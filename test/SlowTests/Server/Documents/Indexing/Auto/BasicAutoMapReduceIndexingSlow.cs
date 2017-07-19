@@ -26,19 +26,19 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Count",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
                 new IndexField
                 {
                     Name = "TotalCount",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
                 new IndexField
                 {
                     Name = "Age",
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Aggregation = AggregationOperation.Sum,
                     Storage = FieldStorage.Yes
                 }
             }, new[]

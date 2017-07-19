@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Indexes
 
         public SortOptions? Sort { get; set; }
 
-        public FieldMapReduceOperation MapReduceOperation { get; set; }
+        public AggregationOperation Aggregation { get; set; }
 
         public FieldStorage Storage { get; set; }
 
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Indexes
             return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
                 && Sort == other.Sort
-                && MapReduceOperation == other.MapReduceOperation
+                && Aggregation == other.Aggregation
                 && Storage == other.Storage
                 && Indexing == other.Indexing
                 && TermVector == other.TermVector;
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Indexes
                 var hashCode = (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);
                 hashCode = (hashCode * 397) ^ Sort.GetHashCode();
-                hashCode = (hashCode * 397) ^ (int)MapReduceOperation;
+                hashCode = (hashCode * 397) ^ (int)Aggregation;
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;

@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents.Queries
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                 },
             },
              new[]

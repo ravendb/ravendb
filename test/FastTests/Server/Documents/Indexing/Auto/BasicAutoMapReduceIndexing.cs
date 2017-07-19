@@ -241,7 +241,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Sort = SortOptions.Numeric,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 };
 
                 var location = new IndexField
@@ -258,7 +258,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Name = "Sum",
                     Storage = FieldStorage.Yes,
                     Sort = SortOptions.Numeric,
-                    MapReduceOperation = FieldMapReduceOperation.Sum
+                    Aggregation = AggregationOperation.Sum
                 };
 
                 var etag = await database.IndexStore.CreateIndex(new AutoMapReduceIndexDefinition("Users", new[] {count, sum}, new[] {location}));
@@ -288,7 +288,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[0].Definition.MapFields["Count"].Name);
                 Assert.Equal(SortOptions.Numeric, indexes[0].Definition.MapFields["Count"].Sort);
-                Assert.Equal(FieldMapReduceOperation.Count, indexes[0].Definition.MapFields["Count"].MapReduceOperation);
+                Assert.Equal(AggregationOperation.Count, indexes[0].Definition.MapFields["Count"].Aggregation);
 
                 var definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
 
@@ -308,10 +308,10 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Equal(2, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Count", indexes[1].Definition.MapFields["Count"].Name);
-                Assert.Equal(FieldMapReduceOperation.Count, indexes[1].Definition.MapFields["Count"].MapReduceOperation);
+                Assert.Equal(AggregationOperation.Count, indexes[1].Definition.MapFields["Count"].Aggregation);
                 Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Count"].Sort);
                 Assert.Equal("Sum", indexes[1].Definition.MapFields["Sum"].Name);
-                Assert.Equal(FieldMapReduceOperation.Sum, indexes[1].Definition.MapFields["Sum"].MapReduceOperation);
+                Assert.Equal(AggregationOperation.Sum, indexes[1].Definition.MapFields["Sum"].Aggregation);
                 Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Sum"].Sort);
 
                 definition = indexes[0].Definition as AutoMapReduceIndexDefinition;
@@ -339,13 +339,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     new IndexField
                     {
                         Name = "Lines,Quantity",
-                        MapReduceOperation = FieldMapReduceOperation.Sum,
+                        Aggregation = AggregationOperation.Sum,
                         Storage = FieldStorage.Yes
                     },
                     new IndexField
                     {
                         Name = "Lines,Price",
-                        MapReduceOperation = FieldMapReduceOperation.Sum,
+                        Aggregation = AggregationOperation.Sum,
                         Storage = FieldStorage.Yes
                     }
                 },
@@ -447,7 +447,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Age",
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Aggregation = AggregationOperation.Sum,
                     Storage = FieldStorage.Yes
                 }
             }, new[]
@@ -522,7 +522,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Age",
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Aggregation = AggregationOperation.Sum,
                     Storage = FieldStorage.Yes
                 }
             }, new[]
@@ -600,7 +600,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Count",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 }
             }, new[]
@@ -702,7 +702,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Count",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 }
             }, new[]

@@ -42,7 +42,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Sort = SortOptions.Numeric
                 },
             },
@@ -102,7 +102,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -132,7 +132,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -164,7 +164,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -188,7 +188,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -230,7 +230,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -248,13 +248,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
                 new IndexField
                 {
                     Name = "TotalAge",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Sum
+                    Aggregation = AggregationOperation.Sum
                 },
             },
             new[]
@@ -286,7 +286,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Price",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Aggregation = AggregationOperation.Sum,
                     Sort = SortOptions.String
                 },
             }, new[]

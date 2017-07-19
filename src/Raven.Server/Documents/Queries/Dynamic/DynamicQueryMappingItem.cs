@@ -7,16 +7,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
     {
         private string _normalizedName;
 
-        public DynamicQueryMappingItem(string name, FieldMapReduceOperation mapReduceOperation)
+        public DynamicQueryMappingItem(string name, AggregationOperation aggregationOperation)
         {
             Name = name;
-            MapReduceOperation = mapReduceOperation;
+            AggregationOperation = aggregationOperation;
         }
 
         public string Name { get; }
 
         public string NormalizedName => _normalizedName ?? (_normalizedName = IndexField.ReplaceInvalidCharactersInFieldName(Name));
 
-        public FieldMapReduceOperation MapReduceOperation { get; }
+        public AggregationOperation AggregationOperation { get; set; }
     }
 }

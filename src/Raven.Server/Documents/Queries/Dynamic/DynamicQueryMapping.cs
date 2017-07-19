@@ -56,7 +56,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         Name = field.Name,
                         Storage = FieldStorage.Yes,
-                        MapReduceOperation = field.MapReduceOperation,
+                        Aggregation = field.AggregationOperation,
                         Sort = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType,
                     }).ToArray(),
                     GroupByFields.Select(field =>
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
                 {
-                    extendedMapFields.Add(new DynamicQueryMappingItem(field.Name, field.MapReduceOperation));
+                    extendedMapFields.Add(new DynamicQueryMappingItem(field.Name, field.Aggregation));
                 }
 
                 if (extendedSortDescriptors.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false && field.Sort != null)
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     return;
 
-                fields[fieldName] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
+                fields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
 
                 switch (valueType)
                 {
@@ -172,22 +172,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         }
                     }
 
-                    fields[field.Name] = new DynamicQueryMappingItem(fieldName, FieldMapReduceOperation.None);
+                    fields[field.Name] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
                 }
             }
 
+            if (query.Metadata.IsGroupBy)
+            {
+                result.IsMapReduce = true;
 
+                foreach (var selectField in query.Metadata.SelectFields)
+                {
+                    if (fields.TryGetValue(selectField.Name, out var existingField) == false)
+                    {
+                        if (selectField.AggregationOperation != AggregationOperation.None)
+                            fields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
+                    }
+                    else if (selectField.AggregationOperation != AggregationOperation.None)
+                    {
+                        existingField.AggregationOperation = selectField.AggregationOperation;
+                    }
+                }
 
-            // dynamic map-reduce query
-
-            //result.IsMapReduce = true;
-
-
-            //                dynamicMapFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy == false).Select(x => new DynamicQueryMappingItem(x.Name, x.OperationType));
-            //
-            //                result.GroupByFields = query.DynamicMapReduceFields.Where(x => x.IsGroupBy).Select(x => x.Name).ToArray();
-            //
-            //                numericFields = null;
+                result.GroupByFields = query.Metadata.GroupBy;
+            }
 
             // TODO arek - get rid of linq
             result.MapFields = fields.Values

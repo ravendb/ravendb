@@ -1574,7 +1574,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             if (mapReduceOperationCall.Method.DeclaringType != typeof(Enumerable))
                 throw new NotSupportedException($"Unsupported method in select of dynamic map reduce query: {mapReduceOperationCall.Method.Name} of type {mapReduceOperationCall.Method.DeclaringType}");
 
-            FieldMapReduceOperation mapReduceOperation;
+            AggregationOperation mapReduceOperation;
             if (Enum.TryParse(mapReduceOperationCall.Method.Name, out mapReduceOperation) == false)
                 throw new NotSupportedException($"Unhandled map reduce operation type: {mapReduceOperationCall.Method.Name}");
 
@@ -1625,7 +1625,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         case "Sum":
                             {
-                                if (mapReduceOperation != FieldMapReduceOperation.Sum)
+                                if (mapReduceOperation != AggregationOperation.Sum)
                                     throw new NotSupportedException("Cannot use different aggregating functions for a single field");
 
                                 if (methodCallExpression.Arguments.Count != 2)
@@ -1646,13 +1646,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 }
             }
 
-            if (mapReduceOperation == FieldMapReduceOperation.Count)
+            if (mapReduceOperation == AggregationOperation.Count)
             {
                 _documentQuery.GroupByCount(renamedField);
                 return;
             }
 
-            if (mapReduceOperation == FieldMapReduceOperation.Sum)
+            if (mapReduceOperation == AggregationOperation.Sum)
             {
                 _documentQuery.GroupBySum(mapReduceField, renamedField);
                 return;

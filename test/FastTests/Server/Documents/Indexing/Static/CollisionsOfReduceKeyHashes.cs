@@ -34,7 +34,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     new IndexField
                     {
                         Name = "Count",
-                        MapReduceOperation = FieldMapReduceOperation.Count,
+                        Aggregation = AggregationOperation.Count,
                         Storage = FieldStorage.Yes
                     }
                 }, new[]

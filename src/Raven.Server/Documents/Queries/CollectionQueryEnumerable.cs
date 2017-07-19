@@ -89,7 +89,7 @@ namespace Raven.Server.Documents.Queries
                 if (query.Metadata.OrderBy == null)
                     return null;
 
-                Debug.Assert(query.Metadata.OrderBy.Count == 1);
+                Debug.Assert(query.Metadata.OrderBy.Length == 1);
 
                 var randomField = query.Metadata.OrderBy[0];
 

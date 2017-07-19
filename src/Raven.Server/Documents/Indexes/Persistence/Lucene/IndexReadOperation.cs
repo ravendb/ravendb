@@ -354,7 +354,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<string[], IQueryResultRetriever> createRetriever, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, CancellationToken token)
         {
             var documentQuery = new BooleanQuery();
 
@@ -404,7 +404,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var fieldsToFetch = string.IsNullOrWhiteSpace(query.DocumentId)
-                ? _searcher.Doc(baseDocId, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().ToArray()
+                ? _searcher.Doc(baseDocId, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().Select(x => new SelectField(x)).ToArray()
                 : null;
 
             var retriever = createRetriever(fieldsToFetch);

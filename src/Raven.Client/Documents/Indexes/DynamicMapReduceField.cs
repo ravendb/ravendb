@@ -6,7 +6,7 @@
 
         public string ClientSideName { get; set; }
 
-        public FieldMapReduceOperation OperationType { get; set; }
+        public AggregationOperation OperationType { get; set; }
 
         public bool IsGroupBy { get; set; }
     }

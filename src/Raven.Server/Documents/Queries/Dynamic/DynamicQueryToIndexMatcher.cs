@@ -263,9 +263,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var field = definition.GetField(mapField.Name);
 
-                if (field.MapReduceOperation != mapField.MapReduceOperation)
+                if (field.Aggregation != mapField.AggregationOperation)
                 {
-                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.MapReduceOperation} operation defined, while query required {mapField.MapReduceOperation}"));
+                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
 
                     return false;
                 }

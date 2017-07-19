@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
+using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
@@ -22,10 +24,14 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = QueryExpression.Extract(Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
 
+            IsGroupBy = Query.GroupBy != null;
+
             Build(parameters);
         }
 
         public readonly bool IsDynamic;
+
+        public readonly bool IsGroupBy;
 
         public readonly string CollectionName;
 
@@ -37,16 +43,18 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<string, ValueTokenType> Fields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
 
-        public List<(string Name, OrderByFieldType OrderingType, bool Ascending)> OrderBy;
+        public string[] GroupBy;
 
-        public string[] SelectFields;
+        public (string Name, OrderByFieldType OrderingType, bool Ascending)[] OrderBy;
 
-        public void AddEmptyField(string fieldName)
+        public SelectField[] SelectFields;
+
+        private void AddEmptyField(string fieldName)
         {
             AllFieldNames.Add(fieldName);
         }
 
-        public void AddField(string fieldName, ValueTokenType value)
+        private void AddField(string fieldName, ValueTokenType value)
         {
             AllFieldNames.Add(fieldName);
             Fields[fieldName] = value;
@@ -55,42 +63,106 @@ namespace Raven.Server.Documents.Queries
         private void Build(BlittableJsonReaderObject parameters)
         {
             if (Query.Select != null)
+                FillSelectFields();
+            else
             {
-                var fields = new List<string>(Query.Select.Count);
-
-                foreach (var fieldInfo in Query.Select)
-                {
-
-                    switch (fieldInfo.Expression.Type)
-                    {
-                        case OperatorType.Field:
-                            var name = QueryExpression.Extract(Query.QueryText, fieldInfo.Expression.Field);
-                            fields.Add(name);
-                            break;
-                        default:
-                            throw new NotImplementedException("TODO arek");
-                    }
-
-                    if (fieldInfo.Alias != null)
-                    {
-                        // TODO arek - we don't handle server side aliases at the moment
-                    }
-                }
-
-                SelectFields = fields.ToArray();
+                if (IsGroupBy)
+                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT");
             }
 
             if (Query.Where != null)
-            {
                 new FillFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
+
+            if (Query.GroupBy != null)
+            {
+                GroupBy = new string[Query.GroupBy.Count];
+
+                for (var i = 0; i < Query.GroupBy.Count; i++)
+                    GroupBy[i] = QueryExpression.Extract(Query.QueryText, Query.GroupBy[i]);
             }
 
             if (Query.OrderBy != null)
             {
-                OrderBy = new List<(string Name, OrderByFieldType OrderingType, bool Ascending)>(Query.OrderBy.Count);
-                foreach (var fieldInfo in Query.OrderBy)
-                    OrderBy.Add((QueryExpression.Extract(Query.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+                OrderBy = new (string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
+
+                for (var i = 0; i < Query.OrderBy.Count; i++)
+                {
+                    var fieldInfo = Query.OrderBy[i];
+                    OrderBy[i] = ((QueryExpression.Extract(Query.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+                }
             }
+        }
+
+        private void FillSelectFields()
+        {
+            var fields = new List<SelectField>(Query.Select.Count);
+
+            foreach (var fieldInfo in Query.Select)
+            {
+                string alias = null;
+
+                if (fieldInfo.Alias != null)
+                    alias = QueryExpression.Extract(Query.QueryText, fieldInfo.Alias);
+
+                var expression = fieldInfo.Expression;
+
+                switch (expression.Type)
+                {
+                    case OperatorType.Field:
+                        var name = QueryExpression.Extract(Query.QueryText, expression.Field);
+                        fields.Add(new SelectField(name, alias));
+                        break;
+                    case OperatorType.Method:
+                        if (IsGroupBy)
+                        {
+                            var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
+                            string fieldName = null;
+
+                            if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
+                            {
+                                switch (methodName)
+                                {
+                                    case "key":
+                                        fieldName = alias ?? "key";
+                                        break;
+                                    default:
+                                        throw new NotSupportedException($"Unknown aggregation method: '{methodName}'");
+                                }
+                            }
+                            else
+                            {
+                                switch (aggregation)
+                                {
+                                    case AggregationOperation.Count:
+                                        fieldName = "Count";
+                                        break;
+                                    case AggregationOperation.Sum:
+
+                                        if (expression.Arguments == null)
+                                            throw new InvalidOperationException("TODO arek");
+                                        if (expression.Arguments.Count != 1)
+                                            throw new InvalidOperationException("TODO arek");
+
+                                        var sumFieldToken = expression.Arguments[0] as FieldToken;
+
+                                        fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+                                        break;
+
+                                }
+                            }
+
+                            fields.Add(new SelectField(fieldName ?? methodName, alias, aggregation));
+
+                            break;
+                        }
+                        else
+                            throw new NotImplementedException("TODO arek");
+                    default:
+                        throw new NotImplementedException("TODO arek");
+                }
+            }
+
+            SelectFields = fields.ToArray();
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)

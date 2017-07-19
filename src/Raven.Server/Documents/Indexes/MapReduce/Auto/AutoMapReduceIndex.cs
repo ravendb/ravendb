@@ -93,12 +93,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 foreach (var indexField in Definition.MapFields.Values)
                 {
-                    switch (indexField.MapReduceOperation)
+                    switch (indexField.Aggregation)
                     {
-                        case FieldMapReduceOperation.Count:
+                        case AggregationOperation.Count:
                             mappedResult[indexField.Name] = 1;
                             break;
-                        case FieldMapReduceOperation.Sum:
+                        case AggregationOperation.Sum:
                             object fieldValue;
                             StringSegment leftPath;
                             BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out fieldValue, out leftPath);
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             mappedResult[indexField.Name] = total;
 
                             break;
-                        case FieldMapReduceOperation.None:
+                        case AggregationOperation.None:
                             object result;
                             BlittableJsonTraverser.Default.TryRead(document.Data, indexField.Name, out result, out leftPath);
 

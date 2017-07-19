@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Indexes
 
         public class AutoIndexFieldOptions : IndexFieldOptions
         {
-            public FieldMapReduceOperation MapReduceOperation { get; set; }
+            public AggregationOperation MapReduceOperation { get; set; }
 
             protected bool Equals(AutoIndexFieldOptions other)
             {

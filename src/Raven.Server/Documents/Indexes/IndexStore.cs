@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes
                 .Select(x =>
                 {
                     var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                    field.MapReduceOperation = x.Value.MapReduceOperation;
+                    field.Aggregation = x.Value.MapReduceOperation;
 
                     return field;
                 })
@@ -182,7 +182,7 @@ namespace Raven.Server.Documents.Indexes
                     .Select(x =>
                     {
                         var field = IndexField.Create(x.Key, x.Value, allFields: null);
-                        field.MapReduceOperation = x.Value.MapReduceOperation;
+                        field.Aggregation = x.Value.MapReduceOperation;
 
                         return field;
                     })

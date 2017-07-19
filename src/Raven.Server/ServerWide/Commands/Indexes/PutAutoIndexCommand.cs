@@ -89,7 +89,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     Spatial = null,
                     Suggestions = null,
                     Sort = kvp.Value.Sort,
-                    MapReduceOperation = kvp.Value.MapReduceOperation
+                    MapReduceOperation = kvp.Value.Aggregation
                 };
 
             return result;

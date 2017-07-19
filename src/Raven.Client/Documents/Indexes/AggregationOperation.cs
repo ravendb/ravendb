@@ -1,6 +1,6 @@
 ﻿namespace Raven.Client.Documents.Indexes
 {
-    public enum FieldMapReduceOperation
+    public enum AggregationOperation
     {
         None,
         Count,
