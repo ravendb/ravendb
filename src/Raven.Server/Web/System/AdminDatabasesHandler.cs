@@ -346,7 +346,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
+        [RavenAction("/admin/periodic-backup/update", "POST", "/admin/periodic-backup/update?name={databaseName:string}")]
         public async Task UpdatePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
@@ -453,7 +453,7 @@ namespace Raven.Server.Web.System
                         var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
                         using (var awsClient = new RavenAwsS3Client(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName))
                         {
-                            await awsClient.TestConnection();
+                            await awsClient.GetObject(s3Settings.BucketName, s3Settings.RemoteFolderName);
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Glacier:
