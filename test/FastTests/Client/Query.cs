@@ -51,8 +51,13 @@ namespace FastTests.Client
                         .Where(x => x.Name.Equals("Tarzan"))
                         .ToList();
 
+                    var queryResult3 = newSession.Query<User>()
+                        .Where(x => x.Name.EndsWith("n"))
+                        .ToList();
+
                     Assert.Equal(queryResult.Count, 2);
                     Assert.Equal(queryResult2.Count, 1);
+                    Assert.Equal(queryResult3.Count, 2);
                 }
             }
         }

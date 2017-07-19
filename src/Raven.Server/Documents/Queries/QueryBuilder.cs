@@ -80,11 +80,7 @@ namespace Raven.Server.Documents.Queries
 
                         if (expression.Type == OperatorType.Equal && fieldType == FieldName.FieldType.String)
                         {
-                            return new FieldLuceneASTNode
-                            {
-                                FieldName = new FieldName(luceneFieldName, fieldType),
-                                Node = CreateTermNode(value, valueType)
-                            };
+                            return CreateFieldNode(luceneFieldName, fieldType, CreateTermNode(value, valueType));
                         }
 
                         RangeLuceneASTNode rangeNode = new RangeLuceneASTNode()
@@ -120,11 +116,7 @@ namespace Raven.Server.Documents.Queries
                                 break;
                         }
 
-                        return new FieldLuceneASTNode
-                        {
-                            FieldName = new FieldName(luceneFieldName, fieldType),
-                            Node = rangeNode
-                        };
+                        return CreateFieldNode(luceneFieldName, fieldType, rangeNode);
                     }
                 case OperatorType.Between:
                     {
@@ -134,17 +126,13 @@ namespace Raven.Server.Documents.Queries
 
                         var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valueFirstType);
 
-                        return new FieldLuceneASTNode
+                        return CreateFieldNode(luceneFieldName, fieldType, new RangeLuceneASTNode
                         {
-                            FieldName = new FieldName(luceneFieldName, fieldType),
-                            Node = new RangeLuceneASTNode
-                            {
-                                InclusiveMin = true,
-                                InclusiveMax = true,
-                                RangeMin = CreateTermNode(valueFirst, valueFirstType),
-                                RangeMax = CreateTermNode(valueSecond, valueSecondType)
-                            }
-                        };
+                            InclusiveMin = true,
+                            InclusiveMax = true,
+                            RangeMin = CreateTermNode(valueFirst, valueFirstType),
+                            RangeMax = CreateTermNode(valueSecond, valueSecondType)
+                        });
                     }
                 case OperatorType.In:
                     {
@@ -183,6 +171,10 @@ namespace Raven.Server.Documents.Queries
                             return HandleSearch(query, expression, metadata, parameters, boost);
                         case MethodType.Boost:
                             return HandleBoost(query, expression, metadata, parameters);
+                        case MethodType.StartsWith:
+                            return HandleStartsWith(query, expression, metadata, parameters, boost);
+                        case MethodType.EndsWith:
+                            return HandleEndsWith(query, expression, metadata, parameters, boost);
                         default:
                             throw new NotSupportedException($"Method '{methodType}' is not supported.");
                     }
@@ -217,6 +209,39 @@ namespace Raven.Server.Documents.Queries
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static LuceneASTNodeBase HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
+        {
+            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (string.IsNullOrEmpty(value))
+                value = "*";
+            else
+                value += "*";
+
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, new TermLuceneASTNode
+            {
+                Term = value,
+                Type = TermLuceneASTNode.TermType.PrefixTerm
+            });
+        }
+
+        private static LuceneASTNodeBase HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
+        {
+            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            value = string.IsNullOrEmpty(value) 
+                ? "*" 
+                : value.Insert(0, "*");
+
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, new TermLuceneASTNode
+            {
+                Term = value,
+                Type = TermLuceneASTNode.TermType.WildCardTerm
+            });
         }
 
         private static LuceneASTNodeBase HandleBoost(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
@@ -256,16 +281,12 @@ namespace Raven.Server.Documents.Queries
                 node = CreateNode(left, CreateTermNode(values[values.Length - 1], valueType), boost);
             }
 
-            return new FieldLuceneASTNode
-            {
-                FieldName = new FieldName(fieldName),
-                Node = node
-            };
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, node);
 
             LuceneASTNodeBase CreateNode(LuceneASTNodeBase left, LuceneASTNodeBase right, string boostValue)
             {
-                var result = right == null 
-                    ? left 
+                var result = right == null
+                    ? left
                     : new OperatorLuceneASTNode(left, right, OperatorLuceneASTNode.Operator.OR, isDefaultOperatorAnd: false);
 
                 if (boostValue == null)
@@ -379,6 +400,15 @@ namespace Raven.Server.Documents.Queries
 
                 yield return (item.ToString(), GetValueTokenType(item));
             }
+        }
+
+        private static FieldLuceneASTNode CreateFieldNode(string fieldName, FieldName.FieldType fieldType, LuceneASTNodeBase node)
+        {
+            return new FieldLuceneASTNode
+            {
+                FieldName = new FieldName(fieldName, fieldType),
+                Node = node
+            };
         }
 
         private static TermLuceneASTNode CreateTermNode(string value, ValueTokenType valueType)
@@ -566,6 +596,12 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Boost;
 
+            if (string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
+                return MethodType.StartsWith;
+
+            if (string.Equals(methodName, "endsWith", StringComparison.OrdinalIgnoreCase))
+                return MethodType.EndsWith;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
         }
 
@@ -577,7 +613,9 @@ namespace Raven.Server.Documents.Queries
         private enum MethodType
         {
             Search,
-            Boost
+            Boost,
+            StartsWith,
+            EndsWith
         }
     }
 }
