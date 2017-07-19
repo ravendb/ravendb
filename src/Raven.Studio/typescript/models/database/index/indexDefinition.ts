@@ -37,7 +37,8 @@ class indexDefinition {
     defaultFieldOptions = ko.observable<indexFieldOptions>();
     isAutoIndex = ko.observable<boolean>(false);
 
-    outputReduceToCollection = ko.observable<string>();
+    outputReduceToCollection = ko.observable<boolean>();
+    reduceToCollectionName = ko.observable<string>();
 
     numberOfFields = ko.pureComputed(() => this.fields().length);
     numberOfConfigurationFields = ko.pureComputed(() => this.configuration() ? this.configuration().length : 0);
@@ -60,7 +61,8 @@ class indexDefinition {
         this.reduce(dto.Reduce);
         this.hasReduce(!!dto.Reduce);
         this.isTestIndex(dto.IsTestIndex);
-        this.outputReduceToCollection(dto.OutputReduceToCollection);
+        this.outputReduceToCollection(!!dto.OutputReduceToCollection);
+        this.reduceToCollectionName(dto.OutputReduceToCollection);
         this.fields(_.map(dto.Fields, (fieldDto, indexName) => new indexFieldOptions(indexName, fieldDto, indexFieldOptions.defaultFieldOptions())));
         const defaultFieldOptions = this.fields().find(x => x.name() === indexFieldOptions.DefaultFieldOptions);
         if (defaultFieldOptions) {
@@ -105,9 +107,16 @@ class indexDefinition {
             }
         });
 
+        this.reduceToCollectionName.extend({
+            required: {
+                onlyIf: () => this.hasReduce() && this.outputReduceToCollection()
+            }
+        });
+
         this.validationGroup = ko.validatedObservable({
             name: this.name,
-            reduce: this.reduce
+            reduce: this.reduce,
+            reduceToCollectionName: this.reduceToCollectionName
         });
     }
 
@@ -167,7 +176,7 @@ class indexDefinition {
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             IsTestIndex: false, //TODO: test indexes
-            OutputReduceToCollection: this.outputReduceToCollection()
+            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null
         }
     }
 
