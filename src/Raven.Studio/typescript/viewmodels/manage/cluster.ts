@@ -1,6 +1,8 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import removeNodeFromClusterCommand = require("commands/database/cluster/removeNodeFromClusterCommand");
 import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
+import promoteClusterNodeCommand = require("commands/database/cluster/promoteClusterNodeCommand");
+import demoteClusterNodeCommand = require("commands/database/cluster/demoteClusterNodeCommand");
 
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -16,12 +18,14 @@ class cluster extends viewModelBase {
 
     spinners = {
         stepdown: ko.observable<boolean>(false),
-        delete: ko.observableArray<string>([])
+        delete: ko.observableArray<string>([]),
+        promote: ko.observableArray<string>([]),
+        demote: ko.observableArray<string>([])
     }
 
     constructor() {
         super();
-        this.bindToCurrentInstance("deleteNode", "stepDown");
+        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote");
 
         this.initObservables();
     }
@@ -34,6 +38,30 @@ class cluster extends viewModelBase {
         super.activate(args);
 
         this.updateHelpLink("11HBHO");
+    }
+
+    promote(node: clusterNode) {
+        this.confirmationMessage("Are you sure?", "Do you want to promote current node to become member/promotable?", ["Cancel", "Yes, promote"])
+            .done(result => {
+               if (result.can) {
+                   this.spinners.promote.push(node.tag());
+                   new promoteClusterNodeCommand(node.tag())
+                       .execute()
+                       .always(() => this.spinners.promote.remove(node.tag()));
+               } 
+            });
+    }
+
+    demote(node: clusterNode) {
+         this.confirmationMessage("Are you sure?", "Do you want to demote current node to become watcher?", ["Cancel", "Yes, demote"])
+            .done(result => {
+               if (result.can) {
+                   this.spinners.demote.push(node.tag());
+                   new demoteClusterNodeCommand(node.tag())
+                       .execute()
+                       .always(() => this.spinners.demote.remove(node.tag()));
+               } 
+            });
     }
 
     stepDown(node: clusterNode) {
