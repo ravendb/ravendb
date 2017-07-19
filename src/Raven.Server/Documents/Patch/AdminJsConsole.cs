@@ -1,26 +1,37 @@
 using System;
+using System.Diagnostics;
 using System.Dynamic;
 using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
-
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
     public class AdminJsConsole : DocumentPatcherBase
     {
-        private readonly RavenServer _server;
+        public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("AdminJsConsole");
 
+        private readonly RavenServer _server;
+        private readonly Stopwatch _sw = new Stopwatch();
 
         public AdminJsConsole(DocumentDatabase database) : base(database)
         {
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations($"AdminJSConsole : Prepering to execute database script for \"{database.Name}\"");
+            }
         }
 
         public AdminJsConsole(RavenServer server)
         {
             _server = server;
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations("AdminJSConsole : Prepering to execute server script");
+            }
         }
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
@@ -36,20 +47,90 @@ namespace Raven.Server.Documents.Patch
 
         public object ApplyScript(AdminJsScript script)
         {
-            var jintEngine = GetEngine(script, ExecutionStr);
+            _sw.Start();
+            Engine jintEngine;
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations($"Script : \"{script.Script}\"");
+            }
+            try
+            {
+                jintEngine = GetEngine(script, ExecutionStr);
+            }
+            catch (Exception e)
+            {
+                if (Log.IsOperationsEnabled)
+                {
+                    Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
+                }
+                throw;
+            }
+            JsValue jsVal;
+            try
+            {
+                jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
 
-            var jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
+            }
+            catch (Exception e)
+            {
+                if (Log.IsOperationsEnabled)
+                {
+                    Log.Operations("An Exception was thrown while executing the script: ", e);
+                }
+                throw;
+            }
 
-            return ConvertResults(jsVal, Database);
+            var result =  ConvertResults(jsVal, Database);
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations($"Finished executing database script. Total time: {_sw.Elapsed} ");
+            }
+            _sw.Reset();
+            return result;
         }
 
         public object ApplyServerScript(AdminJsScript script)
         {
-            var jintEngine = GetEngine(script, ServerExecutionStr);
+            _sw.Start();
+            Engine jintEngine;
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations($"Script : \"{script.Script}\"");
+            }
+            try
+            {
+                jintEngine = GetEngine(script, ServerExecutionStr);
+            }
+            catch (Exception e)
+            {
+                if (Log.IsOperationsEnabled)
+                {
+                    Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
+                }
+                throw;
+            }
 
-            var jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
+            JsValue jsVal;
+            try
+            {
+                jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
+            }
+            catch (Exception e)
+            {
+                if (Log.IsOperationsEnabled)
+                {
+                    Log.Operations("An Exception was thrown while executing the script: ", e);
+                }
+                throw;
+            }
 
-            return ConvertResults(jsVal);
+            var result = ConvertResults(jsVal, Database);
+            if (Log.IsOperationsEnabled)
+            {
+                Log.Operations($"Finished executing server script. Total time: {_sw.Elapsed} ");
+            }
+            _sw.Reset();
+            return result;
         }
 
         private static object ConvertResults(JsValue jsVal, DocumentDatabase database = null)
