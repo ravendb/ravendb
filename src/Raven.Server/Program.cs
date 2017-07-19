@@ -44,18 +44,6 @@ namespace Raven.Server
                 return 0;
             }
 
-            if (CommandLineSwitches.RegisterService)
-            {
-                RavenWindowsServiceController.Install(args);
-                return 0;
-            }
-
-            if (CommandLineSwitches.UnregisterService)
-            {
-                RavenWindowsServiceController.Uninstall();
-                return 0;
-            }
-
             new WelcomeMessage(Console.Out).Print();
 
             var configuration = new RavenConfiguration(null, ResourceType.Server, CommandLineSwitches.CustomConfigPath);
@@ -67,9 +55,20 @@ namespace Raven.Server
 
             LoggingSource.Instance.SetupLogMode(configuration.Logs.Mode, Path.Combine(AppContext.BaseDirectory, configuration.Logs.Path));
 
-            if (RavenWindowsServiceController.ShouldRunAsWindowsService(configuration))
-            {                
-                RavenWindowsServiceController.Run(configuration);
+            if (WindowsServiceRunner.ShouldRunAsWindowsService())
+            {
+                try
+                {
+                    WindowsServiceRunner.Run(CommandLineSwitches.ServiceName, configuration);
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info("Error running Windows Service", e);
+
+                    return 1;
+                }
+
                 return 0;
             }
 

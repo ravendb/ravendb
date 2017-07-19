@@ -17,10 +17,6 @@ namespace Raven.Server.Utils
 
         public static bool Daemon => ParseSwitchOption(_daemonOption);
 
-        public static bool RegisterService => ParseSwitchOption(_registerServiceOption);
-
-        public static bool UnregisterService => ParseSwitchOption(_unregisterServiceOption);
-
         public const string DefaultServiceName = "RavenDB";
 
         public static string ServiceName =>
@@ -38,10 +34,6 @@ namespace Raven.Server.Utils
         private static CommandOption _browserOption;
 
         private static CommandOption _versionOption;
-
-        private static CommandOption _registerServiceOption;
-
-        private static CommandOption _unregisterServiceOption;
 
         private static CommandOption _daemonOption;
 
@@ -85,14 +77,6 @@ namespace Raven.Server.Utils
                 "--print-id",
                 "Prints server ID upon server start",
                 CommandOptionType.NoValue);
-            _registerServiceOption = _app.Option(
-                "--register-service",
-                "Registers Windows service and exits",
-                CommandOptionType.NoValue);
-            _unregisterServiceOption = _app.Option(
-                "--unregister-service",
-                "Unregisters Windows service and exits",
-                CommandOptionType.NoValue);
             _daemonOption = _app.Option(
                 "-d | --daemon",
                 "Runs as daemon (available only for Linux). Windows users should use --register-service and services.msc for service management",
@@ -124,12 +108,6 @@ namespace Raven.Server.Utils
 
             if (PlatformDetails.RunningOnPosix == false && Daemon)
                 throw new CommandParsingException(_app, "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
-
-            if (PlatformDetails.RunningOnPosix && RegisterService)
-                throw new CommandParsingException(_app, "Switch \"--register-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
-
-            if (PlatformDetails.RunningOnPosix && UnregisterService)
-                throw new CommandParsingException(_app, "Switch \"--unregister-service\" is not supported on Linux. Use --daemon switch to run as daemon.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)
