@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Tags[].Name"));
-            Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
+            Assert.Equal("Auto/Users/ByTags___Name", definition.Name);
         }
 
 
@@ -135,7 +135,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithSortedFields()
         {
-            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Age");
+            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Age AS long");
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -171,7 +171,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         [Fact]
         public void CreateDefinitionForQueryWithNestedFieldsAndNumberSortingSet()
         {
-            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.ZipCode");
+            create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.ZipCode AS double");
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -235,6 +235,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND StartsWith(LastName, 'A') ORDER BY Age AS double, Count AS long"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
+
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND AddressId = 'addresses/1' ORDER BY Age AS double, Count AS long"));
+
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 

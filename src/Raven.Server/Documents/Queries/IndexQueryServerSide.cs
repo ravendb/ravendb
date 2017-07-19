@@ -22,12 +22,12 @@ namespace Raven.Server.Documents.Queries
 
         public IndexQueryServerSide()
         {
-            // TODO arek - remove me
         }
 
-        public IndexQueryServerSide(string query)
+        public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = EscapingHelper.UnescapeLongDataString(query);
+            Metadata = new QueryMetadata(Query, queryParameters);
         }
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
@@ -49,8 +49,9 @@ namespace Raven.Server.Documents.Queries
             if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
                 throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
-            var result = new IndexQueryServerSide(EscapingHelper.UnescapeLongDataString(query[0]))
+            var result = new IndexQueryServerSide()
             {
+                Query = EscapingHelper.UnescapeLongDataString(query[0]),
                 // all defaults which need to have custom value
                 Start = start,
                 PageSize = pageSize
