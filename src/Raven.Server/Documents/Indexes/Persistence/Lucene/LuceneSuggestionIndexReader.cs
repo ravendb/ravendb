@@ -45,11 +45,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return QueryOverSingleWord(query, term);
         }
 
-
+        private static readonly string[] EmptyArray = new string[0];
 
         /// <summary> Field name for each word in the ngram index.</summary>
-        private const string F_WORD = "word";
-        private readonly Term F_WORD_TERM = new Term(F_WORD);
+        private const string FWord = "word";
 
         /// <summary> Boost value for start and end grams</summary>
         private const float BoostStart = 2.0f;
@@ -72,6 +71,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        private struct GramKeys
+        {
+            public string Start;
+            public string End;
+            public string Gram;
+        }
+        // Avoiding allocations for string keys that are bounded in the set of potential values. 
+        private static readonly GramKeys[] GramsTable;
+
+        static LuceneSuggestionIndexReader()
+        {
+            GramsTable = new GramKeys[5];
+
+            for (int i = 0; i < GramsTable.Length; i++)
+            {
+                GramsTable[i] = new GramKeys
+                {
+                    Start = "start" + i,
+                    End = "end" + i,
+                    Gram = "gram" + i
+                };
+            }
+        }
+
         private string[] QueryOverSingleWord<TDistance>(SuggestionQueryServerSide parameters, string word, TDistance sd) 
             where TDistance : IStringDistance
         {
@@ -84,7 +107,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var ir = _searcher.IndexReader;
 
-            int freq = (ir != null && field != null) ? ir.DocFreq(new Term(F_WORD, word), _state) : 0;
+            int freq = (ir != null && field != null) ? ir.DocFreq(new Term(FWord, word), _state) : 0;
             int goalFreq = (morePopular && ir != null && field != null) ? freq : 0;
 
             // if the word exists in the real index and we don't care for word frequency, return the word itself
@@ -96,9 +119,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var query = new BooleanQuery();
 
             var alreadySeen = new HashSet<string>();
-            for (var ng = GetMin(lengthWord); ng <= GetMax(lengthWord); ng++)
-            {
-                string key = "gram" + ng;
+
+            int ng = GetMin(lengthWord);
+            int max = ng + 1;
+
+            var table = GramsTable;
+            for (; ng <= max; ng++)
+            {                
                 string[] grams = FormGrams(word, ng);
 
                 if (grams.Length == 0)
@@ -109,18 +136,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (BoostStart > 0)
                 {
                     // should we boost prefixes?
-                    Add(query, "start" + ng, grams[0], BoostStart); // matches start of word
+                    Add(query, table[ng].Start, grams[0], BoostStart); // matches start of word
                 }
 
                 if (BoostEnd > 0)
                 {
                     // should we boost suffixes
-                    Add(query, "end" + ng, grams[grams.Length - 1], BoostEnd); // matches end of word
+                    Add(query, table[ng].End, grams[grams.Length - 1], BoostEnd); // matches end of word
                 }
 
                 for (int i = 0; i < grams.Length; i++)
                 {
-                    Add(query, key, grams[i]);
+                    Add(query, table[ng].Gram, grams[i]);
                 }
             }
 
@@ -138,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var suggestedWord = new SuggestWord();
             for (int i = 0; i < stop; i++)
             {
-                suggestedWord.Term = _searcher.Doc(hits[i].Doc, _state).Get(F_WORD, _state); // get orig word
+                suggestedWord.Term = _searcher.Doc(hits[i].Doc, _state).Get(FWord, _state); // get orig word
 
                 // don't suggest a word for itself, that would be silly
                 if (suggestedWord.Term.Equals(word, StringComparison.OrdinalIgnoreCase))
@@ -152,7 +179,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (ir != null && field != null)
                 {
                     // use the user index
-                    suggestedWord.Freq = _searcher.DocFreq(new Term(F_WORD, suggestedWord.Term), _state); // freq in the index
+                    suggestedWord.Freq = _searcher.DocFreq(new Term(FWord, suggestedWord.Term), _state); // freq in the index
 
                     // don't suggest a word that is not present in the field
                     if ((morePopular && goalFreq > suggestedWord.Freq) || suggestedWord.Freq < 1)
@@ -172,9 +199,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 suggestedWord = new SuggestWord();
             }
 
+            int size = queue.Size();
+            if (size == 0)
+                return EmptyArray;
+
             // convert to array string
-            string[] list = new string[queue.Size()];
-            for (int i = queue.Size() - 1; i >= 0; i--)
+            string[] list = new string[size];
+            for (int i = size - 1; i >= 0; i--)
             {
                 list[i] = queue.Pop().Term;
             }
@@ -220,29 +251,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static int GetMin(int l)
         {
+            int r = 1;
             if (l > 5)
-            {
-                return 3;
-            }
-            if (l == 5)
-            {
-                return 2;
-            }
-            return 1;
-        }
+                r = 3;
+            else if (l == 5)
+                r = 2;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static int GetMax(int l)
-        {
-            if (l > 5)
-            {
-                return 4;
-            }
-            if (l == 5)
-            {
-                return 3;
-            }
-            return 2;
+            return r;
         }
 
         private string[] QueryOverMultipleWords(SuggestionQueryServerSide parameters, string queryText)

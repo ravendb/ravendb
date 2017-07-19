@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
+using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Documents;
@@ -17,14 +17,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class LuceneSuggestionIndexWriter : IDisposable
     {
-        private const string F_WORD = "word";
-        private readonly Term F_WORD_TERM = new Term(F_WORD);
+        private const string FWord = "word";
+        private readonly Term _fWordTerm = new Term(FWord);
 
         private readonly string _field;
         private readonly LuceneVoronDirectory _directory;
         private LowerCaseWhitespaceAnalyzer _analyzer = new LowerCaseWhitespaceAnalyzer();
         private readonly SnapshotDeletionPolicy _indexDeletionPolicy;
         private readonly IndexWriter.MaxFieldLength _maxFieldLength;
+        private readonly HashSet<string> _alreadySeen = new HashSet<string>();
 
         private IndexWriter _indexWriter;
         private IndexSearcher _indexSearcher;
@@ -45,54 +46,63 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             RecreateIndexWriter(state);                        
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private int GetMin(int l)
         {
+            int r = 1;
             if (l > 5)
-            {
-                return 3;
-            }
-            if (l == 5)
-            {
-                return 2;
-            }
-            return 1;
+                r = 3;
+            else if (l == 5)
+                r = 2;
+
+            return r;
         }
 
-
-        private int GetMax(int l)
+        private struct GramKeys
         {
-            if (l > 5)
+            public string Start;
+            public string End;
+            public string Gram;
+        }
+        // Avoiding allocations for string keys that are bounded in the set of potential values. 
+        private static readonly GramKeys[] GramsTable;
+
+        static LuceneSuggestionIndexWriter()
+        {
+            GramsTable = new GramKeys[5];
+
+            for (int i = 0; i < GramsTable.Length; i++)
             {
-                return 4;
+                GramsTable[i] = new GramKeys
+                {
+                    Start = "start" + i,
+                    End = "end" + i,
+                    Gram = "gram" + i
+                };
             }
-            if (l == 5)
-            {
-                return 3;
-            }
-            return 2;
         }
 
         private static void AddGram(string text, global::Lucene.Net.Documents.Document doc, int ng1, int ng2)
         {
+            var table = GramsTable;
             int len = text.Length;
             for (int ng = ng1; ng <= ng2; ng++)
             {
-                string key = "gram" + ng;
                 string end = null;
                 for (int i = 0; i < len - ng + 1; i++)
                 {
                     string gram = text.Substring(i, (i + ng) - (i));
-                    doc.Add(new Field(key, gram, Field.Store.NO, Field.Index.NOT_ANALYZED));
+                    doc.Add(new Field(table[ng].Gram, gram, Field.Store.NO, Field.Index.NOT_ANALYZED));
                     if (i == 0)
                     {
-                        doc.Add(new Field("start" + ng, gram, Field.Store.NO, Field.Index.NOT_ANALYZED));
+                        doc.Add(new Field(table[ng].Start, gram, Field.Store.NO, Field.Index.NOT_ANALYZED));
                     }
                     end = gram;
                 }
                 if (end != null)
                 {
                     // may not be present if len==ng1
-                    doc.Add(new Field("end" + ng, end, Field.Store.NO, Field.Index.NOT_ANALYZED));
+                    doc.Add(new Field(table[ng].End, end, Field.Store.NO, Field.Index.NOT_ANALYZED));
                 }
             }
         }
@@ -100,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static global::Lucene.Net.Documents.Document CreateDocument(string text, int ng1, int ng2)
         {
             global::Lucene.Net.Documents.Document doc = new global::Lucene.Net.Documents.Document();
-            doc.Add(new Field(F_WORD, text, Field.Store.YES, Field.Index.NOT_ANALYZED)); // orig term
+            doc.Add(new Field(FWord, text, Field.Store.YES, Field.Index.NOT_ANALYZED)); // orig term
             AddGram(text, doc, ng1, ng2);
             return doc;
         }
@@ -155,13 +165,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         continue; // too short we bail but "too long" is fine...
                     }
 
-                    if (_indexSearcher.DocFreq(F_WORD_TERM.CreateTerm(word), state) > 0)
-                    {
-                        // if the word already exist in the gramindex
+                    // Early skip avoiding allocation of terms and searching. 
+                    if (_alreadySeen.Contains(word))
                         continue;
-                    }
 
-                    _indexWriter.AddDocument(CreateDocument(word, GetMin(len), GetMax(len)), state);
+                    if (_indexSearcher.DocFreq(_fWordTerm.CreateTerm(word), state) <= 0)
+                    {
+                        // the word does not exist in the gramindex
+                        int min = GetMin(len);
+                        
+                        _indexWriter.AddDocument(CreateDocument(word, min, min + 1), state);
+                    }
+                    
+                    _alreadySeen.Add(word);
                 }
             }
         }
@@ -206,7 +222,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                throw new IndexWriterCreationException(e);
+                throw new IndexWriterCreationException(e, this._field);
             }
         }
 
