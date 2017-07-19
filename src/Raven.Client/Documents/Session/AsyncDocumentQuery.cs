@@ -28,8 +28,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
-            : base(session, indexName, collectionName, fieldsToFetchToken, isMapReduce)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isMapReduce)
+            : base(session, indexName, collectionName, isMapReduce)
         {
         }
 
@@ -470,7 +470,7 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TResult>(Transformer);
         }
 
         IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
@@ -693,7 +693,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields, projections);
+            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -922,7 +922,7 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
         {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
         }
 
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -1077,16 +1077,20 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, string[] fieldsToFetch, string[] projectionFields)
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
         {
+            if (newFieldsToFetch != null)
+                UpdateFieldsToFetchToken(newFieldsToFetch);
+
             var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
                 IndexName,
                 CollectionName,
-                null,
                 IsMapReduce)
             {
                 PageSize = PageSize,
+                SelectTokens = SelectTokens,
+                FieldsToFetchToken = FieldsToFetchToken,
                 WhereTokens = WhereTokens,
                 OrderByTokens = OrderByTokens,
                 GroupByTokens = GroupByTokens,
@@ -1122,24 +1126,6 @@ namespace Raven.Client.Documents.Session
                 LastEquality = LastEquality,
                 ShouldExplainScores = ShouldExplainScores
             };
-
-            FieldsToFetchToken fieldsToFetchToken = null;
-            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
-                fieldsToFetchToken = FieldsToFetchToken.Create(fieldsToFetch, projectionFields);
-
-            foreach (var token in SelectTokens)
-            {
-                if (token is FieldsToFetchToken)
-                {
-                    if (fieldsToFetchToken == null)
-                        continue;
-
-                    query.SelectTokens.AddLast(fieldsToFetchToken);
-                    continue;
-                }
-
-                query.SelectTokens.AddLast(token);
-            }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);
             return query;

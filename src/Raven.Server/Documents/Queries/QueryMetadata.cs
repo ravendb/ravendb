@@ -39,6 +39,8 @@ namespace Raven.Server.Documents.Queries
 
         public List<(string Name, OrderByFieldType OrderingType, bool Ascending)> OrderBy;
 
+        public string[] SelectFields;
+
         public void AddEmptyField(string fieldName)
         {
             AllFieldNames.Add(fieldName);
@@ -52,17 +54,43 @@ namespace Raven.Server.Documents.Queries
 
         private void Build(BlittableJsonReaderObject parameters)
         {
+            if (Query.Select != null)
+            {
+                var fields = new List<string>(Query.Select.Count);
+
+                foreach (var fieldInfo in Query.Select)
+                {
+
+                    switch (fieldInfo.Expression.Type)
+                    {
+                        case OperatorType.Field:
+                            var name = QueryExpression.Extract(Query.QueryText, fieldInfo.Expression.Field);
+                            fields.Add(name);
+                            break;
+                        default:
+                            throw new NotImplementedException("TODO arek");
+                    }
+
+                    if (fieldInfo.Alias != null)
+                    {
+                        // TODO arek - we don't handle server side aliases at the moment
+                    }
+                }
+
+                SelectFields = fields.ToArray();
+            }
+
             if (Query.Where != null)
             {
                 new FillFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
             }
 
-            if (Query.OrderBy == null)
-                return;
-
-            OrderBy = new List<(string Name, OrderByFieldType OrderingType, bool Ascending)>(Query.OrderBy.Count);
-            foreach (var fieldInfo in Query.OrderBy)
-                OrderBy.Add((QueryExpression.Extract(Query.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+            if (Query.OrderBy != null)
+            {
+                OrderBy = new List<(string Name, OrderByFieldType OrderingType, bool Ascending)>(Query.OrderBy.Count);
+                foreach (var fieldInfo in Query.OrderBy)
+                    OrderBy.Add((QueryExpression.Extract(Query.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+            }
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)

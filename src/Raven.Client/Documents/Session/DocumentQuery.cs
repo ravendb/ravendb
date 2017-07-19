@@ -26,8 +26,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="DocumentQuery{T}"/> class.
         /// </summary>
-        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, FieldsToFetchToken fieldsToFetchToken, bool isMapReduce)
-            : base(session, indexName, collectionName, fieldsToFetchToken, isMapReduce)
+        public DocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isMapReduce)
+            : base(session, indexName, collectionName, isMapReduce)
         {
         }
 
@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Session
         public virtual IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
             where TTransformer : AbstractTransformerCreationTask, new()
         {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
         }
 
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
@@ -107,7 +107,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields, projections);
+            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         /// <summary>
@@ -714,7 +714,7 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TResult>(Transformer);
         }
 
         /// <summary>
@@ -1104,16 +1104,20 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, string[] fieldsToFetch, string[] projectionFields)
+        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
         {
+            if (newFieldsToFetch != null)
+                UpdateFieldsToFetchToken(newFieldsToFetch);
+
             var query = new DocumentQuery<TResult>(
                 TheSession,
                 IndexName,
                 CollectionName,
-                null,
                 IsMapReduce)
             {
                 PageSize = PageSize,
+                SelectTokens = SelectTokens,
+                FieldsToFetchToken = FieldsToFetchToken,
                 WhereTokens = WhereTokens,
                 OrderByTokens = OrderByTokens,
                 GroupByTokens = GroupByTokens,
@@ -1148,24 +1152,6 @@ namespace Raven.Client.Documents.Session
                 DefaultOperator = DefaultOperator,
                 ShouldExplainScores = ShouldExplainScores
             };
-
-            FieldsToFetchToken fieldsToFetchToken = null;
-            if (fieldsToFetch != null && fieldsToFetch.Length > 0)
-                fieldsToFetchToken = FieldsToFetchToken.Create(fieldsToFetch, projectionFields);
-
-            foreach (var token in SelectTokens)
-            {
-                if (token is FieldsToFetchToken)
-                {
-                    if (fieldsToFetchToken == null)
-                        continue;
-
-                    query.SelectTokens.AddLast(fieldsToFetchToken);
-                    continue;
-                }
-
-                query.SelectTokens.AddLast(token);
-            }
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);
             return query;

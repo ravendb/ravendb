@@ -14,8 +14,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        public string[] FieldsToFetch { get; set; }
-
         public QueryOperator DefaultOperator { get; set; }
 
         public string DefaultField { get; set; }
@@ -79,9 +77,6 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
-                            break;
-                        case "fetch":
-                            result.FieldsToFetch = item.Value;
                             break;
                         case "operator":
                             result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?

@@ -132,7 +132,7 @@ namespace Raven.Client.Documents.Session
         public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(IAsyncDocumentQuery<T> query, CancellationToken token = default(CancellationToken))
         {
             var documentQuery = (AsyncDocumentQuery<T>)query;
-            var projectionFields = documentQuery.ProjectionFields;
+            var projectionFields = documentQuery.FieldsToFetchToken?.Projections;
             var indexQuery = query.GetIndexQuery();
 
             var streamOperation = new StreamOperation(this);

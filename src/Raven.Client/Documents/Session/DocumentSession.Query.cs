@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Session
             if (isIndex == false && isCollection == false)
                 collectionName = Conventions.GetCollectionName(typeof(T));
 
-            return new DocumentQuery<T>(this, indexName, collectionName, fieldsToFetchToken: null, isMapReduce: isMapReduce);
+            return new DocumentQuery<T>(this, indexName, collectionName, isMapReduce: isMapReduce);
         }
 
         /// <summary>

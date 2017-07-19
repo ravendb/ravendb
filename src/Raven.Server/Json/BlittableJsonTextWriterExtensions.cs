@@ -498,32 +498,12 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.FieldsToFetch));
             var isFirstInternal = true;
-            if (query.FieldsToFetch != null)
-            {
-                writer.WriteStartArray();
-
-                foreach (var field in query.FieldsToFetch)
-                {
-                    if (isFirstInternal == false) writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(field);
-                }
-
-                writer.WriteEndArray();
-            }
-            else
-                writer.WriteNull();
-            writer.WriteComma();
 
             writer.WritePropertyName(nameof(query.HighlightedFields));
             writer.WriteStartArray();
             if (query.HighlightedFields != null)
             {
-                isFirstInternal = true;
                 foreach (var field in query.HighlightedFields)
                 {
                     if (isFirstInternal == false)

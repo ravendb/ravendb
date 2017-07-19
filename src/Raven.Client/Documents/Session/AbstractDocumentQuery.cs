@@ -74,16 +74,6 @@ namespace Raven.Client.Documents.Session
 
         protected Dictionary<string, object> QueryParameters = new Dictionary<string, object>();
 
-        /// <summary>
-        ///   The list of fields to project directly from the results
-        /// </summary>
-        protected internal readonly string[] ProjectionFields;
-
-        /// <summary>
-        ///   The list of fields to project directly from the index on the server
-        /// </summary>
-        protected readonly string[] FieldsToFetch;
-
         protected bool IsMapReduce;
         /// <summary>
         /// The session for this query
@@ -117,9 +107,11 @@ namespace Raven.Client.Documents.Session
 
         protected QueryOperation QueryOperation;
 
-        protected readonly LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
+        protected LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
 
         protected readonly FromToken FromToken;
+
+        protected internal FieldsToFetchToken FieldsToFetchToken;
 
         protected LinkedList<QueryToken> WhereTokens = new LinkedList<QueryToken>();
 
@@ -221,17 +213,11 @@ namespace Raven.Client.Documents.Session
         protected AbstractDocumentQuery(InMemoryDocumentSessionOperations session,
                                      string indexName,
                                      string collectionName,
-                                     FieldsToFetchToken fieldsToFetchToken,
                                      bool isMapReduce)
         {
-            ProjectionFields = fieldsToFetchToken?.Projections;
-            FieldsToFetch = fieldsToFetchToken?.FieldsToFetch;
             IsMapReduce = isMapReduce;
             IndexName = indexName;
             CollectionName = collectionName;
-
-            if (fieldsToFetchToken != null)
-                SelectTokens.AddLast(fieldsToFetchToken);
 
             FromToken = FromToken.Create(indexName, collectionName);
 
@@ -470,7 +456,7 @@ namespace Raven.Client.Documents.Session
                 IndexName,
                 CollectionName,
                 indexQuery,
-                ProjectionFields,
+                FieldsToFetchToken?.Projections,
                 TheWaitForNonStaleResults,
                 Timeout,
                 TransformResultsFunc,
@@ -493,7 +479,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public IEnumerable<string> GetProjectionFields()
         {
-            return ProjectionFields ?? Enumerable.Empty<string>();
+            return FieldsToFetchToken?.Projections ?? Enumerable.Empty<string>();
         }
 
         /// <summary>
@@ -1793,6 +1779,36 @@ If you really want to do in memory filtering on the data returned from the query
             var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);
             return parameterName;
+        }
+
+        protected void UpdateFieldsToFetchToken(FieldsToFetchToken fieldsToFetch)
+        {
+            FieldsToFetchToken = fieldsToFetch;
+
+            if (SelectTokens.Count == 0)
+            {
+                SelectTokens.AddLast(fieldsToFetch);
+            }
+            else
+            {
+                var current = SelectTokens.First;
+                var replaced = false;
+
+                while (current != null)
+                {
+                    if (current.Value is FieldsToFetchToken)
+                    {
+                        current.Value = fieldsToFetch;
+                        replaced = true;
+                        break;
+                    }
+
+                    current = current.Next;
+                }
+
+                if (replaced == false)
+                    SelectTokens.AddLast(fieldsToFetch);
+            }
         }
     }
 }

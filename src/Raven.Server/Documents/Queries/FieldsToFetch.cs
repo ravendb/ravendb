@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries
         public readonly bool IsTransformation;
 
         public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition, Transformer transformer)
-            : this(query.FieldsToFetch, indexDefinition, transformer)
+            : this(query.Metadata.SelectFields, indexDefinition, transformer)
         {
             IsDistinct = query.IsDistinct && IsProjection;
         }
