@@ -4,8 +4,8 @@ import router = require("plugins/router");
 import savePeriodicBackupConfigurationCommand = require("commands/database/tasks/savePeriodicBackupConfigurationCommand");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
-import getDrivesInfo = require("commands/database/tasks/getDrivesInfo");
-import testPeriodicBackupCredentials = require("commands/database/tasks/testPeriodicBackupCredentials");
+import getDrivesInfoCommand = require("commands/database/tasks/getDrivesInfoCommand");
+import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
 
@@ -43,7 +43,6 @@ class editPeriodicBackupTask extends viewModelBase {
             this.configuration(periodicBackupConfiguration.empty());
             this.getDrivesInfo().done(drivesInfo => this.configuration().localSettings().updateDrivesInfo(drivesInfo))
                 .always(() => deferred.resolve());
-            deferred.resolve();
         }
 
         this.addS3Popover();
@@ -62,7 +61,7 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     private getDrivesInfo(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.DrivesInfo> {
-        return new getDrivesInfo(this.activeDatabase()).execute();
+        return new getDrivesInfoCommand(this.activeDatabase()).execute();
     }
 
     addS3Popover() {
@@ -97,7 +96,7 @@ class editPeriodicBackupTask extends viewModelBase {
         }
 
         bs.isTestingCredentials(true);
-        new testPeriodicBackupCredentials(this.activeDatabase(), bs.connectionType, bs.toDto())
+        new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
             .execute()
             .always(() => bs.isTestingCredentials(false));
     }

@@ -161,13 +161,7 @@ class periodicBackupConfiguration {
             let key = isFull ? this.fullBackupFrequency() : this.incrementalBackupFrequency();
 
             const options = this.allBackupFrequencyOptions
-                .filter(x => isFull ? x.full : x.incremental)
-                .map(x => {
-                    return {
-                        label: x.label,
-                        value: x.value
-                    }
-                });
+                .filter(x => isFull ? x.full : x.incremental);
 
             if (key) {
                 key = key.toLowerCase();

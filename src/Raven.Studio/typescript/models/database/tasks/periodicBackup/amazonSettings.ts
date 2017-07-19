@@ -37,7 +37,7 @@ abstract class amazonSettings extends backupSettings {
 
         const lowerCaseRegionName = !dto.AwsRegionName ? "" : dto.AwsRegionName.toLowerCase();
         const region = this.availableAwsRegionEndpoints.find(x => x.value === lowerCaseRegionName);
-        this.selectedAwsRegion(!!region ? (region.label + " - " + region.value) : dto.AwsRegionName);
+        this.selectedAwsRegion(!!region ? this.getDisplayRegionName(region) : dto.AwsRegionName);
 
         this.initAmazonValidation();
 
@@ -48,7 +48,7 @@ abstract class amazonSettings extends backupSettings {
             const newSelectedAwsRegionLowerCase = newSelectedAwsRegion.toLowerCase();
             const foundRegion = this.availableAwsRegionEndpoints.find(x =>
                 this.getDisplayRegionName(x).toLowerCase() === newSelectedAwsRegionLowerCase);
-            if (!!foundRegion)
+            if (foundRegion)
                 return;
 
             this.awsRegionName(newSelectedAwsRegion.trim());
@@ -68,7 +68,7 @@ abstract class amazonSettings extends backupSettings {
 
                         const foundRegion = this.availableAwsRegionEndpoints.find(x =>
                             this.getDisplayRegionName(x).toLowerCase() === awsRegionName);
-                        if (!!foundRegion)
+                        if (foundRegion)
                             return true;
 
                         if (!awsRegionName.includes("-") ||

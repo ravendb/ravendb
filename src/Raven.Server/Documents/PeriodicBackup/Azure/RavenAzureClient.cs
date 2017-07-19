@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
         {
             if (stream.Length > TotalBlocksSizeLimitInBytes)
-                throw new InvalidOperationException($"Can't upload more than 4.75TB to Azure, current upload size: {stream.Length/1024D/1024/1024/1024}TB");
+                throw new InvalidOperationException($"Can't upload more than 4.75TB to Azure, current upload size: {new Size(stream.Length).HumaneSize}");
 
             var threads = ProcessorInfo.ProcessorCount/2 + 1;
             //max size of in memory queue is: 500MB
