@@ -453,7 +453,7 @@ namespace Raven.Server.Documents.Revisions
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
             long revisionEtag = 0;
-            if (table.ReadByKey(key, out TableValueReader tvr) == false)
+            if (table.ReadByKey(key, out TableValueReader tvr))
             {
                 revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
                 table.Delete(tvr.Id);
