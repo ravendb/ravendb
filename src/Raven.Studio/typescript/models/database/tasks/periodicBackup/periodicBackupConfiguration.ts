@@ -3,6 +3,7 @@ import localSettings = require("models/database/tasks/periodicBackup/localSettin
 import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
+import cronstrue = require("cronstrue")
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
@@ -84,7 +85,7 @@ class periodicBackupConfiguration {
         }
 
         try {
-            const result = cRonstrue.toString(currentBackupFrequency.toUpperCase());
+            const result = cronstrue.toString(currentBackupFrequency.toUpperCase());
             if (result.includes("undefined")) {
                 backupParsingError("Invalid cron expression!");
                 return null;
