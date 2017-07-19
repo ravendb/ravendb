@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations
 
         public TResult Send<TResult>(IOperation<TResult> operation, int? sessionId = null)
         {
-            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionId:sessionId));
+            return AsyncHelpers.RunSync(() => SendAsync(operation, sessionId: sessionId));
         }
 
         public Task SendAsync(IOperation operation, CancellationToken token = default(CancellationToken), int? sessionId = null)
