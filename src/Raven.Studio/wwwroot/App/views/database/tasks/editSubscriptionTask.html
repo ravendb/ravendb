@@ -59,7 +59,7 @@
                             <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
                             <div class="toggle">
                                 <input id="toggle-transform-script" type="checkbox" data-bind="checked: applyScript">
-                                <label for="toggle-transform-script">Apply Transform Script&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                                <label for="toggle-transform-script">Apply Transform Script <i class="icon-info text-info" id="scriptInfo"></i></label>
                             </div>
                             <div id="collapseTransformScript" data-bind="collapse: applyScript">
                                 <!--TODO : ace editor, add script validations - see issue 7795-->
@@ -137,8 +137,8 @@
                                     <i class="icon-table"></i><span>Display</span>
                                     <span class="caret"></span>
                                 </button>
-                                <div class="dropdown-menu colselect-dropdown slidein-style" role="menu">
-                                    TODO:
+                                <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                    <div data-bind="compose: $root.columnsSelector"></div>
                                 </div>
                             </div>
                         </div>
