@@ -36,6 +36,8 @@ namespace Voron.Impl
 
         public IEnumerable<Table> Tables => _tables == null ? Enumerable.Empty<Table>() : _tables.Values;
 
+        public bool IsWriteTransaction => _lowLevelTransaction.Flags == TransactionFlags.ReadWrite;
+
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
             _lowLevelTransaction = lowLevelTransaction;
@@ -85,7 +87,7 @@ namespace Voron.Impl
             return null;
         }
 
-        private static unsafe void ThrowInvalidTreeType(Slice treeName, RootObjectType type, TreeRootHeader* header)
+        private static void ThrowInvalidTreeType(Slice treeName, RootObjectType type, TreeRootHeader* header)
         {
             throw new InvalidOperationException($"Tried to open {treeName} as a {type}, but it is actually a " +
                                                 header->RootObjectType);

@@ -1,26 +1,23 @@
-// -----------------------------------------------------------------------
-//  <copyright file="LazyMoreLikeThisOperation.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using System;
+using System.Globalization;
+using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session.Operations.Lazy
 {
-    internal class LazyMoreLikeThisOperation<T> : ILazyOperation
+    internal class LazySuggestionOperation : ILazyOperation
     {
-        private readonly MoreLikeThisQuery _query;
-        private readonly MoreLikeThisOperation _operation;
+        private readonly SuggestionQuery _query;
+        private readonly SuggestionOperation _operation;
 
-        public LazyMoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
+        public LazySuggestionOperation(InMemoryDocumentSessionOperations session, SuggestionQuery query)
         {
             _query = query;
-            _operation = new MoreLikeThisOperation(session, query);
+            _operation = new SuggestionOperation(session, query);
         }
 
         public GetRequest CreateRequest()
@@ -53,10 +50,10 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
                 return;
             }
 
-            var result = JsonDeserializationClient.MoreLikeThisQueryResult((BlittableJsonReaderObject)response.Result);
+            var result = JsonDeserializationClient.SuggestQueryResult((BlittableJsonReaderObject)response.Result);
             _operation.SetResult(result);
 
-            Result = _operation.Complete<T>();
+            Result = _operation.Complete();
         }
     }
 }

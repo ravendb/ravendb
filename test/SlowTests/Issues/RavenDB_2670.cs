@@ -54,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void MaxSuggestionsShouldWork()
         {
             using (var store = GetDocumentStore())
