@@ -137,7 +137,7 @@ fi
 RESULT=$(cat ${RESULT_FILE}.tmp | awk '{print $2}' | cut -f1 -d'.')
 
 if [[ ${RESULT} -lt ${RES_MIN_WRITE_PER_SEC} ]]; then
-	logerror 12 "Got ${RESULT} writes per sec while minimum is: ${RES_MIN_WRITE_PER_SEC}" ${PSNUM}
+	logerror "exit_code_3" "Got ${RESULT} writes per sec while minimum is: ${RES_MIN_WRITE_PER_SEC}" ${PSNUM}
 fi
 
 
