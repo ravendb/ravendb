@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("The document id or map group fields are mandatory");
 
             var sw = Stopwatch.StartNew();
-            var index = GetIndex(query.IndexName);
+            var index = GetIndex(query.Metadata.IndexName);
 
             if (existingResultEtag.HasValue)
             {

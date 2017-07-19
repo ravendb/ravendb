@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteMoreLikeThisQueryResult(context, result, out numberOfResults);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.IndexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(MoreLikeThis)} ({query.Metadata.IndexName})", HttpContext, numberOfResults, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
         private async Task Explain(DocumentsOperationContext context, HttpMethod method)

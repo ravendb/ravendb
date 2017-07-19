@@ -21,8 +21,8 @@ namespace Raven.Client.Documents.Session.Operations
             _session = session ?? throw new ArgumentNullException(nameof(session));
             _query = query ?? throw new ArgumentNullException(nameof(query));
 
-            if (_query.IndexName == null)
-                throw new ArgumentNullException(nameof(query.IndexName));
+            if (_query.Query == null)
+                throw new ArgumentNullException(nameof(query.Query));
         }
 
         public MoreLikeThisCommand CreateRequest()

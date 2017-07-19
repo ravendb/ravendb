@@ -39,19 +39,22 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
+                    var indexName = new Posts_ByPostCategory().IndexName;
+
                     Assert.NotEmpty(session.Advanced
-                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery()
+                        .MoreLikeThis<MockPost>(new MoreLikeThisQuery
                         {
+                            Query = $"FROM INDEX '{indexName}'",
                             DocumentId = "posts/123",
                             Fields = new[] { "Body" }
                         }).ToList());
 
                     Assert.Empty(session.Advanced
-                        .MoreLikeThis<MockPost, Posts_ByPostCategory>(new MoreLikeThisQuery()
+                        .MoreLikeThis<MockPost>(new MoreLikeThisQuery
                         {
+                            Query = $"FROM INDEX '{indexName}' WHERE Category = 'IT'",
                             DocumentId = "posts/123",
-                            Fields = new[] { "Body" },
-                            AdditionalQuery = "Category:IT"
+                            Fields = new[] { "Body" }
                         }).ToList());
                 }
             }

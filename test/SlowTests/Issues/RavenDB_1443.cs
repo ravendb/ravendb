@@ -80,9 +80,9 @@ namespace SlowTests.Issues
             {
                 var oldRequests = session.Advanced.NumberOfRequests;
 
-                var moreLikeThisLazy = session.Advanced.Lazily.MoreLikeThis<Article>(new MoreLikeThisQuery()
+                var moreLikeThisLazy = session.Advanced.Lazily.MoreLikeThis<Article>(new MoreLikeThisQuery
                 {
-                    IndexName = index.IndexName,
+                    Query = $"FROM INDEX '{index.IndexName}'",
                     DocumentId = "articles/0",
                     MinimumTermFrequency = 0,
                     MinimumDocumentFrequency = 0,

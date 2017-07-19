@@ -20,6 +20,9 @@ namespace Raven.Server.Documents.Queries
 
         public bool IsDistinct { get; set; }
 
+        [JsonIgnore]
+        public QueryMetadata Metadata { get; private set; }
+
         public IndexQueryServerSide()
         {
         }
@@ -138,8 +141,5 @@ namespace Raven.Server.Documents.Queries
             result.Metadata = new QueryMetadata(result.Query, null);
             return result;
         }
-
-        [JsonIgnore]
-        public QueryMetadata Metadata { get; private set; }
     }
 }

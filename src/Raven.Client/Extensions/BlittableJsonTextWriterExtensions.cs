@@ -43,20 +43,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (string.IsNullOrEmpty(query.AdditionalQuery) == false)
-            {
-                writer.WritePropertyName(nameof(query.AdditionalQuery));
-                writer.WriteString(query.AdditionalQuery);
-                writer.WriteComma();
-            }
-
-            if (string.IsNullOrEmpty(query.IndexName) == false)
-            {
-                writer.WritePropertyName(nameof(query.IndexName));
-                writer.WriteString(query.IndexName);
-                writer.WriteComma();
-            }
-
             if (string.IsNullOrEmpty(query.StopWordsDocumentId) == false)
             {
                 writer.WritePropertyName(nameof(query.StopWordsDocumentId));
@@ -139,11 +125,15 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            writer.WritePropertyName(nameof(query.MinimumWordLength));
             if (query.MinimumWordLength.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MinimumWordLength));
                 writer.WriteInteger(query.MinimumWordLength.Value);
-            else
-                writer.WriteNull();
+                writer.WriteComma();
+            }
+
+            writer.WritePropertyName(nameof(query.Query));
+            writer.WriteString(query.Query);
 
             writer.WriteEndObject();
         }

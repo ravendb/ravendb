@@ -93,15 +93,10 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public string DocumentId { get; set; }
 
         /// <summary>
-        /// The name of the index to use for this operation
-        /// </summary>
-        public string IndexName { get; set; }
-
-        /// <summary>
         /// An additional query that the matching documents need to also
         /// match to be returned. 
         /// </summary>
-        public string AdditionalQuery { get; set; }
+        public string Query { get; set; }
 
         /// <summary>
         /// Values for the mapping group fields to use as the basis for comparison

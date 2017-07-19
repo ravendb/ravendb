@@ -6,10 +6,12 @@
 
 using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Operations;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
@@ -25,17 +27,7 @@ namespace Raven.Client.Documents.Session
                 throw new ArgumentNullException(nameof(documentId));
 
             var index = new TIndexCreator();
-            return MoreLikeThisAsync<T>(new MoreLikeThisQuery { IndexName = index.IndexName, DocumentId = documentId });
-        }
-
-        public Task<List<T>> MoreLikeThisAsync<T, TIndexCreator>(MoreLikeThisQuery query) where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            var index = new TIndexCreator();
-            query.IndexName = index.IndexName;
-            return MoreLikeThisAsync<T>(query);
+            return MoreLikeThisAsync<T>(new MoreLikeThisQuery { Query = CreateQuery(index.IndexName), DocumentId = documentId });
         }
 
         public Task<List<T>> MoreLikeThisAsync<TTransformer, T, TIndexCreator>(string documentId, Dictionary<string, object> transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
@@ -48,7 +40,7 @@ namespace Raven.Client.Documents.Session
 
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery
             {
-                IndexName = index.IndexName,
+                Query = CreateQuery(index.IndexName),
                 Transformer = transformer.TransformerName,
                 TransformerParameters = transformerParameters
             });
@@ -62,7 +54,7 @@ namespace Raven.Client.Documents.Session
             var index = new TIndexCreator();
             var transformer = new TTransformer();
 
-            query.IndexName = index.IndexName;
+            query.Query = CreateQuery(index.IndexName);
             query.Transformer = transformer.TransformerName;
 
             return MoreLikeThisAsync<T>(query);
@@ -72,7 +64,7 @@ namespace Raven.Client.Documents.Session
         {
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery
             {
-                IndexName = index,
+                Query = CreateQuery(index),
                 DocumentId = documentId,
                 Transformer = transformer,
                 TransformerParameters = transformerParameters
@@ -93,6 +85,16 @@ namespace Raven.Client.Documents.Session
             operation.SetResult(result);
 
             return operation.Complete<T>();
+        }
+
+        private static string CreateQuery(string indexName)
+        {
+            var fromToken = FromToken.Create(indexName, null);
+
+            var sb = new StringBuilder();
+            fromToken.WriteTo(sb);
+
+            return sb.ToString();
         }
     }
 }

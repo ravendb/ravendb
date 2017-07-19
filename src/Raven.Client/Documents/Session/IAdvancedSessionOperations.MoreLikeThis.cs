@@ -18,8 +18,6 @@ namespace Raven.Client.Documents.Session
     {
         List<T> MoreLikeThis<T, TIndexCreator>(string documentId) where TIndexCreator : AbstractIndexCreationTask, new();
 
-        List<T> MoreLikeThis<T, TIndexCreator>(MoreLikeThisQuery query) where TIndexCreator : AbstractIndexCreationTask, new();
-
         List<T> MoreLikeThis<TTransformer, T, TIndexCreator>(string documentId, Dictionary<string, object> transformerParameters = null)
             where TIndexCreator : AbstractIndexCreationTask, new()
             where TTransformer : AbstractTransformerCreationTask, new();
