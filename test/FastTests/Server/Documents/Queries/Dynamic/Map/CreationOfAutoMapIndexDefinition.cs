@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Tags[].Name"));
-            Assert.Equal("Auto/Users/ByTags___Name", definition.Name);
+            Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
         }
 
 

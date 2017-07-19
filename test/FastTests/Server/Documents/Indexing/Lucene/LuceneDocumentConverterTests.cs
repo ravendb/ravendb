@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using Lucene.Net.Documents;
+﻿using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -257,7 +256,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
                 new IndexField
                 {
-                    Name = "Companies,Products,Name",
+                    Name = "Companies[].Products[].Name",
                     Storage = FieldStorage.No
                 },
             });

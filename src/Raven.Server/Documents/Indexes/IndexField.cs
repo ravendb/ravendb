@@ -31,11 +31,17 @@ namespace Raven.Server.Documents.Indexes
             const int Zero = '0';
             const int Nine = '9';
             const int Underscore = '_';
+            const int CollectionSeparator_1 = '[';
+            const int CollectionSeparator_2 = ']';
+            const int CollectionSeparator_3 = '.';
 
             if (string.IsNullOrEmpty(field))
                 return field;
 
             char[] input = null;
+
+            var resultLength = field.Length;
+            var collectionSeparatorShift = 0;
 
             for (var i = 0; i < field.Length; i++)
             {
@@ -58,10 +64,22 @@ namespace Raven.Server.Documents.Indexes
                     field.CopyTo(0, input, 0, field.Length);
                 }
 
-                input[i] = '_';
+                input[i + collectionSeparatorShift] = '_';
+
+                if (ch == CollectionSeparator_1 && (i + 2) < field.Length && field[i + 1] == CollectionSeparator_2 && field[i + 2] == CollectionSeparator_3)
+                {
+                    // found collection separator  "[]."
+                    // let's replace it to single '_' character 
+
+                    field.CopyTo(i + 3, input, i + collectionSeparatorShift + 1, field.Length - (i + 3));
+
+                    collectionSeparatorShift -= 2;
+                    i += 2;
+                    resultLength -= 2;
+                }
             }
 
-            return input == null ? field : new string(input);
+            return input == null ? field : new string(input, 0, resultLength);
         }
 
         public IndexField()
