@@ -808,22 +808,8 @@ namespace Raven.Server.ServerWide
         {
             using (context.OpenWriteTransaction())
             {
-                var listOfDatabaseName = GetDatabaseNames(context).ToList();
-                //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
-                var onDatabaseChanged = DatabaseChanged;
-                if (onDatabaseChanged != null)
-                {
-                    _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
-                    TaskExecutor.Execute(_ =>
-                    {
-                        foreach (var db in listOfDatabaseName)
-                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
-                    }, null);
-                }
-
                 // Lets read all the certificate keys from the cluster, and delete the matching ones from the local state
                 var clusterCertificateKeys = serverStore.Cluster.ItemKeysStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
-
 
                 foreach (var key in clusterCertificateKeys)
                 {
@@ -834,7 +820,22 @@ namespace Raven.Server.ServerWide
                         DeleteLocalState(context, key);
                     }
                 }
+                //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                var onDatabaseChanged = DatabaseChanged;
+                if (onDatabaseChanged != null)
+                {
+                    var listOfDatabaseName = GetDatabaseNames(context).ToList();
+                    TaskExecutor.Execute(_ =>
+                    {
+                        foreach (var db in listOfDatabaseName)
+                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
+                    }, null);
+                }
+
+                context.Transaction.Commit();
             }
+            
+            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
         }
     }
 
