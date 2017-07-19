@@ -84,7 +84,7 @@ class periodicBackupConfiguration {
         }
 
         try {
-            const result = cRonstrue.toString(currentBackupFrequency.toUpperCase());
+            const result = cronstrue.toString(currentBackupFrequency.toUpperCase());
             if (result.includes("undefined")) {
                 backupParsingError("Invalid cron expression!");
                 return null;

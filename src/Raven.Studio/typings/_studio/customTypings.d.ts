@@ -89,7 +89,7 @@ interface Cronstrue {
     toString(string: string): string;
 }
 
-declare var cRonstrue: Cronstrue;
+declare var cronstrue: Cronstrue;
 
 interface Spinner {
     stop() :void;
