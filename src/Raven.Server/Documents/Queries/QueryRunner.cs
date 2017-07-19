@@ -340,7 +340,7 @@ namespace Raven.Server.Documents.Queries
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
         {
-            return new IndexQueryServerSide
+            return new IndexQueryServerSide(query.Metadata)
             {
                 Query = query.Query,
                 Start = query.Start,
@@ -351,7 +351,8 @@ namespace Raven.Server.Documents.Queries
                 HighlightedFields = query.HighlightedFields,
                 HighlighterKeyName = query.HighlighterKeyName,
                 TransformerParameters = query.TransformerParameters,
-                Transformer = query.Transformer
+                Transformer = query.Transformer,
+                QueryParameters = query.QueryParameters
             };
         }
 
