@@ -20,7 +20,7 @@ namespace Raven.Client.Extensions
         public static Type ExtractTypeFromPath<T>(this Expression<Func<T, object>> path)
         {
             var propertySeparator = '.';
-            var collectionSeparator = ',';
+            var collectionSeparator = "[].";
             var collectionSeparatorAsString = collectionSeparator.ToString();
             var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
             var properties = propertyPath.Split(propertySeparator);
@@ -75,16 +75,16 @@ namespace Raven.Client.Extensions
         ///</summary>
         public static string ToPropertyPath(this LambdaExpression expr,
             char propertySeparator = '.',
-            char collectionSeparator = ',')
+            string collectionSeparator = "[].")
         {
             var expression = expr.Body;
 
             return expression.ToPropertyPath(propertySeparator, collectionSeparator);
         }
 
-        public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', char collectionSeparator = ',')
+        public static string ToPropertyPath(this Expression expression, char propertySeparator = '.', string collectionSeparator = "[].")
         {
-            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator.ToString());
+            var propertyPathExpressionVisitor = new PropertyPathExpressionVisitor(propertySeparator.ToString(), collectionSeparator);
             propertyPathExpressionVisitor.Visit(expression);
 
             var builder = new StringBuilder();
@@ -99,7 +99,7 @@ namespace Raven.Client.Extensions
                 {
                     var nextVal = propertyPathExpressionVisitor.Results.Peek();
 
-                    if (nextVal.Length == 1 && nextVal[0] == collectionSeparator)
+                    if (nextVal.Length == collectionSeparator.Length && nextVal.Equals(collectionSeparator, StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }
@@ -108,7 +108,7 @@ namespace Raven.Client.Extensions
                 builder.Append(curValue);
 
             }
-            return builder.ToString().Trim(propertySeparator, collectionSeparator);
+            return builder.ToString().Trim(propertySeparator, collectionSeparator[0], collectionSeparator[1], collectionSeparator[2]);
         }
 
         internal class PropertyPathExpressionVisitor : ExpressionVisitor
