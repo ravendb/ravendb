@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
-            private  Guid _dbDd;
+            private Guid _dbId;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate()
             {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbDd) == false)
+                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbId) == false)
                     return false;
 
                 return _replicationBatchReply.CurrentEtag > 0;
@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Replication
                     return 0;
 
 
-                return context.UpdateLastDatabaseChangeVector(_dbDd, _replicationBatchReply.CurrentEtag) ? 1 : 0;
+                return context.UpdateLastDatabaseChangeVector(_dbId, _replicationBatchReply.CurrentEtag) ? 1 : 0;
             }
         }
         
