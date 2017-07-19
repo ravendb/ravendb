@@ -9,13 +9,15 @@ namespace Raven.Client.Server.Commands
     {
         public string NodeTag;
         public string TopologyId;
+        public string Certificate;
+        public string ClusterStatus;
     }
 
     class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/cluster/node-info";
+            url = $"{node.Url}/cluster/node-info";
 
             return new HttpRequestMessage
             {

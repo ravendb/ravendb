@@ -1,11 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
 using Raven.Client.Server.Commands;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -67,6 +72,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
+                    json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ServerCertificateHolder.CertificateForClients;
                     json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
                 }
                 context.Write(writer, json);
@@ -175,7 +181,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}&expectedThumbrpint={thumbprint:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
@@ -206,6 +212,38 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
+
+                        if (serverUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                        {
+                            if (nodeInfo.Certificate == null)
+                                throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
+
+                            var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
+                            
+                            if (certificate.NotBefore > DateTime.UtcNow)
+                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+
+                            if (certificate.NotAfter < DateTime.UtcNow)
+                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
+
+                            var expected = GetStringQueryString("expectedThumbrpint", required: false);
+                            if (expected != null)
+                            {
+                                if (certificate.Thumbprint != expected)
+                                    throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
+                            }
+
+                            var certificateDefinition = new CertificateDefinition
+                            {
+                                Certificate = nodeInfo.Certificate,
+                                Thumbprint = certificate.Thumbprint
+                            };
+
+                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                            await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                        }
+
+                        
                         await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
