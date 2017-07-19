@@ -6,8 +6,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Sparrow.Json;
 
@@ -28,6 +30,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDictionary<string, object> ExternalState { get; }
 
+        Task<ServerNode> GetCurrentSessionNode();
+        
         RequestExecutor RequestExecutor { get; }
         JsonOperationContext Context { get; }
 

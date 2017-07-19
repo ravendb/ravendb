@@ -11,7 +11,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     script = ko.observable<string>();
     fromChangeVector = ko.observableArray<Raven.Client.Documents.Replication.Messages.ChangeVectorEntry>([]); 
-    includeRevisions = ko.observable<boolean>(true);
+    applyScript = ko.observable<boolean>(true); 
+    includeRevisions = ko.observable<boolean>(false);
     areRevisionsDefinedForCollection = ko.observable<boolean>(true);
 
     startingPointType = ko.observable<subscriptionStartType>();
@@ -25,6 +26,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
         super(dto);
 
+        dto.Criteria.Script = dto.Criteria.Script || ""; 
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
         this.editViewInitValidation();
@@ -43,8 +45,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             return this.startingPointType() === "Latest Document";
         });
 
-        this.collection.subscribe(() => { this.getCollectionRevisionsSettings(); });
-        this.includeRevisions.subscribe(include => { if (include) { this.getCollectionRevisionsSettings(); } });
+        this.collection.throttle(250).subscribe(() => { this.getCollectionRevisionsSettings(); }); 
+        this.includeRevisions.throttle(250).subscribe(include => { if (include && this.collection()) { this.getCollectionRevisionsSettings(); } });
     }
 
     editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
@@ -54,37 +56,45 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     }
 
     dataFromUI(): subscriptionDataFromUI {
+        const script = this.applyScript() ? this.script() : null;
+
         return {
             TaskName: this.taskName(),
             ChangeVectorEntry: null,
             // TODO:  Note: null means that we define with 'Beginning of Time'. This is temporary, until the other 2 options are implemented 
             Collection: this.collection(), 
-            Script: this.script(),
+            Script: script,
             IncludeRevisions: this.includeRevisions()
         }
     }
 
     editViewInitValidation() {
+
         this.collection.extend({
-            required: true,
-            validation: [
-                {
-                    validator: (val: string) => _.find(this.collections(), x => x.name === val),
-                    message: "Collection doesn't exist"
-                }
-            ]
+            required: true
+        });
+
+        this.script.extend({
+            required: {
+                onlyIf: () => this.applyScript()
+            }
         });
 
         this.includeRevisions.extend({
             validation: [
                 {
-                    validator: (val: boolean) => !this.includeRevisions() || this.areRevisionsDefinedForCollection(),
+                    validator: () => this.collection(),
+                    message: "Collection is not selected"
+                },
+                {
+                    validator: () => !this.includeRevisions() || this.areRevisionsDefinedForCollection(),
                     message: "Revisions are not set for this collection"
                 }]
         });
 
         this.validationGroup = ko.validatedObservable({
             collection: this.collection,
+            script: this.script,
             includeRevisions: this.includeRevisions
         });
     }
@@ -93,7 +103,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     getCollectionRevisionsSettings() {
         return new getRevisionsConfigurationCommand(this.activeDatabase())
             .execute()
-            .done((revisionsConfig: Raven.Client.Server.Versioning.VersioningConfiguration) => {
+            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => {
                 if (revisionsConfig) {
                     let revisionIsSet: boolean = false;
 
@@ -117,13 +127,29 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             });
     }
 
+    createCollectionNameAutocompleter(item: ongoingTaskSubscriptionEditModel) {
+        return ko.pureComputed(() => {
+            const key = item.collection();
+
+            const options = this.collections()
+                .filter(x => !x.isAllDocuments && !x.isSystemDocuments && !x.name.startsWith("@"))
+                .map(x => x.name);
+
+            if (key) {
+                return options.filter(x => x.toLowerCase().includes(key.toLowerCase()));
+            } else {
+                return options;
+            }
+        });
+    }
+
     static empty(): ongoingTaskSubscriptionEditModel {
         return new ongoingTaskSubscriptionEditModel(
             {
                 Disabled: false,
                 Criteria: {
                      Collection: null,
-                     Script: null,
+                     Script: "",
                      IncludeRevisions: false
                 },
                 ChangeVector: [],

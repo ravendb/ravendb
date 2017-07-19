@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -107,12 +108,13 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation1 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person>("Person/ByName", x => x.Name == "Bob"));
+                var operation1 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person>("Person/ByName", x => x.Name == "Bob"),
+                    CancellationToken.None);
                 await operation1.WaitForCompletionAsync();
 
                 WaitForIndexing(store);
 
-                var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35));
+                var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35),CancellationToken.None);
                 await operation2.WaitForCompletionAsync();
 
                 using (var session = store.OpenAsyncSession())

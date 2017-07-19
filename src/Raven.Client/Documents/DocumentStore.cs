@@ -61,31 +61,6 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
-        /// Set document store settings based on a given connection string.
-        /// </summary>
-        /// <param name="connString">The connection string to parse</param>
-        public void ParseConnectionString(string connString)
-        {
-            var connectionStringOptions = ConnectionStringParser<RavenConnectionStringOptions>.FromConnectionString(connString);
-            connectionStringOptions.Parse();
-            SetConnectionStringSettings(connectionStringOptions.ConnectionStringOptions);
-        }
-
-        /// <summary>
-        /// Copy the relevant connection string settings
-        /// </summary>
-        protected virtual void SetConnectionStringSettings(RavenConnectionStringOptions options)
-        {
-            if (options.Urls.Count > 0)
-                Urls = options.Urls.ToArray();
-            if (string.IsNullOrEmpty(options.Database) == false)
-                Database = options.Database;
-            if (string.IsNullOrEmpty(options.ApiKey) == false)
-                ApiKey = options.ApiKey;
-
-        }
-
-        /// <summary>
         /// Performs application-defined tasks associated with freeing, releasing, or resetting unmanaged resources.
         /// </summary>
         public override void Dispose()
@@ -181,13 +156,13 @@ namespace Raven.Client.Documents
             lazy = Conventions.DisableTopologyUpdates == false
                 ? new Lazy<RequestExecutor>(() =>
                 {
-                    var requestExecutor = RequestExecutor.Create(Urls, database, ApiKey, Conventions);
+                    var requestExecutor = RequestExecutor.Create(Urls, database, Certificate, Conventions);
                     RequestExecutorCreated?.Invoke(this, requestExecutor);
                     return requestExecutor;
                 })
                 : new Lazy<RequestExecutor>(() =>
                 {
-                    var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, ApiKey, Conventions);
+                    var forSingleNode = RequestExecutor.CreateForSingleNodeWithConfigurationUpdates(Urls[0], database, Certificate, Conventions);
                     RequestExecutorCreated?.Invoke(this, forSingleNode);
                     return forSingleNode;
                 });

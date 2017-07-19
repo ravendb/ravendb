@@ -23,12 +23,12 @@ namespace SlowTests.Issues
             var dictionary = classes.ToDictionary(x => x, x => x.GetTypeInfo().BaseType);
 
             var sb = new StringBuilder();
-            foreach (var baseType in dictionary.Values)
+            foreach (var kvp in dictionary)
             {
-                if (dictionary.TryGetValue(baseType, out Type type) == false)
+                if (dictionary.TryGetValue(kvp.Value, out var _) == false)
                     continue;
 
-                sb.Append($"Class '{type.FullName}' inherits from '{baseType.FullName}'");
+                sb.Append($"Class '{kvp.Key.FullName}' inherits from '{kvp.Value.FullName}'");
             }
 
             if (sb.Length == 0)

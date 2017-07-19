@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -23,7 +24,7 @@ namespace SlowTests.Server.Basic
                     await session.SaveChangesAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteCollectionOperation("Users"));
+                var operation = await store.Operations.SendAsync(new DeleteCollectionOperation("Users"),CancellationToken.None);
                 await operation.WaitForCompletionAsync();
 
                 var stats = await store.Admin.SendAsync(new GetStatisticsOperation());

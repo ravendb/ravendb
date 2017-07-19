@@ -70,48 +70,37 @@
 
                 <div data-bind="if: replicationTasks().length > 0 && (selectedTaskType() === 'External Replication' || selectedTaskType() === 'All tasks' )">
                     <div class="hr-title">
-                        <h5>EXTERNAL REPLICATION</h5><hr>
+                        <h5><i class="icon-external-replication"></i> <span>EXTERNAL REPLICATION</span></h5><hr>
                     </div>
                     <div data-bind="foreach: replicationTasks">
                         <div class="panel destination-item external-replication" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
-                            <!-- TODO: this is a temporary place for the Task Name title - waiting for Rafal input.. -->
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info">
-                                <div class="info-container flex-horizontal">
+                            <div class="padding padding-sm destination-info flex-vertical">
+                                <div class="flex-horizontal">
 
-                                    <div class="checkbox">
+                                    <div class="checkbox panel-checkbox">
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="flex-grow">
-                                        <div class="flex-horizontal margin-bottom">
-                                            <div class="task-name flex-grow">
+                                    <div class="flex-grow panel-name">
+                                        <div class="flex-horizontal">
+                                            <div class="panel-name flex-grow">
                                                 <h3>
                                                     <a href="#" data-bind="click: editTask" title="Edit task">
-                                                        <i class="icon-external-replication"></i><span data-bind="text: taskName"></span>
+                                                        <span data-bind="text: taskName"></span>
                                                     </a>
                                                 </h3>
-                                            </div>
-                                            <div class="status" data-bind="template: { name: 'status-template' }"></div>
-                                            <div data-bind="template: { name: 'actions-template' }"></div>
-                                        </div>
-
-                                        <div class="flex-horizontal">
-                                            <div class="destination">
-                                                <h5>DESTINATION</h5>
-                                                <h4>
-                                                    <span title="Destination database" class="location" data-bind="text: destinationDB() + ' @ '"></span>
-                                                    <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }">
-                                                        <span data-bind="text: destinationURL"></span>
-                                                    </a>
-                                                    
+                                                <div class="specs">
                                                     <!-- TODO: Change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
-                                                    <!-- TODO: If database name is very long than 'actions buttons' overflow to next line. Shorten db name and add '...' -->
-                                                </h4>
+                                                    <span title="Destination database" class="location" data-bind="text: destinationDB() + '@'"></span><a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }"><span data-bind="text: destinationURL"></span></a>
+                                                </div>
                                             </div>
-                                            <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>                                            
+
                                         </div>
                                     </div>
+                                    <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
+                                    <div class="status" data-bind="template: { name: 'status-template' }"></div>
+                                    <div data-bind="template: { name: 'actions-template' }"></div>
                                 </div>
                             </div>
                         </div>
@@ -119,7 +108,6 @@
                 </div>
 
                 <!-- etl -->
-            
                 <!-- TODO... -->
                 <!--<div data-bind="if: etlTasks().length > 0 && (selectedTaskType() === 'RavenDB ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -149,9 +137,7 @@
                             </div>
                         </div>
                     </div>-->
-            
                 <!-- sql -->
-            
                 <!-- TODO... -->
                 <!--<div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -181,9 +167,7 @@
                             </div>
                         </div>
                     </div>-->
-            
                 <!-- backup -->
-            
                 <!-- TODO... -->
                 <!--<div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
@@ -213,55 +197,50 @@
                             </div>
                         </div>
                     </div>-->
-            
                 <!-- subscription -->
-                
+
                 <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
                     <div class="hr-title">
-                        <h5>SUBSCRIPTION</h5><hr>
+                        <h5><i class="icon-subscription"></i> <span>SUBSCRIPTION</span></h5><hr>
                     </div>
                     <div data-bind="foreach: subscriptionTasks">
                         <div class="panel destination-item subscription" data-bind="if: responsibleNode().NodeTag === $parent.selectedNode() || $parent.selectedNode() === 'All nodes'">
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
-                            <div class="padding padding-sm destination-info">
-                                <div class="info-container flex-horizontal">
-                                    <div class="checkbox">
+                            <div class="padding padding-sm destination-info flex-vertical">
+                                <div class="flex-horizontal">
+                                    <div class="checkbox panel-checkbox">
                                         <input type="checkbox" class="styled">
                                         <label></label>
                                     </div>
-                                    <div class="destination flex-grow">
-                                        <h5>TASK NAME</h5>
+                                    <div class="panel-name flex-grow">
                                         <h3>
-                                            <i class="icon-subscription"></i>
                                             <span title="Subscription task name" class="location" data-bind="text: taskName"></span>
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
-                                </div>
-                                <div class="actions-container">
-                                    <div class="actions">  
+                                    <div class="actions">
                                         <button class="btn btn-default" data-bind="click: showSubscriptionDetails.toggle.bind(showSubscriptionDetails)" title="Click for details"><i class="icon-info"></i></button>
                                         <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
                                         <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
                                     </div>
                                 </div>
-                                <div class="collapse flex-grow" data-bind="collapse: showSubscriptionDetails">
-                                    <hr/>
-                                    <div class="flex-horizontal">
-                                        <div class="flex-grow">
-                                            <ul class="properties">
-                                                <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
-                                                <li><span>Last Client Activity:</span><strong data-bind="text: timeOfLastClientActivity"></strong>
-                                                    <button class="btn btn-xs btn-upcoming" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
-                                                        <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                    </button>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                        <div>
-                                            <button class="btn btn-default" data-bind="click: $root.refreshOngoingTaskInfo" title="Refresh info"><i class="icon-refresh"></i></button>
-                                        </div>
+                            </div>
+                            <div class="collapse panel-addon" data-bind="collapse: showSubscriptionDetails">
+                                <div class="padding padding-sm flex-horizontal">
+                                    <div class="flex-grow">
+                                        <ul class="properties">
+                                            <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
+                                            <li>
+                                                <span>Last Client Activity:</span><strong data-bind="text: timeOfLastClientActivity"></strong>
+                                                <button class="btn btn-xs btn-upcoming" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                    <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                </button>
+                                            </li>
+                                        </ul>
+                                    </div>
+                                    <div>
+                                        <button class="btn btn-default" data-bind="click: $root.refreshOngoingTaskInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
                                 </div>
                             </div>
@@ -342,8 +321,8 @@
 </script>
 
 <script type="text/html" id="responsible-node-template">
-    <h5>RESPONSIBLE NODE</h5>
-    <h4 data-bind="text: responsibleNode().NodeTag" title="Cluster node that is responsible for this task"></h4>
+    <i class="icon-cluster-node" title="Cluster node that is responsible for this task"></i>
+    <span data-bind="text: responsibleNode().NodeTag" title="Cluster node that is responsible for this task"></span>
 </script>
 
 <script type="text/html" id="actions-template">

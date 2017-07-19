@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing.MapReduce;
 using FastTests.Server.Replication;
@@ -57,7 +58,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"));
+                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"),CancellationToken.None);
                 await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {

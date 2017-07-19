@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
+using Sparrow.Platform.Win32;
 using Voron.Platform.Posix;
 
 namespace Sparrow.LowMemory
@@ -129,6 +129,8 @@ namespace Sparrow.LowMemory
                 return CheckPageFileOnHdd.PosixIsSwappingOnHddInsteadOfSsd();
             return CheckPageFileOnHdd.WindowsIsSwappingOnHddInsteadOfSsd();
         }
+
+        public static unsafe bool WillCauseHardPageFault(byte* addr, long length) => PlatformDetails.RunningOnPosix ? PosixMemoryQueryMethods.WillCauseHardPageFault(addr, length) : Win32MemoryQueryMethods.WillCauseHardPageFault(addr, length);
     }
 
     public struct MemoryInfoResult

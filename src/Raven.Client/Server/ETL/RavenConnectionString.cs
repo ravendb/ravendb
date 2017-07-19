@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.ETL
 {
@@ -7,8 +8,6 @@ namespace Raven.Client.Server.ETL
         private string _url;
 
         public string Database { get; set; }
-
-        public string ApiKey { get; set; }
 
         public string Url
         {
@@ -25,6 +24,14 @@ namespace Raven.Client.Server.ETL
 
             if (string.IsNullOrEmpty(Url))
                 errors.Add($"{nameof(Url)} cannot be empty");
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(Url)] = Url;
+            json[nameof(Database)] = Database;
+            return json;
         }
     }
 }

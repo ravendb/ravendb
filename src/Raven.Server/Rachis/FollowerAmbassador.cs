@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,7 +29,7 @@ namespace Raven.Server.Rachis
         private ManualResetEvent _wakeLeader;
         private readonly string _tag;
         private readonly string _url;
-        private readonly string _apiKey;
+        private readonly X509Certificate2 _certificate;
         private string _status;
 
         public string Status
@@ -76,14 +77,14 @@ namespace Raven.Server.Rachis
             _wakeLeader.Set();
         }
 
-        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, string apiKey)
+        public FollowerAmbassador(RachisConsensus engine, Leader leader, ManualResetEvent wakeLeader, string tag, string url, X509Certificate2 certificate)
         {
             _engine = engine;
             _leader = leader;
             _wakeLeader = wakeLeader;
             _tag = tag;
             _url = url;
-            _apiKey = apiKey;
+            _certificate = certificate;
             Status = "Started";
         }
 
@@ -111,7 +112,7 @@ namespace Raven.Server.Rachis
                             TransactionOperationContext context;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
                             {
-                                stream = _engine.ConnectToPeer(_url, _apiKey, context).Result;
+                                stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
                             }
                         }
                         catch (Exception e)

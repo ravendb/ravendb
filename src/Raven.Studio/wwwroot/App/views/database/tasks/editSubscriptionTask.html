@@ -1,5 +1,4 @@
-<div class="content-margin">
-    <div class="destinations flex-vertical absolute-fill content-margin">
+    <div class="edit-subscription flex-vertical absolute-fill content-margin">
         <div class="row flex-row flex-grow flex-stretch-items">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
@@ -15,7 +14,7 @@
                         <i class="icon-cancel"></i>
                         <span>Cancel</span>
                     </button>
-                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: !enableTestArea(), enable: canOpenTestArea" title="Test this subscription definition">
+                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: !enableTestArea()" title="Test this subscription definition">
                         <i class="icon-rocket"></i>
                         <span>Test Subscription</span>
                     </button>
@@ -25,24 +24,26 @@
                     </button>
                 </div>
                 <div class="scroll" data-bind="with: editedSubscription">
-                    <div class="panel padding">
-                        <h2 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h2>
-                        <h2 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h2>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Task Name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
-                                       data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
-                            </div>
+                    <div class="panel padding flex-form">
+                        <h3 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h3>
+                        <h3 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h3>
+                        <div class="form-group margin-top">
+                            <label class="control-label">Task Name</label>
+                            <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
+                                   data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Collection</label>
-                            <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
+                        <div class="form-group">
+                            <label class="control-label">Collection</label>
+                            <div class="flex-grow" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
-                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask() }" placeholder="Select a collection">
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
+                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
+                                           placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: collections">
-                                        <li><a href="#" data-bind="text: name, click: _.partial($root.useCollection, $data)"></a></li>  <!-- TODO: autoComplete collection name -->
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
+                                        <li data-bind="click: _.partial($root.useCollection, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>  
                                     </ul>
                                 </div>
                                 <span class="help-block" data-bind="validationMessage: collection"></span>
@@ -56,26 +57,25 @@
                                 <label for="include-revisions">Include Revisions</label>
                             </div>
                             <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
-                            <div class="toggle collapsed" data-toggle="collapse" data-target="#collapseTransformScript" aria-expanded="false">
-                                <input id="toggle-transform-script" type="checkbox">
-                                <label for="toggle-transform-script">
-                                    Apply Transform Script&nbsp&nbsp;<i class="icon-info text-info" id="scriptInfo"></i>
-                                </label>
+                            <div class="toggle">
+                                <input id="toggle-transform-script" type="checkbox" data-bind="checked: applyScript">
+                                <label for="toggle-transform-script">Apply Transform Script <i class="icon-info text-info" id="scriptInfo"></i></label>
                             </div>
-                            <div class="collapse" id="collapseTransformScript" aria-expanded="false">
-                                <!-- TODO : ace editor, add validations ? -->
+                            <div id="collapseTransformScript" data-bind="collapse: applyScript">
+                                <!--TODO : ace editor, add script validations - see issue 7795-->
                                 <pre class="form-control margin-top" placeholder="Enter transform script"
-                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
-                                <div>
-                                    <div class="help-block"></div>
+                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' },  validationElement: script," style="height: 160px;">
+                                </pre>
+                                <div data-bind="validationElement: script">
+                                    <div class="help-block" data-bind="validationMessage: script"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="panel padding">
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Send Documents From</label>
-                            <div class=" col-xs-12 col-sm-6 col-lg-8">
+                    <div class="panel padding flex-form">
+                        <div class="form-group">
+                            <label class="control-label">Send Documents From</label>
+                            <div class="flex-grow">
                                 <div class="dropdown btn-block" title="Set the starting point for the subscription task">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled">
                                         <span data-bind="text: startingPointType"></span>
@@ -96,7 +96,7 @@
                             </div>
                         </div>
                         <div class="margin-top">
-                            <div class="row flex-row margin-bottom" data-bind="visible: startingPointChangeVector ">
+                            <div class="row flex-row" data-bind="visible: startingPointChangeVector ">
                                 <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
                                     <textarea rows="3" class="form-control" placeholder="Set change vector"></textarea>
                                 </div>
@@ -105,35 +105,47 @@
                                 </div>
                             </div>
                         </div>
-                        <br /><br /><br />
                     </div>
                 </div>
             </div>
             <div class="col-sm-12 col-lg-6 flex-vertical" id="testArea" data-bind="visible: enableTestArea">
-                <div class="panel padding flex-window">
-                    <div> 
-                        <div class="flex-horizontal margin-bottom">
+                <div class="panel padding flex-vertical flex-grow">
+                    <div class="flex-header"> 
+                        <div class="flex-horizontal">
                             <div class="flex-grow"><h3>Test Subscription</h3></div>
                             <div><button class="close" data-bind="click: toggleTestArea" title="Close the test area"><i class="icon-cancel"></i></button></div>
                         </div>
                         <div class="flex-horizontal">
-                            <div class="flex-grow">
+                            <div class="flex-grow flex-vertical">
                                 <div class="input-group">
                                     <div class="input-group-addon">Results limit</div>
                                     <input type="number" min="1" class="form-control" placeholder="Set number of documents to fetch" title="Set number of documents to fetch" data-bind="textInput: testResultsLimit" />
-                                    <!-- TODO: what is the maximum number here ? -->
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-info" data-bind="enable: canRunTest, click: runTest"><i class="icon-rocket"></i><span>Run Test</span></button>
+                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disbale: spinners.globalToggleDisable" title="Run test with current settings">
+                                    <i class="icon-rocket"></i><span>Run Test</span>
+                                </button> 
                             </div>
                         </div>
                     </div>
                     
-                    <!-- TODO: implement display button -->
-                    
-                    <div class="flex-window-scroll">
-                        <div class="objects-list-container" style="height: 600px"> <!-- TODO: height shouldn't be hardcoded, need to modify classes.. -->
+                    <div class="clearfix">
+                        <div class="pull-right">
+                            <div class="btn-group dropdown-right open">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
+                                    <i class="icon-table"></i><span>Display</span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                    <div data-bind="compose: $root.columnsSelector"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex-grow scroll">
+                        <div class="objects-list-container">
                             <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-results-template'"></virtual-grid>
                         </div>
                     </div>
@@ -141,7 +153,6 @@
             </div>
         </div>
     </div>
-</div>
 
 <script type="text/html" id="empty-test-results-template">
     No results for the defined subscription.

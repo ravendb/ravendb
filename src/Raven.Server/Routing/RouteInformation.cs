@@ -13,10 +13,10 @@ namespace Raven.Server.Routing
 
     public class RouteInformation
     {
+        public AuthorizationStatus AuthorizationStatus;
         public readonly string Method;
         public readonly string Path;
 
-        public readonly bool NoAuthorizationRequired;
         public readonly bool SkipUsagesCount;
 
         private HandleRequest _request;
@@ -30,12 +30,12 @@ namespace Raven.Server.Routing
             Databases
         }
 
-        public RouteInformation(string method, string path, bool noAuthorizationRequired, bool skipUsagesCount, bool isDebugInformationEndpoint = false)
+        public RouteInformation(string method, string path, AuthorizationStatus authorizationStatus, bool skipUsagesCount, bool isDebugInformationEndpoint = false)
         {
+            AuthorizationStatus = authorizationStatus;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
             Method = method;
             Path = path;
-            NoAuthorizationRequired = noAuthorizationRequired;
             SkipUsagesCount = skipUsagesCount;
         }
 
@@ -151,7 +151,7 @@ namespace Raven.Server.Routing
 
         public override string ToString()
         {
-            return $"{nameof(Method)}: {Method}, {nameof(Path)}: {Path}, {nameof(NoAuthorizationRequired)}: {NoAuthorizationRequired}";
+            return $"{nameof(Method)}: {Method}, {nameof(Path)}: {Path}, {nameof(AuthorizationStatus)}: {AuthorizationStatus}";
         }
     }
 }

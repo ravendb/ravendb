@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -190,10 +191,9 @@ namespace Raven.Client.Documents
         public string Database { get; set; }
 
         /// <summary>
-        /// The API Key to use when authenticating against a RavenDB server that
-        /// supports API Key authentication
+        /// The client certificate to use for authentication
         /// </summary>
-        public string ApiKey { get; set; }
+        public X509Certificate2 Certificate { get; set; }
 
         public abstract RequestExecutor GetRequestExecutor(string databaseName = null);
 

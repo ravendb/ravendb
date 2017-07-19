@@ -17,17 +17,16 @@ namespace Raven.Server.Web.System
 {
     public class TestConnectionHandler : RequestHandler
     {
-        [RavenAction("/admin/test-connection", "GET", "/admin/test-connection?url={serverUrl:string}&api={apiKey:string}")]
+        [RavenAction("/admin/test-connection", "GET", "/admin/test-connection?url={serverUrl:string}")]
         public async Task TestConnection()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
-            var api = GetStringQueryString("api", false);
             DynamicJsonValue result;
 
             try
             {
                 var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
-                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, api, "Test-Connection");
+                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ServerCertificateHolder.Certificate);
                 if (await Task.WhenAny(timeout, connectionInfo) == timeout)
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
@@ -39,12 +38,10 @@ namespace Raven.Server.Web.System
             }
             catch (Exception e)
             {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest; 
-
                 result = new DynamicJsonValue
                 {
-                    ["Success"] = false,
-                    ["Error"] = $"An exception was thrown while trying to connect to {url} : {e}",
+                    [nameof(NodeConnectionTestResult.Success)] = false,
+                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}",
                 };
             }
 
@@ -56,10 +53,10 @@ namespace Raven.Server.Web.System
         }
 
 
-        private static async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
+        private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
         {
             await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, null);
-            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo);
+            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ServerCertificateHolder.Certificate);
         }
 
         private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
@@ -75,22 +72,18 @@ namespace Raven.Server.Web.System
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
 
-                    switch (headerResponse.Status)
+                    if(headerResponse.AuthorizationSuccessful == false)
                     {
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                            result["Success"] = true;
-                            break;
-                        default:
-                            HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                            result["Success"] = false;
-                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of bad credentials. AuthorizationStatus: {headerResponse.Status}";
-                            break;
+                        result["Success"] = false;
+                        result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
+                    }
+                    else
+                    {
+                        result["Success"] = true;
                     }
                 }
 
             }
-
             return result;
         }
 
@@ -102,11 +95,15 @@ namespace Raven.Server.Web.System
                 writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteNull();
-                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.AuthorizationToken));
-                writer.WriteNull();
             }
             writer.WriteEndObject();
             writer.Flush();
         }
+    }
+
+    public class NodeConnectionTestResult
+    {
+        public bool Success;
+        public string Error;
     }
 }

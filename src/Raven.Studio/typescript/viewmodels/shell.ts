@@ -22,9 +22,7 @@ import appUrl = require("common/appUrl");
 import dynamicHeightBindingHandler = require("common/bindingHelpers/dynamicHeightBindingHandler");
 import autoCompleteBindingHandler = require("common/bindingHelpers/autoCompleteBindingHandler");
 import helpBindingHandler = require("common/bindingHelpers/helpBindingHandler");
-import oauthContext = require("common/oauthContext");
 import messagePublisher = require("common/messagePublisher");
-import apiKeyLocalStorage = require("common/storage/apiKeyLocalStorage");
 import extensions = require("common/extensions");
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -35,7 +33,6 @@ import getServerBuildVersionCommand = require("commands/resources/getServerBuild
 import viewModelBase = require("viewmodels/viewModelBase");
 import accessHelper = require("viewmodels/shell/accessHelper");
 import licensingStatus = require("viewmodels/common/licensingStatus");
-import enterApiKey = require("viewmodels/common/enterApiKey");
 import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
@@ -52,9 +49,7 @@ class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
 
-    renewOAuthTokenTimeoutId: number;
     showContinueTestButton = ko.pureComputed(() => viewModelBase.hasContinueTestOption()); //TODO:
-    showLogOutButton: KnockoutComputed<boolean>; //TODO:
     
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
@@ -84,7 +79,7 @@ class shell extends viewModelBase {
 
     studioLoadingFakeRequest: requestExecution;
 
-    private onApiKeyAndBootstrapFinishedTask = $.Deferred<void>();
+    private onBootstrapFinishedTask = $.Deferred<void>();
 
     constructor() {
         super();
@@ -92,13 +87,6 @@ class shell extends viewModelBase {
         this.studioLoadingFakeRequest = protractedCommandsDetector.instance.requestStarted(0);
 
         extensions.install();
-
-        this.showLogOutButton = ko.computed(() => {
-            var lsApiKey = apiKeyLocalStorage.get();
-            var contextApiKey = oauthContext.apiKey();
-            return lsApiKey || contextApiKey;
-        });
-        oauthContext.enterApiKeyTask = this.setupApiKey();
 
         dynamicHeightBindingHandler.install();
         autoCompleteBindingHandler.install();
@@ -122,43 +110,30 @@ class shell extends viewModelBase {
     activate(args: any) {
         super.activate(args, true);
 
-        oauthContext.enterApiKeyTask.done(() => {
+        const licenseTask = license.fetchLicenseStatus();
+        const topologyTask = this.clusterManager.init();
 
-            // we have api key set up at this moment, let's 
-            // bootstap project by download global defaults
-            // and then start configuring services
+        $.when<any>(licenseTask, topologyTask)
+            .done(() => {
+                changesContext.default
+                    .connectServerWideNotificationCenter();
 
-            const licenseTask = license.fetchLicenseStatus();
-            const topologyTask = this.clusterManager.init();
+                // load global settings
+                studioSettings.default.globalSettings();
 
-            $.when<any>(licenseTask, topologyTask)
-                .done(() => {
-                    changesContext.default
-                        .connectServerWideNotificationCenter();
+                // bind event handles before we connect to server wide notification center 
+                // (connection will be started after executing this method) - it was just scheduled 2 lines above
+                // please notice we don't wait here for connection to be established
+                // since this invocation is sync we can't end up with race condition
+                this.databasesManager.setupGlobalNotifications();
+                this.clusterManager.setupGlobalNotifications();
+                this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
 
-                    // load global settings
-                    studioSettings.default.globalSettings();
-
-                    // bind event handles before we connect to server wide notification center 
-                    // (connection will be started after executing this method) - it was just scheduled 2 lines above
-                    // please notice we don't wait here for connection to be established
-                    // since this invocation is sync we can't end up with race condition
-                    this.databasesManager.setupGlobalNotifications();
-                    this.clusterManager.setupGlobalNotifications();
-                    this.notificationCenter.setupGlobalNotifications(changesContext.default.serverNotifications());
-
-                    this.connectToRavenServer();
-                })
-                .then(() => this.onApiKeyAndBootstrapFinishedTask.resolve(), () => this.onApiKeyAndBootstrapFinishedTask.reject());
-        });
+                this.connectToRavenServer();
+            })
+            .then(() => this.onBootstrapFinishedTask.resolve(), () => this.onBootstrapFinishedTask.reject());
 
         this.setupRouting();
-
-        $(window).bind("storage", (e: any) => {
-            if (e.originalEvent.key === apiKeyLocalStorage.localStorageName) {
-                this.onLogOut();
-            }
-        });
 
         //TODO: should we await for api key here? 
         this.fetchClientBuildVersion();
@@ -206,7 +181,7 @@ class shell extends viewModelBase {
 
         this.initializeShellComponents();
 
-        this.onApiKeyAndBootstrapFinishedTask
+        this.onBootstrapFinishedTask
             .done(() => {
                 registration.showRegistrationDialogIfNeeded(license.licenseStatus());
             });
@@ -242,47 +217,6 @@ class shell extends viewModelBase {
         });
     }*/
 
-
-    setupApiKey() {
-        // try to find api key as studio hash parameter
-        const hash = window.location.hash;
-
-        if (hash === "#has-api-key") {
-            return this.showApiKeyDialog();
-        } else if (hash.match(/#api-key/g)) {
-            const match = /#api-key=(.*)/.exec(hash);
-            if (match && match.length === 2) {
-                oauthContext.apiKey(match[1]);
-                apiKeyLocalStorage.setValue(match[1]);
-            }
-            const splittedHash = hash.split("&#api-key");
-            const url = (splittedHash.length === 1) ? "#databases" : splittedHash[0];
-            window.location.href = url;
-        } else {
-            const apiKeyFromStorage = apiKeyLocalStorage.get();
-            if (apiKeyFromStorage) {
-                oauthContext.apiKey(apiKeyFromStorage);
-            }
-        }
-
-        oauthContext.authHeader.subscribe(h => {
-            if (this.renewOAuthTokenTimeoutId) {
-                clearTimeout(this.renewOAuthTokenTimeoutId);
-                this.renewOAuthTokenTimeoutId = null;
-            }
-            if (h) {
-                this.renewOAuthTokenTimeoutId = setTimeout(() => this.renewOAuthToken(), 25 * 60 * 1000);
-            }
-        });
-
-        return $.Deferred().resolve();
-    }
-
-    private renewOAuthToken() {
-        /* TODO: oauthContext.authHeader(null);
-         new getDatabaseStatsCommand(null).execute();*/
-    }
-   
     private getIndexingDisbaledValue(indexingDisabledString: string) {
         if (indexingDisabledString === undefined || indexingDisabledString == null)
             return false;
@@ -321,13 +255,6 @@ class shell extends viewModelBase {
     }
 
     private handleRavenConnectionFailure(result: any) {
-        if (result.status === 401) {
-            // Unauthorized might be caused by invalid credentials. 
-            // Remove them from both local storage and oauth context.
-            apiKeyLocalStorage.clean();
-            oauthContext.clean();
-        }
-
         sys.log("Unable to connect to Raven.", result);
         const tryAgain = "Try again";
         this.confirmationMessage(':-(', "Couldn't connect to Raven. Details in the browser console.", [tryAgain])
@@ -365,25 +292,9 @@ class shell extends viewModelBase {
             });
     }
 
-    showApiKeyDialog() {
-        const dialog = new enterApiKey();
-        return app.showBootstrapDialog(dialog).then(() => window.location.href = "#databases");
-    }
-
     showLicenseStatusDialog() {
         const dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
         app.showBootstrapDialog(dialog);
-    }
-
-    logOut() {
-        // this call dispatches storage event to all tabs in browser and calls onLogOut inside each.
-        apiKeyLocalStorage.clean();
-        apiKeyLocalStorage.notifyAboutLogOut();
-    }
-
-    onLogOut() {
-        window.location.hash = this.appUrls.hasApiKey();
-        window.location.reload();
     }
 
     navigateToClusterSettings() {

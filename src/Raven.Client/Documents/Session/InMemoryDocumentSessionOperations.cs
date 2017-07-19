@@ -34,6 +34,11 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class InMemoryDocumentSessionOperations : IDisposable
     {
+        [ThreadStatic]
+        private static int _clientSessionIdCounter;
+
+        protected readonly int _clientSessionId = ++_clientSessionIdCounter;
+
         protected readonly RequestExecutor _requestExecutor;
         private readonly IDisposable _releaseOperationContext;
         private readonly JsonOperationContext _context;
@@ -43,6 +48,7 @@ namespace Raven.Client.Documents.Session
         private readonly int _hash = Interlocked.Increment(ref _instancesCounter);
         protected bool GenerateDocumentIdsOnStore = true;
         private BatchOptions _saveChangesOptions;
+        private bool _isDisposed;
 
         /// <summary>
         /// The session id 
@@ -67,6 +73,24 @@ namespace Raven.Client.Documents.Session
         private Dictionary<string, object> _externalState;
 
         public IDictionary<string, object> ExternalState => _externalState ?? (_externalState = new Dictionary<string, object>());
+
+        public async Task<ServerNode> GetCurrentSessionNode()
+        {
+            (int Index, ServerNode Node) result;
+            switch (this._documentStore.Conventions.ReadBalanceBehavior)
+            {
+                case ReadBalanceBehavior.None:
+                    result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
+                    break;
+                case ReadBalanceBehavior.RoundRobin:
+                    result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
+                    break;
+                case ReadBalanceBehavior.FastestNode:
+                default:
+                    throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
+            }
+            return result.Node;
+        }
 
         /// <summary>
         /// Translate between an ID and its associated entity
@@ -966,13 +990,22 @@ more responsive application.
 
         private void Dispose(bool isDisposing)
         {
-            if (isDisposing)
+            if (_isDisposed)
+                return;
+
+            _isDisposed = true;
+
+            if (isDisposing && RunningOn.FinalizerThread == false)
             {
                 GC.SuppressFinalize(this);
+
                 _releaseOperationContext.Dispose();
             }
             else
             {
+                // when we are disposed from the finalizer then we have to dispose the context immediately instead of returning it to the pool because
+                // the finalizer of ArenaMemoryAllocator could be already called so we cannot return such context to the pool (RavenDB-7571)
+
                 Context.Dispose();
             }
         }
@@ -995,7 +1028,6 @@ more responsive application.
             {
                 // nothing can be done here
             }
-
 #if DEBUG
             Debug.WriteLine("Disposing a session for finalizer! It should be disposed by calling session.Dispose()!");
 #endif

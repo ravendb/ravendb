@@ -1051,7 +1051,7 @@ namespace Raven.Server.Documents.Indexes
             stats.AddCorruptionError(e);
 
             if (_logger.IsOperationsEnabled)
-                _logger.Operations($"Data corruption occured for '{Name}' ({Etag}).", e);
+                _logger.Operations($"Data corruption occurred for '{Name}' ({Etag}).", e);
 
             // TODO we should create notification here?
 

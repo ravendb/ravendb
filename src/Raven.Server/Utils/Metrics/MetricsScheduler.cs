@@ -56,7 +56,7 @@ namespace Raven.Server.Utils.Metrics
                     catch (Exception e)
                     {
                         if (_logger.IsInfoEnabled)
-                            _logger.Info("Error occured during MetricsScheduler ticking of a single action", e);
+                            _logger.Info("Error occurred during MetricsScheduler ticking of a single action", e);
                     }
                 }
 

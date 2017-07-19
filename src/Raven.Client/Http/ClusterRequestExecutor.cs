@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
@@ -13,33 +14,34 @@ namespace Raven.Client.Http
     {
         private readonly SemaphoreSlim _clusterTopologySemaphore = new SemaphoreSlim(1, 1);
 
-        protected ClusterRequestExecutor(string apiKey, DocumentConventions conventions) : base(null, apiKey, conventions)
+        protected ClusterRequestExecutor(X509Certificate2 certificate, DocumentConventions conventions) : base(null, certificate, conventions)
         {
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, string apiKey, DocumentConventions conventions)
+        public new static ClusterRequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        public new static ClusterRequestExecutor CreateForSingleNodeWithConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
         [Obsolete("Not supported", error: true)]
-        public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, string apiKey, DocumentConventions conventions)
+        public new static ClusterRequestExecutor CreateForSingleNodeWithoutConfigurationUpdates(string url, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             throw new NotSupportedException();
         }
 
-        public static ClusterRequestExecutor CreateForSingleNode(string url, string apiKey)
+        public static ClusterRequestExecutor CreateForSingleNode(string url, X509Certificate2 certificate)
         {
-            var executor = new ClusterRequestExecutor(apiKey, DocumentConventions.Default)
+            ValidateUrls(new[] { url }, certificate);
+            var executor = new ClusterRequestExecutor(certificate, DocumentConventions.Default)
             {
-                _nodeSelector = new FailoverNodeSelector(new Topology
+                _nodeSelector = new NodeSelector(new Topology
                 {
                     Etag = -1,
                     Nodes = new List<ServerNode>
@@ -57,9 +59,9 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        public static ClusterRequestExecutor Create(string[] urls, string apiKey, DocumentConventions conventions = null)
+        public static ClusterRequestExecutor Create(string[] urls, X509Certificate2 certificate, DocumentConventions conventions = null)
         {
-            var executor = new ClusterRequestExecutor(apiKey, conventions ?? DocumentConventions.Default)
+            var executor = new ClusterRequestExecutor(certificate, conventions ?? DocumentConventions.Default)
             {
                 _disableClientConfigurationUpdates = true
             };
@@ -68,9 +70,9 @@ namespace Raven.Client.Http
             return executor;
         }
 
-        protected override Task PerformHealthCheck(ServerNode serverNode, JsonOperationContext context)
+        protected override Task PerformHealthCheck(ServerNode serverNode, int nodeIndex, JsonOperationContext context)
         {
-            return ExecuteAsync(serverNode, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
+            return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
         }
 
         public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
@@ -88,14 +90,12 @@ namespace Raven.Client.Http
                 using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var command = new GetClusterTopologyCommand();
-
-                    await ExecuteAsync(node, context, command, shouldRetry: false).ConfigureAwait(false);
+                    await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     var serverHash = ServerHash.GetServerHash(node.Url);
                     ClusterTopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
 
                     var results = command.Result;
-
                     var newTopology = new Topology
                     {
                         Nodes = new List<ServerNode>(
@@ -107,15 +107,15 @@ namespace Raven.Client.Http
                             }
                         )
                     };
+
                     if (_nodeSelector == null)
                     {
-                        _nodeSelector = new FailoverNodeSelector(newTopology);
+                        _nodeSelector = new NodeSelector(newTopology);
                     }
                     else if (_nodeSelector.OnUpdateTopology(newTopology))
                     {
                         DisposeAllFailedNodesTimers();
                     }
-
                 }
             }
             finally
@@ -144,7 +144,7 @@ namespace Raven.Client.Http
             if (cachedTopology == null)
                 return false;
 
-            _nodeSelector = new FailoverNodeSelector(new Topology
+            _nodeSelector = new NodeSelector(new Topology
             {
                 Nodes = new List<ServerNode>(
                     from member in cachedTopology.Topology.Members

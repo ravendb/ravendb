@@ -313,6 +313,18 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
+        private bool ShouldReplicateItem(ChangeVectorEntry[] self, Dictionary<Guid, long> other)
+        {
+            for (int i = 0; i < self.Length; i++)
+            {
+                if (other.TryGetValue(self[i].DbId, out long otherEtag) == false)
+                    return true;
+                if (self[i].Etag > otherEtag)
+                    return true;
+            }
+            return false;
+        }
+
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)

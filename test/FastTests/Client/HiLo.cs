@@ -143,8 +143,7 @@ namespace FastTests.Client
                 var newStore = new DocumentStore()
                 {
                     Urls = store.Urls,
-                    Database = store.Database,
-                    ApiKey = store.ApiKey
+                    Database = store.Database
                 };
                 newStore.Initialize();
 
@@ -167,8 +166,7 @@ namespace FastTests.Client
                 newStore = new DocumentStore()
                 {
                     Urls = store.Urls,
-                    Database = store.Database,
-                    ApiKey = store.ApiKey
+                    Database = store.Database
                 };
                 newStore.Initialize();
 

@@ -5,8 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
@@ -24,6 +26,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
+using Raven.Client.Server.Operations.Certificates;
 
 
 namespace Raven.Server.Utils
@@ -95,6 +98,7 @@ namespace Raven.Server.Utils
             Stats,
             Info,
             Gc,
+            AddServerCert,
             LowMem,
             Help,
             Logo,
@@ -457,6 +461,37 @@ namespace Raven.Server.Utils
             return isOn; // here rc is not an exit code, it is a setter to _experimental
         }
 
+        private static bool CommandAddServerCert(List<string> args, RavenCli cli)
+        {
+            var path = args.First();
+
+            var cert = args.Count != 1 ? new X509Certificate2(path, args[1]) : new X509Certificate2(path);
+            WriteText("Successfully read certificate: " + cert.Thumbprint, TextColor, cli);
+            WriteText(cert.ToString(), TextColor, cli);
+            var certKey = Constants.Certificates.Prefix + cert.Thumbprint;
+
+            using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            {
+                var json = new CertificateDefinition
+                {
+                    // this does not include the private key, that is only for the client
+                    Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
+                    Permissions = null,
+                    ServerAdmin = true,
+                    Thumbprint = cert.Thumbprint
+                }.ToJson();
+
+                using (var certificate = ctx.ReadObject(json, "Server/Certificate/Definition"))
+                using (var tx = ctx.OpenWriteTransaction())
+                {
+                    cli._server.ServerStore.Cluster.PutLocalState(ctx, certKey, certificate);
+                    tx.Commit();
+                }
+            }
+
+            return true;
+        }
+
         private static bool CommandScript(List<string> args, RavenCli cli)
         {
             // script <database|server> [databaseName]
@@ -639,6 +674,7 @@ namespace Raven.Server.Utils
                 new[] {"logo [no-clear]", "Clear screen and print initial logo"},
                 new[] {"gc [gen]", "Collect garbage of specified gen : 0, 1 or default 2"},
                 new[] {"lowMem", "Simulate Low-Memory event"},
+                new[] {"addServerCert <path> [password]", "Register the certificate as a trusted certificate of a cluster member"},
                 new[] {"timer <on|off|fire>", "enable or disable candidate selection timer (Rachis), or fire timeout immediately"},
                 new[] {"experimental <on|off>", "Set if to allow experimental cli commands. WARNING: Use with care!"},
                 new[] {"sript <server|database> [database]", "Execute script on server or specified database. WARNING: Use with care!"},
@@ -690,6 +726,7 @@ namespace Raven.Server.Utils
             [Command.Gc] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandGc },
             [Command.Log] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandLog },
             [Command.Clear] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandClear },
+            [Command.AddServerCert] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandAddServerCert },
             [Command.Info] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandInfo },
             [Command.Logo] = new SingleAction { NumOfArgs = 0, DelegateFync = CommandLogo },
             [Command.Experimental] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandExperimental },

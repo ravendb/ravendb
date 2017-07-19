@@ -14,11 +14,11 @@ using Xunit;
 namespace SlowTests.Server.Documents.ETL
 {
     [Trait("Category", "ETL")]
-    public class EtlTestBase : RavenTestBase
+    public abstract class EtlTestBase : RavenTestBase
     {
         protected static AddEtlOperationResult AddEtl<T>(DocumentStore src, EtlConfiguration<T> configuration, T connectionString) where T : ConnectionString
         {
-            src.Admin.Server.Send(new AddConnectionStringOperation<T>(connectionString, src.Database));
+            src.Admin.Server.Send(new PutConnectionStringOperation<T>(connectionString, src.Database));
             return src.Admin.Server.Send(new AddEtlOperation<T>(configuration, src.Database));
         }
 

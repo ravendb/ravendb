@@ -31,7 +31,7 @@ namespace Raven.Traffic
                     {
                         store = new DocumentStore
                         {
-                            Urls = config.ConnectionString.Urls.ToArray(),
+                            Urls = config.Urls.ToArray(),
                             Database = config.ResourceName
                         }.Initialize();
                     }

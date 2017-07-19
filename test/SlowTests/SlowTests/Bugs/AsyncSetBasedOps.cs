@@ -6,6 +6,7 @@
 
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -67,7 +68,7 @@ namespace SlowTests.SlowTests.Bugs
                     {
                         Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
                     }
-                )))
+                ),CancellationToken.None))
                 .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var db = store.OpenAsyncSession())
