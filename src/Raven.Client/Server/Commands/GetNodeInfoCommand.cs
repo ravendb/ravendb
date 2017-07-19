@@ -15,7 +15,7 @@ namespace Raven.Client.Server.Commands
     {
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/cluster/node-info";
+            url = $"{node.Url}/cluster/node-info";
 
             return new HttpRequestMessage
             {

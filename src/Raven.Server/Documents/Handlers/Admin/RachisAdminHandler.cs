@@ -255,12 +255,15 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        /* Promote a non-voter to a promotable */         
+        /* Promote a non-voter to a promotable */
         [RavenAction("/admin/cluster/promote", "POST", "/admin/cluster/promote?nodeTag={nodeTag:string}")]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
+            {
+                NoContentStatus();
                 return;
+            }
             
             if (ServerStore.IsLeader() == false)
             {
@@ -281,7 +284,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                NoContentStatus();
             }
         }
 
@@ -289,8 +292,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/demote", "POST", "/admin/cluster/demote?nodeTag={nodeTag:string}")]
         public async Task DemoteNode()
         {
-            if (ServerStore.LeaderTag == null)            
-                return;           
+            if (ServerStore.LeaderTag == null)
+            {
+                NoContentStatus();
+                return;
+            }
+
             if (ServerStore.IsLeader() == false)
             {
                 RedirectToLeader();
@@ -316,7 +323,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var url = topology.GetUrlFromTag(nodeTag);
                 await ServerStore.Engine.ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.NonVoter);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                NoContentStatus();
             }           
         }
 
