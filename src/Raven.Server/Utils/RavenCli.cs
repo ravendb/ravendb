@@ -537,18 +537,26 @@ namespace Raven.Server.Utils
             {
                 object result;
                 var adminJsScript = new AdminJsScript { Script = jsCli.Script };
+                var certificate = cli._server.ServerCertificateHolder.Certificate.FriendlyName;
 
                 if (isServerScript)
                 {
                     var console = new AdminJsConsole(cli._server);
+                    if (console.Log.IsOperationsEnabled)
+                    {
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {certificate?? "None"}");
+                    }
                     result = console.ApplyServerScript(adminJsScript);
                 }
                 else
                 {
                     var console = new AdminJsConsole(database);
+                    if (console.Log.IsOperationsEnabled)
+                    {
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {certificate?? "None"}");
+                    }
                     result = console.ApplyScript(adminJsScript);
                 }
-
 
                 string str;
                 if (result == null || result is DynamicJsonValue)
