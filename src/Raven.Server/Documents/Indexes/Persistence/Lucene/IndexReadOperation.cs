@@ -376,9 +376,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (stopWords != null)
                 mlt.SetStopWords(stopWords);
 
-            var fieldNames = query.Fields ?? ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
-                                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyFieldName)
-                                    .ToArray();
+            string[] fieldNames;
+            if (query.Fields != null && query.Fields.Length > 0)
+                fieldNames = query.Fields;
+            else
+                fieldNames = ir.GetFieldNames(IndexReader.FieldOption.INDEXED)
+                    .Where(x => x != Constants.Documents.Indexing.Fields.DocumentIdFieldName && x != Constants.Documents.Indexing.Fields.ReduceKeyFieldName)
+                    .ToArray();
 
             mlt.SetFieldNames(fieldNames);
             mlt.Analyzer = _analyzer;

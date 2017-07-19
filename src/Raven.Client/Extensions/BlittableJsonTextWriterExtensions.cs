@@ -16,7 +16,136 @@ namespace Raven.Client.Extensions
 
         public static void WriteMoreLikeThisQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, MoreLikeThisQuery query)
         {
-            writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query, conventions, context));
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(query.DocumentId));
+            writer.WriteString(query.DocumentId);
+            writer.WriteComma();
+
+            if (query.PageSizeSet && query.PageSize >= 0)
+            {
+                writer.WritePropertyName(nameof(query.PageSize));
+                writer.WriteInteger(query.PageSize);
+                writer.WriteComma();
+            }
+
+            if (query.Boost.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.Boost));
+                writer.WriteBool(query.Boost.Value);
+                writer.WriteComma();
+            }
+
+            if (query.BoostFactor.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.BoostFactor));
+                writer.WriteDouble(query.BoostFactor.Value);
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrEmpty(query.AdditionalQuery) == false)
+            {
+                writer.WritePropertyName(nameof(query.AdditionalQuery));
+                writer.WriteString(query.AdditionalQuery);
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrEmpty(query.IndexName) == false)
+            {
+                writer.WritePropertyName(nameof(query.IndexName));
+                writer.WriteString(query.IndexName);
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrEmpty(query.StopWordsDocumentId) == false)
+            {
+                writer.WritePropertyName(nameof(query.StopWordsDocumentId));
+                writer.WriteString(query.StopWordsDocumentId);
+                writer.WriteComma();
+            }
+
+            if (query.Fields != null && query.Fields.Length > 0)
+            {
+                writer.WriteArray(nameof(query.Fields), query.Fields);
+                writer.WriteComma();
+            }
+
+            if (query.Includes != null && query.Includes.Length > 0)
+            {
+                writer.WriteArray(nameof(query.Includes), query.Includes);
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrWhiteSpace(query.Transformer) == false)
+            {
+                writer.WritePropertyName(nameof(query.Transformer));
+                writer.WriteString(query.Transformer);
+                writer.WriteComma();
+
+                if (query.TransformerParameters != null)
+                {
+                    writer.WritePropertyName(nameof(query.TransformerParameters));
+                    writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.TransformerParameters, conventions, context));
+                    writer.WriteComma();
+                }
+            }
+
+            if (query.MaximumDocumentFrequency.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MaximumDocumentFrequency));
+                writer.WriteInteger(query.MaximumDocumentFrequency.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MaximumDocumentFrequencyPercentage.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MaximumDocumentFrequencyPercentage));
+                writer.WriteInteger(query.MaximumDocumentFrequencyPercentage.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MaximumNumberOfTokensParsed.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MaximumNumberOfTokensParsed));
+                writer.WriteInteger(query.MaximumNumberOfTokensParsed.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MaximumQueryTerms.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MaximumQueryTerms));
+                writer.WriteInteger(query.MaximumQueryTerms.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MaximumWordLength.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MaximumWordLength));
+                writer.WriteInteger(query.MaximumWordLength.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MinimumDocumentFrequency.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MinimumDocumentFrequency));
+                writer.WriteInteger(query.MinimumDocumentFrequency.Value);
+                writer.WriteComma();
+            }
+
+            if (query.MinimumTermFrequency.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.MinimumTermFrequency));
+                writer.WriteInteger(query.MinimumTermFrequency.Value);
+                writer.WriteComma();
+            }
+
+            writer.WritePropertyName(nameof(query.MinimumWordLength));
+            if (query.MinimumWordLength.HasValue)
+                writer.WriteInteger(query.MinimumWordLength.Value);
+            else
+                writer.WriteNull();
+
+            writer.WriteEndObject();
         }
 
         public static void WriteIndexQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, IndexQuery query)
