@@ -76,7 +76,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(0, batchStats.MapErrors);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
@@ -84,8 +84,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
-
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = "Name:John" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM '{index.Name}' WHERE Name = 'John'"), context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("users/1", queryResult.Results[0].Id);

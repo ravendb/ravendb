@@ -340,16 +340,16 @@ namespace Raven.Server.Documents.Queries
 
         public static (string Value, ValueTokenType Type) GetValue(string fieldName, Parser.Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
-            var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
-
             if (value.Type == ValueTokenType.Parameter)
             {
+                var parameterName = QueryExpression.Extract(query.QueryText, value);
+
                 var expectedValueType = metadata.Fields[fieldName];
 
                 if (parameters == null)
                     throw new InvalidOperationException();
 
-                if (parameters.TryGetMember(valueOrParameterName, out var parameterValue) == false)
+                if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     throw new InvalidOperationException();
 
                 var parameterValueType = GetValueTokenType(parameterValue);
@@ -360,7 +360,19 @@ namespace Raven.Server.Documents.Queries
                 return (parameterValue.ToString(), parameterValueType); // TODO [ppekrol] avoid ToString()
             }
 
-            return (valueOrParameterName, value.Type);
+            string queryValue;
+
+            switch (value.Type)
+            {
+                case ValueTokenType.String:
+                    queryValue = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    break;
+                default:
+                    queryValue = QueryExpression.Extract(query.QueryText, value);
+                    break;
+            }
+
+            return (queryValue, value.Type);
         }
 
         private static (string LuceneFieldName, FieldName.FieldType LuceneFieldType) GetLuceneField(string fieldName, ValueTokenType valueType)
