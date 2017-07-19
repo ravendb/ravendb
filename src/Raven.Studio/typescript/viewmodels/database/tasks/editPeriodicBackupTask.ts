@@ -4,7 +4,6 @@ import router = require("plugins/router");
 import savePeriodicBackupConfigurationCommand = require("commands/database/tasks/savePeriodicBackupConfigurationCommand");
 import periodicBackupConfiguration = require("models/database/tasks/periodicBackup/periodicBackupConfiguration");
 import getPeriodicBackupConfigurationCommand = require("commands/database/tasks/getPeriodicBackupConfigurationCommand");
-import getDrivesInfoCommand = require("commands/database/tasks/getDrivesInfoCommand");
 import testPeriodicBackupCredentialsCommand = require("commands/database/tasks/testPeriodicBackupCredentialsCommand");
 import popoverUtils = require("common/popoverUtils");
 import backupSettings = require("models/database/tasks/periodicBackup/backupSettings");
@@ -26,11 +25,10 @@ class editPeriodicBackupTask extends viewModelBase {
         
         if (args.taskId) {
             // editing an existing task
-            $.when<any>(this.getPeriodicBackupConfiguration(args.taskId), this.getDrivesInfo())
-                .done(([configuration]: [Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration],
-                    [drivesInfo]: [Raven.Server.Documents.PeriodicBackup.DrivesInfo]) => {
+            new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
+                .execute()
+                .done((configuration: Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration) => {
                     this.configuration(new periodicBackupConfiguration(configuration));
-                    this.configuration().localSettings().updateDrivesInfo(drivesInfo);
                     deferred.resolve();
                 })
                 .fail(() => {
@@ -41,8 +39,7 @@ class editPeriodicBackupTask extends viewModelBase {
         else {
             // creating a new task
             this.configuration(periodicBackupConfiguration.empty());
-            this.getDrivesInfo().done(drivesInfo => this.configuration().localSettings().updateDrivesInfo(drivesInfo))
-                .always(() => deferred.resolve());
+            deferred.resolve();
         }
 
         this.addS3Popover();
@@ -53,15 +50,6 @@ class editPeriodicBackupTask extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
         document.getElementById("taskName").focus();
-    }
-
-    private getPeriodicBackupConfiguration(taskId: number):
-        JQueryPromise<Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration> {
-        return new getPeriodicBackupConfigurationCommand(this.activeDatabase(), taskId).execute();
-    }
-
-    private getDrivesInfo(): JQueryPromise<Raven.Server.Documents.PeriodicBackup.DrivesInfo> {
-        return new getDrivesInfoCommand(this.activeDatabase()).execute();
     }
 
     addS3Popover() {

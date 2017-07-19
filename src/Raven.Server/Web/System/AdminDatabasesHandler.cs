@@ -345,36 +345,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/periodic-backup/drives-info", "GET", "/admin/periodic-backup/drives-info?name={databaseName:string}")]
-        public Task GetDrivesInfo()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var drivesInfo = new DrivesInfo();
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
-                var ravenConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(name, false, false, databaseRecord);
-
-                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                {
-                    DrivesInfo.GetDrivesInfoForWindows(ravenConfiguration, drivesInfo);
-                }
-                else
-                {
-                    //TODO: implement for Linux/Mac
-                }
-                
-                var drivesInfoBlittable = EntityToBlittable.ConvertEntityToBlittable(drivesInfo, DocumentConventions.Default, context);
-                context.Write(writer, drivesInfoBlittable);
-                writer.Flush();
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/admin/periodic-backup/update", "POST", "/admin/config-periodic-backup?name={databaseName:string}")]
         public async Task UpdatePeriodicBackup()
         {

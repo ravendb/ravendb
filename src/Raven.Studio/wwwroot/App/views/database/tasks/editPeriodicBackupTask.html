@@ -88,9 +88,9 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath, css: { 'has-warning': displaySameDriveWarning }">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
                             <input data-bind="textInput: folderPath" , type="text" class="form-control" placeholder="Full directory backup path" />
-                            <div class="help-block" data-bind="visible: displaySameDriveWarning">
+                            <div class="help-block">
                                 Backup to database drive is not suggested
                             </div>
                         </div>
