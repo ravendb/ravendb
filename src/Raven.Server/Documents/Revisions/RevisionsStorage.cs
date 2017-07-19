@@ -374,6 +374,7 @@ namespace Raven.Server.Documents.Revisions
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                context.LastDatabaseChangeVector = changeVector;
                 DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
@@ -451,13 +452,14 @@ namespace Raven.Server.Documents.Revisions
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
+            long revisionEtag = 0;
             if (table.ReadByKey(key, out TableValueReader tvr) == false)
-                return;
+            {
+                revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
+                table.Delete(tvr.Id);
+            }
 
-            var revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
-
-            table.Delete(tvr.Id);
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, CollectionName collectionName, ChangeVectorEntry[] changeVector)

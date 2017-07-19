@@ -294,6 +294,7 @@ namespace Raven.Server.Documents
                     {
                         var newEtag = _documentsStorage.GenerateNextEtag();
                         deleteAttachmentChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                        context.LastDatabaseChangeVector = conflictChangeVector;
                     }
                     nonPersistentFlags |= DeleteAttachmentConflicts(context, lowerId, document, conflictDocument, deleteAttachmentChangeVector);
                 });
