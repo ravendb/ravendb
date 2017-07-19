@@ -319,7 +319,7 @@ namespace Sparrow.Json
                 object val;
                 if (obj.TryGet(propertyName, out val))
                 {
-                    dic[propertyName] = val.ToString();
+                    dic[propertyName] = val?.ToString();
                 }
             }
             return dic;
