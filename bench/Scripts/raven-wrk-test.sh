@@ -25,7 +25,12 @@ function log
 
 function shutdownServer
 {
-	kill $1
+	if [[ $3 -ne 0 ]]; then
+		log "About to kill process $3"
+		kill $1 &>> ${LOG}
+	else
+		return
+	fi
 
 	CNT=0
 	MAX=20
@@ -47,8 +52,13 @@ function shutdownServer
 function logerror
 {
 	log "ERROR($1): $2"
+	if [[ "$1" == "exit_code_3" ]]; then
+		shutdownServer $3
+		exit 3
+	fi
+
 	if [[ "$1" != "shutdown_flag" ]]; then
-		shutdownServer
+		shutdownServer $3
 		exit 1
 	fi
 }
@@ -59,19 +69,19 @@ log "========================="
 
 JOBS=$(jobs -p | wc -l)
 if [[ ${JOBS} -ne 0 ]]; then
-	logerror 2 "Started with already parallel jobs. Practically cannot happen. JOBS=${JOBS}"
+	logerror 2 "Started with already parallel jobs. Practically cannot happen. JOBS=${JOBS}" 0
 fi
 
 if [[ -f ${RAVENDB_PATH} ]]; then
 	log "${RAVENDB_PATH} will be used"
 else
-	logerror 4 "Cannot find ravendb dll ${RAVENDB_PATH}"
+	logerror 4 "Cannot find ravendb dll ${RAVENDB_PATH}" 0
 fi
 
 if [[ -x ${WRK_PATH} ]]; then
         log "${WRK_PATH} will be used"
 else
-        logerror 5 "Cannot find wrk execautable ${WRK_PATH}"
+        logerror 5 "Cannot find wrk execautable ${WRK_PATH}" 0
 fi
 
 # TODO:
@@ -94,12 +104,12 @@ while [[ ${CNT} -lt ${MAX} ]]; do
 done
 
 if [[ ${CNT} -eq ${MAX} ]]; then
-	logerror 7 "Did not get 'Running as Service' on time"
+	logerror 7 "Did not get 'Running as Service' on time" 0
 fi
 	
 JOBS=$(jobs -p | wc -l)
 if [[ ${JOBS} != 1 ]]; then
-        logerror 6 "Failed to run raven server. JOBS=${JOBS}"
+        logerror 6 "Failed to run raven server. JOBS=${JOBS}" 0
 fi
 
 PSNUM=$(jobs -p)
@@ -117,20 +127,17 @@ ${WRK_PATH} ${WRK_CONF} ${WRK_SCRIPT_WRITES} &> ${RESULT_FILE}
 
 NONSUCCESS=$(grep -i "non" ${RESULT_FILE} | grep -i "responses" | wc -l | awk '{print $1}')
 if [[ ${NONSUCCESS} -gt 0 ]]; then
-	shutdownServer ${PSNUM}
-        logerror 10 "Failed to get wrk results"
+        logerror 10 "Failed to get wrk results" ${PSNUM}
 fi
 
 cat ${RESULT_FILE} | grep 'Requests/sec:' &> ${RESULT_FILE}.tmp
 if [[ $(cat ${RESULT_FILE}.tmp | wc -l | awk '{print $1}') -ne "1" ]]; then
-	shutdownServer ${PSNUM}
-	logerror 11 "Failed to get wrk results"
+	logerror 11 "Failed to get wrk results" ${PSNUM}
 fi
 RESULT=$(cat ${RESULT_FILE}.tmp | awk '{print $2}' | cut -f1 -d'.')
 
 if [[ ${RESULT} -lt ${RES_MIN_WRITE_PER_SEC} ]]; then
-	shutdownServer ${PSNUM}
-	logerror 12 "Got ${RESULT} writes per sec while minimum is: ${RES_MIN_WRITE_PER_SEC}"
+	logerror 12 "Got ${RESULT} writes per sec while minimum is: ${RES_MIN_WRITE_PER_SEC}" ${PSNUM}
 fi
 
 
