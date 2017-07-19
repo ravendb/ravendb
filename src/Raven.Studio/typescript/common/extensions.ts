@@ -183,7 +183,7 @@ class extensions {
         };
 
         ko.bindingHandlers["collapse"] = {
-            init: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
+            init: (element: any, valueAccessor: () => KnockoutObservable<boolean>) => {
                 const value = valueAccessor();
                 const valueUnwrapped = ko.unwrap(value);
                 const $element = $(element);
