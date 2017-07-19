@@ -8,7 +8,7 @@ using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Expiration;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Server.Revisions;
 using Raven.Client.Server.Tcp;
@@ -89,7 +89,7 @@ namespace Raven.Server.Json
         public static readonly Func<BlittableJsonReaderObject, FeedbackForm> FeedbackForm = GenerateJsonDeserializationRoutine<FeedbackForm>();
         public static readonly Func<BlittableJsonReaderObject, CustomIndexPaths> CustomIndexPaths = GenerateJsonDeserializationRoutine<CustomIndexPaths>();
 
-        public static readonly Func<BlittableJsonReaderObject, ApiKeyDefinition> ApiKeyDefinition = GenerateJsonDeserializationRoutine<ApiKeyDefinition>();
+        public static readonly Func<BlittableJsonReaderObject, CertificateDefinition> CertificateDefinition = GenerateJsonDeserializationRoutine<CertificateDefinition>();
 
         public static readonly Func<BlittableJsonReaderObject, RestoreSettings> RestoreSettings = GenerateJsonDeserializationRoutine<RestoreSettings>();
 

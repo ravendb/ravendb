@@ -41,7 +41,7 @@ namespace Raven.Server.Routing
                         routes[routeKey] = routeInfo = new RouteInformation(
                             route.Method, 
                             route.Path, 
-                            route.NoAuthorizationRequired, 
+                            route.RequiredAuthorization, 
                             route.SkipUsagesCount,
                             route.IsDebugInformationEndpoint);
                     }

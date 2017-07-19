@@ -72,14 +72,13 @@ namespace Raven.Client
             }
         }
 
-        public class ApiKeys
+        public class Certificates
         {
-            private ApiKeys()
+            private Certificates()
             {
             }
 
-            public const string Prefix = "apikeys/";
-            public const string ClusterApiKeyName = "Raven/Cluster";
+            public const string Prefix = "certificates/";
         }
 
         public class Configuration

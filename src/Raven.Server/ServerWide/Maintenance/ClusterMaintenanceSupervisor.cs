@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -32,16 +33,19 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly JsonContextPool _contextPool = new JsonContextPool();
 
         internal readonly ClusterConfiguration Config;
+        private readonly ServerStore _server;
+
         public ClusterMaintenanceSupervisor(ServerStore server,string leaderClusterTag, long term)
         {
             _leaderClusterTag = leaderClusterTag;
             _term = term;
+            _server = server;
             Config = server.Configuration.Cluster;
         }
 
-        public void AddToCluster(string clusterTag, string url,string apiKey)
+        public void AddToCluster(string clusterTag, string url)
         {
-            var clusterNode = new ClusterNode(clusterTag, url, apiKey, _contextPool, this, _cts.Token);
+            var clusterNode = new ClusterNode(clusterTag, url, _contextPool, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
             var task = clusterNode.StartListening();
             GC.KeepAlive(task); // we are explicitly not waiting on this task
@@ -116,19 +120,16 @@ namespace Raven.Server.ServerWide.Maintenance
             private DateTime _lastSuccessfulUpdateDateTime;
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
-            private readonly string _apiKey;
 
             public ClusterNode(
                 string clusterTag,
                 string url,
-                string apiKey,
                 JsonContextPool contextPool,
                 ClusterMaintenanceSupervisor parent,
                 CancellationToken token)
             {
                 ClusterTag = clusterTag;
                 Url = url;
-                _apiKey = apiKey;
                 _contextPool = contextPool;
                 _parent = parent;
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
@@ -153,7 +154,8 @@ namespace Raven.Server.ServerWide.Maintenance
                 TcpConnectionInfo tcpConnection = null;
                 try
                 {
-                    tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, _apiKey, "Supervisor");
+                    tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
+                        _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                 }
                 catch (Exception e)
                 {
@@ -175,7 +177,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _tcpClient?.Dispose();
                                 _tcpClient = new TcpClient();
-                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, _apiKey, "Supervisor");
+                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
+                                    _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                             }
                         }
 
@@ -254,7 +257,7 @@ namespace Raven.Server.ServerWide.Maintenance
             private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo)
             {
                 await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _tcpClient, _log);
-                return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo);
+                return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
             }
 
             private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo)
@@ -267,14 +270,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        switch (headerResponse.Status)
+                        if (headerResponse.AuthorizationSuccessful == false)
                         {
-                            case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                                //All good nothing to do
-                                break;
-                            default:
-                                throw new UnauthorizedAccessException(
-                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Status}");
+                            throw new UnauthorizedAccessException(
+                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                         }
                     }
 
@@ -292,8 +291,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
-                    writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.AuthorizationToken));
-                    writer.WriteString((string)null);//TODO: fixme
                 }
                 writer.WriteEndObject();
                 writer.Flush();

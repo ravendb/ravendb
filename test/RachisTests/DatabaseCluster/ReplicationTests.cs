@@ -4,9 +4,10 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Exceptions.Security;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -414,54 +415,59 @@ namespace RachisTests.DatabaseCluster
                 }
             }
         }
-
-        private readonly ApiKeyDefinition _apiKey = new ApiKeyDefinition
+        
+        [Fact]
+        public async Task ReplicateToWatcherWithAuth()
         {
-            Enabled = true,
-            Secret = "secret",
-        };
+            var serverCertPath = SetupServerAuthentication();
+            var clientCert1 = AskServerForClientCertificate(serverCertPath, new string[0], serverAdmin:true);
+            var clientCert2 = AskServerForClientCertificate(serverCertPath, new[] { "ReplicateToWatcherWithAuthDB" });
 
-        [Theory]
-        [InlineData("secret")]
-        [InlineData("bad")]
-        public async Task ReplicateToWatcherWithAuth(string api)
-        {
-            //DoNotReuseServer();
-
-            Server.Configuration.Security.AuthenticationEnabled = false;
-            using (var store1 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
-            using (var store2 = GetDocumentStore(apiKey: "super/" + _apiKey.Secret))
+            using (var store1 = GetDocumentStore(certificate: clientCert1, modifyName: s => "ReplicateToWatcherWithAuthDB"))
+            using (var store2 = GetDocumentStore(certificate: clientCert2, modifyName: s => "ReplicateToWatcherWithAuthDB", createDatabase: false))
             {
-                _apiKey.ResourcesAccessMode[store1.Database] = AccessMode.Admin;
-                _apiKey.ResourcesAccessMode[store2.Database] = AccessMode.ReadWrite;
-                store2.Admin.Server.Send(new PutApiKeyOperation("super", _apiKey));
-                var doc = store2.Admin.Server.Send(new GetApiKeyOperation("super"));
-                Assert.NotNull(doc);
-                Server.Configuration.Security.AuthenticationEnabled = true;
-
-                var watcher = new ExternalReplication
+                var watcher2 = new ExternalReplication
                 {
                     Database = store2.Database,
-                    Url = store2.Urls.First(),
-                    ApiKey = "super/" + api
+                    Url = store2.Urls.First()
                 };
 
-                await AddWatcherToReplicationTopology(store1, watcher);
+                await AddWatcherToReplicationTopology(store1, watcher2);
 
                 using (var session = store1.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                     await session.SaveChangesAsync();
                 }
+                
+                Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
+            }
+        }
 
-                if (api.Equals(_apiKey.Secret))
+        [Fact]
+        public async Task ReplicateToWatcherWithInvalidAuth()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var clientCert1 = AskServerForClientCertificate(serverCertPath, new string[0], serverAdmin: true);
+            var clientCert2 = AskServerForClientCertificate(serverCertPath, new[] { "OtherDB" });
+
+            using (var store1 = GetDocumentStore(certificate: clientCert1, modifyName: s => "ReplicateToWatcherWithAuthDB"))
+            using (var store2 = GetDocumentStore(certificate: clientCert2, modifyName: s => "ReplicateToWatcherWithAuthDB", createDatabase: false))
+            {
+                var watcher2 = new ExternalReplication
                 {
-                    Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
-                }
-                else
+                    Database = store2.Database,
+                    Url = store2.Urls.First()
+                };
+
+                await AddWatcherToReplicationTopology(store1, watcher2);
+
+                using (var session = store1.OpenAsyncSession())
                 {
-                    Assert.False(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                    await Assert.ThrowsAsync<AuthorizationException>(async () => await session.SaveChangesAsync());
                 }
+                
             }
         }
     }

@@ -39,9 +39,7 @@ namespace Raven.Server.Documents.Replication
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
 
-#if DEBUG
-        public AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
-#endif
+        internal AsyncManualResetEvent DebugWaitAndRunReplicationOnce;
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;
@@ -280,7 +278,7 @@ namespace Raven.Server.Documents.Replication
                     try
                     {
                         _reconnectQueue.TryRemove(failure);
-                        AddAndStartOutgoingReplication(failure.Node);
+                        AddAndStartOutgoingReplication(failure.Node, failure.External);
                     }
                     catch (Exception e)
                     {
@@ -481,7 +479,7 @@ namespace Raven.Server.Documents.Replication
             _internalDestinations.AddRange(newInternalDestinations);
         }
 
-        private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd)
+        private void StartOutgoingConnections(IReadOnlyCollection<ReplicationNode> connectionsToAdd, bool external = false)
         {
             if (connectionsToAdd.Count == 0)
                 return;
@@ -497,7 +495,7 @@ namespace Raven.Server.Documents.Replication
                 _numberOfSiblings++;
                 if (_log.IsInfoEnabled)
                     _log.Info("Initialized outgoing replication for " + destination.FromString());
-                AddAndStartOutgoingReplication(destination);
+                AddAndStartOutgoingReplication(destination, external);
             }
 
             if (_log.IsInfoEnabled)
@@ -558,9 +556,9 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private void AddAndStartOutgoingReplication(ReplicationNode node)
+        private void AddAndStartOutgoingReplication(ReplicationNode node, bool external)
         {
-            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node);
+            var outgoingReplication = new OutgoingReplicationHandler(this, Database, node, external);
             outgoingReplication.Failed += OnOutgoingSendingFailed;
             outgoingReplication.SuccessfulTwoWaysCommunication += OnOutgoingSendingSucceeded;
             _outgoing.TryAdd(outgoingReplication); // can't fail, this is a brand new instance
@@ -569,7 +567,8 @@ namespace Raven.Server.Documents.Replication
 
             _outgoingFailureInfo.TryAdd(node, new ConnectionShutdownInfo
             {
-                Node = node
+                Node = node,
+                External = external
             });
             outgoingReplication.Start();
 
@@ -650,16 +649,7 @@ namespace Raven.Server.Documents.Replication
             }
 
         }
-
-        public string GetClusterApiKey()
-        {
-            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (ctx.OpenReadTransaction())
-            {
-                return _server.GetClusterTopology(ctx).ApiKey;
-            }         
-        }
-
+        
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
         {
             _incomingLastActivityTime.AddOrUpdate(instance.ConnectionInfo, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
@@ -752,6 +742,8 @@ namespace Raven.Server.Documents.Replication
         public class ConnectionShutdownInfo
         {
             public string DestinationDbId;
+
+            public bool External;
 
             public long LastAcceptedDocumentEtag;
 

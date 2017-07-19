@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
@@ -15,7 +16,7 @@ namespace Raven.Server.Rachis
         private readonly Candidate _candidate;
         private readonly string _tag;
         private readonly string _url;
-        private readonly string _apiKey;
+        private readonly X509Certificate2 _certificate;
         public string Status;
         private Thread _thread;
         private Stream _conenctToPeer;
@@ -24,13 +25,13 @@ namespace Raven.Server.Rachis
         public long ReadlElectionWonAtTerm { get; set; }
         public string Tag => _tag;
 
-        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, string apiKey)
+        public CandidateAmbassador(RachisConsensus engine, Candidate candidate, string tag, string url, X509Certificate2 certificate)
         {
             _engine = engine;
             _candidate = candidate;
             _tag = tag;
             _url = url;
-            _apiKey = apiKey;
+            _certificate = certificate;
             Status = "Started";
         }
 
@@ -80,7 +81,7 @@ namespace Raven.Server.Rachis
                             TransactionOperationContext context;
                             using (_engine.ContextPool.AllocateOperationContext(out context))
                             {
-                                _conenctToPeer = _engine.ConnectToPeer(_url, _apiKey, context).Result; 
+                                _conenctToPeer = _engine.ConnectToPeer(_url, _certificate, context).Result; 
                             }
 
                             if (_candidate.Running == false)

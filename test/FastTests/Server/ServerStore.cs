@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Net.Http;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util.Helpers;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -129,12 +130,17 @@ namespace FastTests.Server
         {
             using (GetDocumentStore())
             {
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate());
+
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
                     {
-                        Secret = "123"
+                        Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                        Permissions = null,
+                        ServerAdmin = true,
+                        Thumbprint = certificate.Thumbprint
                     }));
                 }
 
@@ -143,8 +149,8 @@ namespace FastTests.Server
                 {
                     var fetched = Server.ServerStore.Cluster.Read(context, "foo/bar");
                     string val;
-                    Assert.True(fetched.TryGet("Secret", out val));
-                    Assert.Equal("123", val);
+                    Assert.True(fetched.TryGet(nameof(CertificateDefinition.Thumbprint), out val));
+                    Assert.Equal(certificate.Thumbprint, val);
                 }
 
             }
@@ -155,22 +161,36 @@ namespace FastTests.Server
         {
             using (GetDocumentStore())
             {
+                var certificate = new X509Certificate2(GenerateAndSaveSelfSignedCertificate());
+
                 TransactionOperationContext context;
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 using (context.OpenWriteTransaction())
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                     {
-                        Secret = "123"
-                    }));
+                        await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
+                        {
+                            Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                            Permissions = null,
+                            ServerAdmin = true,
+                            Thumbprint = certificate.Thumbprint
+                        }));
+                    }
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                 {
-                    await Server.ServerStore.PutValueInClusterAsync(new PutApiKeyCommand("foo/bar", new ApiKeyDefinition
+                    using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))
                     {
-                        Secret = "321"
-                    }));
+                        await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
+                        {
+                            Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
+                            Permissions = null,
+                            ServerAdmin = true,
+                            Thumbprint = certificate.Thumbprint
+                        }));
+                    }
                 }
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out context))

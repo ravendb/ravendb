@@ -7,9 +7,9 @@ using Voron;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class TransactionsModeHandler : AdminDatabaseRequestHandler
+    public class TransactionsModeHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/transactions-mode", "GET")]
+        [RavenAction("/databases/*/admin/transactions-mode", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public Task CommitNonLazyTx()
         {
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");

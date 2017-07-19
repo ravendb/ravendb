@@ -34,11 +34,23 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using AccessToken = Raven.Server.Web.Authentication.AccessToken;
 using System.Reflection;
+using System.Security.Claims;
 using System.Runtime.InteropServices;
+using System.Security.Cryptography;
+using System.Text;
+using DasMulli.Win32.ServiceUtils;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
+using Microsoft.AspNetCore.Server.Kestrel.Filter;
+using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
+using Raven.Client;
 using Raven.Client.Extensions;
-using Raven.Client.Server.Operations.ApiKeys;
+using Raven.Client.Server.Operations.Certificates;
+using Raven.Server.ServerWide.Commands;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Platform.Posix;
@@ -51,7 +63,7 @@ namespace Raven.Server
         {
             //TODO: When this method become available, update to call directly
             var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
-             .CreateDelegate(typeof(Func<int, int, bool>));
+                .CreateDelegate(typeof(Func<int, int, bool>));
 
             setMinThreads(250, 250);
         }
@@ -59,8 +71,6 @@ namespace Raven.Server
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
 
         public readonly RavenConfiguration Configuration;
-
-        public readonly ConcurrentDictionary<string, AccessToken> AccessTokenCache = new ConcurrentDictionary<string, AccessToken>();
 
         public Timer ServerMaintenanceTimer;
 
@@ -83,25 +93,13 @@ namespace Raven.Server
 
             ServerStore = new ServerStore(Configuration, this);
             Metrics = new MetricsCountersManager();
-            ServerMaintenanceTimer = new Timer(ServerMaintenanceTimerByMinute, null, TimeSpan.FromMinutes(1), TimeSpan.FromMinutes(1));
 
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
-        
+
         public Task<TcpListenerStatus> GetTcpServerStatusAsync()
         {
             return _tcpListenerTask;
-        }
-
-        private void ServerMaintenanceTimerByMinute(object state)
-        {
-            foreach (var accessToken in AccessTokenCache.Values)
-            {
-                if (accessToken.IsExpired == false)
-                    continue;
-
-                AccessTokenCache.TryRemove(accessToken.Token, out var _);
-            }
         }
 
         public void Initialize()
@@ -131,13 +129,32 @@ namespace Raven.Server
 
                 if (Configuration.Security.CertificatePath != null)
                 {
-                    ServerCertificate = LoadCertificate(Configuration.Security);
-                    
-                    kestrelOptions += options => options.UseHttps(ServerCertificate.Certificate);
-                    
+                    ServerCertificateHolder = LoadCertificate(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
+                    kestrelOptions += options =>
+                    {
+                        var filterOptions = new HttpsConnectionFilterOptions
+                        {
+                            ServerCertificate = ServerCertificateHolder.Certificate,
+                            CheckCertificateRevocation = true,
+                            ClientCertificateMode = ClientCertificateMode.AllowCertificate,
+                            SslProtocols = SslProtocols.Tls12,
+                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
+                                // Here we are explicitly ignoring trust chain issues for client certificates
+                                // this is because we don't actually require trust, we just use the certificate
+                                // as a way to authenticate. The admin are going to tell us which specific certs
+                                // we can trust anyway, so we can ignore such errors.
+                                    errors == SslPolicyErrors.RemoteCertificateChainErrors ||
+                                    errors == SslPolicyErrors.None
+                        };
+
+                        options.ConnectionFilter = new AuthenticatingFilter(this, new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
+                    };
+
                     // Enforce https in all network activities
                     if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException($"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " + Configuration.Core.ServerUrl);
+                        throw new InvalidOperationException(
+                            $"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " +
+                            Configuration.Core.ServerUrl);
                 }
 
                 _webHost = new WebHostBuilder()
@@ -176,7 +193,7 @@ namespace Raven.Server
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
-                
+
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -242,38 +259,231 @@ namespace Raven.Server
             }
         }
 
+        public class AuthenticateConnection : IHttpAuthenticationFeature
+        {
+            public HashSet<string> AuthorizedDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            private HashSet<string> _caseSensitiveAuthorizedDatabases = new HashSet<string>();
+            public X509Certificate2 Certificate;
+            public CertificateDefinition Definition;
+
+            public bool CanAccess(string db)
+            {
+                if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
+                    return false;
+                if (Status == AuthenticationStatus.ServerAdmin)
+                    return true;
+                if (db == null)
+                    return false;
+
+                if (Status != AuthenticationStatus.Allowed)
+                    return false;
+                if (_caseSensitiveAuthorizedDatabases.Contains(db))
+                    return true;
+                if (AuthorizedDatabases.Contains(db) == false)
+                    return false;
+                // Technically speaking, since this is per connection, this is single threaded. But I'm 
+                // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
+                // we'll probably want to handle this concurrently, and the cost of adding it in this manner
+                // is pretty small for most cases anyway
+                _caseSensitiveAuthorizedDatabases = new HashSet<string>(_caseSensitiveAuthorizedDatabases)
+                {
+                    db
+                };
+                return true;
+            }
+
+            ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
+
+            IAuthenticationHandler IHttpAuthenticationFeature.Handler { get; set; }
+
+            public AuthenticationStatus Status;
+        }
+
+        public class AuthenticatingFilter : IConnectionFilter
+        {
+            private readonly RavenServer _server;
+            private readonly HttpsConnectionFilter _httpsConnectionFilter;
+
+            public AuthenticatingFilter(RavenServer server, HttpsConnectionFilter httpsConnectionFilter)
+            {
+                _server = server;
+                _httpsConnectionFilter = httpsConnectionFilter;
+            }
+
+            private class DummyHttpRequestFeature : IHttpRequestFeature
+            {
+                public string Protocol { get; set; }
+                public string Scheme { get; set; }
+                public string Method { get; set; }
+                public string PathBase { get; set; }
+                public string Path { get; set; }
+                public string QueryString { get; set; }
+                public string RawTarget { get; set; }
+                public IHeaderDictionary Headers { get; set; }
+                public Stream Body { get; set; }
+            }
+
+            public async Task OnConnectionAsync(ConnectionFilterContext context)
+            {
+                await _httpsConnectionFilter.OnConnectionAsync(context);
+                var old = context.PrepareRequest;
+
+                var featureCollection = new FeatureCollection();
+                featureCollection.Set<IHttpRequestFeature>(new DummyHttpRequestFeature());
+                old?.Invoke(featureCollection);
+
+                var tls = featureCollection.Get<ITlsConnectionFeature>();
+                var certificate = tls?.ClientCertificate;
+                var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
+
+                // build the token
+                context.PrepareRequest = features =>
+                {
+                    old?.Invoke(features);
+                    features.Set<IHttpAuthenticationFeature>(authenticationStatus);
+                };
+            }
+
+        }
+
+        private AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
+        {
+            var authenticationStatus = new AuthenticateConnection {Certificate = certificate};
+            if (certificate == null)
+            {
+                authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
+            }
+            else if (certificate.NotAfter < DateTime.UtcNow)
+            {
+                authenticationStatus.Status = AuthenticationStatus.Expired;
+            }
+            else if (certificate.NotBefore > DateTime.UtcNow)
+            {
+                authenticationStatus.Status = AuthenticationStatus.NotYetValid;
+            }
+            else if (certificate.Equals(ServerCertificateHolder.Certificate))
+            {
+                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+            }
+            else
+            {
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    var certKey = Constants.Certificates.Prefix + certificate.Thumbprint;
+                    BlittableJsonReaderObject cert;
+                    using (ctx.OpenReadTransaction())
+                    {
+                        cert = ServerStore.Cluster.Read(ctx, certKey) ??
+                               ServerStore.Cluster.GetLocalState(ctx, certKey);
+                    }
+                    if (cert == null)
+                    {
+                        authenticationStatus.Status = AuthenticationStatus.UnfamiliarCertificate;
+                    }
+                    else
+                    {
+                        var definition = JsonDeserializationServer.CertificateDefinition(cert);
+                        authenticationStatus.Definition = definition;
+                        if (definition.ServerAdmin)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                        }
+                        else
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Allowed;
+                            foreach (var database in definition.Permissions)
+                            {
+                                authenticationStatus.AuthorizedDatabases.Add(database);
+                            }
+                        }
+                    }
+                }
+            }
+            return authenticationStatus;
+        }
+
+
         public string[] WebUrls { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
-        
-        internal CertificateHolder ServerCertificate;
+
+        internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
 
         public class CertificateHolder
         {
             public string CertificateForClients;
             public X509Certificate2 Certificate;
+            public AsymmetricKeyEntry PrivateKey;
         }
 
-        private static CertificateHolder LoadCertificate(SecurityConfiguration config)
+        public static CertificateHolder LoadCertificate(string certificatePath, string certificatePassword)
         {
             try
             {
-                var loadedCertificate = config.CertificatePassword == null
-                    ? new X509Certificate2(File.ReadAllBytes(config.CertificatePath))
-                    : new X509Certificate2(File.ReadAllBytes(config.CertificatePath), config.CertificatePassword);
+                var rawData = File.ReadAllBytes(certificatePath);
+
+                var loadedCertificate = certificatePassword == null
+                    ? new X509Certificate2(rawData)
+                    : new X509Certificate2(rawData, certificatePassword);
+
+                ValidateExpiration(certificatePath, loadedCertificate);
+
+                ValidatePrivateKey(certificatePath, certificatePassword, rawData, out var privateKey);
+
+                ValidateKeyUsages(certificatePath, loadedCertificate);
 
                 return new CertificateHolder
                 {
                     Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert))
+                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                    PrivateKey = privateKey
                 };
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Could not load certificate file {config.CertificatePath}, please check the path and password", e);
+                throw new InvalidOperationException($"Could not load certificate file {certificatePath}, please check the path and password", e);
             }
         }
-        
+
+        private static void ValidateExpiration(string certificatePath, X509Certificate2 loadedCertificate)
+        {
+            if (loadedCertificate.NotAfter < DateTime.UtcNow)
+                throw new EncryptionException($"The provided certificate {certificatePath} is expired! " + loadedCertificate);
+        }
+
+        private static void ValidatePrivateKey(string certificatePath, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
+        {
+            var store = new Pkcs12Store();
+            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+            pk = null;
+            foreach (string alias in store.Aliases)
+            {
+                pk = store.GetKey(alias);
+                if (pk != null)
+                    break;
+            }
+
+            if (pk == null)
+                throw new EncryptionException("Unable to find the private key in the provided certificate: " + certificatePath);
+        }
+
+        private static void ValidateKeyUsages(string certificatePath, X509Certificate2 loadedCertificate)
+        {
+            var supported = false;
+            foreach (var extension in loadedCertificate.Extensions)
+            {
+                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
+                    continue;
+
+                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+
+                supported = extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"); // Client Authentication & Server Authentication
+            }
+
+            if (supported == false)
+                throw new EncryptionException("Server certificate " + certificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+        }
+
         public class TcpListenerStatus
         {
             public readonly List<TcpListener> Listeners = new List<TcpListener>();
@@ -337,7 +547,7 @@ namespace Raven.Server
                     }
                 }
 
-                if(successfullyBoundToAtLeastOne == false)
+                if (successfullyBoundToAtLeastOne == false)
                 {
                     if (errors.Count == 1)
                         throw errors[0];
@@ -364,16 +574,16 @@ namespace Raven.Server
         private async Task<IPAddress[]> GetTcpListenAddresses(string host)
         {
             if (IPAddress.TryParse(host, out IPAddress ipAddress))
-                return new[] { ipAddress };
+                return new[] {ipAddress};
 
             switch (host)
             {
                 case "*":
                 case "+":
-                    return new[] { IPAddress.Any };
+                    return new[] {IPAddress.Any};
                 case "localhost":
                 case "localhost.fiddler":
-                    return new[] { IPAddress.Loopback };
+                    return new[] {IPAddress.Loopback};
                 default:
                     try
                     {
@@ -449,25 +659,43 @@ namespace Raven.Server
                                 // we don't want to allow external (and anonymous) users to send us unlimited data
                                 // a maximum of 2 KB for the header is big enough to include any valid header that
                                 // we can currently think of
-                                maxSize: 1024*2
-                                ))
+                                maxSize: 1024 * 2
+                            ))
                             {
                                 header = JsonDeserializationClient.TcpConnectionHeaderMessage(headerJson);
                                 if (Logger.IsInfoEnabled)
                                 {
-                                    Logger.Info($"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
+                                    Logger.Info(
+                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            if (TryAuthorize(context, Configuration, tcp.Stream, header) == false)
+                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+
+
+                            using (var writer = new BlittableJsonTextWriter(context, stream))
                             {
-                                var msg =
-                                    $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
-                                    $" is not authorized to access {header.DatabaseName ?? "the cluster node"}";
+                                writer.WriteStartObject();
+                                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.AuthorizationSuccessful));
+                                writer.WriteBool(authSuccessful);
+                                if (err != null)
+                                {
+                                    writer.WriteComma();
+                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
+                                    writer.WriteString(err);
+                                }
+                                writer.WriteEndObject();
+                                writer.Flush();
+                            }
+
+                            if (authSuccessful == false)
+                            {
                                 if (Logger.IsInfoEnabled)
                                 {
-                                    Logger.Info(msg);
+                                    Logger.Info(
+                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}" +
+                                        $" is not authorized to access {header.DatabaseName ?? "the cluster node"} because {err}");
                                 }
-                                throw new UnauthorizedAccessException(msg);
+                                return; // cannot proceed
                             }
                         }
 
@@ -545,9 +773,9 @@ namespace Raven.Server
                     tcp.PinnedBuffer
                 ))
                 {
-                    
+
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
-                    
+
                     if (_clusterMaintenanceWorker?.CurrentTerm > maintenanceHeader.Term)
                     {
                         if (_tcpLogger.IsInfoEnabled)
@@ -566,7 +794,7 @@ namespace Raven.Server
                     }
                     return true;
                 }
-                
+
             }
             return false;
         }
@@ -592,7 +820,7 @@ namespace Raven.Server
             }
 
             tcp.DocumentDatabase = await databaseLoadingTask;
-            if(tcp.DocumentDatabase == null)
+            if (tcp.DocumentDatabase == null)
                 DatabaseDoesNotExistException.Throw(header.DatabaseName);
 
             Debug.Assert(tcp.DocumentDatabase != null);
@@ -625,87 +853,75 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (ServerCertificate != null)
+            if (ServerCertificateHolder.Certificate != null)
             {
-                SslStream sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
-                {
-                    return errors == SslPolicyErrors.None ||
-                           // it is fine that the client doesn't have a cert, we just care that they
-                           // are connecting to us securely
-                           errors == SslPolicyErrors.RemoteCertificateNotAvailable;
-                });
+                var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
+                    // it is fine that the client doesn't have a cert, we just care that they
+                    // are connecting to us securely. At any rate, we'll ensure that if certificate
+                    // is required, we'll validate that it is one of the expected ones on the server
+                    // and that the client is authorized to do so. 
+                    // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                    // SSL, because that generate a nicer error for the user to read then just aborted
+                    // connection because SSL negotation failed.
+                        true);
                 stream = sslStream;
-                await sslStream.AuthenticateAsServerAsync(ServerCertificate.Certificate, true, SslProtocols.Tls12, false);
+
+                await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
         }
 
-        private bool TryAuthorize(JsonOperationContext context, RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
-            using (var writer = new BlittableJsonTextWriter(context, stream))
+            msg = null;
+            if (configuration.Security.AuthenticationEnabled == false)
             {
-                if (configuration.Security.AuthenticationEnabled == false
-                    && header.AuthorizationToken == null)
-                {
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
-                    return true;
-                }
-                
-                var sigBase64Size = Sparrow.Utils.Base64.CalculateAndValidateOutputLength(Sodium.crypto_sign_bytes());
-                if (header.AuthorizationToken == null || header.AuthorizationToken.Length < sigBase64Size + 8 /* sig length + prefix */)
-                {
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.AuthorizationTokenRequired));
-                    return false;
-                }
 
-                AccessToken accessToken;
-                if (RequestRouter.TryGetAccessToken(this, header.AuthorizationToken, sigBase64Size, out accessToken) == false)
-                {
-                    if (accessToken.IsExpired)
-                    {
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ExpiredAuthorizationToken));
-                        return false;
-                    }
-                    ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.BadAuthorizationToken));
-                    return false;
-                }
-
-                AccessMode mode;
-                var hasValue =
-                    accessToken.AuthorizedDatabases.TryGetValue(header.DatabaseName, out mode) ||
-                    accessToken.AuthorizedDatabases.TryGetValue("*", out mode);
-
-                if (hasValue == false)
-                    mode = AccessMode.None;
-
-                switch (mode)
-                {
-                    case AccessMode.None:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden));
-                        return false;
-                    case AccessMode.ReadOnly:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly));
-                        return false;
-                    case AccessMode.ReadWrite:
-                    case AccessMode.Admin:
-                        ReplyStatus(writer, nameof(TcpConnectionHeaderResponse.AuthorizationStatus.Success));
-                        return true;
-                    default:
-                        throw new ArgumentOutOfRangeException("Unknown access mode: " + mode);
-                }
+                return true;
             }
 
-        }
+            if (!(stream is SslStream sslStream))
+            {
+                msg = "TCP connection is required to use SSL when authentication is enabled";
+                return false;
+            }
 
+            var certificate = (X509Certificate2)sslStream.RemoteCertificate;
+            var auth = AuthenticateConnectionCertificate(certificate);
 
-        private static void ReplyStatus(BlittableJsonTextWriter writer, string status)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
-            writer.WriteString(status);
-            writer.WriteEndObject();
-            writer.Flush();
+            switch (auth.Status)
+            {
+                case AuthenticationStatus.Expired:
+                    msg = "The provided client certificate " + certificate.FriendlyName + " is expired on " + certificate.NotAfter;
+                    return false;
+                case AuthenticationStatus.NotYetValid:
+                    msg = "The provided client certificate " + certificate.FriendlyName + " is not yet valid because it starts on " + certificate.NotBefore;
+                    return false;
+                case AuthenticationStatus.ServerAdmin:
+                    msg = "Admin can do it all";
+                    return true;
+                case AuthenticationStatus.Allowed:
+                    switch (header.Operation)
+                    {
+                        case TcpConnectionHeaderMessage.OperationTypes.Cluster:
+                        case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
+                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ServerAdmin";
+                            return false;
+                        case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
+                        case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                        case TcpConnectionHeaderMessage.OperationTypes.Replication:
+                            if (auth.CanAccess(header.DatabaseName))
+                                return true;
+                            msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
+                            return false;
+                        default:
+                            throw new InvalidOperationException("Unknown operation " + header.Operation);
+                    }
+                default:
+                    msg = "Cannot allow access to a certificate with status: " + auth.Status;
+                    return false;
+            }
         }
 
         private static void ThrowDatabaseShutdown(DocumentDatabase database)
@@ -791,6 +1007,7 @@ namespace Raven.Server
         }
 
         public const string PipePrefix = "raven-control-pipe-";
+
         public void OpenPipe()
         {
             var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
@@ -834,7 +1051,8 @@ namespace Raven.Server
             Pipe = new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte,
                 PipeOptions.Asynchronous, 1024, 1024);
 
-            if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+            if (PlatformDetails.RunningOnPosix
+            ) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
             {
                 var pathField = Pipe.GetType().GetField("_path", BindingFlags.NonPublic | BindingFlags.Instance);
                 if (pathField == null)
@@ -843,6 +1061,17 @@ namespace Raven.Server
                 }
                 pathField.SetValue(Pipe, Path.Combine(pipeDir, pipeName));
             }
+        }
+
+        public enum AuthenticationStatus
+        {
+            None,
+            NoCertificateProvided,
+            UnfamiliarCertificate,
+            Allowed,
+            ServerAdmin,
+            Expired,
+            NotYetValid
         }
     }
 }

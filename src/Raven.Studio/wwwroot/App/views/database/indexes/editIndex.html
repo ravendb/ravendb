@@ -91,6 +91,20 @@
                             <i class="icon-plus"></i><span>Add reduction</span>
                         </button>
                     </div>
+                    <div class="flex-horizontal margin-bottom">
+                        <div class="input-group flex-grow" data-bind="visible: editedIndex().hasReduce, validationElement: editedIndex().reduceToCollectionName">
+                            <div class="input-group-addon">
+                                <div class="checkbox checkbox-inline">
+                                    <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
+                                    <label for="outputToCollection">
+                                        Output reduce to collection
+                                    </label>
+                                </div>
+                            </div>
+                            <input type="text" class="form-control flex-grow" placeholder="Enter collection name"
+                                   data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="tabs">
@@ -139,14 +153,6 @@
                                             <li><a href="#" data-bind="text: $data, click: _.partial($parent.indexStoragePath, $data)"></a></li>
                                             <!-- /ko -->
                                         </ul>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="form-group" data-bind="visible: editedIndex().hasReduce">
-                                <label class="col-sm-2 control-label">Output reduce to collection</label>
-                                <div class="col-sm-10">
-                                    <div class="dropdown visible-block">
-                                        <input class="form-control" data-bind="textInput: editedIndex().outputReduceToCollection" />
                                     </div>
                                 </div>
                             </div>

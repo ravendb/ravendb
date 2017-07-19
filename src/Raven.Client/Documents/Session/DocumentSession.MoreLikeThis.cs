@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
             var operation = new MoreLikeThisOperation(this, query);
 
             var command = operation.CreateRequest();
-            RequestExecutor.Execute(command, Context);
+            RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 
             var result = command.Result;
             operation.SetResult(result);

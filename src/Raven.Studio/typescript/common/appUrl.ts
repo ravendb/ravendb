@@ -27,8 +27,6 @@ class appUrl {
         adminSettings: ko.pureComputed(() => appUrl.forAdminSettings()),
         adminSettingsCluster: ko.pureComputed(() => appUrl.forCluster()),
 
-        hasApiKey: ko.pureComputed(() => appUrl.forHasApiKey()),
-
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
@@ -127,9 +125,6 @@ class appUrl {
     static forAdminSettings(): string {
         return "#admin/settings";
     }
-    static forApiKeys(): string {
-        return "#admin/settings/apiKeys";
-    }
 
     static forCluster(): string {
         return "#admin/settings/cluster";
@@ -137,10 +132,6 @@ class appUrl {
 
     static forAddClusterNode(): string {
         return "#admin/settings/addClusterNode";
-    }
-
-    static forServerSmugging(): string {
-        return "#admin/settings/serverSmuggling";
     }
 
     static forBackup(): string {
@@ -201,10 +192,6 @@ class appUrl {
 
     static forAbout(): string {
         return "#about";
-    }
-
-    static forHasApiKey(): string {
-        return "#has-api-key";
     }
 
     static forEditDoc(id: string, db: database | databaseInfo, collection?: string): string {

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -53,7 +54,7 @@ namespace Raven.Server.Rachis
 
         public abstract bool ShouldSnapshot(Slice slice, RootObjectType type);
 
-        public abstract Task<Stream> ConnectToPeer(string url, string apiKey);
+        public abstract Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate);
 
         public virtual void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {

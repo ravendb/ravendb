@@ -15,7 +15,7 @@ namespace Raven.Server.Routing
 
         public string Description { get; }
 
-        public bool NoAuthorizationRequired { get; set; } // "NeverSecret"
+        public AuthorizationStatus RequiredAuthorization { get; set; } = AuthorizationStatus.ValidUser;
 
         public bool SkipUsagesCount { get; set; }
 
@@ -26,5 +26,12 @@ namespace Raven.Server.Routing
             Description = description;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
         }
+    }
+
+    public enum AuthorizationStatus
+    {
+        ServerAdmin,
+        ValidUser,
+        UnauthenticatedClients
     }
 }

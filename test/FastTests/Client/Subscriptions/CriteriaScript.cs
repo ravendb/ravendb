@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
@@ -16,16 +17,13 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task BasicCriteriaTest(bool useSsl)
         {
+            X509Certificate2 certificate = null;
             if (useSsl)
             {
-                var tempPath = GenerateAndSaveSelfSignedCertificate();
-                DoNotReuseServer(new ConcurrentDictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
-                });
+                SetupAuthenticationInTest(out certificate, new[]{ "CriteriaTestDB" });
             }
-            using (var store = GetDocumentStore())
+
+            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => "CriteriaTestDB"))
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
                 await CreateDocuments(store, 1);
@@ -65,17 +63,13 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
+            X509Certificate2 certificate = null;
             if (useSsl)
             {
-                var tempPath = GenerateAndSaveSelfSignedCertificate();
-                DoNotReuseServer(new ConcurrentDictionary<string, string>
-                {
-                    [RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = tempPath,
-                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://127.0.0.1:0"
-                });
+                SetupAuthenticationInTest(out certificate, new[] { "CriteriaTestDB" });
             }
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => "CriteriaTestDB"))
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
                 await CreateDocuments(store, 1);

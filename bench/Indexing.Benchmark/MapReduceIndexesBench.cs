@@ -51,10 +51,7 @@ namespace Indexing.Benchmark
                 public double Total { get; set; }
             }
 
-            public override string IndexName
-            {
-                get { return "Orders/GroupByCompany"; }
-            }
+            public override string IndexName => "Orders/GroupByCompany";
 
             public override IndexDefinition CreateIndexDefinition()
             {
@@ -91,10 +88,7 @@ select new
                 public double Total { get; set; }
             }
 
-            public override string IndexName
-            {
-                get { return "Orders/GroupByCompany_Fanout"; }
-            }
+            public override string IndexName => "Orders/GroupByCompany_Fanout";
 
             public override IndexDefinition CreateIndexDefinition()
             {

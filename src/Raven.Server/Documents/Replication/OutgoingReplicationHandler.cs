@@ -12,10 +12,8 @@ using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
-using Raven.Client.Http.OAuth;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
-using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -39,7 +37,6 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         private readonly AsyncManualResetEvent _waitForChanges = new AsyncManualResetEvent();
         private readonly CancellationTokenSource _cts;
-        private readonly ApiKeyAuthenticator _authenticator = new ApiKeyAuthenticator();
         private Thread _sendingThread;
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;
@@ -47,8 +44,7 @@ namespace Raven.Server.Documents.Replication
 
         internal DateTime _lastDocumentSentTime;
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector =
-            new Dictionary<Guid, long>();
+        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
 
         internal string _destinationLastKnownChangeVectorAsString;
 
@@ -69,16 +65,18 @@ namespace Raven.Server.Documents.Replication
 
         public event Action<OutgoingReplicationHandler> SuccessfulTwoWaysCommunication;
         public readonly ReplicationNode Destination;
+        private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
 
         private OutgoingReplicationStatsAggregator _lastStats;
 
-        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node)
+        public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external)
         {
             _parent = parent;
             _database = database;
             Destination = node;
+            _external = external;
             _log = LoggingSource.Instance.GetLogger<OutgoingReplicationHandler>(_database.Name);
 
             _database.Changes.OnDocumentChange += OnDocumentChange;
@@ -110,13 +108,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
-
-        private string GetApiKey()
-        {
-            var watcher = Destination as ExternalReplication;
-            return watcher == null ? _parent.GetClusterApiKey() : watcher.ApiKey;
-        }
-
+        
         public string GetNode()
         {
             var node = Destination as InternalReplication;
@@ -128,7 +120,8 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), GetApiKey(), "Replication");
+                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication", 
+                    _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
@@ -148,7 +141,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
                         .Wait(CancellationToken);
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 
@@ -194,8 +187,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            var msg =
-                                $"Failed to parse initial server response. This is definitely not supposed to happen.";
+                            var msg = "Failed to parse initial server response. This is definitely not supposed to happen.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
@@ -208,13 +200,11 @@ namespace Raven.Server.Documents.Replication
                         {
                             while (true)
                             {
-#if DEBUG
                                 if (_parent.DebugWaitAndRunReplicationOnce != null)
                                 {
                                     _parent.DebugWaitAndRunReplicationOnce.WaitAsync().Wait(_cts.Token);
                                     _parent.DebugWaitAndRunReplicationOnce.Reset();
                                 }
-#endif
 
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
@@ -324,14 +314,10 @@ namespace Raven.Server.Documents.Replication
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
-                //send initial connection information               
-                var token = AsyncHelpers.RunSync(() => _authenticator.GetAuthenticationTokenAsync(GetApiKey(), Destination.Url, documentsContext));
-
                 documentsContext.Write(writer, new DynamicJsonValue
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.AuthorizationToken)] = token,
                     [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
                 });
                 writer.Flush();
@@ -371,13 +357,9 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                switch (headerResponse.Status)
+                if(headerResponse.AuthorizationSuccessful == false)
                 {
-                    case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                        //All good nothing to do
-                        break;
-                    default:
-                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Status}");
+                    throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                 }
             }
         }
@@ -429,7 +411,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
-            private  Guid _dbid;
+            private Guid _dbId;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -439,7 +421,7 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate()
             {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbid) == false)
+                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbId) == false)
                     return false;
 
                 return _replicationBatchReply.CurrentEtag > 0;
@@ -457,10 +439,8 @@ namespace Raven.Server.Documents.Replication
                     return 0;
 
 
-                return context.UpdateLastDatabaseChangeVector(_dbid, _replicationBatchReply.CurrentEtag) ? 1 : 0;
+                return context.UpdateLastDatabaseChangeVector(_dbId, _replicationBatchReply.CurrentEtag) ? 1 : 0;
             }
-
-            
         }
         
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
@@ -475,14 +455,16 @@ namespace Raven.Server.Documents.Replication
                 _destinationLastKnownChangeVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
             }
 
-           
-            var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
-            if (update.InitAndValidate())
+            if (_external == false)
             {
-                // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                // is purely adviosry. We just want to have the information up to date at some point, and we won't 
-                // miss anything much if this isn't there.
-                _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
+                if (update.InitAndValidate())
+                {
+                    // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
+                    // is purely advisory. We just want to have the information up to date at some point, and we won't 
+                    // miss anything much if this isn't there.
+                    _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
+                }
             }
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -509,8 +491,7 @@ namespace Raven.Server.Documents.Replication
 
         internal void SendHeartbeat()
         {
-            DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 try

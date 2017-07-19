@@ -8,7 +8,7 @@ class licenseActivateCommand extends commandBase {
     }
 
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.license.licenseActivate;
+        const url = endpoints.global.license.adminLicenseActivate;
 
         return this.post(url, JSON.stringify(this.licensePayload), null, { dataType: undefined })
             .fail((response: JQueryXHR) => {

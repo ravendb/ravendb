@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions.Patching;
@@ -823,7 +824,8 @@ this.Value = another.Value;
 
                 var operation = await store.Operations.SendAsync(new PatchByIndexOperation("TestIndex",
                     new IndexQuery() { Query = "Value:1" },
-                    new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }));
+                    new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }),
+                    CancellationToken.None);
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())

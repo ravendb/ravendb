@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _remoteEndpoint = remoteEndpoint;
         }
 
-        public IEnumerable<(Document Doc,Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, long startEtag, SubscriptionPatchDocument patch)
+        public IEnumerable<(Document Doc,Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, SubscriptionPatchDocument patch, long startEtag)
         {
             if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
                 throw new ArgumentException("The collection name must be specified");

@@ -53,18 +53,6 @@ class extensions {
             message: "Url format expected: 'http(s)://hostName:portNumber'"
         };  
 
-        // Validate that the Api Key is the following format: xxxxx/xxxxx (e.g. abCD123/efGh456)
-        (ko.validation.rules as any)['validApiKey'] = {
-            validator: (apiKey: string) => {
-                if (apiKey) {
-                    const apiKeyRegex = /^([\da-z]+)\/([\da-z]+)$/;
-                    return (apiKeyRegex.test(apiKey));
-                }
-                return true;
-            },
-            message: "Api Key format expected: 2 strings separated by a slash, i.e. xxxxx/xxxxx"
-        };
-
         (ko.validation.rules as any)['validDatabaseName'] = {
             validator: (val: string) => !extensions.validateDatabaseName(val),
             message: (params: any, databaseName: KnockoutObservable<string>) => {
@@ -195,21 +183,42 @@ class extensions {
         };
 
         ko.bindingHandlers["collapse"] = {
-            init: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
-                var value = valueAccessor();
-                var valueUnwrapped = ko.unwrap(value);
-                var $element = $(element);
+            init: (element: any, valueAccessor: () => KnockoutObservable<boolean>) => {
+                const value = valueAccessor();
+                const valueUnwrapped = ko.unwrap(value);
+                const $element = $(element);
                 $element
                     .addClass('collapse')
                     .collapse({
                         toggle: valueUnwrapped
                     });
+
+                // mark element is being initialized to allow initial animation to take place
+                $(element).data('bs.collapse').initializing = true;
             },
 
-            update: (element: any, valueAccessor: KnockoutObservable<boolean>) => {
-                var value = valueAccessor();
-                var valueUnwrapped = ko.unwrap(value);
-                $(element).collapse(valueUnwrapped ? "show" : "hide");
+            update: (element: any, valueAccessor: () => KnockoutObservable<boolean>) => {
+                const value = valueAccessor();
+                const valueUnwrapped = ko.unwrap(value);
+                const bsData = $(element).data('bs.collapse');
+
+                const action = valueUnwrapped ? "show" : "hide";
+
+                const isInit = bsData.initializing;
+
+                if (isInit) {
+                    delete bsData.initializing;
+                } else {
+                    const transitioning = bsData.transitioning;
+
+                    if (!transitioning) {
+                        // if there isn't any other animation in progress - proceed
+                        $(element).collapse(action);
+                    } else if (ko.isObservable(value)) {
+                        // have we another animation in progress - try to recover this state by reseting checkbox
+                        value(!value());
+                    }
+                }
             }
         };
 

@@ -31,16 +31,6 @@ declare var Cronstrue: {
 declare var Favico: any;
 
 ///
-/// Forge
-///
-
-declare var forge: any;
-
-declare module "forge" {
-    export = forge;
-}
-
-///
 /// jQuery: 
 ///   - selectpicker 
 ///   - multiselect

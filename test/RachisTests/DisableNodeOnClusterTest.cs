@@ -76,7 +76,7 @@ namespace RachisTests
                     {
                         Url = store.Urls[0],
                         Database = databaseName,
-                    }, Timeout.Infinite);
+                    },  Timeout.Infinite);
             } while (store.GetRequestExecutor().TopologyNodes.Count != replicationFactor);
         }
     }

@@ -1,13 +1,12 @@
-<div class="content-margin">
-    <div class="destinations flex-vertical absolute-fill content-margin">
+    <div class="edit-subscription flex-vertical absolute-fill content-margin">
         <div class="row flex-row flex-grow flex-stretch-items">
             <div class="col-sm-12 col-lg-6 flex-vertical">
                 <div class="flex-header">
-                    <button class="btn btn-primary" data-bind="click: saveSubscription"> 
+                    <button class="btn btn-primary" data-bind="click: saveSubscription, enable: isSaveEnabled">
                         <i class="icon-save"></i>
                         <span>Save</span>
                     </button>
-                    <button class="btn btn-default" data-bind="click: cloneSubscription, visible: !isAddingNewSubscriptionTask()" title="Clone this subscription"> 
+                    <button class="btn btn-default" data-bind="click: cloneSubscription, visible: !isAddingNewSubscriptionTask()" title="Clone this subscription">
                         <i class="icon-clone"></i>
                         <span>Clone</span>
                     </button>
@@ -15,32 +14,36 @@
                         <i class="icon-cancel"></i>
                         <span>Cancel</span>
                     </button>
-                    <button class="btn btn-info pull-right btn-upcoming">
+                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: !enableTestArea()" title="Test this subscription definition">
                         <i class="icon-rocket"></i>
-                        <span>Test subscription</span>
+                        <span>Test Subscription</span>
+                    </button>
+                    <button class="btn btn-info pull-right" data-bind="click: toggleTestArea, visible: enableTestArea" title="Close the test area">
+                        <i class="icon-rocket"></i>
+                        <span>Close Test Area</span>
                     </button>
                 </div>
                 <div class="scroll" data-bind="with: editedSubscription">
-                    <div class="panel padding">
-                        <h2 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h2>
-                        <h2 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h2>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Task Name</label>
-                            <div class="col-xs-12 col-sm-6 col-lg-8">
-                                <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
-                                       data-bind="value: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
-                            </div>
+                    <div class="panel padding flex-form">
+                        <h3 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h3>
+                        <h3 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h3>
+                        <div class="form-group margin-top">
+                            <label class="control-label">Task Name</label>
+                            <input type="text" class="form-control" id="taskName" placeholder="Enter a descriptive name for the subscription task" title="Note: if no name is supplied then server will create one for you"
+                                   data-bind="textInput: taskName, attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
                         </div>
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Collection</label>
-                            <div class=" col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
+                        <div class="form-group">
+                            <label class="control-label">Collection</label>
+                            <div class="flex-grow" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
                                 <div class="dropdown btn-block">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="attr: { disabled: !$root.isAddingNewSubscriptionTask() }">
-                                        <span data-bind="text: collection() || 'Select collection..', textinput: collection"></span> <!-- TODO: make the 'Select collection..' grayed out, like a real placeholder -->
-                                        <span class="caret"></span>
-                                    </button>
-                                    <ul class="dropdown-menu max-height" data-bind="foreach: $root.collections">
-                                        <li><a href="#" data-bind="text: name, click: _.partial($root.useCollection, $data)"></a></li>
+                                    <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
+                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
+                                           placeholder="Select a collection">
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
+                                        <li data-bind="click: _.partial($root.useCollection, $data)">
+                                            <a href="#" data-bind="text: $data"></a>
+                                        </li>  
                                     </ul>
                                 </div>
                                 <span class="help-block" data-bind="validationMessage: collection"></span>
@@ -49,32 +52,32 @@
                     </div>
                     <div class="panel">
                         <div class="padding">
-                            <div class="toggle">
+                            <div class="toggle" data-bind="validationElement: includeRevisions,  validationOptions: { insertMessages: false }">
                                 <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
                                 <label for="include-revisions">Include Revisions</label>
                             </div>
-                            <div class="toggle collapsed" data-toggle="collapse" data-target="#collapseTransformScript" aria-expanded="false">
-                                <input id="toggle-transform-script" type="checkbox">
-                                <label for="toggle-transform-script">
-                                    Apply Transform Script<i class="icon-info text-info"></i>
-                                </label>
+                            <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
+                            <div class="toggle">
+                                <input id="toggle-transform-script" type="checkbox" data-bind="checked: applyScript">
+                                <label for="toggle-transform-script">Apply Transform Script <i class="icon-info text-info" id="scriptInfo"></i></label>
                             </div>
-                            <div class="collapse" id="collapseTransformScript" aria-expanded="false">
-                                <!-- TODO : ace editor, add validations ? -->
-                                <pre class="form-control margin-top" placeholder="Enter transform script" 
-                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;"></pre>
-                                <div>
-                                    <div class="help-block"></div>
+                            <div id="collapseTransformScript" data-bind="collapse: applyScript">
+                                <!--TODO : ace editor, add script validations - see issue 7795-->
+                                <pre class="form-control margin-top" placeholder="Enter transform script"
+                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' },  validationElement: script," style="height: 160px;">
+                                </pre>
+                                <div data-bind="validationElement: script">
+                                    <div class="help-block" data-bind="validationMessage: script"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    <div class="panel padding">
-                        <div class="row flex-row margin-bottom">
-                            <label class="control-label col-xs-12 col-sm-6 col-lg-4">Send Documents From</label>
-                            <div class=" col-xs-12 col-sm-6 col-lg-8">
+                    <div class="panel padding flex-form">
+                        <div class="form-group">
+                            <label class="control-label">Send Documents From</label>
+                            <div class="flex-grow">
                                 <div class="dropdown btn-block" title="Set the starting point for the subscription task">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled"> 
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled">
                                         <span data-bind="text: startingPointType"></span>
                                         <span class="caret"></span>
                                     </button>
@@ -93,7 +96,7 @@
                             </div>
                         </div>
                         <div class="margin-top">
-                            <div class="row flex-row margin-bottom" data-bind="visible: startingPointChangeVector "> 
+                            <div class="row flex-row" data-bind="visible: startingPointChangeVector ">
                                 <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
                                     <textarea rows="3" class="form-control" placeholder="Set change vector"></textarea>
                                 </div>
@@ -102,198 +105,60 @@
                                 </div>
                             </div>
                         </div>
-                        <br/><br/><br/>
                     </div>
                 </div>
             </div>
-            <!--<div class="col-sm-12 col-lg-6 flex-vertical">
-                <div class="panel padding flex-grow">
-                    <div class="flex-header">
-                        <div class="flex-horizontal margin-bottom">
-                            <div class="flex-grow">
-                                <h3>Test subscription</h3>
-                            </div>
-                            <div>
-                                <button class="close"><i class="icon-cancel"></i></button>
-                            </div>
+            <div class="col-sm-12 col-lg-6 flex-vertical" id="testArea" data-bind="visible: enableTestArea">
+                <div class="panel padding flex-vertical flex-grow">
+                    <div class="flex-header"> 
+                        <div class="flex-horizontal">
+                            <div class="flex-grow"><h3>Test Subscription</h3></div>
+                            <div><button class="close" data-bind="click: toggleTestArea" title="Close the test area"><i class="icon-cancel"></i></button></div>
                         </div>
                         <div class="flex-horizontal">
-                            <div class="flex-grow">
+                            <div class="flex-grow flex-vertical">
                                 <div class="input-group">
-                                    <div class="input-group-addon">Results limit <i class="icon-info text-info"></i></div>
-                                    <input type="number" class="form-control" />
+                                    <div class="input-group-addon">Results limit</div>
+                                    <input type="number" min="1" class="form-control" placeholder="Set number of documents to fetch" title="Set number of documents to fetch" data-bind="textInput: testResultsLimit" />
                                 </div>
                             </div>
                             <div>
-                                <button class="btn btn-info"><i class="icon-rocket"></i> <span>Run</span></button>
+                                <button class="btn btn-info" data-bind="click: runTest, css: { 'btn-spinner': spinners.globalToggleDisable }, disbale: spinners.globalToggleDisable" title="Run test with current settings">
+                                    <i class="icon-rocket"></i><span>Run Test</span>
+                                </button> 
                             </div>
                         </div>
                     </div>
+                    
                     <div class="clearfix">
                         <div class="pull-right">
-                            <div class="btn-group dropdown-right">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            <div class="btn-group dropdown-right open">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown">
                                     <i class="icon-table"></i><span>Display</span>
                                     <span class="caret"></span>
                                 </button>
-                                <ul class="dropdown-menu colselect-dropdown slidein-style" role="menu">
-                                    <div>
-                                        <div class="columns-list-container flex-vertical" data-view="views/partial/columnsSelector" data-active-view="true" style="">
-                                            <div class="flex-header">
-                                                <div class="checkbox">
-                                                    <input type="checkbox" id="select_all" class="styled" readonly="">
-                                                    <label for="select_all">
-                                                        Select All
-                                                    </label>
-                                                </div>
-                                            </div>
-                                            <div class="flex-grow">
-                                                <ul class="column-list scroll">
-                                                    <li style="display: none;">
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox">
-                                                                <label type="checkbox" /&gt;&lt;label&gt;&lt;/label&gt;&lt;/div&gt;</label>
-                                                            </div>
-                                                        </div>
-                                                        <div style="display: none;">
-                                                            <a href="#" class="column-edit"><i class="icon-edit"></i></a>
-                                                            <a href="#" class="column-remove"><i class="icon-trash"></i></a>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox">
-                                                                <label>Id</label>
-                                                            </div>
-                                                        </div>
-                                                        <div style="display: none;">
-                                                            <a href="#" class="column-edit"><i class="icon-edit"></i></a>
-                                                            <a href="#" class="column-remove"><i class="icon-trash"></i></a>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox" data-bind="checked: visible">
-                                                                <label data-bind="text: virtualColumn().header">ETag</label>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <a href="#" class="column-edit"><i class="icon-edit"></i></a>
-                                                            <a href="#" class="column-remove"><i class="icon-trash"></i></a>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox" data-bind="checked: visible">
-                                                                <label>Last Modified</label>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox">
-                                                                <label>Collection</label>
-                                                            </div>
-                                                        </div>
-
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox">
-                                                                <label>Name</label>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                    <li>
-                                                        <div class="column-name">
-                                                            <div class="checkbox">
-                                                                <input class="styled" type="checkbox">
-                                                                <label>Supplier</label>
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <a href="javascript:void(0)" class="column-rearrange"><i class="icon-menu"></i></a>
-                                                        </div>
-                                                    </li>
-
-                                                </ul>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </ul>
+                                <div class="dropdown-menu colselect-dropdown slidein-style" role="menu" data-bind="dropdownPanel: true">
+                                    <div data-bind="compose: $root.columnsSelector"></div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="virtual-grid flex-grow" data-bind="attr: { id: gridId }" id="vg_17">
-                        <div class="absolute-center loading" data-bind="visible: isLoading" style="display: none;"><div class="global-spinner"></div></div>
-                        <div class="column-container flex-window-head" data-bind="foreach: columns, visible: settings.showHeader"><div class="column" data-bind="style: { width: $data.width }" style="width: 38px;"><strong data-bind="html: $data.header"><div class="checkbox checkbox-table-selector"><input class="checked-column-header styled" type="checkbox"><label></label></div></strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 300px;"><strong data-bind="html: $data.header">Id</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 200px;"><strong data-bind="html: $data.header">ETag</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 300px;"><strong data-bind="html: $data.header">Last Modified</strong></div><div class="column" data-bind="style: { width: $data.width }" style="width: 200px;"><strong data-bind="html: $data.header">Collection</strong></div></div>
-                        <div class="viewport flex-window-scroll header-visible" data-bind="css: { 'header-visible': settings.showHeader }">
-                            <div class="viewport-scroller" style="height: 500px; width: 1038px;">
-                                <div class="virtual-row even" style="height: 36px; top: 0px;">
-                                    <div class="cell">
-                                        <div class="checkbox checkbox-table-selector">
-                                            <input class="checked-cell-input styled" type="checkbox"><label></label>
-                                        </div>
-                                    </div>
-                                    <div class="cell text-cell token string " style="width: 300px">
-                                        <a href="#databases/edit?&amp;id=products%2F77&amp;database=asd">products/77</a>
-                                    </div>
-                                    <div class="cell text-cell token number " style="width: 200px">2,113</div>
-                                    <div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6552708Z</div>
-                                    <div class="cell text-cell token string " style="width: 200px">
-                                        <a href="#databases/documents?collection=Products&amp;database=asd">Products</a>
-                                    </div>
-                                </div><div class="virtual-row" style="height: 36px; top: 36px;">
-                                    <div class="cell">
-                                        <div class="checkbox checkbox-table-selector">
-                                            <input class="checked-cell-input styled" type="checkbox"><label></label>
-                                        </div>
-                                    </div>
-                                    <div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F76&amp;database=asd">products/76</a></div><div class="cell text-cell token number " style="width: 200px">2,111</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6547679Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div>
-                                </div><div class="virtual-row even" style="height: 36px; top: 72px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F75&amp;database=asd">products/75</a></div><div class="cell text-cell token number " style="width: 200px">2,109</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6512583Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 108px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F74&amp;database=asd">products/74</a></div><div class="cell text-cell token number " style="width: 200px">2,107</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6497544Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 144px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F73&amp;database=asd">products/73</a></div><div class="cell text-cell token number " style="width: 200px">2,105</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6497544Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 180px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F72&amp;database=asd">products/72</a></div><div class="cell text-cell token number " style="width: 200px">2,103</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6492529Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 216px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F71&amp;database=asd">products/71</a></div><div class="cell text-cell token number " style="width: 200px">2,101</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6332106Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 252px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F70&amp;database=asd">products/70</a></div><div class="cell text-cell token number " style="width: 200px">2,099</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6327092Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 288px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F69&amp;database=asd">products/69</a></div><div class="cell text-cell token number " style="width: 200px">2,097</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6322085Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 324px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F68&amp;database=asd">products/68</a></div><div class="cell text-cell token number " style="width: 200px">2,095</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6076424Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 360px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F67&amp;database=asd">products/67</a></div><div class="cell text-cell token number " style="width: 200px">2,093</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6071413Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 396px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F66&amp;database=asd">products/66</a></div><div class="cell text-cell token number " style="width: 200px">2,091</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6071413Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 432px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F65&amp;database=asd">products/65</a></div><div class="cell text-cell token number " style="width: 200px">2,089</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6066399Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 468px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F64&amp;database=asd">products/64</a></div><div class="cell text-cell token number " style="width: 200px">2,087</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6011249Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 504px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F63&amp;database=asd">products/63</a></div><div class="cell text-cell token number " style="width: 200px">2,085</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6006235Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 540px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F62&amp;database=asd">products/62</a></div><div class="cell text-cell token number " style="width: 200px">2,083</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6001221Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 576px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F61&amp;database=asd">products/61</a></div><div class="cell text-cell token number " style="width: 200px">2,081</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.6001221Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: 612px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F60&amp;database=asd">products/60</a></div><div class="cell text-cell token number " style="width: 200px">2,079</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.5996206Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row even" style="height: 36px; top: 648px;"><div class="cell"><div class="checkbox checkbox-table-selector"><input class="checked-cell-input styled" type="checkbox"><label></label></div></div><div class="cell text-cell token string " style="width: 300px"><a href="#databases/edit?&amp;id=products%2F59&amp;database=asd">products/59</a></div><div class="cell text-cell token number " style="width: 200px">2,077</div><div class="cell text-cell token string " style="width: 300px">2017-06-21T10:53:06.5996206Z</div><div class="cell text-cell token string " style="width: 200px"><a href="#databases/documents?collection=Products&amp;database=asd">Products</a></div></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div><div class="virtual-row" style="height: 36px; top: -9999px"></div>
-                            </div>
-                        </div>
-                        <div class="absolute-center" data-bind="visible: emptyTemplate &amp;&amp; emptyResult(), if: emptyTemplate" style="display: none;">
-                            <div data-bind="template: emptyTemplate">
-                                Collection is empty
-                            </div>
+
+                    <div class="flex-grow scroll">
+                        <div class="objects-list-container">
+                            <virtual-grid class="resizable" params="controller: gridController, emptyTemplate: 'empty-test-results-template'"></virtual-grid>
                         </div>
                     </div>
                 </div>
-            </div>-->
+            </div>
         </div>
     </div>
+
+<script type="text/html" id="empty-test-results-template">
+    No results for the defined subscription.
+</script>
+
+<div class="tooltip json-preview lg" style="opacity: 0">
+    <pre><code class="white-space-pre"></code></pre>
 </div>
+

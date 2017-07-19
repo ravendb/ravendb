@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -42,7 +43,8 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }),
+                        CancellationToken.None);
 
                 var deleteResult = await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
@@ -76,7 +78,8 @@ namespace SlowTests.Client.Indexing
 
                 operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }),
+                        CancellationToken.None);
 
                 var e = Assert.Throws<RavenException>(() =>
                 {
@@ -115,11 +118,11 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }),
+                        CancellationToken.None);
 
                 await operation
-                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15))
-                    ;
+                    .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {

@@ -19,7 +19,6 @@
     "bootstrap-multiselect": "^0.9.13",
     "bootstrap-select": "^1.9.4",
     "Durandal": "durandal#^2.1.0",
-    "forge": "^0.6.38",
     "jszip-utils": "^0.0.2",
     "jszip": "^2.5.0",
     "text": "requirejs-text#^2.0.14",

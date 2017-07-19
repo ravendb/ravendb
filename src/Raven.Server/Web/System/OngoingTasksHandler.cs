@@ -460,7 +460,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/status?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}&disable={disable:true|false}")]
+        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/state?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}&disable={disable:true|false}")]
         public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

@@ -16,7 +16,6 @@ requirejs.config({
           "rbush": "../Content/rbush/rbush",
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",
-          "forge": "../lib/forge/js/forge",
           "moment": "../lib/moment/moment",
           "plugins/bootstrapModal": "../App/plugins/bootstrapModal",
           "cronstrue": "../lib/cronstrue/dist/cronstrue"

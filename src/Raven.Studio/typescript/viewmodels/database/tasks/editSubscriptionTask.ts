@@ -5,14 +5,40 @@ import ongoingTaskSubscriptionEdit = require("models/database/tasks/ongoingTaskS
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import collection = require("models/database/documents/collection");
 import saveSubscriptionTaskCommand = require("commands/database/tasks/saveSubscriptionTaskCommand");
+import testSubscriptionTaskCommand = require("commands/database/tasks/testSubscriptionTaskCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
-import collectionsTracker = require("common/helpers/database/collectionsTracker");
+import popoverUtils = require("common/popoverUtils");
+import jsonUtil = require("common/jsonUtil");
+import virtualGridController = require("widgets/virtualGrid/virtualGridController");
+import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
+import columnsSelector = require("viewmodels/partial/columnsSelector");
+import documentObject = require("models/database/documents/document");
+import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
+import textColumn = require("widgets/virtualGrid/columns/textColumn");
+import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+
+type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class editSubscriptionTask extends viewModelBase {
 
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
+    isSaveEnabled: KnockoutComputed<boolean>;
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
-    collections = collectionsTracker.default.collections;
+
+    enableTestArea = ko.observable<boolean>(false);
+    testResultsLimit = ko.observable<number>(10);
+
+    private gridController = ko.observable<virtualGridController<any>>();
+    private customFunctionsContext: object;
+    columnsSelector = new columnsSelector<documentObject>();
+    fetcher = ko.observable<fetcherType>();
+    private columnPreview = new columnPreviewPlugin<documentObject>();
+    dirtyResult = ko.observable<boolean>(false);
+    isFirstRun = true;
+
+    spinners = {
+        globalToggleDisable: ko.observable<boolean>(false)
+    }
 
     constructor() {
         super();
@@ -22,6 +48,7 @@ class editSubscriptionTask extends viewModelBase {
 
     activate(args: any) { 
         super.activate(args);
+        const deferred = $.Deferred<void>();
 
         if (args.taskId) { 
 
@@ -30,20 +57,77 @@ class editSubscriptionTask extends viewModelBase {
 
             new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
                 .execute()
-                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => this.editedSubscription(new ongoingTaskSubscriptionEdit(result))) 
+                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
+                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
+
+                    if (this.editedSubscription().collection()) {
+                        this.editedSubscription().getCollectionRevisionsSettings()
+                            .done(() => deferred.resolve());
+                    } else {
+                        deferred.resolve();
+                    }
+                })
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
         }
         else {
             // 2. Creating a new task
             this.isAddingNewSubscriptionTask(true);
             this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
+            deferred.resolve();
         }
+
+        deferred.always(() => this.initObservables());
+        return deferred;
+    }
+
+    private initObservables() {
+
+        this.dirtyFlag = new ko.DirtyFlag([
+            this.editedSubscription().taskName,
+            this.editedSubscription().collection,
+            this.editedSubscription().includeRevisions,
+            this.editedSubscription().script,
+            this.editedSubscription().startingPointType
+        ], false, jsonUtil.newLineNormalizingHashFunction); 
+
+        this.isSaveEnabled = ko.pureComputed(() => {
+            return this.dirtyFlag().isDirty();
+        });   
+    }
+
+    attached() {
+        super.attached();
+
+        const jsCode = Prism.highlight(
+            "if (this.Votes < 10)\r\n" +
+            "  return;\r\n" +
+            "var customer = LoadDocument(this.CustomerId);\r\n" +
+            "return {\r\n" +
+            "   Issue: this.Issue,\r\n" +
+            "   Votes: this.Votes,\r\n" +
+            "   Customer: {\r\n" +
+            "        Name: customer.Name,\r\n" +
+            "        Email: customer.Email\r\n" +
+            "   }\r\n" + 
+            "};",
+            (Prism.languages as any).javascript);
+            
+         $("#scriptInfo").popover({
+            html: true,
+            trigger: "hover",
+            container: "body",
+            template: popoverUtils.longPopoverTemplate,
+            content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
+                + `<p>You can use following functions in your patch script:</p>`
+                + `<ul>`
+                + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
+                + `</ul>`
+        });
     }
 
     compositionComplete() {
         super.compositionComplete();
         document.getElementById('taskName').focus(); 
-        document.getElementById("toggle-transform-script").click();
     }
 
     saveSubscription() {
@@ -57,7 +141,10 @@ class editSubscriptionTask extends viewModelBase {
 
         new saveSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, this.editedSubscription().taskId, this.editedSubscription().taskState()) 
             .execute()
-            .done(() => this.goToOngoingTasksView());
+            .done(() => {
+                this.goToOngoingTasksView();
+                this.dirtyFlag().reset(); 
+            });
     }
 
     cloneSubscription() {
@@ -71,8 +158,8 @@ class editSubscriptionTask extends viewModelBase {
         this.goToOngoingTasksView();
     }
 
-    useCollection(collectionToUse: collection) {
-        this.editedSubscription().collection(collectionToUse.name);
+    useCollection(collectionToUse: string) {
+        this.editedSubscription().collection(collectionToUse);
     }
 
     setStartingPointType(startingPointType: subscriptionStartType) {
@@ -90,6 +177,89 @@ class editSubscriptionTask extends viewModelBase {
             valid = false;
 
         return valid;
+    }
+
+    runTest() {
+        if (!this.isValid(this.editedSubscription().validationGroup) || this.testResultsLimit() < 1) {
+            return;
+        }
+
+        this.columnsSelector.reset();
+
+        const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
+        this.fetcher(fetcherMethod);
+
+        if (this.isFirstRun) {
+            const grid = this.gridController();
+            grid.withEvaluationContext(this.customFunctionsContext);
+        }
+
+        if (this.isFirstRun) {
+            const extraClassProvider = (item: documentObject) => {
+                //TODO: if item has error return appropriate css class
+                return "";
+            }
+            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
+                showRowSelectionCheckbox: false,
+                showSelectAllCheckbox: false,
+                enableInlinePreview: true,
+                columnOptions: {
+                    extraClass: extraClassProvider
+                }
+            });
+         
+            this.columnsSelector.init(this.gridController(),
+                fetcherMethod,
+                (w, r) => documentsProvider.findColumns(w, r),
+                (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
+
+            const grid = this.gridController();
+            grid.dirtyResults.subscribe(dirty => this.dirtyResult(dirty));
+
+            grid.headerVisible(true);
+
+            this.columnPreview.install("virtual-grid", ".tooltip", (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any) => void) => {
+                if (column instanceof textColumn) {
+                    const value = column.getCellValue(doc);
+                    if (!_.isUndefined(value)) {
+                        const json = JSON.stringify(value, null, 4);
+                        const html = Prism.highlight(json, (Prism.languages as any).javascript);
+                        onValue(html);
+                    }
+                }
+            });
+
+            this.fetcher.subscribe(() => grid.reset());
+        }
+
+        this.isFirstRun = false;
+    }
+
+    private fetchTestDocuments(start: number, take: number): JQueryPromise<pagedResult<documentObject>> {
+        const dtoDataFromUI = this.editedSubscription().dataFromUI();
+        const resultsLimit = this.testResultsLimit() || 1;
+
+        this.spinners.globalToggleDisable(true);
+
+        return new testSubscriptionTaskCommand(this.activeDatabase(), dtoDataFromUI, resultsLimit)
+            .execute()
+            .always(() => this.spinners.globalToggleDisable(false));
+    }
+
+    toggleTestArea() {
+        // 1. Test area is closed and we want to open it
+        if (!this.enableTestArea()) {
+            if (this.isValid(this.editedSubscription().validationGroup)) {
+                this.enableTestArea(true);
+                this.runTest();
+            }
+            else return;
+        }
+        else {
+            // 2. Test area is open and we want to close it
+            this.enableTestArea(false);
+            this.columnsSelector.reset();
+        }
     }
 }
 

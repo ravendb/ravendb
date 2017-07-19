@@ -54,6 +54,7 @@ function findHandlerName(input) {
 function extractRavenActions(contents) {
     // line format: [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
     // or : [RavenAction("/databases/*/notification-center/watch", "GET", SkipUsagesCount = true)]
+    // or : [RavenAction("/databases/*/notification-center/watch", "GET", IsDebugInformationEndpoint = true)]
     var annotationRegexpWoSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\"(,(\s*) \"([^"]+)\")?\)]/g;
     var match;
     var matches = new Set();
@@ -64,8 +65,8 @@ function extractRavenActions(contents) {
         }
     }
     
-    var annotationRegexpWithSkipUsagesCount = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\",(\s*)(SkipUsagesCount|IsDebugInformationEndpoint)(\s*)=(\s*)true\)]/g;
-    while ((match = annotationRegexpWithSkipUsagesCount.exec(contents))) {
+    var annotationRegexpWithBooleanFlag = /\[RavenAction\(\"([^"]+)\", \"([^"]+)\",[^)]+\)]/g;
+    while ((match = annotationRegexpWithBooleanFlag.exec(contents))) {
         var url = match[1];
         if (url !== "/") {
             matches.add(url);

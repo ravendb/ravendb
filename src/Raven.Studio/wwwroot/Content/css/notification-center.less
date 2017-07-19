@@ -1,4 +1,5 @@
-﻿
+﻿@notification-margin: @grid-gutter-width/4;
+
 #notification-center {
     position: absolute;
     width: @menu-width;
@@ -6,7 +7,6 @@
     right: 0;
     bottom: 0;
     overflow-y: auto;
-    padding: @grid-gutter-width / 8;
     -moz-transform: translateX(100%);
     -webkit-transform: translateX(100%);
     -o-transform: translateX(100%);
@@ -21,8 +21,83 @@
     -o-transition: transform @menu-transition-ease;
     transition: transform @menu-transition-ease;
 
+    .notification-actions {
+        flex-shrink: 0;
+        background-color: @gray-darker;
+        position: relative;
+        z-index: 1;
+        margin-bottom: @notification-margin;
+
+        .dismiss {
+            border: none;
+            padding: 2px @grid-gutter-width/4;
+            margin: 0;
+            display: block;
+            font-size: 13px;
+            background-color: transparent;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            outline: none;
+            align-self: center;
+
+            &:hover {
+                text-decoration: underline;
+            }
+        }
+
+        .notification-type-toggle {
+            display: inline-block;
+            cursor: pointer;
+            height: 30px;
+            min-width: 30px;
+            border: none;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            outline: none;
+            margin: 0;
+            background-color: transparent;
+
+            &.active {
+                background-color: @gray-base;
+            }
+
+            &:not(.active) {
+                &:hover {
+                    background-color: @gray-dark !important;
+                }
+            }
+
+            &.type-success {
+                color: @brand-success;
+            }
+
+            &.type-info {
+                color: @brand-info;
+            }
+
+            &.type-warning {
+                color: @brand-warning;
+            }
+
+            &.type-danger {
+                color: @brand-danger;
+            }
+        }
+    }
+
+    .notification-list {
+        padding: 0 @notification-margin @notification-margin;
+    }
+
     .notification-item {
-        margin-bottom: @grid-gutter-width / 8;
+        margin-bottom: @notification-margin;
         background-color: @panel-bg;
 
         .close {
@@ -95,7 +170,7 @@
                 font-size: 12px;
                 line-height: 12px;
                 color: @gray;
-                margin-bottom: @grid-gutter-width /4;
+                margin-bottom: @grid-gutter-width /2;
             }
 
             p {
@@ -108,7 +183,7 @@
             h4,
             h5 {
                 margin-top: 0;
-                margin-bottom: @grid-gutter-width / 8;
+                margin-bottom: @notification-margin;
             }
         }
     }

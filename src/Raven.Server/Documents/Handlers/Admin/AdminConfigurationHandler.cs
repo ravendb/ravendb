@@ -7,9 +7,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
-    public class AdminConfigurationHandler : AdminDatabaseRequestHandler
+    public class AdminConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/configuration/client", "PUT")]
+        [RavenAction("/databases/*/admin/configuration/client", "PUT", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();

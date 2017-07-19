@@ -1,17 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Org.BouncyCastle.Pkix;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
-using Raven.Server.Extensions;
 using static Microsoft.CodeAnalysis.CSharp.SyntaxFactory;
 
 namespace Raven.Server.Documents.Indexes

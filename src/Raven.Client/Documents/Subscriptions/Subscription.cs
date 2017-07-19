@@ -300,8 +300,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     try
                     {
-                        await requestExecutor.ExecuteAsync(_redirectNode, context, command, shouldRetry: false).ConfigureAwait(false);
-
+                        await requestExecutor.ExecuteAsync(_redirectNode, null, context, command, shouldRetry: false).ConfigureAwait(false);
                     }
                     catch (Exception)
                     {
@@ -316,7 +315,6 @@ namespace Raven.Client.Documents.Subscriptions
                     await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
                 }
 
-                var apiToken = await requestExecutor.GetAuthenticationToken(context, command.RequestedNode).ConfigureAwait(false);
                 var uri = new Uri(command.Result.Url);
 
                 _tcpClient = new TcpClient();
@@ -326,14 +324,13 @@ namespace Raven.Client.Documents.Subscriptions
                 _tcpClient.SendBufferSize = 32 * 1024;
                 _tcpClient.ReceiveBufferSize = 4096;
                 _stream = _tcpClient.GetStream();
-                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient, command.Result).ConfigureAwait(false);
+                _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     DatabaseName = databaseName,
-                    AuthorizationToken = apiToken
                 }));
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
@@ -344,23 +341,15 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
                 {
                     var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                    switch (reply.Status)
-                    {
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.Forbidden:
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.ForbiddenReadOnly:
-                            throw AuthorizationException.Forbidden($"Cannot access database {databaseName} because we got a Forbidden authorization status");
-                        case TcpConnectionHeaderResponse.AuthorizationStatus.Success:
-                            break;
-                        default:
-                            throw AuthorizationException.Unauthorized(reply.Status, _dbName);
-                    }
+                    if (reply.AuthorizationSuccessful == false)
+                        throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
                 await _stream.FlushAsync().ConfigureAwait(false);
 
                 _subscriptionLocalRequestExecutor?.Dispose();
-                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.ApiKey, _store.Conventions);
+                _subscriptionLocalRequestExecutor = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(command.RequestedNode.Url, _dbName, requestExecutor.Certificate, _store.Conventions);
                 return _stream;
             }
         }

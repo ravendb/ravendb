@@ -295,7 +295,7 @@ namespace Raven.Server.Documents.Replication
             }
 
             // destination already has it
-            if (item.ChangeVector.GreaterThan(_parent._destinationLastKnownChangeVector) == false)
+            if (ShouldReplicateItem(item.ChangeVector, _parent._destinationLastKnownChangeVector) == false)
             {
                 stats.RecordChangeVectorSkip();
 
@@ -310,6 +310,18 @@ namespace Raven.Server.Documents.Replication
             Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
             _orderedReplicaItems.Add(item.Etag, item);
             return true;
+        }
+
+        private bool ShouldReplicateItem(ChangeVectorEntry[] self, Dictionary<Guid, long> other)
+        {
+            for (int i = 0; i < self.Length; i++)
+            {
+                if (other.TryGetValue(self[i].DbId, out long otherEtag) == false)
+                    return true;
+                if (self[i].Etag > otherEtag)
+                    return true;
+            }
+            return false;
         }
 
         private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)

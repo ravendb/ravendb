@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
@@ -263,24 +265,34 @@ namespace Raven.Server.Web.Studio
 
             foreach (var document in documents)
             {
-                var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (int i = 0; i < size; i++)
-                {
-                    document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
-                    var propName = prop.Name;
-                    if (!columns.Contains(propName))
-                    {
-                        columns.Add(prop.Name);
-                    }
-                }
+                FetchColumnNames(document.Data, columns, _buffers);
             }
 
-            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
-            columns.Remove(metadataField);
+            RemoveMetadata(context, columns);
 
             return columns;
+        }
+
+        public static void FetchColumnNames(BlittableJsonReaderObject data, HashSet<LazyStringValue> columns, BlittableJsonReaderObject.PropertiesInsertionBuffer buffers)
+        {
+            var size = data.GetPropertiesByInsertionOrder(buffers);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            for (var i = 0; i < size; i++)
+            {
+                data.GetPropertyByIndex(buffers.Properties[i], ref prop);
+                var propName = prop.Name;
+                if (columns.Contains(propName) == false)
+                {
+                    columns.Add(prop.Name);
+                }
+            }
+        }
+
+        public static void RemoveMetadata(DocumentsOperationContext context, HashSet<LazyStringValue> columns)
+        {
+            var metadataField = context.GetLazyStringForFieldWithCaching(Constants.Documents.Metadata.Key);
+            columns.Remove(metadataField);
         }
 
         [RavenAction("/databases/*/studio/collections/docs", "DELETE")]
