@@ -640,7 +640,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
         }
     }
 
-    public class ParenthesistLuceneASTNode : LuceneASTNodeBase
+    public class ParenthesisLuceneASTNode : LuceneASTNodeBase
     {
         public override IEnumerable<LuceneASTNodeBase> Children
         {

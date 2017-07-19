@@ -1333,17 +1333,13 @@ If you really want to do in memory filtering on the data returned from the query
 
             switch (escapeQueryOptions)
             {
-                case EscapeQueryOptions.EscapeAll:
-                    searchTerms = RavenQuery.Escape(searchTerms, false, false);
-                    break;
                 case EscapeQueryOptions.AllowPostfixWildcard:
-                    searchTerms = RavenQuery.Escape(searchTerms, false, false);
                     searchTerms = EscapePostfixWildcard.Replace(searchTerms, "*${1}");
                     break;
                 case EscapeQueryOptions.AllowAllWildcards:
-                    searchTerms = RavenQuery.Escape(searchTerms, false, false);
                     searchTerms = searchTerms.Replace("\\*", "*");
                     break;
+                case EscapeQueryOptions.EscapeAll:
                 case EscapeQueryOptions.RawQuery:
                     break;
                 default:

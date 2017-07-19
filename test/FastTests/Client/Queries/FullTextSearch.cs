@@ -565,7 +565,7 @@ namespace FastTests.Client.Queries
                         var query = GetIndexQuery(qry);
 
                         Assert.Equal("FROM Images WHERE search(Name, :p0)", query.Query);
-                        Assert.Equal(string.Format("\\{0}", specialCharacter), query.QueryParameters["p0"]);
+                        Assert.Equal(specialCharacter.ToString(), query.QueryParameters["p0"]);
 
                         qry.ToList();
                     }
@@ -587,7 +587,7 @@ namespace FastTests.Client.Queries
                     var query = GetIndexQuery(qry);
 
                     Assert.Equal("FROM Images WHERE search(Name, :p0)", query.Query);
-                    Assert.Equal("He said\\: hello there", query.QueryParameters["p0"]);
+                    Assert.Equal("He said: hello there", query.QueryParameters["p0"]);
 
                     qry.ToList();
                 }

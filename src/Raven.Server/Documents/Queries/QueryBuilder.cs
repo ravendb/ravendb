@@ -40,7 +40,9 @@ namespace Raven.Server.Documents.Queries
                     FieldName = new FieldName(string.Empty)
                 });
 
-                return luceneQuery;
+                // The parser already throws parse exception if there is a syntax error.
+                // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
+                return luceneQuery ?? new BooleanQuery();
             }
         }
 
@@ -269,7 +271,7 @@ namespace Raven.Server.Documents.Queries
                 if (boostValue == null)
                     return result;
 
-                return new ParenthesistLuceneASTNode
+                return new ParenthesisLuceneASTNode
                 {
                     Boost = boost,
                     Node = result
