@@ -280,7 +280,8 @@ namespace Raven.Server.Documents.Revisions
                             }
 
                             var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                            if (changeVector.GreaterThan(docChangeVector))
+                            var conflictStatus = ConflictsStorage.GetConflictStatus(changeVector, docChangeVector);
+                            if (conflictStatus == ConflictsStorage.ConflictStatus.Update)
                                 PutFromRevision();
 
                             void PutFromRevision()
@@ -565,7 +566,8 @@ namespace Raven.Server.Documents.Revisions
                     }
 
                     var docChangeVector = TableValueToChangeVector(ref tvr, (int)DocumentsTable.ChangeVector);
-                    if (changeVector.GreaterThan(docChangeVector))
+                    var conflictStatus = ConflictsStorage.GetConflictStatus(changeVector, docChangeVector);
+                    if (conflictStatus == ConflictsStorage.ConflictStatus.Update)
                     {
                         _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
                             nonPersistentFlags | NonPersistentDocumentFlags.FromRevision);

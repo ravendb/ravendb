@@ -39,36 +39,12 @@ namespace Raven.Client.Extensions
         {
             for (int i = 0; i < self.Length; i++)
             {
-                long otherEtag;
-                if (other.TryGetValue(self[i].DbId, out otherEtag) == false)
+                if (other.TryGetValue(self[i].DbId, out long otherEtag) == false)
                     return true;
                 if (self[i].Etag > otherEtag)
                     return true;
             }
             return false;
-        }
-
-        public static bool GreaterThan(this ChangeVectorEntry[] self, ChangeVectorEntry[] other)
-        {
-            for (int i = 0; i < self.Length; i++)
-            {
-                var indexOfDbId = IndexOf(self[i].DbId, other);
-                if (indexOfDbId == -1)
-                    return true;
-                if (self[i].Etag > other[indexOfDbId].Etag)
-                    return true;
-            }
-            return false;
-        }
-
-        private static int IndexOf(Guid dbId, ChangeVectorEntry[] v)
-        {
-            for (int i = 0; i < v.Length; i++)
-            {
-                if (v[i].DbId == dbId)
-                    return i;
-            }
-            return -1;
         }
 
         public static string Format(this ChangeVectorEntry[] changeVector, int? maxCount = null)
