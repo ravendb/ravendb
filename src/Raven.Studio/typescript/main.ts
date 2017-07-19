@@ -17,8 +17,7 @@ requirejs.config({
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",
           "moment": "../lib/moment/moment",
-          "plugins/bootstrapModal": "../App/plugins/bootstrapModal",
-          "cronstrue": "../lib/cronstrue/dist/cronstrue"
+          "plugins/bootstrapModal": "../App/plugins/bootstrapModal"
       }  
     },
 

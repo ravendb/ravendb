@@ -16,14 +16,6 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
-declare module "cronstrue" {
-    export = Cronstrue;
-}
-
-declare var Cronstrue: {
-    toString(string: string): string;
-}
-
 /// Favico
 ///
 /// Using *any* as official typings are broken
@@ -92,6 +84,12 @@ interface DirtyFlag {
     reset(): void;
     forceDirty(): void;
 }
+
+interface Cronstrue {
+    toString(string: string): string;
+}
+
+declare var cRonstrue: Cronstrue;
 
 interface Spinner {
     stop() :void;
