@@ -122,7 +122,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public ClusterStateMachine Cluster => _engine.StateMachine;
+        public ClusterStateMachine Cluster => _engine?.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
         public RachisConsensus.State CurrentState => _engine.CurrentState;
         public string NodeTag => _engine.Tag;

@@ -68,7 +68,7 @@ namespace Raven.Server.Rachis
 
         public override void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
-            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
+            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, _serverStore);
         }
 
         public override Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
@@ -1313,7 +1313,9 @@ namespace Raven.Server.Rachis
 
                 tx.Commit();
             }
-
+            
+            if (serverStore.Cluster == null)
+                return;
             // We put a certificate in the local state to tell the server who to trust, and this is done before
             // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
             // create the cluster, we register those local certificates in the cluster.
