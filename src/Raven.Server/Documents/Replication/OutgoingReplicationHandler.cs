@@ -5,7 +5,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
@@ -15,7 +14,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
-using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -46,8 +44,7 @@ namespace Raven.Server.Documents.Replication
 
         internal DateTime _lastDocumentSentTime;
 
-        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector =
-            new Dictionary<Guid, long>();
+        internal readonly Dictionary<Guid, long> _destinationLastKnownChangeVector = new Dictionary<Guid, long>();
 
         internal string _destinationLastKnownChangeVectorAsString;
 
@@ -190,8 +187,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            var msg =
-                                $"Failed to parse initial server response. This is definitely not supposed to happen.";
+                            var msg = "Failed to parse initial server response. This is definitely not supposed to happen.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
@@ -415,7 +411,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
-            private  Guid _dbid;
+            private  Guid _dbDd;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -425,7 +421,7 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate()
             {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbid) == false)
+                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbDd) == false)
                     return false;
 
                 return _replicationBatchReply.CurrentEtag > 0;
@@ -443,10 +439,8 @@ namespace Raven.Server.Documents.Replication
                     return 0;
 
 
-                return context.UpdateLastDatabaseChangeVector(_dbid, _replicationBatchReply.CurrentEtag) ? 1 : 0;
+                return context.UpdateLastDatabaseChangeVector(_dbDd, _replicationBatchReply.CurrentEtag) ? 1 : 0;
             }
-
-            
         }
         
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
@@ -467,7 +461,7 @@ namespace Raven.Server.Documents.Replication
                 if (update.InitAndValidate())
                 {
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
-                    // is purely adviosry. We just want to have the information up to date at some point, and we won't 
+                    // is purely advisory. We just want to have the information up to date at some point, and we won't 
                     // miss anything much if this isn't there.
                     _database.TxMerger.Enqueue(update).IgnoreUnobservedExceptions();
                 }
@@ -497,8 +491,7 @@ namespace Raven.Server.Documents.Replication
 
         internal void SendHeartbeat()
         {
-            DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 try
