@@ -75,7 +75,7 @@ namespace Raven.Tests.Bundles.Replication
             store3.DatabaseCommands.GlobalAdmin.EnsureDatabaseExists("FailoverTest");
             SetupReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), new Dictionary<string, string> { { "C1s", null } }, store2);
             UpdateReplication(store1.DatabaseCommands.ForDatabase("FailoverTest"), store3);
-
+   
             using (var store = new DocumentStore
             {
                 DefaultDatabase = "FailoverTest",
@@ -89,7 +89,7 @@ namespace Raven.Tests.Bundles.Replication
                 store.Initialize();
 
                 var replicationInformerForDatabase = store.GetReplicationInformerForDatabase();
-                replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands)
+                replicationInformerForDatabase.UpdateReplicationInformationIfNeededAsync((AsyncServerClient)store.AsyncDatabaseCommands, true)
                                               .Wait();
 
                 using (var session = store.OpenSession())
