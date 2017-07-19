@@ -331,7 +331,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Filter the results from the index using the specified where clause.
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Where(string fieldName, string whereClause)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause)
         {
             Where(fieldName, whereClause);
             return this;

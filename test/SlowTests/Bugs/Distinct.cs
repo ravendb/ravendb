@@ -170,7 +170,7 @@ namespace SlowTests.Bugs
                 {
                     QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("CustomersIndex")
-                        .Statistics(out qs).Where("Occupation", "Marketing")
+                        .Statistics(out qs).WhereLucene("Occupation", "Marketing")
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")
                         .Take(20)
@@ -209,7 +209,7 @@ namespace SlowTests.Bugs
 
                     QueryStatistics qs;
                     var qRes = session.Advanced.DocumentQuery<Customer>("ReducedCustomersIndex")
-                        .Statistics(out qs).Where("Occupation", "Marketing")
+                        .Statistics(out qs).WhereLucene("Occupation", "Marketing")
                         .Distinct()
                         .SelectFields<Customer>("CustomerId")
                         .Take(20)

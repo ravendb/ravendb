@@ -491,7 +491,7 @@ namespace SlowTests.Tests.Linq
 
                     //This is the lucene query we want to mimic
                     var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
-                            .Where("Cost_D_Range", "{1 TO NULL}")
+                            .WhereLucene("Cost_D_Range", "{1 TO NULL}")
                             .SelectFields<SomeDataProjection>("Cost")
                             .ToArray();
 

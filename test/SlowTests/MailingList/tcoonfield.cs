@@ -32,7 +32,7 @@ namespace SlowTests.MailingList
                 {
                     var products = docSession.Advanced.DocumentQuery<Product, Product_AvailableForSale>()
                         .WaitForNonStaleResults()
-                        .Where("Name", "MyName")
+                        .WhereLucene("Name", "MyName")
                         .ToList();
 
                     Assert.Empty(products);

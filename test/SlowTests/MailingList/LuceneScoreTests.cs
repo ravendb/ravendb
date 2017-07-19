@@ -74,7 +74,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results =
-                        session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text", "wire each time").WaitForNonStaleResultsAsOfNow().
+                        session.Advanced.DocumentQuery<Book, BooksSearch>().WhereLucene("Text", "wire each time").WaitForNonStaleResultsAsOfNow().
                             Select(b => new BookSummary() { Author = b.Author, Description = b.Description, Id = b.Id }).ToList();
 
 
@@ -106,7 +106,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results =
-                        session.Advanced.DocumentQuery<Book, BooksSearch>().Where("Text", "wire each time").WaitForNonStaleResultsAsOfNow().
+                        session.Advanced.DocumentQuery<Book, BooksSearch>().WhereLucene("Text", "wire each time").WaitForNonStaleResultsAsOfNow().
                             ToList();
                     var scores = from result in results
                                  select session.Advanced.GetMetadataFor(result).GetNumber(Constants.Documents.Metadata.IndexScore);

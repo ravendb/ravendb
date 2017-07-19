@@ -521,7 +521,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="whereClause">Lucene-syntax based query predicate.</param>
-        TSelf Where(string fieldName, string whereClause);
+        TSelf WhereLucene(string fieldName, string whereClause);
 
         /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive

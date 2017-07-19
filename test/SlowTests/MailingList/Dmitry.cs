@@ -62,9 +62,9 @@ namespace SlowTests.MailingList
                 {
                     var content = session.Advanced
                         .DocumentQuery<MusicContent, MusicSearchIndex>()
-                        .Where("Title", "<<new>>")
-                        .Where("Album", "<<new>>")
-                        .Where("Keywords", "<<new>>")
+                        .WhereLucene("Title", "<<new>>")
+                        .WhereLucene("Album", "<<new>>")
+                        .WhereLucene("Keywords", "<<new>>")
                         .Skip(1)
                         .Take(10)
                         .ToList();

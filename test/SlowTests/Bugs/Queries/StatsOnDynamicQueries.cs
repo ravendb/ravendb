@@ -56,7 +56,7 @@ namespace SlowTests.Bugs.Queries
                     QueryStatistics stats;
                     var query = session.Advanced.DocumentQuery<User>()
                         .Statistics(out stats)
-                        .Where("Email", "ayende");
+                        .WhereLucene("Email", "ayende");
 
                     var result = query.ToArray();
                     Assert.NotEqual(0, stats.TotalResults);

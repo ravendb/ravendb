@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                 // We fail to find any Products as expected - Note Phrase is not a match
                 // *****************************************************************************************************************************************
                 var results = session.Advanced.DocumentQuery<Product, Product_Search>()
-                  .Where("Query", "\"Gigabit Switch Network\"")
+                  .WhereLucene("Query", "\"Gigabit Switch Network\"")
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
                   .WaitForNonStaleResults()
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                 // *****************************************************************************************************************************************
                 results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .OpenSubclause()
-                  .Where("Query", "\"Gigabit Switch Network\" Vertical")
+                  .WhereLucene("Query", "\"Gigabit Switch Network\" Vertical")
                   .CloseSubclause()
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                 // *****************************************************************************************************************************************
                 results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .OpenSubclause()
-                  .Where("Query", "Vertical \"Gigabit Switch Network\"") // <-- Only difference from above successful test, is putting the single term in front of phrase
+                  .WhereLucene("Query", "Vertical \"Gigabit Switch Network\"") // <-- Only difference from above successful test, is putting the single term in front of phrase
                   .CloseSubclause()
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
@@ -104,7 +104,7 @@ namespace SlowTests.MailingList
                 // We fail to find any Products as expected - Note Phrase is not a match
                 // *****************************************************************************************************************************************
                 var results = session.Advanced.DocumentQuery<Product, Product_Search>()
-                  .Where("Query", "\"Gigabit Switch Network\"")
+                  .WhereLucene("Query", "\"Gigabit Switch Network\"")
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
                   .WaitForNonStaleResults()
@@ -116,7 +116,7 @@ namespace SlowTests.MailingList
                 // *****************************************************************************************************************************************
                 results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .OpenSubclause()
-                  .Where("Query", "\"Gigabit Switch Network\" Switch")
+                  .WhereLucene("Query", "\"Gigabit Switch Network\" Switch")
                   .CloseSubclause()
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
@@ -129,7 +129,7 @@ namespace SlowTests.MailingList
                 // *****************************************************************************************************************************************
                 results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .OpenSubclause()
-                  .Where("Query", "\"Gigabit Switch Network\" Sound")
+                  .WhereLucene("Query", "\"Gigabit Switch Network\" Sound")
                   .CloseSubclause()
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")
@@ -142,7 +142,7 @@ namespace SlowTests.MailingList
                 // *****************************************************************************************************************************************
                 results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .OpenSubclause()
-                  .Where("Query", "\"Gigabit Switch Network\" Switch Sound") // <- This should be "Gigabit Switch Network" OR Switch OR Sound
+                  .WhereLucene("Query", "\"Gigabit Switch Network\" Switch Sound") // <- This should be "Gigabit Switch Network" OR Switch OR Sound
                   .CloseSubclause()
                   .AndAlso()
                   .WhereEquals("Department", "Electronics")

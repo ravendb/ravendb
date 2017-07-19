@@ -31,9 +31,9 @@ namespace FastTests.Client.Queries
                 using (var session = store.OpenSession())
                 {
                     var accs = session.Advanced.DocumentQuery<object, AccommodationsIndex>()
-                        .Where("ImageUrl", "[* TO *]")
+                        .WhereLucene("ImageUrl", "[* TO *]")
                         .AndAlso()
-                        .Where("Categories", "[* TO *]")
+                        .WhereLucene("Categories", "[* TO *]")
                         .AndAlso()
                         .WhereEquals("ExistsInLanguage", true)
                         .ToList();

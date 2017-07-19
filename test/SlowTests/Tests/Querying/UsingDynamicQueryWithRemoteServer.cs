@@ -72,9 +72,9 @@ namespace SlowTests.Tests.Querying
                 {
                     var results =
                         s.Advanced.DocumentQuery<Blog>()
-                            .Where("Title.Length", "3")
+                            .WhereLucene("Title.Length", "3")
                             .AndAlso()
-                            .Where("Category", "Rhinos")
+                            .WhereLucene("Category", "Rhinos")
                             .WaitForNonStaleResultsAsOfNow()
                             .ToArray();
 
@@ -253,8 +253,8 @@ namespace SlowTests.Tests.Querying
                             .Highlight("Title", 18, 2, out titleHighlightings)
                             .Highlight("Category", 18, 2, out categoryHighlightings)
                             .SetHighlighterTags("*", "*")
-                            .Where("Title", "(target word)")
-                            .Where("Category", "rhinos")
+                            .WhereLucene("Title", "(target word)")
+                            .WhereLucene("Category", "rhinos")
                             .WaitForNonStaleResultsAsOfNow()
                             .ToArray();
 

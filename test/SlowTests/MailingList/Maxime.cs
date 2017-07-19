@@ -48,8 +48,8 @@ namespace SlowTests.MailingList
                     .Statistics(out stats)
                     .WithinRadiusOf(500, 45.54545, -73.63908)
                     .OpenSubclause()
-                    .Where("Name", $"{terms}")
-                    .Where("Terms", $"{terms}")
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
                     .CloseSubclause()
                     .Take(10)
                     .ToList();
@@ -62,8 +62,8 @@ namespace SlowTests.MailingList
                     .Statistics(out stats)
                     .WithinRadiusOf(500, 45.54545, -73.63908)
                     .OpenSubclause()
-                    .Where("Name", $"{terms}")
-                    .Where("Terms", $"{terms}")
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
                     .CloseSubclause()
                     .Take(10)
                     .ToList();
@@ -110,8 +110,8 @@ namespace SlowTests.MailingList
                     .Statistics(out stats)
                     .RelatesToShape(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
                     .OpenSubclause()
-                    .Where("Name", $"{terms}")
-                    .Where("Terms", $"{terms}")
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
                     .CloseSubclause()
                     .Take(10)
                     .ToList();
