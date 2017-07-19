@@ -32,14 +32,23 @@ namespace rvn
 
             ConfigureOfflineOperationCommand();
             ConfigureAdminChannelCommand();
-            
+            ConfigureWindowsServiceCommand();
+
             _app.OnExecute(() =>
             {
                 _app.ShowHelp();
                 return 1;
             });
 
-            return _app.Execute(args);
+            try
+            {
+                return _app.Execute(args);
+            }
+            catch (CommandParsingException parsingException)
+            {
+                ExitWithError(parsingException.Message, _app);
+                return 1;
+            }
         }
 
         private static void ConfigureAdminChannelCommand()
@@ -48,7 +57,7 @@ namespace rvn
             {
                 cmd.Description = "Named Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
-                var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => {});
+                var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
                 cmd.OnExecute(() =>
                 {
                     if (int.TryParse(pidArg.Value, out var pid))
@@ -72,20 +81,92 @@ namespace rvn
             return 1;
         }
 
-        private static void ConfigureServerCommands() {
-            _app.Command("server", cmd => {
+        private static void ConfigureWindowsServiceCommand()
+        {
+            const string defaultServiceName = "RavenDB";
 
-                cmd.Description = "Allows to perform a server operation";
+            if (PlatformDetails.RunningOnPosix)
+            {
+                return;
+            }
+
+            _app.Command("windows-service", cmd =>
+            {
+                cmd.Description = "allows to perform an operation on RavenDB Server run as Windows Service";
                 cmd.HelpOption(HelpOptionString);
-                
-                // TODO @gregolsky
-                // WINDOWS only
-                // register-service --service-name|-s, 
-                // unregister-service --service-name|-s, 
-                // start-service --service-name|-s, 
-                // stop-service --service-name|-s
+                ConfigureServiceNameOption(cmd);
 
+                cmd.Command("register", subcmd =>
+                {
+                    var serviceNameOpt = ConfigureServiceNameOption(subcmd);
+                    var serverDirOpt = subcmd.Option("--server-dir", "RavenDB Server directory", CommandOptionType.SingleValue);
+
+                    subcmd.Description = "registers RavenDB Server as Windows Service";
+                    subcmd.ExtendedHelpText = "\r\nRegisters RavenDB Server as Windows Service. Any additional arguments passed after command options are going to be passed to the server run as Windows Service.";
+                    subcmd.HelpOption(HelpOptionString);
+
+                    subcmd.OnExecute(() =>
+                    {
+                        WindowsService.Register(
+                            serviceNameOpt.Value() ?? defaultServiceName, 
+                            serverDirOpt.Value(), 
+                            subcmd.RemainingArguments);
+
+                        return 0;
+                    });
+
+                }, throwOnUnexpectedArg: false);
+
+                cmd.Command("unregister", subcmd =>
+                {
+                    var serviceNameOpt = ConfigureServiceNameOption(subcmd);
+                    subcmd.Description = "unregisters RavenDB Server Windows Service";
+                    subcmd.HelpOption(HelpOptionString);
+
+                    subcmd.OnExecute(() =>
+                    {
+                        WindowsService.Unregister(serviceNameOpt.Value() ?? defaultServiceName);
+                        return 0;
+                    });
+                });
+
+                cmd.Command("start", subcmd =>
+                {
+                    var serviceNameOpt = ConfigureServiceNameOption(subcmd);
+                    subcmd.Description = "starts RavenDB Server Windows Service";
+                    subcmd.HelpOption(HelpOptionString);
+
+                    subcmd.OnExecute(() =>
+                    {
+                        WindowsService.Start(serviceNameOpt.Value() ?? defaultServiceName);
+                        return 0;
+                    });
+                });
+
+                cmd.Command("stop", subcmd =>
+                {
+                    var serviceNameOpt = ConfigureServiceNameOption(subcmd);
+                    subcmd.Description = "stops RavenDB Server Windows Service";
+                    subcmd.HelpOption(HelpOptionString);
+
+                    subcmd.OnExecute(() =>
+                    {
+                        WindowsService.Stop(serviceNameOpt.Value() ?? defaultServiceName);
+                        return 0;
+                    });
+                });
+
+                cmd.OnExecute(() =>
+                {
+                    cmd.ShowHelp();
+                    return 1;
+                });
             });
+        }
+
+        private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
         }
 
         private static void ConfigureOfflineOperationCommand()
@@ -104,7 +185,7 @@ namespace rvn
                         return 0;
                     });
                 });
-                
+
                 cmd.Command("get-key", subcmd =>
                 {
                     subcmd.Description = "exports unprotected server store encryption key to a given directory";
@@ -112,18 +193,16 @@ namespace rvn
                         "\r\nExports unprotected server store encryption key to RavenDB directory. This key will allow decryption of the server store and must be secured. This is REQUIRED when restoring backups from an encrypted server store.";
                     subcmd.HelpOption(HelpOptionString);
 
-                    subcmd.Argument("[path]", "RavenDB directory path");
+                    var pathArg = subcmd.Argument("[path]", "RavenDB directory path");
                     subcmd.OnExecute(() =>
                     {
-                        var path = cmd.Arguments[0].Value;
-                        if (string.IsNullOrEmpty(path) == false)
+                        if (string.IsNullOrEmpty(pathArg.Value) == false)
                         {
-                            OfflineOperations.GetKey(path);
+                            OfflineOperations.GetKey(pathArg.Value);
                         }
                         else
                         {
-                            return ExitWithError(
-                                "RavenDB directory path argument is mandatory.", subcmd);
+                            return ExitWithError("RavenDB directory path argument is mandatory.", subcmd);
                         }
 
                         return 0;
@@ -134,13 +213,12 @@ namespace rvn
                 {
                     subcmd.Description = @"restores and protects the key for current OS user";
                     subcmd.HelpOption(HelpOptionString);
-                    subcmd.Argument("[path]", "RavenDB directory path");
+                    var path = subcmd.Argument("[path]", "RavenDB directory path");
                     subcmd.OnExecute(() =>
                     {
-                        var path = cmd.Arguments[0].Value;
-                        if (string.IsNullOrEmpty(path) == false)
+                        if (string.IsNullOrEmpty(path.Value) == false)
                         {
-                            OfflineOperations.PutKey(path);
+                            OfflineOperations.PutKey(path.Value);
                         }
                         else
                         {
@@ -158,16 +236,13 @@ namespace rvn
                 {
                     subcmd.Description = "";
 
-                    subcmd.Argument("[key]", "key");
-                    subcmd.Argument("[tag]", "tag");
-                    
+                    var keyArg = subcmd.Argument("[key]", "key");
+                    var tagArg = subcmd.Argument("[tag]", "tag");
+
                     subcmd.OnExecute(() =>
                     {
                         if (subcmd.Arguments.Count == 2)
                         {
-                            var keyArg = subcmd.Arguments[0];
-                            var tagArg = subcmd.Arguments[1];
-
                             OfflineOperations.Trust(keyArg.Value, tagArg.Value);
                         }
                         else
