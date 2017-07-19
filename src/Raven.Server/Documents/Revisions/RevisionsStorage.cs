@@ -458,7 +458,6 @@ namespace Raven.Server.Documents.Revisions
                 revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
                 table.Delete(tvr.Id);
             }
-
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
         }
 
@@ -469,6 +468,10 @@ namespace Raven.Server.Documents.Revisions
             fixed (ChangeVectorEntry* pChangeVector = changeVector)
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+
+                if (table.VerifyKeyExists(keySlice))
+                    return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
+                
                 using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -481,7 +484,7 @@ namespace Raven.Server.Documents.Revisions
                     tvb.Add((int)DocumentFlags.None);
                     tvb.Add((byte*)pChangeVector, sizeof(ChangeVectorEntry) * changeVector.Length);
                     tvb.Add(null, 0);
-                    table.Insert(tvb);
+                    table.Set(tvb);
                 }
             }
         }

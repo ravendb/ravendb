@@ -15,11 +15,7 @@ namespace Tryouts
                 Console.WriteLine(i);
                 using (var test = new FastTests.Server.Documents.Revisions.RevisionsReplication())   
                 {
-                    test.GetRevisionsBinEntries(useSession: false).Wait() ;
-                }
-                using (var test = new FastTests.Server.Documents.Revisions.RevisionsReplication())
-                {
-                    test.GetRevisionsBinEntries(useSession: true).Wait();
+                    test.WillDeleteOldRevisions().Wait() ;
                 }
             }
         }
