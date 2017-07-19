@@ -21,6 +21,7 @@ using Raven.Database.FileSystem.Synchronization.Rdc.Wrapper;
 using Raven.Database.FileSystem.Util;
 using Raven.Json.Linq;
 using FileSystemInfo = Raven.Abstractions.FileSystem.FileSystemInfo;
+using System.Diagnostics;
 
 namespace Raven.Database.FileSystem.Synchronization
 {
@@ -328,8 +329,12 @@ namespace Raven.Database.FileSystem.Synchronization
 
                 var needSyncingAgain = new List<FileHeader>();
 
-                foreach (var confirmation in confirmations)
+                Debug.Assert(filesNeedConfirmation.Count == confirmations.Length);
+
+                for (int i = 0; i < confirmations.Length; i++)
                 {
+                    var confirmation = confirmations[i];
+
                     if (confirmation.Status == FileStatus.Safe)
                     {
                         Log.Debug("Destination server {0} said that file '{1}' is safe", destination, confirmation.FileName);
@@ -341,7 +346,22 @@ namespace Raven.Database.FileSystem.Synchronization
                         {
                             var fileHeader = accessor.ReadFile(confirmation.FileName);
 
-                            if (fileHeader != null)
+                            if (fileHeader == null)
+                            {
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug("Destination server {0} said that file '{1}' is {2} but such file no longer exists. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status);
+
+                                RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+                            }
+                            else if (EtagUtil.IsGreaterThan(fileHeader.Etag, filesNeedConfirmation[i].FileETag))
+                            {
+                                if (Log.IsDebugEnabled)
+                                    Log.Debug("Destination server {0} said that file '{1}' is {2} but such file has been changed since we stored the syncing configuration. " +
+                                        "Stored etag in configuration is {3} while current file etag is {4}. Removing related syncing configuration", destination, confirmation.FileName, confirmation.Status, fileHeader.Etag, filesNeedConfirmation[i].FileETag);
+
+                                RemoveSyncingConfiguration(confirmation.FileName, destination.Url);
+                            }
+                            else
                             {
                                 needSyncingAgain.Add(fileHeader);
 
