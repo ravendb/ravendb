@@ -462,6 +462,29 @@ namespace Raven.Tests.Helpers
 
             try
             {
+                
+                
+                using (var systemDocumentStore = new DocumentStore
+                {
+                    Url = "http://localhost:" + port,
+                    Conventions =
+                    {
+                        FailoverBehavior = FailoverBehavior.FailImmediately
+                    }
+                }.Initialize())
+                {
+                    
+                    var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                    doc.Settings["Raven/ActiveBundles"] = activeBundles;
+
+                    var systemDatabaseCommands = systemDocumentStore.DatabaseCommands.ForSystemDatabase();
+                    if (systemDatabaseCommands.Get(doc.Id) != null)
+                        throw new InvalidOperationException(string.Format("Database '{0}' already exists", databaseName));
+
+                    systemDatabaseCommands.GlobalAdmin.CreateDatabase(doc);
+                }
+                
+                
                 using (var documentStore = new DocumentStore
                 {
                     Url = "http://localhost:" + port,
