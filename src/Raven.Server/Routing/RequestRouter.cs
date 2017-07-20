@@ -123,6 +123,7 @@ namespace Raven.Server.Routing
                     return true;
                 case AuthorizationStatus.ServerAdmin:
                 case AuthorizationStatus.ValidUser:
+                case AuthorizationStatus.DatabaseAdmin:
                     var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
 
                     switch (feature?.Status)

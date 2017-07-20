@@ -199,12 +199,12 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateConflictResolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             
-            if (TryGetAllowedDbs(name, out var dbs, requireAdmin: true) == false)
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
                 return;
 
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)

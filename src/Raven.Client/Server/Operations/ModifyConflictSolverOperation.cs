@@ -52,7 +52,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/update-resolver?name={_databaseName}";
+                url = $"{node.Url}/admin/update-resolver?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {

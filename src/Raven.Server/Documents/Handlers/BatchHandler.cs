@@ -253,7 +253,6 @@ namespace Raven.Server.Documents.Handlers
             public DocumentDatabase Database;
             public long LastEtag;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
-
             public HashSet<string> ModifiedCollections;
 
             public override string ToString()
