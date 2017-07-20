@@ -504,10 +504,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/external-replication", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/external-replication", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdateExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(name, out var _, requireAdmin:true) == false)
+                return;
 
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -546,10 +549,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/tasks", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteOngoingTask()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(dbName, out var _, requireAdmin:true) == false)
+                return;
 
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
