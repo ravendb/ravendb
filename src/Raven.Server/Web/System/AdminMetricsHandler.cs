@@ -13,7 +13,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminMetricsHandler : RequestHandler
     {
-        [RavenAction("/admin/metrics", "GET")]
+        [RavenAction("/admin/metrics", "GET", AuthorizationStatus.ServerAdmin)]
         public Task GetRootStats()
         {
             JsonOperationContext context;

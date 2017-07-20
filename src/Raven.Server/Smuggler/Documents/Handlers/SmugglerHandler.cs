@@ -37,7 +37,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
     {
         private static readonly HttpClient HttpClient = new HttpClient();
 
-        [RavenAction("/databases/*/smuggler/validate-options", "POST")]
+        [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostValidateOptions()
         {
             DocumentsOperationContext context;
@@ -79,7 +79,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/export", "POST")]
+        [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostExport()
         {
             DocumentsOperationContext context;
@@ -141,7 +141,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import-s3-dir", "GET")]
+        [RavenAction("/databases/*/smuggler/import-s3-dir", "GET", AuthorizationStatus.ValidUser)]
         public async Task PostImportFromS3Directory()
         {
             var url = GetQueryStringValueAndAssertIfSingleAndNotEmpty("url");
@@ -165,7 +165,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             await BulkImport(files, Path.GetTempPath());
         }
 
-        [RavenAction("/databases/*/smuggler/import-dir", "GET")]
+        [RavenAction("/databases/*/smuggler/import-dir", "GET", AuthorizationStatus.ValidUser)]
         public async Task PostImportDirectory()
         {
             var directory = GetQueryStringValueAndAssertIfSingleAndNotEmpty("dir");
@@ -268,7 +268,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import", "GET")]
+        [RavenAction("/databases/*/smuggler/import", "GET", AuthorizationStatus.ValidUser)]
         public Task GetImport()
         {
             if (HttpContext.Request.Query.ContainsKey("file") == false &&
@@ -279,7 +279,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             return PostImport();
         }
 
-        [RavenAction("/databases/*/smuggler/import", "POST")]
+        [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostImport()
         {
             DocumentsOperationContext context;
@@ -302,7 +302,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/smuggler/import/async", "POST")]
+        [RavenAction("/databases/*/smuggler/import/async", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostImportAsync()
         {
             DocumentsOperationContext context;

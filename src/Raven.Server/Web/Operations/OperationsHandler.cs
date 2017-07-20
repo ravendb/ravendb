@@ -10,7 +10,7 @@ namespace Raven.Server.Web.Operations
 {
     public class OperationsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/operations/next-operation-id", "GET")]
+        [RavenAction("/databases/*/operations/next-operation-id", "GET", AuthorizationStatus.ValidUser)]
         public Task GetNextOperationId()
         {
             var nextId = Database.Operations.GetNextOperationId();
@@ -30,7 +30,7 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operations/kill", "POST")]
+        [RavenAction("/databases/*/operations/kill", "POST", AuthorizationStatus.ValidUser)]
         public Task Kill()
         {
             var id = GetLongQueryString("id");
@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Operations
             return NoContent();
         }
 
-        [RavenAction("/databases/*/operations", "GET")]
+        [RavenAction("/databases/*/operations", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
             var id = GetLongQueryString("id", required: false);
@@ -77,7 +77,7 @@ namespace Raven.Server.Web.Operations
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/operations/state", "GET")]
+        [RavenAction("/databases/*/operations/state", "GET", AuthorizationStatus.ValidUser)]
         public Task State()
         {
             var id = GetLongQueryString("id");

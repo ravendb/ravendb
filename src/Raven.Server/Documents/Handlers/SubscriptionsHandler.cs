@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SubscriptionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/subscriptions/try", "POST", "/databases/{databaseName:string}/subscriptions/try")]
+        [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser)]
         public async Task Try()
         {
             DocumentsOperationContext context;
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
         
-        [RavenAction("/databases/*/subscriptions", "PUT", "/databases/{databaseName:string}/subscriptions")]
+        [RavenAction("/databases/*/subscriptions", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Create()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/subscriptions", "DELETE", "/databases/{databaseName:string}/subscriptions?id={subscriptionId:long}&taskName={taskName:string}")]
+        [RavenAction("/databases/*/subscriptions", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
             var subscriptionName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents.Handlers
             await NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions", "GET", "/databases/{databaseName:string}/subscriptions?[running=true|history=true|id=<subscription id>|name=<subscription name>]")]
+        [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
             var start = GetStart();
@@ -184,7 +184,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/subscriptions/drop", "POST", "/databases/{databaseName:string}/subscriptions/drop?id={subscriptionId:long}")]
+        [RavenAction("/databases/*/subscriptions/drop", "POST", AuthorizationStatus.ValidUser)]
         public Task DropSubscriptionConnection()
         {
             var subscriptionId = GetLongQueryString("id");

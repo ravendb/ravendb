@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -40,29 +41,9 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        [RavenAction("/admin/databases/is-loaded", "GET", "/admin/databases/is-loaded?name={databaseName:string}")]
-        public Task IsDatabaseLoaded()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+        
 
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-            var isLoaded = ServerStore.DatabasesLandlord.IsDatabaseLoaded(name);
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(IsDatabaseLoadedCommand.CommandResult.DatabaseName)] = name,
-                        [nameof(IsDatabaseLoadedCommand.CommandResult.IsLoaded)] = isLoaded
-                    });
-                    writer.Flush();
-                }
-            }
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/databases", "GET", "/admin/databases?name={databaseName:string}")]
+        [RavenAction("/admin/databases", "GET", AuthorizationStatus.ServerAdmin)]
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -105,7 +86,7 @@ namespace Raven.Server.Web.System
         }
 
         // add database to already existing database group
-        [RavenAction("/admin/databases/add-node", "POST", "/admin/databases/add-node?name={databaseName:string}&node={nodeName:string|optional}")]
+        [RavenAction("/admin/databases/add-node", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -188,7 +169,7 @@ namespace Raven.Server.Web.System
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
         }
 
-        [RavenAction("/admin/databases", "PUT", "/admin/databases/{databaseName:string}")]
+        [RavenAction("/admin/databases", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -305,45 +286,19 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/expiration/config", "POST", "/admin/expiration/config?name={databaseName:string}")]
+        [RavenAction("/admin/expiration/config", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ConfigExpiration()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
         }
 
-        [RavenAction("/admin/revisions/config", "POST", "/admin/revisions/config?name={databaseName:string}")]
+        [RavenAction("/admin/revisions/config", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ConfigRevisions()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
         }
 
-        [RavenAction("/admin/periodic-backup", "GET", "/admin/periodic-backup?name={databaseName:string}")]
-        public Task GetPeriodicBackup()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var taskId = GetLongQueryString("taskId", required: true);
-            if (taskId == 0)
-                throw new ArgumentException("Task ID cannot be 0");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
-                var periodicBackup = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == taskId);
-                if (periodicBackup == null)
-                    throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
-
-                var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(periodicBackup, DocumentConventions.Default, context);
-                context.Write(writer, databaseRecordBlittable);
-                writer.Flush();
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/periodic-backup/update", "POST", "/admin/periodic-backup/update?name={databaseName:string}")]
+        [RavenAction("/admin/periodic-backup", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task UpdatePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
@@ -407,33 +362,8 @@ namespace Raven.Server.Web.System
                     json[taskIdName] = taskId;
                 });
         }
-
-        [RavenAction("/admin/periodic-backup/status", "GET", "/admin/periodic-backup/status?name={databaseName:string}")]
-        public Task GetPeriodicBackupStatus()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            var taskId = GetLongQueryString("taskId", required: true);
-            if (taskId == 0)
-                throw new ArgumentException("Task ID cannot be 0");
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var statusBlittable =
-                ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteStartObject();
-                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
-                writer.WriteObject(statusBlittable);
-                writer.WriteEndObject();
-                writer.Flush();
-            }
-
-            return Task.CompletedTask;
-        }
-
-        [RavenAction("/admin/periodic-backup/test-credentials", "POST", "/admin/periodic-backup/test-credentials?type={connectionType:string}")]
+        
+        [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task TestPerioidicBackupCredentials()
         {
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
@@ -475,7 +405,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/get-restore-points", "POST", "/admin/get-restore-points")]
+        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -507,7 +437,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/database-restore", "POST", "/admin/database-restore")]
+        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task RestoreDatabase()
         {
             // we don't dispose this as operation is async
@@ -580,31 +510,7 @@ namespace Raven.Server.Web.System
                 throw;
             }
         }
-
-        [RavenAction("/admin/operations/state", "GET")]
-        public Task State()
-        {
-            var id = GetLongQueryString("id");
-            // ReSharper disable once PossibleInvalidOperationException
-            var state = ServerStore.Operations.GetOperation(id)?.State;
-
-            if (state == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, state.ToJson());
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
+        
         private async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
             BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
             string debug,
@@ -652,7 +558,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-functions", "POST", "/admin/modify-custom-functions?name={databaseName:string}")]
+        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ModifyCustomFunctions()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -685,43 +591,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/update-resolver", "POST", "/admin/update-resolver?name={databaseName:string}")]
-        public async Task UpdateConflictResolver()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
-                var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
-
-                using (context.OpenReadTransaction())
-                {
-                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
-
-                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
-                    await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, new DynamicJsonValue
-                        {
-                            ["RaftCommandIndex"] = index,
-                            ["Key"] = name,
-                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
-                        });
-                        writer.Flush();
-                    }
-                }
-            }
-        }
-
-        [RavenAction("/admin/databases", "DELETE", "/admin/databases?name={databaseName:string|multiple}&hard-delete={isHardDelete:bool|optional(false)}&from-node={nodeToDelete:string|optional(null)}")]
+        [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
@@ -763,13 +633,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/disable", "POST", "/admin/databases/disable?name={resourceName:string|multiple}")]
+        [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task DisableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: true);
         }
 
-        [RavenAction("/admin/databases/enable", "POST", "/admin/databases/enable?name={resourceName:string|multiple}")]
+        [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task EnableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: false);
@@ -841,14 +711,14 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/etl/add", "PUT", "/admin/etl/add?name={databaseName:string}&type={[sql|raven]:string}")]
+        [RavenAction("/admin/etl", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task AddEtl()
         {
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
-        [RavenAction("/admin/etl/update", "POST", "/admin/etl/update?id={id:ulong}&name={databaseName:string}&type={[sql|raven]:string}")]
+        [RavenAction("/admin/etl/update", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task UpdateEtl()
         {
             var id = GetLongQueryString("id");
@@ -857,7 +727,7 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
-        [RavenAction("/admin/console", "POST", "/admin/console?database={databaseName:string}&server-script={isServerScript:bool|optional(false)}")]
+        [RavenAction("/admin/console", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task AdminConsole()
         {
             var name = GetStringQueryString("database", false);
@@ -944,13 +814,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/connection-strings/put", "PUT", "/admin/connection-strings/put?name={databaseName:string}&type={[sql|raven]:string}")]
+        [RavenAction("/admin/connection-strings", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task PutConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
         }
 
-        [RavenAction("/admin/connection-strings/remove", "DELETE", "/admin/connection-strings/remove?name={databaseName:string}&connectionString={connectionStringName:string}&type={[sql|raven]:string}")]
+        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task RemoveConnectionString()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -975,41 +845,6 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
-        }
-
-        [RavenAction("/admin/connection-strings/get", "GET", "/admin/connection-strings/get?name={databaseName:string}")]
-        public Task GetConnectionStrings()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                DatabaseRecord record;
-                using (context.OpenReadTransaction())
-                {
-                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
-                }
-                var ravenConnectionString = record.RavenConnectionStrings;
-                var sqlConnectionstring = record.SqlConnectionStrings;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var result = new GetConnectionStringsResult
-                    {
-                        RavenConnectionStrings = ravenConnectionString,
-                        SqlConnectionStrings = sqlConnectionstring
-                    };
-                    context.Write(writer, result.ToJson());
-                    writer.Flush();
-                }
-            }
-
-            return Task.CompletedTask;
         }
     }
 }

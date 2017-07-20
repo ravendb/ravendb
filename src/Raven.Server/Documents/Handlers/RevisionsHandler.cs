@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class RevisionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/revisions-config", "GET")]
+        [RavenAction("/databases/*/revisions-config", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsConfig()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions", "GET")]
+        [RavenAction("/databases/*/revisions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsFor()
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/revisions/bin", "GET", "/databases/*/revisions/bin?etag={long.MaxValue}&pageSize=25")]
+        [RavenAction("/databases/*/revisions/bin", "GET", AuthorizationStatus.ValidUser)]
         public Task GetRevisionsBin()
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;

@@ -11,7 +11,7 @@ namespace Raven.Server.Web.Studio
 {
     public class LicenseHandler : RequestHandler
     {
-        [RavenAction("/license/status", "GET", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/license/status", "GET", AuthorizationStatus.ValidUser)]
         public Task Status()
         {
         
@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
  
-        [RavenAction("/admin/license/registration", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/license/registration", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task Register()
         {
             UserRegistrationInfo userInfo;
@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/admin/license/activate", "POST", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ServerAdmin)]
         public Task Activate()
         {
             License license;

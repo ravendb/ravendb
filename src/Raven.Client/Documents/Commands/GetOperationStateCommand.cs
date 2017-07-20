@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Commands
         {
             url = _isServerStoreOperation == false ? 
                 $"{node.Url}/databases/{node.Database}/operations/state?id={_id}" : 
-                $"{node.Url}/admin/operations/state?id={_id}";
+                $"{node.Url}/operations/state?id={_id}";
 
             return new HttpRequestMessage
             {

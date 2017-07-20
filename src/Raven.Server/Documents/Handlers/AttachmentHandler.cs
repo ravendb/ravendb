@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class AttachmentHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/attachments", "HEAD")]
+        [RavenAction("/databases/*/attachments", "HEAD", AuthorizationStatus.ValidUser)]
         public Task Head()
         {
             var documentId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -52,13 +52,13 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/attachments", "GET")]
+        [RavenAction("/databases/*/attachments", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             return GetAttachment(true);
         }
 
-        [RavenAction("/databases/*/attachments", "POST")]
+        [RavenAction("/databases/*/attachments", "POST", AuthorizationStatus.ValidUser)]
         public Task GetPost()
         {
             return GetAttachment(false);
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/attachments", "PUT")]
+        [RavenAction("/databases/*/attachments", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/attachments", "DELETE")]
+        [RavenAction("/databases/*/attachments", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class BulkInsertHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/bulk_insert", "POST")]
+        [RavenAction("/databases/*/bulk_insert", "POST", AuthorizationStatus.ValidUser)]
         public async Task BulkInsert()
         {
             var operationCancelToken = CreateOperationToken();

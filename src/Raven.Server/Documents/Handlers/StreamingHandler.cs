@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
     {
         private string _postQuery;
 
-        [RavenAction("/databases/*/streams/docs", "HEAD", "/databases/{databaseName:string}/streams/docs")]
+        [RavenAction("/databases/*/streams/docs", "HEAD", AuthorizationStatus.ValidUser)]
         public Task StreamDocsHead()
         {
             //why is this action exists in 3.0?
@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/docs", "GET", "/databases/{databaseName:string}/streams/docs")]
+        [RavenAction("/databases/*/streams/docs", "GET", AuthorizationStatus.ValidUser)]
         public Task StreamDocsGet()
         {
             var transformerName = GetStringQueryString("transformer", required: false);
@@ -94,13 +94,13 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries/$", "HEAD")]
+        [RavenAction("/databases/*/streams/queries/$", "HEAD", AuthorizationStatus.ValidUser)]
         public Task SteamQueryHead()
         {
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries/$", "GET")]
+        [RavenAction("/databases/*/streams/queries/$", "GET", AuthorizationStatus.ValidUser)]
         public async Task StreamQueryGet()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/streams/queries/$", "POST")]
+        [RavenAction("/databases/*/streams/queries/$", "POST", AuthorizationStatus.ValidUser)]
         public Task StreamQueryPost()
         {
             using (var sr = new StreamReader(RequestBodyStream()))

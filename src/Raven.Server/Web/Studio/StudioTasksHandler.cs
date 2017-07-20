@@ -16,7 +16,7 @@ namespace Raven.Server.Web.Studio
     public class StudioTasksHandler : RequestHandler
     {
         //TODO: split to specific handler
-        [RavenAction("/databases/*/studio-tasks/config", "GET")]
+        [RavenAction("/databases/*/studio-tasks/config", "GET", AuthorizationStatus.ServerAdmin)]
         public Task Config()
         {
             //TODO: implement
@@ -25,7 +25,7 @@ namespace Raven.Server.Web.Studio
         }
 
         //TODO: split to specific handler
-        [RavenAction("/studio-tasks/server-configs", "GET")]
+        [RavenAction("/studio-tasks/server-configs", "GET", AuthorizationStatus.ServerAdmin)]
         public Task Get()
         {
             //TODO: implement
@@ -33,7 +33,7 @@ namespace Raven.Server.Web.Studio
         }
 
         //TODO: handle this in js ?
-        [RavenAction("/studio-tasks/new-encryption-key", "GET")]
+        [RavenAction("/studio-tasks/new-encryption-key", "GET", AuthorizationStatus.ServerAdmin)]
         public async Task GetNewEncryption()
         {
             RandomNumberGenerator randomNumberGenerator = RandomNumberGenerator.Create();
@@ -45,7 +45,7 @@ namespace Raven.Server.Web.Studio
         }
 
         //TODO: handle this in js ?
-        [RavenAction("/studio-tasks/is-base-64-key", "POST")]
+        [RavenAction("/studio-tasks/is-base-64-key", "POST", AuthorizationStatus.ServerAdmin)]
         public Task IsBase64Key()
         {
             StreamReader reader = new StreamReader(HttpContext.Request.Body);
@@ -71,7 +71,7 @@ namespace Raven.Server.Web.Studio
             public List<string> Functions;
         }
 
-        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST")]
+        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST", AuthorizationStatus.ServerAdmin)]
         public Task ValidateCustomFunctions()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

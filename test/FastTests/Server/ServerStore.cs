@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -138,7 +139,7 @@ namespace FastTests.Server
                     await Server.ServerStore.PutValueInClusterAsync(new PutCertificateCommand("foo/bar", new CertificateDefinition
                     {
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                        Permissions = null,
+                        Permissions = new Dictionary<string, DatabaseAccess>(),
                         ServerAdmin = true,
                         Thumbprint = certificate.Thumbprint
                     }));

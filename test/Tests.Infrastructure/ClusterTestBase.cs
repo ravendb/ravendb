@@ -384,11 +384,7 @@ namespace Tests.Infrastructure
                 // TODO iftah
                 /*if (useSsl)
                 {
-                    serverUrl = serverUrl.Replace("http:", "https:");
-                    customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
-                    var defaultServer = GetNewServer(customSettings);
-
-                    SetupAuthenticationInTest(out _, new string[0], customSettings, true, serverUrl, false, defaultServer);
+                    
                 }*/
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);

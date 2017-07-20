@@ -10,7 +10,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 {
     public class ServerNotificationCenterHandler : RequestHandler
     {
-        [RavenAction("/notification-center/watch", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/notification-center/watch", "GET", AuthorizationStatus.ServerAdmin)]
         public async Task Get()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -32,7 +32,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             }
         }
 
-        [RavenAction("/notification-center/dismiss", "POST")]
+        [RavenAction("/notification-center/dismiss", "POST", AuthorizationStatus.ValidUser)]
         public Task DismissPost()
         {
             var id = GetStringQueryString("id");
@@ -47,7 +47,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             return NoContent();
         }
 
-        [RavenAction("/notification-center/postpone", "POST")]
+        [RavenAction("/notification-center/postpone", "POST", AuthorizationStatus.ValidUser)]
         public Task PostponePost()
         {
             var id = GetStringQueryString("id");

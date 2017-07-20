@@ -13,7 +13,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/studio/index-fields", "POST")]
+        [RavenAction("/databases/*/studio/index-fields", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostIndexFields()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

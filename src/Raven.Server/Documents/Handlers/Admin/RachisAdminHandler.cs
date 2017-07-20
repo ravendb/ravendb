@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : RequestHandler
     {
-        [RavenAction("/rachis/send", "POST", "/rachis/send", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ApplyCommand()
         {
             TransactionOperationContext context;
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/log", "GET", "/admin/cluster/log", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.ServerAdmin)]
         public Task GetLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/node-info", "GET", "/cluster/node-info", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/node-info", "GET", AuthorizationStatus.ValidUser)]
         public Task GetNodeInfo()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/topology", "GET", "/cluster/topology", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser)]
         public Task GetClusterTopology()
         {
             TransactionOperationContext context;
@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/maintenance-stats", "GET", "/cluster/maintenance-stats", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.ServerAdmin)]
         public Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
@@ -169,13 +169,12 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
 
-        [RavenAction("/admin/cluster/add-node", "OPTIONS", "/admin/cluster/add-node?url={nodeUrl:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        [RavenAction("/admin/cluster/timeout", "OPTIONS", "/admin/cluster/timeout", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        [RavenAction("/admin/cluster/promote", "OPTIONS", "/admin/cluster/promote", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        [RavenAction("/admin/cluster/demote", "OPTIONS", "/admin/cluster/demote", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-
+        [RavenAction("/admin/cluster/add-node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/remove-node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -183,25 +182,32 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}&expectedThumbrpint={thumbprint:string}&watcher={asWatcher:bool|optional(false)}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/add-node", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
 
-            var serverUrl = GetStringQueryString("url");
+            var nodeUrl = GetStringQueryString("url");
             var watcher = GetBoolValueQueryString("watcher", false);
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
+                    var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
+
+                    if (HttpContext.Request.IsHttps != remoteIsHttps)
+                    {
+                        throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it uses HTTPS while the new node is using HTTP");
+                    }
+
                     string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(serverUrl, Server.ServerCertificateHolder.Certificate))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
                     {
                         var infoCmd = new GetNodeInfoCommand();
                         await requestExecutor.ExecuteAsync(infoCmd, ctx);
@@ -216,7 +222,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         var nodeTag = nodeInfo.NodeTag == "?" 
                             ? null : nodeInfo.NodeTag;
 
-                        if (serverUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase))
+                        if (remoteIsHttps)
                         {
                             if (nodeInfo.Certificate == null)
                                 throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
@@ -247,7 +253,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false , asWatcher:watcher?? false);
+                        await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false);
                         NoContentStatus();
                         return;
                     }
@@ -256,7 +262,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/remove-node", "DELETE", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/remove-node", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task DeleteNode()
         {
             SetupCORSHeaders();
@@ -272,7 +278,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
         
-        [RavenAction("/admin/cluster/timeout", "POST", "/admin/cluster/timeout")]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ServerAdmin)]
         public Task TimeoutNow()
         {
             SetupCORSHeaders();
@@ -283,7 +289,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ServerAdmin)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -299,7 +305,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", "/admin/cluster/promote?nodeTag={nodeTag:string}")]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -334,7 +340,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", "/admin/cluster/demote?nodeTag={nodeTag:string}")]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)

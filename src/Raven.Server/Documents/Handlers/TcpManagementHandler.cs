@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TcpManagementHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/tcp", "GET", "/databases/{databaseName:string}/tcp/all?start={start:int}&pageSize={pageSize:int}")]
+        [RavenAction("/databases/*/tcp", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
             var start = GetStart();
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/tcp", "DELETE", "/databases/{databaseName:string}/tcp/drop?id={id:long}")]
+        [RavenAction("/databases/*/tcp", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
             var id = GetLongQueryString("id");

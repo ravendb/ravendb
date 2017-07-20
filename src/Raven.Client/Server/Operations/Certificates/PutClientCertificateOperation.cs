@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
 using Raven.Client.Documents.Conventions;
@@ -14,13 +15,13 @@ namespace Raven.Client.Server.Operations.Certificates
     public class PutClientCertificateOperation : IServerOperation
     {
         private readonly X509Certificate2 _certificate;
-        private readonly HashSet<string> _permissions;
+        private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly bool _serverAdmin;
 
-        public PutClientCertificateOperation(X509Certificate2 certificate, IEnumerable<string> permissions, bool serverAdmin = false)
+        public PutClientCertificateOperation(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
         {
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
-            _permissions = permissions != null ? new HashSet<string>(permissions) : throw new ArgumentNullException(nameof(permissions));
+            _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
             _serverAdmin = serverAdmin;
         }
 
@@ -32,11 +33,11 @@ namespace Raven.Client.Server.Operations.Certificates
         private class PutClientCertificateCommand : RavenCommand
         {
             private readonly X509Certificate2 _certificate;
-            private readonly HashSet<string> _permissions;
+            private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly bool _serverAdmin;
             private readonly JsonOperationContext _context;
 
-            public PutClientCertificateCommand(JsonOperationContext context, X509Certificate2 certificate, HashSet<string> permissions, bool serverAdmin = false)
+            public PutClientCertificateCommand(JsonOperationContext context, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
             {
                 _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
                 _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -65,19 +66,26 @@ namespace Raven.Client.Server.Operations.Certificates
                             writer.WritePropertyName("ServerAdmin");
                             writer.WriteBool(_serverAdmin);
                             writer.WriteComma();
+
                             writer.WritePropertyName("Permissions");
                             writer.WriteStartArray();
                             bool first = true;
-                            foreach (var permission in _permissions)
+                            foreach (var kvp in _permissions)
                             {
                                 if (first == false)
                                     writer.WriteComma();
                                 first = false;
 
-                                writer.WriteString(permission);
+                                writer.WriteStartObject();
+                                writer.WritePropertyName("Database");
+                                writer.WriteString(kvp.Key);
+                                writer.WriteComma();
+                                writer.WritePropertyName("Access");
+                                writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
+                                writer.WriteEndObject();
                             }
-                            writer.WriteEndArray();
 
+                            writer.WriteEndArray();
                             writer.WriteEndObject();
                         }
                     })

@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ServerInfoHandler : RequestHandler
     {
-        [RavenAction("/debug/server-id", "GET", "/debug/server-id", RequiredAuthorization = AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
+        [RavenAction("/debug/server-id", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task ServerId()
         {
             JsonOperationContext context;

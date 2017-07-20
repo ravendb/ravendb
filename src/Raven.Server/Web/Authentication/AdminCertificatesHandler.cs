@@ -22,7 +22,7 @@ namespace Raven.Server.Web.Authentication
     public class AdminCertificatesHandler : RequestHandler
     {
 
-        [RavenAction("/admin/certificates", "POST", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task Generate()
         {
             // one of the first admin action is to create a certificate, so let
@@ -32,17 +32,17 @@ namespace Raven.Server.Web.Authentication
             {
                 var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "certificate-generation");
                 
-                ValidateCertificate(certificateJson, out var friendlyName, out var password, out var serverAdmin, out var permissions);
-
+                ValidateCertificate(certificateJson, out var friendlyName, out var password, out var serverAdmin, out Dictionary<string, DatabaseAccess> permissions);
+                
                 // this creates a client certificate which is signed by the current server certificate
                 var certificate = CertificateUtils.CreateSelfSignedClientCertificate(friendlyName, Server.ServerCertificateHolder);
-
+                
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint,
                     new CertificateDefinition
                     {
                         // this does not include the private key, that is only for the client
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                        Permissions = new HashSet<string>(permissions.Select(x => x?.ToString())),
+                        Permissions = permissions,
                         ServerAdmin = serverAdmin,
                         Thumbprint = certificate.Thumbprint
                     }));
@@ -58,7 +58,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
         
-        [RavenAction("/admin/certificates", "PUT", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task Put()
         {
             // one of the first admin action is to create a certificate, so let
@@ -67,25 +67,32 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
             {
-                ValidatePermissions(certificateJson, out _, out _);
+                ValidatePermissions(certificateJson, out var permissions, out var serverAdmin);
 
-                var certificateDefinition = JsonDeserializationServer.CertificateDefinition(certificateJson);
+                certificateJson.TryGet("Certificate", out string certificate);
 
-                var certificate = new X509Certificate2(Convert.FromBase64String(certificateDefinition.Certificate));
-                if (certificate.HasPrivateKey)
+                var certificateDefinition = new CertificateDefinition()
+                {
+                    Certificate = certificate,
+                    Permissions = permissions,
+                    ServerAdmin = serverAdmin
+                };
+
+                var x509Certificate = new X509Certificate2(Convert.FromBase64String(certificate));
+                if (x509Certificate.HasPrivateKey)
                 {
                     // avoid storing the private key
-                    certificateDefinition.Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert));
+                    certificateDefinition.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
                 }
-                certificateDefinition.Thumbprint = certificate.Thumbprint;
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                certificateDefinition.Thumbprint = x509Certificate.Thumbprint;
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, certificateDefinition));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }
 
-        [RavenAction("/admin/certificates", "DELETE", "/admin/certificates?thumbprint={certificate-thumbprint:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {
             var thumbprint = GetQueryStringValueAndAssertIfSingleAndNotEmpty("thumbprint");
@@ -101,7 +108,7 @@ namespace Raven.Server.Web.Authentication
             }
         }
     
-        [RavenAction("/admin/certificates", "GET", "/admin/certificates", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "GET", AuthorizationStatus.ServerAdmin)]
         public Task GetAll()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
@@ -166,7 +173,7 @@ namespace Raven.Server.Web.Authentication
             out string friendlyName, 
             out string password, 
             out bool serverAdmin, 
-            out BlittableJsonReaderArray permissions)
+            out Dictionary<string, DatabaseAccess> permissions)
         {
             if (certificateJson.TryGet("Name", out friendlyName) == false)
                 throw new ArgumentException("'Name' is a required field when generating a new certificate");
@@ -179,17 +186,27 @@ namespace Raven.Server.Web.Authentication
             ValidatePermissions(certificateJson, out permissions, out serverAdmin);
         }
 
-        private static void ValidatePermissions(BlittableJsonReaderObject certificateJson, out BlittableJsonReaderArray permissions, out bool serverAdmin)
+        private static void ValidatePermissions(BlittableJsonReaderObject certificateJson, out Dictionary<string, DatabaseAccess> permissions, out bool serverAdmin)
         {
             certificateJson.TryGet("ServerAdmin", out serverAdmin); //can be null, default is false
 
-            if (certificateJson.TryGet("Permissions", out permissions) == false)
+            if (certificateJson.TryGet("Permissions", out BlittableJsonReaderArray permissionsJson) == false)
                 throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
 
             const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
             
-            foreach (LazyStringValue dbName in permissions.Items)
+            permissions = new Dictionary<string, DatabaseAccess>();
+            foreach (BlittableJsonReaderObject kvp in permissionsJson.Items)
             {
+                if (kvp.TryGet("Database", out string dbName) == false)
+                    throw new ArgumentException("'Database' is a required field in 'Permissions' when generating a new certificate");
+                if (kvp.TryGet("Access", out string accessString) == false)
+                    throw new ArgumentException("'Access' is a required field in 'Permissions' when generating a new certificate");
+                if (accessString != nameof(DatabaseAccess.ReadWrite) && accessString != nameof(DatabaseAccess.Admin))
+                    throw new ArgumentException($"Invalid access {accessString} for database {dbName} when generating a new certificate");
+
+                permissions.Add(dbName, accessString == nameof(DatabaseAccess.ReadWrite) ? DatabaseAccess.ReadWrite : DatabaseAccess.Admin);
+
                 if (string.IsNullOrWhiteSpace(dbName))
                     throw new ArgumentNullException(nameof(permissions));
 

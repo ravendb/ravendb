@@ -39,7 +39,7 @@ namespace Raven.Client.Server.Operations
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/admin/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
+            url = $"{node.Url}/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get

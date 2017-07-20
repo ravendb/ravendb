@@ -20,7 +20,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioCustomFunctionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/studio/custom-functions", "GET")]
+        [RavenAction("/databases/*/studio/custom-functions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCustomFunctions()
         {
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
