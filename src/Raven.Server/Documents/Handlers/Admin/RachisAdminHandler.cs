@@ -183,12 +183,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}&expectedThumbrpint={thumbprint:string}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/add-node", "POST", "/admin/cluster/add-node?url={nodeUrl:string}&expectedThumbrpint={thumbprint:string}&watcher={asWatcher:bool|optional(false)}", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
 
             var serverUrl = GetStringQueryString("url");
+            var watcher = GetBoolValueQueryString("watcher", false);
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
@@ -246,7 +247,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         
-                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(serverUrl, nodeTag, validateNotInTopology:false , asWatcher:watcher?? false);
                         NoContentStatus();
                         return;
                     }

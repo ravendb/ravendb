@@ -1312,9 +1312,9 @@ namespace Raven.Server.Rachis
             }
         }
 
-        public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true)
+        public Task AddToClusterAsync(string url, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
-            return ModifyTopologyAsync(nodeTag, url, Leader.TopologyModification.Promotable, validateNotInTopology);
+            return ModifyTopologyAsync(nodeTag, url, asWatcher ? Leader.TopologyModification.NonVoter : Leader.TopologyModification.Promotable, validateNotInTopology);
         }
 
         public Task RemoveFromClusterAsync(string nodeTag)
