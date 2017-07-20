@@ -535,54 +535,12 @@ namespace Raven.Server.Utils
 
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                object result;
                 var adminJsScript = new AdminJsScript { Script = jsCli.Script };
-                var certificate = cli._server.ServerCertificateHolder.Certificate.FriendlyName;
-
-                if (isServerScript)
-                {
-                    var console = new AdminJsConsole(cli._server);
-                    if (console.Log.IsOperationsEnabled)
-                    {
-                        console.Log.Operations($"The certificate that was used to initiate the operation: {certificate?? "None"}");
-                    }
-                    result = console.ApplyServerScript(adminJsScript);
-                }
-                else
-                {
-                    var console = new AdminJsConsole(database);
-                    if (console.Log.IsOperationsEnabled)
-                    {
-                        console.Log.Operations($"The certificate that was used to initiate the operation: {certificate?? "None"}");
-                    }
-                    result = console.ApplyScript(adminJsScript);
-                }
+                var result = isServerScript ? jsCli.AdminConsole.ApplyServerScript(adminJsScript) : jsCli.AdminConsole.ApplyScript(adminJsScript);
 
                 string str;
                 if (result == null || result is DynamicJsonValue)
-                {
-                    var ms = new MemoryStream();
-                    using (var writer = new BlittableJsonTextWriter(context, ms))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
-
-                        if (result != null)
-                        {
-                            context.Write(writer, result as DynamicJsonValue);
-                        }
-                        else
-                        {
-                            writer.WriteNull();
-                        }
-
-                        writer.WriteEndObject();
-                        writer.Flush();
-                    }
-
-                    str = Encoding.UTF8.GetString(ms.ToArray());
-                }
+                    str = ConvertResultToString(context, result);                
                 else
                     str = result.ToString();
                 str += Environment.NewLine;
@@ -596,6 +554,33 @@ namespace Raven.Server.Utils
                     Console.ResetColor();
             }
             return true;
+        }
+
+        public static string ConvertResultToString(JsonOperationContext context, object result)
+        {
+            var ms = new MemoryStream();
+            using (var writer = new BlittableJsonTextWriter(context, ms))
+            {
+                writer.WriteStartObject();
+
+                writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+
+                if (result != null)
+                {
+                    var djv = result as DynamicJsonValue;
+                    context.Write(writer, djv);
+                }
+                else
+                {
+                    writer.WriteNull();
+                }
+
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            var str = Encoding.UTF8.GetString(ms.ToArray());
+            return str;
         }
 
         private static bool CommandLowMem(List<string> args, RavenCli cli)
@@ -1166,6 +1151,12 @@ namespace Raven.Server.Utils
             if (consoleColoring)
                 Console.ResetColor();
 
+            AdminConsole = database != null ? new AdminJsConsole(database) : new AdminJsConsole(server);
+            if (AdminConsole.Log.IsOperationsEnabled)
+            {
+                var from = consoleColoring ? "the console cli" : "a named pipe connection";
+                AdminConsole.Log.Operations($"This operation was initiated through {from}");
+            }
             while (true)
             {
                 writer.Write(">>> ");
@@ -1181,13 +1172,11 @@ namespace Raven.Server.Utils
 
                 sb.Append(line);
 
-
-                AdminJsConsole adminJsConsole = database != null ? new AdminJsConsole(database) : new AdminJsConsole(server);
                 var adminJsScript = new AdminJsScript { Script = sb.ToString() };
                 bool hadErrors = false;
                 try
                 {
-                    adminJsConsole.GetEngine(adminJsScript, execString);
+                    AdminConsole.GetEngine(adminJsScript, execString);
                 }
                 catch
                 {
@@ -1203,5 +1192,6 @@ namespace Raven.Server.Utils
         }
 
         public string Script { get; set; }
+        public AdminJsConsole AdminConsole { get; set; }
     }
 }
