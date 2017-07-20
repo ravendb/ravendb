@@ -863,7 +863,7 @@ namespace Raven.Server.Web.System
             var name = GetStringQueryString("database", false);
             var isServerScript = GetBoolValueQueryString("server-script", false) ?? false;
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var clientCert = feature?.Certificate.FriendlyName;
+            var clientCert = feature?.Certificate?.FriendlyName;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {

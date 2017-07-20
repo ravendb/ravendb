@@ -5,6 +5,7 @@ using Jint;
 using Jint.Native;
 using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -13,9 +14,8 @@ namespace Raven.Server.Documents.Patch
     public class AdminJsConsole : DocumentPatcherBase
     {
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("AdminJsConsole");
-
         private readonly RavenServer _server;
-        private readonly Stopwatch _sw = new Stopwatch();
+        private Stopwatch _sw;
 
         public AdminJsConsole(DocumentDatabase database) : base(database)
         {
@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Patch
 
         public object ApplyScript(AdminJsScript script)
         {
-            _sw.Start();
+            _sw = Stopwatch.StartNew();
             Engine jintEngine;
             if (Log.IsOperationsEnabled)
             {
@@ -80,18 +80,16 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            var result =  ConvertResults(jsVal, Database);
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations($"Finished executing database script. Total time: {_sw.Elapsed} ");
             }
-            _sw.Reset();
-            return result;
+            return ConvertResults(jsVal, Database);
         }
 
         public object ApplyServerScript(AdminJsScript script)
         {
-            _sw.Start();
+            _sw = Stopwatch.StartNew();
             Engine jintEngine;
             if (Log.IsOperationsEnabled)
             {
@@ -124,16 +122,15 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            var result = ConvertResults(jsVal, Database);
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations($"Finished executing server script. Total time: {_sw.Elapsed} ");
             }
-            _sw.Reset();
-            return result;
+
+            return ConvertResults(jsVal, Database);
         }
 
-        private static object ConvertResults(JsValue jsVal, DocumentDatabase database = null)
+        private object ConvertResults(JsValue jsVal, DocumentDatabase database = null)
         {
             if (jsVal.IsUndefined() || jsVal.IsNull())
                 return null;
@@ -142,14 +139,29 @@ namespace Raven.Server.Documents.Patch
             {
                 var obj = jsVal.ToObject();
                 if (obj is ExpandoObject == false)
+                {
+                    if (Log.IsOperationsEnabled)
+                    {
+                        Log.Operations($"Output: {obj}");
+                    }
                     return obj;
+                }
             }
 
+            object result;
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (var scope = new PatcherOperationScope(database).Initialize(context))
             {
-                return scope.ToBlittableValue(jsVal, string.Empty, false);
+                result = scope.ToBlittableValue(jsVal, string.Empty, false);
+                if (Log.IsOperationsEnabled)
+                {
+                    //need to create a clone here because JsonOperationContex.Write() modifies the object 
+                    var clone = scope.ToBlittableValue(jsVal, string.Empty, false);
+                    Log.Operations($"Output: {RavenCli.ConvertResultToString(context, clone)}");
+                }
             }
+
+            return result;
         }
 
         public Engine GetEngine(AdminJsScript script, string executionString)
