@@ -119,7 +119,7 @@ namespace Raven.Database.Actions
             return indexEtag;
         }
 
-        internal void CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
+        internal int CheckReferenceBecauseOfDocumentUpdate(string key, IStorageActionsAccessor actions, string[] participatingIds = null)
         {
             Stopwatch sp = null;
             var count = 0;
@@ -176,6 +176,8 @@ namespace Raven.Database.Actions
                     }
                 });
             }
+
+            return count;
         }
 
         private static void IsIndexNameValid(string name)

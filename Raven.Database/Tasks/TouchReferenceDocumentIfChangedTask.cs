@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
@@ -111,32 +113,75 @@ namespace Raven.Database.Tasks
                     }
                 });
 
-                using (context.Database.DocumentLock.Lock())
+                var globalSw = Stopwatch.StartNew();
+                var alreadyTouched = new List<string>();
+                var totalTouchCount = 0;
+                while (docsToTouch.Count > 0)
                 {
-                    context.TransactionalStorage.Batch(accessor =>
+                    Stopwatch sp;
+                    using (context.Database.DocumentLock.Lock())
                     {
-                        foreach (var doc in docsToTouch)
+                        sp = Stopwatch.StartNew();
+                        context.TransactionalStorage.Batch(accessor =>
                         {
-                            try
+                            foreach (var doc in docsToTouch)
                             {
-                                Etag preTouchEtag;
-                                Etag afterTouchEtag;
-                                accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
-                            }
-                            catch (ConcurrencyException)
-                            {
-                                logger.Info("Concurrency exception when touching {0}", doc);
-                            }
-                            context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
-                        }
+                                if (sp.ElapsedMilliseconds > 500)
+                                {
+                                    sp.Stop();
+                                    return;
+                                }
 
-                        foreach (var collectionEtagPair in collectionsAndEtags)
-                        {
-                            context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
-                        }
-                    });
+                                alreadyTouched.Add(doc);
+
+                                try
+                                {
+                                    Etag preTouchEtag;
+                                    Etag afterTouchEtag;
+                                    accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
+                                    totalTouchCount++;
+                                }
+                                catch (ConcurrencyException)
+                                {
+                                    logger.Info("Concurrency exception when touching {0}", doc);
+                                }
+
+                                var internalTouchCount = context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+                                totalTouchCount += internalTouchCount;
+                            }
+                        });
+                    }
+
+                    foreach (var docToRemove in alreadyTouched)
+                    {
+                        docsToTouch.Remove(docToRemove);
+                    }
+
+                    if (sp.ElapsedMilliseconds > 500)
+                        Thread.Sleep(0); // we let other threads access the lock if needed
+
+                    if (logger.IsDebugEnabled)
+                    {
+                        logger.Debug(string.Format("Touched {0:#,#;;0} documents, " +
+                                                   "took: {1:0.#,#;;0}ms", 
+                                                   totalTouchCount, sp.ElapsedMilliseconds));
+                    }
+
+                    alreadyTouched.Clear();
                 }
 
+                if (globalSw.ElapsedMilliseconds > 3000)
+                {
+                    logger.Warn(string.Format("Documents to touch: {0:#,#;;0}, " +
+                                               "touched {1:#,#;;0} documents, " +
+                                               "took: {2:0.#,#;;0}ms",
+                        alreadyTouched.Count, totalTouchCount, globalSw.ElapsedMilliseconds));
+                }
+
+                foreach (var collectionEtagPair in collectionsAndEtags)
+                {
+                    context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
+                }
             }
         }
 
