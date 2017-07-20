@@ -1,15 +1,51 @@
-<section id="infoPackageSection">
-    
-    <div class="content-margin">
-        <button class="btn btn-default" data-bind="click: downloadServerWidePackage">Download server wide info package</button>
-        <button class="btn btn-default" data-bind="click: downloadClusterWidePackage">Download cluster wide info package</button>
+<div class="content-margin" id="infoPackageSection">
+    <div class="row">
+        <div class="col-lg-8 col-lg-offset-2 col-xl-6 col-xl-offset-3">
+            <div class="panel padding">
+                <img src="Content/img/info_package.png" class="img-responsive img-center" />
+                <hr />
+                <h2 class="text-center margin-top">The package contains following statistics:</h2>
+                <ul class="info-package-items margin-top">
+                    <li class="item">
+                        <i class="icon-replication"></i>
+                        <span>Replication</span>
+                    </li>
+                    <li class="item">
+                        <i class="icon-stats"></i>
+                        <span>Performance</span>
+                    </li>
+                    <li class="item">
+                        <i class="icon-io-test"></i>
+                        <span>I/O</span>
+                    </li>
+                    <li class="item">
+                        <i class="icon-storage"></i>
+                        <span>Storage</span>
+                    </li>
+                    <li class="item">
+                        <i class="icon-memory"></i>
+                        <span>Memory</span>
+                    </li>
+                    <li class="item">
+                        <i class="icon-other"></i>
+                        <span>...and more!</span>
+                    </li>
+                </ul>
+                <hr />
+                <div class="row row-sm">
+                    <div class="col-sm-6">
+                        <button class="btn btn-block btn-primary" data-bind="click: downloadServerWidePackage"><i class="icon-server"></i> <span>For current server only</span></button>
+                    </div>
+                    <div class="col-sm-6">
+                        <button class="btn btn-block btn-primary" data-bind="click: downloadClusterWidePackage"><i class="icon-cluster"></i> <span>For entire cluster</span></button>
+                    </div>
 
-        <div class="alert alert-warning">TODO: L&amp;F and write what's inside the package </div>
-
-        <div class="hidden">
-            <form method="get" download target="hidden-form" id="downloadInfoPackageForm"></form>
+                </div>
+            </div>
         </div>
     </div>
-  
 
-</section>
+    <div class="hidden">
+        <form method="get" download target="hidden-form" id="downloadInfoPackageForm"></form>
+    </div>
+</div>
