@@ -62,8 +62,12 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
 
+                        int i = 0;
+
                         foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
                         {
+                            i++;
+
                             if (first == false)
                                 writer.WriteComma();
 
@@ -73,15 +77,14 @@ namespace Raven.Server.Documents.Handlers
                             }
                             else
                             {
-                                writer.WriteObject(context.ReadObject(
-                                    new DynamicJsonValue
-                                    {
-                                        ["Id"] = itemDetails.Doc.Id,
-                                        ["Etag"] = itemDetails.Doc.Etag,
-                                        ["Exception"] = itemDetails.Exception.ToString(),
-                                        ["Document"] = itemDetails.Doc.Data
-                                    }, "Subscription process exception"
-                                ));
+                                var docWithExcepton = new DocumentWithException()
+                                {
+                                    Exception = itemDetails.Exception.ToString(),
+                                    Etag = itemDetails.Doc.Etag,
+                                    Id = itemDetails.Doc.Id,
+                                    DocumentData = itemDetails.Doc.Data
+                                };
+                                writer.WriteObject(context.ReadObject(docWithExcepton.ToJson(), ""));
                             }
 
                             first = false;
@@ -199,4 +202,23 @@ namespace Raven.Server.Documents.Handlers
             return NoContent();
         }
     }
+
+    public class DocumentWithException : IDynamicJson
+    {
+        public string Id { get; set; }
+        public long Etag { get; set; }
+        public string Exception { get; set; }
+        public object DocumentData { get; set; }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+           return new DynamicJsonValue
+           {
+                [nameof(Id)] = Id,
+                [nameof(Etag)] = Etag,
+                [nameof(Exception)] = Exception,
+                [nameof(DocumentData)] = DocumentData
+           };
+        }
+   }
 }

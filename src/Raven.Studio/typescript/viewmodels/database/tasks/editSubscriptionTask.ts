@@ -195,10 +195,13 @@ class editSubscriptionTask extends viewModelBase {
         }
 
         if (this.isFirstRun) {
-            const extraClassProvider = (item: documentObject) => {
-                //TODO: if item has error return appropriate css class
-                return "";
+            const extraClassProvider = (item: documentObject | Raven.Server.Documents.Handlers.DocumentWithException) => {
+                const temp = item as Raven.Server.Documents.Handlers.DocumentWithException;
+                if (temp.Exception) {
+                    return "exception-row";
+                }
             }
+
             const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
                 showRowSelectionCheckbox: false,
                 showSelectAllCheckbox: false,
@@ -210,7 +213,7 @@ class editSubscriptionTask extends viewModelBase {
          
             this.columnsSelector.init(this.gridController(),
                 fetcherMethod,
-                (w, r) => documentsProvider.findColumns(w, r),
+                (w, r) => documentsProvider.findColumns(w, r, ["Exception", "__metadata"]),
                 (results: pagedResult<documentObject>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
 
             const grid = this.gridController();
