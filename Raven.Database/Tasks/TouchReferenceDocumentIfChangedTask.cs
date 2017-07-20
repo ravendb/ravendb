@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 using Raven.Abstractions.Data;
 using Raven.Abstractions.Exceptions;
 using Raven.Abstractions.Logging;
@@ -30,7 +32,7 @@ namespace Raven.Database.Tasks
 
         public override string ToString()
         {
-            return string.Format("Index: {0}, References Count: {1}, References: {2}", 
+            return string.Format("Index: {0}, References Count: {1}, References: {2}",
                 Index, ReferencesToCheck.Count, string.Join(", ", ReferencesToCheck.Keys));
         }
 
@@ -102,7 +104,7 @@ namespace Raven.Database.Tasks
 
                         var entityName = doc.Metadata.Value<string>(Constants.RavenEntityName);
 
-                        if(string.IsNullOrEmpty(entityName))
+                        if (string.IsNullOrEmpty(entityName))
                             continue;
 
                         Etag highestEtagInCollection;
@@ -114,32 +116,73 @@ namespace Raven.Database.Tasks
                     }
                 });
 
-                using (context.Database.DocumentLock.Lock())
+                var globalSw = Stopwatch.StartNew();
+                var alreadyTouched = new List<string>();
+                var totalTouchCount = 0;
+                while (docsToTouch.Count > 0)
                 {
-                    context.TransactionalStorage.Batch(accessor =>
+                    Stopwatch sp;
+                    using (context.Database.DocumentLock.Lock())
                     {
-                        foreach (var doc in docsToTouch)
+                        sp = Stopwatch.StartNew();
+                        context.TransactionalStorage.Batch(accessor =>
                         {
-                            try
+                            foreach (var doc in docsToTouch)
                             {
-                                Etag preTouchEtag;
-                                Etag afterTouchEtag;
-                                accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
-                            }
-                            catch (ConcurrencyException)
-                            {
-                                logger.Info("Concurrency exception when touching {0}", doc);
-                            }
-                            context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
-                        }
+                                if (sp.ElapsedMilliseconds > 500)
+                                {
+                                    sp.Stop();
+                                    return;
+                                }
+                                    
+                                alreadyTouched.Add(doc);
 
-                        foreach (var collectionEtagPair in collectionsAndEtags)
-                        {
-                            context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
-                        }
-                    });
+                                try
+                                {
+                                    Etag preTouchEtag;
+                                    Etag afterTouchEtag;
+                                    accessor.Documents.TouchDocument(doc, out preTouchEtag, out afterTouchEtag);
+                                    totalTouchCount++;
+                                }
+                                catch (ConcurrencyException)
+                                {
+                                    logger.Info("Concurrency exception when touching {0}", doc);
+                                }
+
+                                var internalTouchCount = context.Database.Indexes.CheckReferenceBecauseOfDocumentUpdate(doc, accessor);
+                                totalTouchCount += internalTouchCount;
+                            }
+                        });
+                    }
+
+                    foreach (var docToRemove in alreadyTouched)
+                    {
+                        docsToTouch.Remove(docToRemove);
+                    }
+
+                    if (sp.ElapsedMilliseconds > 500)
+                        Thread.Sleep(0); // we let other threads access the lock if needed
+
+                    if (logger.IsDebugEnabled)
+                    {
+                        logger.Debug($"Touched {totalTouchCount:#,#;;0} documents, " +
+                                     $"took: {sp.ElapsedMilliseconds:0.#,#;;0}ms");
+                    }
+
+                    alreadyTouched.Clear();
                 }
 
+                if (globalSw.ElapsedMilliseconds > 3000)
+                {
+                    logger.Warn($"Documents to touch: {alreadyTouched.Count:#,#;;0}, " +
+                                 $"touched {totalTouchCount:#,#;;0} documents," +
+                                 $"took: {globalSw.ElapsedMilliseconds:0.#,#;;0}ms");
+                }
+
+                foreach (var collectionEtagPair in collectionsAndEtags)
+                {
+                    context.Database.LastCollectionEtags.Update(collectionEtagPair.Key, collectionEtagPair.Value);
+                }
             }
         }
 
