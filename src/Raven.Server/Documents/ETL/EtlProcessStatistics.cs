@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL
             _notificationCenter = notificationCenter;
         }
 
-        public LazyStringValue LastChangeVector { get; set; }
+        public string LastChangeVector { get; set; }
 
         public long LastProcessedEtag { get; set; }
 

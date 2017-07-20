@@ -492,8 +492,8 @@ namespace Raven.Server.Documents.ETL
         private bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
-                remote: item.ChangeVector,
-                local: state.ChangeVector);
+                remoteAsString: item.ChangeVector,
+                localAsString: state.ChangeVector);
 
             return conflictStatus == ConflictStatus.AlreadyMerged;
         }

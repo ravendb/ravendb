@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
                     if (etag == document.Etag)
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     else
-                        HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.Etag + "\"";
+                        HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.ChangeVector + "\"";
                 }
 
                 return Task.CompletedTask;
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Handlers
                 documentsToWrite = documents;
 
             includeDocs.Fill(includes);
-
+            // TODO: fix this
             var actualEtag = ComputeEtagsFor(documents, includes, etags);
             if (transformer != null)
                 actualEtag ^= transformer.Hash;
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
                 var cmd = new DeleteDocumentCommand(id, changeVector, Database, catchConcurrencyErrors: true);
                 await Database.TxMerger.Enqueue(cmd);
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Handlers
                     id = clusterId;
                 }
 
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
                 var cmd = new MergedPutCommand(doc, id, changeVector, Database);
 

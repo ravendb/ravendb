@@ -10,6 +10,7 @@ using Raven.Client.Extensions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -438,7 +439,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext ctx,JsonParserState state)
         {
-            return new LazyStringValue(null,state.StringBuffer, state.StringSize, ctx);
+            return ctx.GetLazyString(Encodings.Utf8.GetString(state.StringBuffer, state.StringSize));
         }
         private enum CommandPropertyName
         {

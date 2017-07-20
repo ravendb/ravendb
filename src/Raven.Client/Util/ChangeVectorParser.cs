@@ -37,14 +37,28 @@ namespace Raven.Client.Util
 
         private static int ParseNodeTag(string changeVector, int start, int end)
         {
+            AssertValidNodeTagChar(changeVector[end]);
+
             int tag = changeVector[end] - 'A';
 
             for (int i = end - 1; i >= start; i--)
             {
+                AssertValidNodeTagChar(changeVector[i]);
                 tag *= 26;
                 tag += changeVector[i] - 'A';
             }
             return tag;
+        }
+
+        private static void AssertValidNodeTagChar(char ch)
+        {
+            if (ch < 'A' || ch> 'Z')
+                ThrowInvalidNodeTag(ch);
+        }
+
+        private static void ThrowInvalidNodeTag(char ch)
+        {
+            throw new ArgumentException("Invalid node tag character: " + ch);
         }
 
         private static long ParseEtag(string changeVector, int start, int end)
@@ -59,7 +73,7 @@ namespace Raven.Client.Util
             return etag;
         }
 
-        private unsafe static Guid ParseDbId(string changeVector, int start)
+        private static unsafe Guid ParseDbId(string changeVector, int start)
         {
             Guid id = Guid.Empty;
             char* buffer = stackalloc char[24];
@@ -308,17 +322,19 @@ namespace Raven.Client.Util
                         current++;
                         break;
                     case State.Whitespace:
-//                        if (char.IsWhiteSpace(changeVector[current]))
-//                        {
-//                            current++;
-//                            break;
-//                        }
-                        if (changeVector[current] == ',')
+                        if (char.IsWhiteSpace(changeVector[current]) ||
+                            changeVector[current] == '=' || // TODO: Remove me
+                            changeVector[current] == ',')
                         {
-                            start = current + 1;
+                            start++;
+                            current++;
+                        }
+                        else
+                        {
+                            start = current;
+                            current++;
                             state = State.Tag;
                         }
-                        current++;
                         break;
 
                     default:

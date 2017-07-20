@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Replication
 
         internal DateTime _lastDocumentSentTime;
 
-        internal LazyStringValue LastAcceptedChangeVector;
+        internal string LastAcceptedChangeVector;
 
         internal string _destinationLastKnownChangeVectorAsString;
 
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
-            private  Guid _dbDd;
+            private  Guid _dbId;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {
@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Replication
 
             public bool InitAndValidate()
             {
-                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbDd) == false)
+                if (Guid.TryParse(_replicationBatchReply.DatabaseId, out _dbId) == false)
                     return false;
 
                 return _replicationBatchReply.CurrentEtag > 0;
@@ -438,8 +438,10 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-
-                return ChangeVectorUtils.TryUpdateChangeVector(_dbid, _replicationBatchReply.CurrentEtag,ref context.LastDatabaseChangeVector) ? 1 : 0;
+                var str = context.LastDatabaseChangeVector.ToString();
+                var res = ChangeVectorUtils.TryUpdateChangeVector(_dbId, _replicationBatchReply.CurrentEtag, ref str);
+                context.LastDatabaseChangeVector = context.GetLazyString(str);
+                return res ? 1 : 0;
             }
         }
         

@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Replication
 
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
-                                resolvedConflicts.Add((ResolveToLatest(conflicts), maxConflictEtag));
+                                resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Replication
             if (resolved == null || duplicateResolverEtagAt == maxEtag)
                 return false;
 
-            resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            resolved.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
             return true;
         }
 
@@ -356,14 +356,14 @@ namespace Raven.Server.Documents.Replication
 
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
-            updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            updatedConflict.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
 
             resolvedConflict = updatedConflict;
 
             return true;
         }
 
-        public unsafe DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
+        public unsafe DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it
@@ -397,7 +397,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            latestDoc.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
 
             return latestDoc;
         }

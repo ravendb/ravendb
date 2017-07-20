@@ -16,6 +16,6 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public string BatchCompleteReason;
 
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
     }
 }

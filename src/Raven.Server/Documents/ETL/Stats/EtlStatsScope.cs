@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public long LastFilteredOutEtag => _stats.LastFilteredOutEtag;
 
-        public LazyStringValue ChangeVector => _stats.ChangeVector;
+        public string ChangeVector => _stats.ChangeVector;
 
         public void RecordExtractedItem()
         {

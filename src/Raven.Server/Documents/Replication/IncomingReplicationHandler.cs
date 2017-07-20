@@ -820,7 +820,7 @@ namespace Raven.Server.Documents.Replication
 
                             _rcvdChangeVector = context.GetLazyString(item.ChangeVector);
 
-                            ChangeVectorUtils.FuseChangeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase);
+                            maxReceivedChangeVectorByDatabase = context.GetLazyString(ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase));
 
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {

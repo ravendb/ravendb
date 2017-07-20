@@ -291,14 +291,22 @@ namespace Raven.Server.Documents
             AssertTransaction(context);
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTree);
             var val = tree.Read(GlobalChangeVector);
-            return new LazyStringValue(null,val.Reader.Base,val.Reader.Length,context);
+            if (val == null)
+            {
+                return null;
+            }
+            return context.GetLazyString(Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length));
         }
 
         public LazyStringValue GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
             var changeVector = GetDatabaseChangeVector(context);
-            ChangeVectorUtils.TryUpdateChangeVector(Environment.DbId, newEtag, ref changeVector);
-            return changeVector;
+            if (changeVector == null)
+                return ChangeVectorUtils.NewChangeVector(context,_documentDatabase.ServerStore.NodeTag,newEtag,_documentDatabase.DbId);
+
+            var str = changeVector.ToString();
+            ChangeVectorUtils.TryUpdateChangeVector(Environment.DbId, newEtag, ref str);
+            return context.GetLazyString(str);
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, LazyStringValue changeVector)
@@ -561,7 +569,7 @@ namespace Raven.Server.Documents
                     yield break;
 
                 var curEtag = TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
-                var curChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref result.Reader);
+                var curChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Reader);
 
                 yield return (curChangeVector, curEtag);
             }
@@ -846,7 +854,7 @@ namespace Raven.Server.Documents
                 Id = TableValueToId(context, (int)DocumentsTable.Id, ref tvr),
                 Etag = TableValueToEtag((int)DocumentsTable.Etag, ref tvr),
                 Data = new BlittableJsonReaderObject(tvr.Read((int)DocumentsTable.Data, out int size), size, context),
-                ChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)DocumentsTable.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)DocumentsTable.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)DocumentsTable.TransactionMarker, out size)
@@ -868,7 +876,7 @@ namespace Raven.Server.Documents
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int size),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size),
-                ChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr)
+                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr)
             };
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
@@ -1483,6 +1491,13 @@ namespace Raven.Server.Documents
         {
             var ptr = tvr.Read(index, out int size);
             return context.AllocateStringValue(null, ptr, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static LazyStringValue TableValueToChangeVector(JsonOperationContext context, int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out int size);
+            return context.GetLazyString(Encodings.Utf8.GetString(ptr,size));
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Revisions
                             return;
                         }
 
-                        var docChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr);
+                        var docChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
                         if (ChangeVectorUtils.GetConflictStatus(changeVector,docChangeVector) == ConflictStatus.Update)
                             PutFromRevision();
 
@@ -556,7 +556,7 @@ namespace Raven.Server.Documents.Revisions
                         return;
                     }
 
-                    var docChangeVector = TableValueToString(context, (int)DocumentsTable.ChangeVector, ref tvr);
+                    var docChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr);
                     if (ChangeVectorUtils.GetConflictStatus(changeVector, docChangeVector) == ConflictStatus.Update)
                     {
                         _documentsStorage.Delete(context, lowerId, id, null, lastModifiedTicks, changeVector, collectionName,
@@ -783,7 +783,7 @@ namespace Raven.Server.Documents.Revisions
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
 
             ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            result.ChangeVector = new LazyStringValue(null,ptr,size,context);
+            result.ChangeVector = context.GetLazyString(Encodings.Utf8.GetString(ptr, size));
             
             return result;
         }

@@ -144,6 +144,7 @@ namespace Raven.Server.Documents
                     DeleteTombstoneIfNeeded(context, keySlice);
 
                     changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                    Debug.Assert(changeVector != null);
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, LazyStringValue cv)
@@ -164,7 +165,7 @@ namespace Raven.Server.Documents
 
                         if (expectedChangeVector != null)
                         {
-                            var oldChangeVector = TableValueToString(context,(int)AttachmentsTable.ChangeVector, ref oldValue);
+                            var oldChangeVector = TableValueToChangeVector(context,(int)AttachmentsTable.ChangeVector, ref oldValue);
                             if (oldChangeVector.CompareTo(expectedChangeVector) != 0)
                                 throw new ConcurrencyException($"Attachment {name} has change vector {oldChangeVector}, but Put was called with the change vector {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
                                 {
@@ -662,7 +663,7 @@ namespace Raven.Server.Documents
                 StorageId = tvr.Id,
                 Key = TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
                 Etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr),
-                ChangeVector = TableValueToString(context, (int)AttachmentsTable.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr),
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
                 ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr)
             };
@@ -802,7 +803,7 @@ namespace Raven.Server.Documents
                 return;
             }
 
-            var currentChangeVector = TableValueToString(context,(int)AttachmentsTable.ChangeVector, ref tvr);
+            var currentChangeVector = TableValueToChangeVector(context,(int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
             using (isPartialKey ? TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) : default(ByteStringContext<ByteStringMemoryCache>.ExternalScope))

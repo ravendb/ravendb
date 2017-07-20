@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Handlers
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
+                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
                 return Task.CompletedTask;
             }
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
                 }
                 HttpContext.Response.Headers["Attachment-Hash"] = attachment.Base64Hash.ToString();
                 HttpContext.Response.Headers["Attachment-Size"] = attachment.Stream.Length.ToString();
-                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.Etag}\"";
+                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
 
                 using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
                 using (var stream = attachment.Stream)
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.Handlers
                 using (var stream = streamsTempFile.StartNewStream())
                 {
                     var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, RequestBodyStream(), stream, Database.DatabaseShutdown);
-                    var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
+                    var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
                     var cmd = new MergedPutAttachmentCommand
                     {
@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Handlers
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
                 var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match"));
+                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
                 var cmd = new MergedDeleteAttachmentCommand
                 {

@@ -14,11 +14,11 @@ namespace Voron.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public LazyStringValue ExcpectedChangeVector { get; set; }
+        public string ExcpectedChangeVector { get; set; }
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
-        public LazyStringValue ActualChangeVector { get; set; }
+        public string ActualChangeVector { get; set; }
     }
 }

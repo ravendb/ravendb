@@ -384,7 +384,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 startEtag = result.Doc.Etag;
                                 lastChangeVector = subscription.ChangeVector == null ? 
                                     result.Doc.ChangeVector : 
-                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, context.GetLazyString(subscription.ChangeVector));
+                                    context.GetLazyString(ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, context.GetLazyString(subscription.ChangeVector)));
                                 
                                 if (result.Doc.Data == null)
                                 {

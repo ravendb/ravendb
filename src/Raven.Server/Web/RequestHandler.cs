@@ -165,6 +165,7 @@ namespace Raven.Server.Web
             return raw;
         }
 
+        //TODO: remove this
         protected long? GetLongFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];
