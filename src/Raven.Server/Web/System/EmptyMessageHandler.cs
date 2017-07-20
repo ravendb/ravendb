@@ -12,13 +12,13 @@ namespace Raven.Server.Web.System
 {
     public class EmptyMessageHandler : RequestHandler
     {
-        [RavenAction("/test/empty-message", "GET")]
+        [RavenAction("/test/empty-message", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             return Task.CompletedTask;
         }
 
-        [RavenAction("/test/sized-message", "GET")]
+        [RavenAction("/test/sized-message", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetBuffer()
         {
             var buffer = LazyBuffer.Value;

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.IO;
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -19,13 +20,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 {
     public class SqlEtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/etl/sql/test-sql-connection", "GET", "/databases/{databaseName:string}/etl/sql/test-sql-connection?factoryName={factoryName:string}&connectionString{connectionString:string}")]
+        [RavenAction("/databases/*/etl/sql/test-sql-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task GetTestSqlConnection()
         {
             try
             {
                 var factoryName = GetStringQueryString("factoryName");
-                var connectionString = GetStringQueryString("connectionString");
+                var connectionString = new StreamReader(HttpContext.Request.Body).ReadToEnd();
                 RelationalDatabaseWriter.TestConnection(factoryName, connectionString);
                 NoContentStatus();
             }
@@ -53,7 +54,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/etl/sql/simulate", "POST", "/databases/{databaseName:string}/etl/sql/simulate")]
+        [RavenAction("/databases/*/etl/sql/simulate", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task PostSimulateSqlReplication()
         {
             DocumentsOperationContext context;

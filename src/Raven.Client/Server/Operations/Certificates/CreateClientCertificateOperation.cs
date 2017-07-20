@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -13,14 +14,14 @@ namespace Raven.Client.Server.Operations.Certificates
     public class CreateClientCertificateOperation : IServerOperation<CertificateRawData>
     {
         private readonly string _name;
-        private readonly HashSet<string> _permissions;
+        private readonly Dictionary<string, DatabaseAccess> _permissions;
         private readonly bool _serverAdmin;
         private readonly string _password;
 
-        public CreateClientCertificateOperation(string name, IEnumerable<string> permissions, bool serverAdmin = false, string password = null)
+        public CreateClientCertificateOperation(string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
-            _permissions = permissions != null ? new HashSet<string>(permissions) : throw new ArgumentNullException(nameof(permissions));
+            _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
             _serverAdmin = serverAdmin;
             _password = password;
         }
@@ -33,12 +34,12 @@ namespace Raven.Client.Server.Operations.Certificates
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
         {
             private readonly string _name;
-            private readonly HashSet<string> _permissions;
+            private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly bool _serverAdmin;
             private readonly string _password;
             private readonly JsonOperationContext _context;
 
-            public CreateClientCertificateCommand(JsonOperationContext context, string name, HashSet<string> permissions, bool serverAdmin = false, string password = null)
+            public CreateClientCertificateCommand(JsonOperationContext context, string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -82,13 +83,19 @@ namespace Raven.Client.Server.Operations.Certificates
                         writer.WritePropertyName("Permissions");
                         writer.WriteStartArray();
                         bool first = true;
-                        foreach (var permission in _permissions)
+                        foreach (var kvp in _permissions)
                         {
                             if (first == false)
                                 writer.WriteComma();
                             first = false;
-                            
-                            writer.WriteString(permission);
+
+                            writer.WriteStartObject();
+                            writer.WritePropertyName("Database");
+                            writer.WriteString(kvp.Key);
+                            writer.WriteComma();
+                            writer.WritePropertyName("Access");
+                            writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
+                            writer.WriteEndObject();
                         }
                         writer.WriteEndArray();
 

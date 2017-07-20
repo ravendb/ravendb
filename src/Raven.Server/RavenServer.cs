@@ -261,35 +261,41 @@ namespace Raven.Server
 
         public class AuthenticateConnection : IHttpAuthenticationFeature
         {
-            public HashSet<string> AuthorizedDatabases = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            private HashSet<string> _caseSensitiveAuthorizedDatabases = new HashSet<string>();
+            public Dictionary<string, DatabaseAccess> AuthorizedDatabases = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
+            private Dictionary<string, DatabaseAccess> _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>();
             public X509Certificate2 Certificate;
             public CertificateDefinition Definition;
 
-            public bool CanAccess(string db)
+            public bool CanAccess(string db, bool requireAdmin)
             {
                 if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
+
                 if (Status == AuthenticationStatus.ServerAdmin)
                     return true;
+
                 if (db == null)
                     return false;
 
                 if (Status != AuthenticationStatus.Allowed)
                     return false;
-                if (_caseSensitiveAuthorizedDatabases.Contains(db))
-                    return true;
-                if (AuthorizedDatabases.Contains(db) == false)
+
+                if (_caseSensitiveAuthorizedDatabases.TryGetValue(db, out var mode))
+                    return mode == DatabaseAccess.Admin || !requireAdmin;
+
+                if (AuthorizedDatabases.TryGetValue(db, out mode) == false)
                     return false;
+
                 // Technically speaking, since this is per connection, this is single threaded. But I'm 
                 // worried about race conditions here if we move to HTTP 2.0 at some point. At that point,
                 // we'll probably want to handle this concurrently, and the cost of adding it in this manner
                 // is pretty small for most cases anyway
-                _caseSensitiveAuthorizedDatabases = new HashSet<string>(_caseSensitiveAuthorizedDatabases)
+                _caseSensitiveAuthorizedDatabases = new Dictionary<string, DatabaseAccess>(_caseSensitiveAuthorizedDatabases)
                 {
-                    db
+                    {db, mode}
                 };
-                return true;
+
+                return mode == DatabaseAccess.Admin || !requireAdmin;
             }
 
             ClaimsPrincipal IHttpAuthenticationFeature.User { get; set; }
@@ -391,9 +397,9 @@ namespace Raven.Server
                         else
                         {
                             authenticationStatus.Status = AuthenticationStatus.Allowed;
-                            foreach (var database in definition.Permissions)
+                            foreach (var kvp in definition.Permissions)
                             {
-                                authenticationStatus.AuthorizedDatabases.Add(database);
+                                authenticationStatus.AuthorizedDatabases.Add(kvp.Key, kvp.Value);
                             }
                         }
                     }
@@ -911,7 +917,7 @@ namespace Raven.Server
                         case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
-                            if (auth.CanAccess(header.DatabaseName))
+                            if (auth.CanAccess(header.DatabaseName, requireAdmin: false))
                                 return true;
                             msg = "The certificate " + certificate.FriendlyName + " does not allow access to " + header.DatabaseName;
                             return false;

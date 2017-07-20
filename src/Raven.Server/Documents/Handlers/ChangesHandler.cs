@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ChangesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/changes", "GET", "/databases/{databaseName:string}/changes", SkipUsagesCount = true)]
+        [RavenAction("/databases/*/changes", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task GetChanges()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/changes/debug", "GET", "/databases/{databaseName:string}/changes/debug")]
+        [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task GetConnectionsDebugInfo()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
             await sendTask;
         }
 
-        [RavenAction("/databases/*/changes", "DELETE", "/databases/{databaseName:string}/changes?id={connectionId:long|multiple}")]
+        [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public Task DeleteConnections()
         {
             var ids = GetStringValuesQueryString("id");

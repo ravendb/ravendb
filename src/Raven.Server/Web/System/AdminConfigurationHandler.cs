@@ -12,7 +12,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminConfigurationHandler : RequestHandler
     {
-        [RavenAction("/admin/configuration/client", "PUT", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();
@@ -29,7 +29,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/configuration/client", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/configuration/client", "GET", AuthorizationStatus.ServerAdmin)]
         public Task GetClientConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

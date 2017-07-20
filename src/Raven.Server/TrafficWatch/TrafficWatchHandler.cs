@@ -20,7 +20,7 @@ namespace Raven.Server.TrafficWatch
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchHandler>("Raven/Server");
 
-        [RavenAction("/traffic-watch/websockets", "GET", "/traffic-watch/websockets")]
+        [RavenAction("/traffic-watch/websockets", "GET", AuthorizationStatus.ServerAdmin)]
         public async Task TrafficWatchWebsockets()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

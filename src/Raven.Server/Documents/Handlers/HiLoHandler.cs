@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
             return Math.Max(32, lastSize);
         }
 
-        [RavenAction("/databases/*/hilo/next", "GET", "/databases/{databaseName:string}/hilo/next?tag={collectionName:string}&lastBatchSize={size:long|optional}&lastRangeAt={date:System.DateTime|optional}&identityPartsSeparator={separator:string|optional}&lastMax={max:long|optional} ")]
+        [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetNextHiLo()
         {
             DocumentsOperationContext context;
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/hilo/return", "PUT", "/databases/{databaseName:string}/hilo/return?tag={collectionName:string}&end={lastGivenHigh:string}&last={lastIdUsed:string}")]
+        [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser)]
         public async Task HiLoReturn()
         {
             DocumentsOperationContext context;

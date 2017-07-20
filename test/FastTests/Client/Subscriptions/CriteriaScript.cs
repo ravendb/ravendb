@@ -4,6 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
@@ -18,44 +19,48 @@ namespace FastTests.Client.Subscriptions
         public async Task BasicCriteriaTest(bool useSsl)
         {
             string dbName = null;
-            X509Certificate2 certificate = null;
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, out dbName);
+                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => dbName))
-            using (var subscriptionManager = new DocumentSubscriptions(store))
+            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
             {
-                await CreateDocuments(store, 1);
-
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
-                await CreateDocuments(store, 5);
-
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                store.Certificate = clientCertificate; // temporary workaround
+                using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
-                    Criteria = new SubscriptionCriteria("Things")
+                    await CreateDocuments(store, 1);
+
+                    var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
+                    await CreateDocuments(store, 5);
+
+                    var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Script = " return this.Name == 'ThingNo3'"
-                    },
-                    ChangeVector = lastChangeVector
-                };
-                var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
-                {
-                    var list = new BlockingCollection<Thing>();
-                    GC.KeepAlive(subscription.Run(x =>
-                    {
-                        foreach (var item in x.Items)
+                        Criteria = new SubscriptionCriteria("Things")
                         {
-                            list.Add(item.Result);
-                        }
-                    }));
+                            Script = " return this.Name == 'ThingNo3'"
+                        },
+                        ChangeVector = lastChangeVector
+                    };
+                    var subsId = subscriptionManager.Create(subscriptionCreationParams);
+                    using (var subscription = subscriptionManager.Open<Thing>(new SubscriptionConnectionOptions(subsId)))
+                    {
+                        var list = new BlockingCollection<Thing>();
+                        GC.KeepAlive(subscription.Run(x =>
+                        {
+                            foreach (var item in x.Items)
+                            {
+                                list.Add(item.Result);
+                            }
+                        }));
 
-                    Thing thing;
-                    Assert.True(list.TryTake(out thing, 5000));
-                    Assert.Equal("ThingNo3", thing.Name);
-                    Assert.False(list.TryTake(out thing, 50));
+                        Thing thing;
+                        Assert.True(list.TryTake(out thing, 5000));
+                        Assert.Equal("ThingNo3", thing.Name);
+                        Assert.False(list.TryTake(out thing, 50));
+                    }
                 }
             }
         }
@@ -65,26 +70,29 @@ namespace FastTests.Client.Subscriptions
         public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
             string dbName = null;
-            X509Certificate2 certificate = null;
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, out dbName);
+                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s =>dbName))
-            using (var subscriptionManager = new DocumentSubscriptions(store))
+            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
             {
-                await CreateDocuments(store, 1);
-
-                var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
-                await CreateDocuments(store, 6);
-
-                var subscriptionCreationParams = new SubscriptionCreationOptions()
+                store.Certificate = clientCertificate; // temporary workaround
+                using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
-                    Criteria = new SubscriptionCriteria("Things")
+                    await CreateDocuments(store, 1);
+
+                    var lastChangeVector = (await store.Admin.SendAsync(new GetStatisticsOperation())).DatabaseChangeVector;
+                    await CreateDocuments(store, 6);
+
+                    var subscriptionCreationParams = new SubscriptionCreationOptions()
                     {
-                        Script =
-                            @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
+                        Criteria = new SubscriptionCriteria("Things")
+                        {
+                            Script =
+                                @"var namSuffix = parseInt(this.Name.replace('ThingNo', ''));  
                     if (namSuffix <= 2){
                         return false;
                     }
@@ -95,38 +103,39 @@ namespace FastTests.Client.Subscriptions
                     return this;
                     }
                     return {Name: 'foo', OtherDoc:LoadDocument('things/6-A')}",
-                    },
-                    ChangeVector = lastChangeVector
-                };
+                        },
+                        ChangeVector = lastChangeVector
+                    };
 
-                var subsId = subscriptionManager.Create(subscriptionCreationParams);
-                using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
-                {
-                    using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    var subsId = subscriptionManager.Create(subscriptionCreationParams);
+                    using (var subscription = subscriptionManager.Open<BlittableJsonReaderObject>(new SubscriptionConnectionOptions(subsId)))
                     {
-                        var list = new BlockingCollection<BlittableJsonReaderObject>();
-                        
-                        GC.KeepAlive(subscription.Run(x =>
+                        using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         {
-                            foreach (var item in x.Items)
+                            var list = new BlockingCollection<BlittableJsonReaderObject>();
+
+                            GC.KeepAlive(subscription.Run(x =>
                             {
-                                list.Add(context.ReadObject(item.Result, "test"));
-                            }
-                        }));
+                                foreach (var item in x.Items)
+                                {
+                                    list.Add(context.ReadObject(item.Result, "test"));
+                                }
+                            }));
 
-                        BlittableJsonReaderObject thing;
+                            BlittableJsonReaderObject thing;
 
-                        Assert.True(list.TryTake(out thing, 5000)); 
-                        dynamic dynamicThing = new DynamicBlittableJson(thing);
-                        Assert.Equal("ThingNo4", dynamicThing.Name);
+                            Assert.True(list.TryTake(out thing, 5000));
+                            dynamic dynamicThing = new DynamicBlittableJson(thing);
+                            Assert.Equal("ThingNo4", dynamicThing.Name);
 
 
-                        Assert.True(list.TryTake(out thing, 5000)); 
-                        dynamicThing = new DynamicBlittableJson(thing);
-                        Assert.Equal("foo", dynamicThing.Name);
-                        Assert.Equal("ThingNo4", dynamicThing.OtherDoc.Name);
+                            Assert.True(list.TryTake(out thing, 5000));
+                            dynamicThing = new DynamicBlittableJson(thing);
+                            Assert.Equal("foo", dynamicThing.Name);
+                            Assert.Equal("ThingNo4", dynamicThing.OtherDoc.Name);
 
-                        Assert.False(list.TryTake(out thing, 50));
+                            Assert.False(list.TryTake(out thing, 50));
+                        }
                     }
                 }
             }

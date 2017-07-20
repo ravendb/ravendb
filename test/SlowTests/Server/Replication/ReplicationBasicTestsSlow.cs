@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -20,17 +22,25 @@ namespace SlowTests.Server.Replication
         {
             var dbName1 = DbName + "-1";
             var dbName2 = DbName + "-2";
-
-            X509Certificate2 certificate = null;
+            
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, new[] { dbName1, dbName2 });
+                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName1] = DatabaseAccess.ReadWrite,
+                    [dbName2] = DatabaseAccess.ReadWrite
+                });
             }
 
             
-            using (var store1 = GetDocumentStore(certificate: certificate, modifyName: s => dbName1))
-            using (var store2 = GetDocumentStore(certificate: certificate, modifyName: s => dbName2))
+            using (var store1 = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName1))
+            using (var store2 = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName2))
             {
+                store1.Certificate = clientCertificate; // temporary workaround
+                store2.Certificate = clientCertificate;
+
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 using (var session = store1.OpenSession())

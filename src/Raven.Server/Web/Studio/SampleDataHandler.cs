@@ -13,7 +13,7 @@ namespace Raven.Server.Web.Studio
     public class SampleDataHandler : DatabaseRequestHandler
     {
 
-        [RavenAction("/databases/*/studio/sample-data", "POST")]
+        [RavenAction("/databases/*/studio/sample-data", "POST", AuthorizationStatus.ValidUser)]
         public Task PostCreateSampleData()
         {
             DocumentsOperationContext context;
@@ -47,7 +47,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        [RavenAction("/databases/*/studio/sample-data/classes", "GET")]
+        [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetSampleDataClasses()
         {
             using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.NorthwindModel.cs"))

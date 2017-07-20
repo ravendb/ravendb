@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class QueriesHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/queries/$", "POST")]
+        [RavenAction("/databases/*/queries/$", "POST", AuthorizationStatus.ValidUser)]
         public async Task Post()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries/$", "GET")]
+        [RavenAction("/databases/*/queries/$", "GET", AuthorizationStatus.ValidUser)]
         public async Task Get()
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
@@ -269,7 +269,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/queries/$", "DELETE")]
+        [RavenAction("/databases/*/queries/$", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
             DocumentsOperationContext context;
@@ -281,7 +281,7 @@ namespace Raven.Server.Documents.Handlers
 
         }
 
-        [RavenAction("/databases/*/queries/$", "PATCH")]
+        [RavenAction("/databases/*/queries/$", "PATCH", AuthorizationStatus.ValidUser)]
         public Task Patch()
         {
             DocumentsOperationContext context;

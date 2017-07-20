@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class StatsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/stats", "GET")]
+        [RavenAction("/databases/*/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task Stats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))            
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/metrics", "GET")]
+        [RavenAction("/databases/*/metrics", "GET", AuthorizationStatus.ValidUser)]
         public Task Metrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/metrics/puts", "GET")]
+        [RavenAction("/databases/*/metrics/puts", "GET", AuthorizationStatus.ValidUser)]
         public Task PutsMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/metrics/bytes", "GET")]
+        [RavenAction("/databases/*/metrics/bytes", "GET", AuthorizationStatus.ValidUser)]
         public Task BytesMetrics()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

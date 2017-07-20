@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminConfigurationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/configuration/client", "PUT", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/configuration/client", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();

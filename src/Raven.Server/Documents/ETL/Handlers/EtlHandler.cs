@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.ETL.Handlers
 {
     public class EtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/etl/stats", "GET")]
+        [RavenAction("/databases/*/etl/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task GetStats()
         {
             var etlStats = GetProcessesToReportOn().Select(x => x.Statistics).ToArray();
@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/etl/debug/stats", "GET")]
+        [RavenAction("/databases/*/etl/debug/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task GetDebugStats()
         {
             var debugStats = GetProcessesToReportOn()
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.ETL.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/etl/performance", "GET")]
+        [RavenAction("/databases/*/etl/performance", "GET", AuthorizationStatus.ValidUser)]
         public Task Performance()
         {
             var stats = GetProcessesToReportOn()

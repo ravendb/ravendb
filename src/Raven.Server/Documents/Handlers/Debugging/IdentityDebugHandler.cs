@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class IdentityDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/identities", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/identities", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetIdentities()
         {
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

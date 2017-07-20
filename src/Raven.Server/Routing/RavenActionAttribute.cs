@@ -13,25 +13,25 @@ namespace Raven.Server.Routing
 
         public string Method { get; }
 
-        public string Description { get; }
 
-        public AuthorizationStatus RequiredAuthorization { get; set; } = AuthorizationStatus.ValidUser;
+        public AuthorizationStatus RequiredAuthorization { get; set; }
 
         public bool SkipUsagesCount { get; set; }
 
-        public RavenActionAttribute(string path, string method, string description = null, bool isDebugInformationEndpoint = false)
+        public RavenActionAttribute(string path, string method, AuthorizationStatus requireAuth, bool isDebugInformationEndpoint = false)
         {
             Path = path;
             Method = method;
-            Description = description;
             IsDebugInformationEndpoint = isDebugInformationEndpoint;
+            RequiredAuthorization = requireAuth;
         }
     }
 
     public enum AuthorizationStatus
     {
         ServerAdmin,
+        DatabaseAdmin,
         ValidUser,
-        UnauthenticatedClients
+        UnauthenticatedClients,
     }
 }

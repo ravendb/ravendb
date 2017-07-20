@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes", "PUT")]
+        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/replace", "POST")]
+        [RavenAction("/databases/*/indexes/replace", "POST", AuthorizationStatus.ValidUser)]
         public Task Replace()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -94,7 +94,7 @@ namespace Raven.Server.Documents.Handlers
             return NoContent();
         }
 
-        [RavenAction("/databases/*/indexes/source", "GET")]
+        [RavenAction("/databases/*/indexes/source", "GET", AuthorizationStatus.ValidUser)]
         public Task Source()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/has-changed", "POST")]
+        [RavenAction("/databases/*/indexes/has-changed", "POST", AuthorizationStatus.ValidUser)]
         public Task HasChanged()
         {
             JsonOperationContext context;
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers
             return NoContent();
         }
 
-        [RavenAction("/databases/*/indexes/debug", "GET")]
+        [RavenAction("/databases/*/indexes/debug", "GET", AuthorizationStatus.ValidUser)]
         public Task Debug()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes", "GET")]
+        [RavenAction("/databases/*/indexes", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
             var name = GetStringQueryString("name", required: false);
@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/stats", "GET")]
+        [RavenAction("/databases/*/indexes/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task Stats()
         {
             var name = GetStringQueryString("name", required: false);
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/progress", "GET")]
+        [RavenAction("/databases/*/indexes/progress", "GET", AuthorizationStatus.ValidUser)]
         public Task Progress()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -351,7 +351,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes", "RESET")]
+        [RavenAction("/databases/*/indexes", "RESET", AuthorizationStatus.ValidUser)]
         public Task Reset()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -371,7 +371,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes", "DELETE")]
+        [RavenAction("/databases/*/indexes", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Handlers
                 : (int)HttpStatusCode.NotFound;
         }
 
-        [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET")]
+        [RavenAction("/databases/*/indexes/c-sharp-index-definition", "GET", AuthorizationStatus.ValidUser)]
         public Task GenerateCSharpIndexDefinition()
         {
             var indexName = HttpContext.Request.Query["name"];
@@ -406,7 +406,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/status", "GET")]
+        [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser)]
         public Task Status()
         {
             DocumentsOperationContext context;
@@ -450,7 +450,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/set-lock", "POST")]
+        [RavenAction("/databases/*/indexes/set-lock", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
@@ -468,7 +468,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/indexes/set-priority", "POST")]
+        [RavenAction("/databases/*/indexes/set-priority", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetPriority()
         {
             var names = GetStringValuesQueryString("name");
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/indexes/errors", "GET")]
+        [RavenAction("/databases/*/indexes/errors", "GET", AuthorizationStatus.ValidUser)]
         public Task GetErrors()
         {
             var names = GetStringValuesQueryString("name", required: false);
@@ -543,7 +543,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/terms", "GET")]
+        [RavenAction("/databases/*/indexes/terms", "GET", AuthorizationStatus.ValidUser)]
         public Task Terms()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -577,7 +577,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/total-time", "GET")]
+        [RavenAction("/databases/*/indexes/total-time", "GET", AuthorizationStatus.ValidUser)]
         public Task TotalTime()
         {
             var indexes = GetIndexesToReportOn();
@@ -625,7 +625,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/performance", "GET")]
+        [RavenAction("/databases/*/indexes/performance", "GET", AuthorizationStatus.ValidUser)]
         public Task Performance()
         {
             var stats = GetIndexesToReportOn()
@@ -646,7 +646,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/indexes/performance/live", "GET", SkipUsagesCount = true)]
+        [RavenAction("/databases/*/indexes/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -674,7 +674,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/indexes/suggest-index-merge", "GET")]
+        [RavenAction("/databases/*/indexes/suggest-index-merge", "GET", AuthorizationStatus.ValidUser)]
         public Task SuggestIndexMerge()
         {
             var mergeIndexSuggestions = Database.IndexStore.ProposeIndexMergeSuggestions();

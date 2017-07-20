@@ -42,7 +42,7 @@ namespace Raven.Client.Server.Operations.ETL
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/etl/add?name={_databaseName}";
+                url = $"{node.Url}/admin/etl?name={_databaseName}";
 
                 var request = new HttpRequestMessage
                 {

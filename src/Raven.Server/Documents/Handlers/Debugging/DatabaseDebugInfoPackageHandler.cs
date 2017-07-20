@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class DatabaseDebugInfoPackageHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/info-package", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/info-package", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename=debug-info of {Database.Name} {DateTime.UtcNow}.zip";

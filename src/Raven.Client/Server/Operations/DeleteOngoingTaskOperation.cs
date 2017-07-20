@@ -53,11 +53,11 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/tasks/delete?name={_databaseName}&id={_taskId}&type={_taskType}";
+                url = $"{node.Url}/admin/tasks?name={_databaseName}&id={_taskId}&type={_taskType}";
 
                 var request = new HttpRequestMessage
                     {
-                        Method = HttpMethod.Post
+                        Method = HttpMethod.Delete
                     };
 
                     return request;

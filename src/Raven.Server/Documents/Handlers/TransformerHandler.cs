@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class TransformerHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/transformers", "PUT")]
+        [RavenAction("/databases/*/transformers", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/transformers", "GET")]
+        [RavenAction("/databases/*/transformers", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
             var name = GetStringQueryString("name", required: false);
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/transformers/rename", "POST")]
+        [RavenAction("/databases/*/transformers/rename", "POST", AuthorizationStatus.ValidUser)]
         public async Task Rename()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/transformers/set-lock", "POST")]
+        [RavenAction("/databases/*/transformers/set-lock", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/transformers", "DELETE")]
+        [RavenAction("/databases/*/transformers", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

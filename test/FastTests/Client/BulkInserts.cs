@@ -5,6 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Config;
 using Sparrow.Json;
 using Xunit;
@@ -17,15 +18,18 @@ namespace FastTests.Client
         [InlineData(false)]
         public async Task Simple_Bulk_Insert(bool useSsl)
         {
-            string dbName = null; ;
-            X509Certificate2 certificate = null;
+            string dbName = null;
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, out dbName);
+                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => dbName))
-            {                
+            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
+            {
+                store.Certificate = clientCertificate; // temporary workaround
+                             
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)

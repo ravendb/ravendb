@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IoMetricsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/io-metrics", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/io-metrics", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task IoMetrics()
         {
             JsonOperationContext context;
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/debug/io-metrics/live", "GET", SkipUsagesCount = true)]
+        [RavenAction("/databases/*/debug/io-metrics/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task IoMetricsLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())

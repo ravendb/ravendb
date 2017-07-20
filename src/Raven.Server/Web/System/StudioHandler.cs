@@ -123,7 +123,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/studio/$", "GET", RequiredAuthorization = AuthorizationStatus.UnauthenticatedClients)]
+        [RavenAction("/studio/$", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public async Task GetStudioFile()
         {
             var fileName = new StringSegment(
@@ -152,7 +152,7 @@ namespace Raven.Server.Web.System
             WriteFileFromZip(zipFilePath, fileName);
         }
 
-        [RavenAction("/", "GET")]
+        [RavenAction("/", "GET", AuthorizationStatus.ValidUser)]
         public Task RavenRoot()
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";

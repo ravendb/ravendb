@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private static readonly string[] EmptyStringArray = new string[0];
 
         //this endpoint is intended to be called by /debug/cluster-info-package only
-        [RavenAction("/admin/debug/remote-cluster-info-package", "GET", RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/debug/remote-cluster-info-package", "GET", AuthorizationStatus.ServerAdmin)]
         public async Task GetClusterwideInfoPackageForRemote()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/cluster-info-package", "GET", IsDebugInformationEndpoint = true, RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetClusterwideInfoPackage()
         {
             var contentDisposition = $"attachment; filename=Cluster wide debug-info {DateTime.UtcNow}.zip";
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        [RavenAction("/admin/debug/info-package", "GET", IsDebugInformationEndpoint = true, RequiredAuthorization = AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
             var contentDisposition = $"attachment; filename=Server wide debug-info {DateTime.UtcNow}.zip";

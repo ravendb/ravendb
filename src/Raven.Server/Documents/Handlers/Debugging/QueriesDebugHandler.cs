@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class QueriesDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/queries/kill", "GET")]
+        [RavenAction("/databases/*/debug/queries/kill", "GET", AuthorizationStatus.ValidUser)]
         public Task KillQuery()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return NoContent();
         }
 
-        [RavenAction("/databases/*/debug/queries/running", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/queries/running", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task RunningQueries()
         {
             var indexes = Database

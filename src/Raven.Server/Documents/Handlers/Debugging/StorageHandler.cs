@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class StorageHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/storage/report", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/storage/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Report()
         {
             DocumentsOperationContext context;
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         //TODO: consider adding this to debug-info-package, need to think how to handle the parameters in a generic manner
-        [RavenAction("/databases/*/debug/storage/environment/report", "GET")]
+        [RavenAction("/databases/*/debug/storage/environment/report", "GET", AuthorizationStatus.ValidUser)]
         public Task EnvironmentReport()
         {
             var name = GetStringQueryString("name");

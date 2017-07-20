@@ -21,12 +21,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class OngoingTasksHandler : RequestHandler
+    public class OngoingTasksHandler : DatabasesHandler
     {
-        [RavenAction("/admin/ongoing-tasks", "GET", "/admin/ongoing-tasks?databaseName={databaseName:string}")]
+        [RavenAction("ongoing-tasks", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");
+            if (TryGetAllowedDbs(name, out var _, requireAdmin:false) == false)
+                return Task.CompletedTask;
+
             var result = GetOngoingTasksFor(name, ServerStore);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -247,10 +250,13 @@ namespace Raven.Server.Web.System
 
         // Get Info about a sepcific task - For Edit View in studio
         // Note: Each task should return its own specific object and Not 'GetTaskInfoResult' - see RavenDB-7712
-        [RavenAction("/admin/get-task", "GET", "/admin/get-task?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}")]
+        [RavenAction("/task", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTaskInfo()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(dbName, out var _, requireAdmin: false) == false)
+                return Task.CompletedTask;
 
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -460,10 +466,13 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/state", "POST", "/admin/tasks/state?name={databaseName:string}&key={taskId:string}&type={taskType:string}&taskName={taskName:string}&disable={disable:true|false}")]
+        [RavenAction("/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(dbName, out var _, requireAdmin:true) == false)
+                return;
 
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
@@ -495,7 +504,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/external-replication/update", "POST", "/admin/external-replication/update?name={databaseName:string}")]
+        [RavenAction("/admin/external-replication", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task UpdateExternalReplication()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -537,7 +546,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/tasks/delete", "POST", "/admin/tasks/delete?name={databaseName:string}&id={taskId:long}&type={taskType:string}&taskName={taskName:string}")]
+        [RavenAction("/admin/tasks", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task DeleteOngoingTask()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -569,6 +578,30 @@ namespace Raven.Server.Web.System
                     writer.Flush();
                 }
             }
+        }
+
+        [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
+        public Task State()
+        {
+            var id = GetLongQueryString("id");
+            // ReSharper disable once PossibleInvalidOperationException
+            var state = ServerStore.Operations.GetOperation(id)?.State;
+
+            if (state == null)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                return Task.CompletedTask;
+            }
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, state.ToJson());
+                }
+            }
+
+            return Task.CompletedTask;
         }
     }
 

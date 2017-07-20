@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class CollectionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/collections/stats", "GET", "/databases/{databaseName:string}/collections/stats")]
+        [RavenAction("/databases/*/collections/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCollectionStats()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "GET", "/databases/{databaseName:string}/collections/docs?name={collectionName:string}&start={pageStart:int|optional}&pageSize={pageSize:int|optional(25)}")]
+        [RavenAction("/databases/*/collections/docs", "GET", AuthorizationStatus.ValidUser)]
         public Task GetCollectionDocuments()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/collections/docs", "DELETE")]
+        [RavenAction("/databases/*/collections/docs", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Handlers
 
         }
 
-        [RavenAction("/databases/*/collections/docs", "PATCH")]
+        [RavenAction("/databases/*/collections/docs", "PATCH", AuthorizationStatus.ValidUser)]
         public Task Patch()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);

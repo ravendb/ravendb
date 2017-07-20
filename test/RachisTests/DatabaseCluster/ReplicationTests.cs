@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -420,12 +421,19 @@ namespace RachisTests.DatabaseCluster
         public async Task ReplicateToWatcherWithAuth()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert1 = AskServerForClientCertificate(serverCertPath, new string[0], serverAdmin:true);
-            var clientCert2 = AskServerForClientCertificate(serverCertPath, new[] { "ReplicateToWatcherWithAuthDB" });
-
-            using (var store1 = GetDocumentStore(certificate: clientCert1, modifyName: s => "ReplicateToWatcherWithAuthDB"))
-            using (var store2 = GetDocumentStore(certificate: clientCert2, modifyName: s => "ReplicateToWatcherWithAuthDB", createDatabase: false))
+            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+            var clientCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin:true);
+            var clientCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
+                ["ReplicateToWatcherWithAuth"] = DatabaseAccess.ReadWrite
+            });
+
+            using (var store1 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithAuth"))
+            using (var store2 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithAuth", createDatabase: false))
+            {
+                store1.Certificate = clientCert1;
+                store2.Certificate = clientCert2;
+
                 var watcher2 = new ExternalReplication
                 {
                     Database = store2.Database,
@@ -448,12 +456,19 @@ namespace RachisTests.DatabaseCluster
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert1 = AskServerForClientCertificate(serverCertPath, new string[0], serverAdmin: true);
-            var clientCert2 = AskServerForClientCertificate(serverCertPath, new[] { "OtherDB" });
-
-            using (var store1 = GetDocumentStore(certificate: clientCert1, modifyName: s => "ReplicateToWatcherWithAuthDB"))
-            using (var store2 = GetDocumentStore(certificate: clientCert2, modifyName: s => "ReplicateToWatcherWithAuthDB", createDatabase: false))
+            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+            var clientCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var clientCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
+                ["OtherDB"] = DatabaseAccess.ReadWrite
+            });
+
+            using (var store1 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithInvalidAuth"))
+            using (var store2 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithInvalidAuth", createDatabase: false))
+            {
+                store1.Certificate = clientCert1;
+                store2.Certificate = clientCert2;
+
                 var watcher2 = new ExternalReplication
                 {
                     Database = store2.Database,

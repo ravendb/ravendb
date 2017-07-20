@@ -815,8 +815,6 @@ namespace Raven.Server.ServerWide
                 {
                     using (var localCertificate = GetLocalState(context, key))
                     {
-                        if (localCertificate == null)
-                            continue;
                         DeleteLocalState(context, key);
                     }
                 }

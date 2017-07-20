@@ -50,7 +50,7 @@ namespace Raven.Client.Server.Operations.ETL
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
+                    Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
                         var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, _context);

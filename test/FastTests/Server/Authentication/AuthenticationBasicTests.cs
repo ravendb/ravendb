@@ -5,32 +5,23 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net;
-using System.Net.Http;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Http;
-using Raven.Client.Server;
 using Raven.Client.Server.Operations.Certificates;
 using Raven.Server;
-using Raven.Server.Config;
+using Raven.Server.Routing;
 using Raven.Server.Utils;
-using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
-using Tests.Infrastructure;
 using Xunit;
 
 namespace FastTests.Server.Authentication
 {
     public class AuthenticationBasicTests : RavenTestBase
     {
-        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, IEnumerable<string> permissions, bool serverAdmin = false)
+        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
@@ -55,10 +46,16 @@ namespace FastTests.Server.Authentication
         public void CanGetDocWithValidPermission()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert = AskServerForClientCertificate(serverCertPath, new[] {"Northwind"});
+            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
 
-            using (var store = GetDocumentStore(certificate: clientCert, modifyName:(s => "Northwind")))
+            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
+                ["CanGetDocWithValidPermission"] = DatabaseAccess.ReadWrite
+            });
+            using (var store = GetDocumentStore(certificate: serverCertificate, modifyName:(s => "CanGetDocWithValidPermission")))
+            {
+                store.Certificate = clientCert; // W.A.
+
                 StoreSampleDoc(store, "test/1");
 
                 dynamic test1Doc;
@@ -68,17 +65,43 @@ namespace FastTests.Server.Authentication
                 Assert.NotNull(test1Doc);
             }
         }
-        
+
+        [Fact]
+        public void CannotGetDocWithoutCertificate()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                ["CannotGetDocWithoutCertificate"] = DatabaseAccess.ReadWrite
+            });
+            Assert.Throws<AuthorizationException>(() =>
+            {
+                using (var store = GetDocumentStore(certificate: null, modifyName: (s => "CannotGetDocWithoutCertificate")))
+                {
+                    StoreSampleDoc(store, "test/1");
+                    using (var session = store.OpenSession())
+                        session.Load<dynamic>("test/1");
+                }
+            });
+
+        }
+
         [Fact]
         public void CannotGetDocWithInvalidPermission()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert = AskServerForClientCertificate(serverCertPath, new[] {"Southwind"});
+            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                ["OtherDB"] = DatabaseAccess.ReadWrite
+            });
 
             Assert.Throws<AuthorizationException>(() =>
             {
-                using (var store = GetDocumentStore(certificate: clientCert, modifyName: (s => "Northwind")))
+                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: (s => "CannotGetDocWithInvalidPermission")))
                 {
+                    store.Certificate = clientCert; // W.A.
+
                     StoreSampleDoc(store, "test/1");
                     using (var session = store.OpenSession())
                         session.Load<dynamic>("test/1");
@@ -93,10 +116,15 @@ namespace FastTests.Server.Authentication
             Assert.Throws<System.InvalidOperationException>(() =>
             {
                 var serverCertPath = SetupServerAuthentication(serverUrl: "http://" + Environment.MachineName + ":8080");
-                var clientCert = AskServerForClientCertificate(serverCertPath, new[] { "Northwind" });
-                
-                using (var store = GetDocumentStore(certificate: clientCert, modifyName: s => "Northwind"))
+                var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+
+                var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
+                    ["CannotGetDocWhenNotUsingHttps"] = DatabaseAccess.ReadWrite
+                });
+                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWhenNotUsingHttps"))
+                {
+                    store.Certificate = clientCert; // W.A.
                     StoreSampleDoc(store, "test/1");
                     using (var session = store.OpenSession())
                         session.Load<dynamic>("test/1");
@@ -110,10 +138,15 @@ namespace FastTests.Server.Authentication
             var e = Assert.Throws<RavenException>(() =>
             {
                 var serverCertPath = SetupServerAuthentication();
-                var clientCert = AskServerForClientCertificate(serverCertPath, new[] {"North?ind"});
-                
-                using (var store = GetDocumentStore(certificate: clientCert, modifyName: s => "Northwind"))
+                var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+                var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
+                    ["CannotGetDocWithIr*&^%$#W$mePermission"] = DatabaseAccess.ReadWrite
+                });
+                
+                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWithInvalidDbNamePermission"))
+                {
+                    store.Certificate = clientCert; // W.A.
                     StoreSampleDoc(store, "test/1");
                     using (var session = store.OpenSession())
                         session.Load<dynamic>("test/1");
@@ -126,19 +159,34 @@ namespace FastTests.Server.Authentication
         public void CannotGetDocWithExpiredCertificate()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert = CreateAndPutExpiredClientCertificate(serverCertPath, new[] {"Northwind"});
+            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
+
+            var clientCert = CreateAndPutExpiredClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                ["CannotGetDocWithExpiredCertificate"] = DatabaseAccess.ReadWrite
+            });
 
             Assert.Throws<AuthorizationException>(() =>
             {
-                using (var store = GetDocumentStore(certificate: clientCert, modifyName: s => "Northwind"))
+                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWithExpiredCertificate"))
                 {
+                    store.Certificate = clientCert; // W.A.
                     StoreSampleDoc(store, "test/1");
                     using (var session = store.OpenSession())
                         session.Load<dynamic>("test/1");
                 }
             });
         }
-        
+
+        [Fact]
+        public void AllAdminRoutesHaveCorrectAuthorizationStatus()
+        {
+            var routes = RouteScanner.Scan(attr => attr.Path.Contains("/admin/") && attr.RequiredAuthorization != AuthorizationStatus.ServerAdmin);
+            Assert.Empty(routes);
+
+            
+        }
+
         private static void StoreSampleDoc(DocumentStore store, string docName)
         {
             using (var session = store.OpenSession())

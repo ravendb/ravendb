@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.Server.Operations.ConnectionStrings;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -24,7 +32,7 @@ namespace Raven.Server.Web.System
     public class DatabasesHandler : RequestHandler
     {
 
-        private bool TryGetAllowedDbs(string dbName, out HashSet<string> dbs)
+        protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
         {
             dbs = null;
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
@@ -45,7 +53,7 @@ namespace Raven.Server.Web.System
                 case RavenServer.AuthenticationStatus.ServerAdmin:
                     return true;
                 case RavenServer.AuthenticationStatus.Allowed:
-                    if (dbName != null && feature.CanAccess(dbName) == false)
+                    if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
                     {
                         Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
                         return false;
@@ -64,7 +72,7 @@ namespace Raven.Server.Web.System
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
-        [RavenAction("/databases", "GET", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()
         {
             // if Studio requested information about single resource - handle it
@@ -85,12 +93,12 @@ namespace Raven.Server.Web.System
 
                     var items = ServerStore.Cluster.ItemsStartingWith(context, Constants.Documents.Prefix, GetStart(), GetPageSize());
 
-                    if (TryGetAllowedDbs(null, out var allowedDbs) == false)
+                    if (TryGetAllowedDbs(null, out var allowedDbs, requireAdmin: false) == false)
                         return Task.CompletedTask;
 
                     if (allowedDbs != null)
                     {
-                        items = items.Where(item => allowedDbs.Contains(item.Item1));
+                        items = items.Where(item => allowedDbs.ContainsKey(item.Item1));
                     }
 
                     writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>
@@ -111,7 +119,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/topology", "GET", "/topology?name={databaseName:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/topology", "GET", AuthorizationStatus.ValidUser)]
         public Task GetTopology()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -123,10 +131,9 @@ namespace Raven.Server.Web.System
                 using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
 
-                    if (TryGetAllowedDbs(name, out var _) == false)
+                    if (TryGetAllowedDbs(name, out var _, requireAdmin:false) == false)
                         return Task.CompletedTask;
-
-
+                    
                     if (dbBlit == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
@@ -161,6 +168,137 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/is-loaded", "GET", AuthorizationStatus.ValidUser)]
+        public Task IsDatabaseLoaded()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
+                return Task.CompletedTask;
+
+            var isLoaded = ServerStore.DatabasesLandlord.IsDatabaseLoaded(name);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(IsDatabaseLoadedCommand.CommandResult.DatabaseName)] = name,
+                        [nameof(IsDatabaseLoadedCommand.CommandResult.IsLoaded)] = isLoaded
+                    });
+                    writer.Flush();
+                }
+            }
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task UpdateConflictResolver()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            
+            if (TryGetAllowedDbs(name, out var dbs, requireAdmin: true) == false)
+                return;
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
+                var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
+
+                using (context.OpenReadTransaction())
+                {
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+
+                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["RaftCommandIndex"] = index,
+                            ["Key"] = name,
+                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
+                        });
+                        writer.Flush();
+                    }
+                }
+            }
+        }
+
+        [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetPeriodicBackupStatus()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
+                return Task.CompletedTask;
+
+            var taskId = GetLongQueryString("taskId", required: true);
+            if (taskId == 0)
+                throw new ArgumentException("Task ID cannot be 0");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var statusBlittable =
+                ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value)))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(GetPeriodicBackupStatusOperationResult.Status));
+                writer.WriteObject(statusBlittable);
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConnectionStrings()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            TryGetAllowedDbs(dbName, out var allowedDbs, true);
+
+            ServerStore.EnsureNotPassive();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
+                {
+                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
+                }
+                var ravenConnectionString = record.RavenConnectionStrings;
+                var sqlConnectionstring = record.SqlConnectionStrings;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var result = new GetConnectionStringsResult
+                    {
+                        RavenConnectionStrings = ravenConnectionString,
+                        SqlConnectionStrings = sqlConnectionstring
+                    };
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
             return Task.CompletedTask;
         }
 

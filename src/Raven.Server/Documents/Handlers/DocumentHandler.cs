@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class DocumentHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/docs", "HEAD", "/databases/{databaseName:string}/docs?id={documentId:string}")]
+        [RavenAction("/databases/*/docs", "HEAD", AuthorizationStatus.ValidUser)]
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "GET", "/databases/{databaseName:string}/docs?id={documentId:string|multiple}&include={fieldName:string|optional|multiple}&transformer={transformerName:string|optional}")]
+        [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             var ids = GetStringValuesQueryString("id", required: false);
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "POST", "/databases/{databaseName:string}/docs body{documentsIds:string[]}")]
+        [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostGet()
         {
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.Handlers
             return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
         }
 
-        [RavenAction("/databases/*/docs", "DELETE", "/databases/{databaseName:string}/docs?id={documentId:string}")]
+        [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser)]
         public async Task Delete()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/docs", "PUT", "/databases/{databaseName:string}/docs?id={documentId:string}")]
+        [RavenAction("/databases/*/docs", "PUT", AuthorizationStatus.ValidUser)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs", "PATCH", "/databases/{databaseName:string}/docs?id={documentId:string}&test={isTestOnly:bool|optional(false)} body{ Patch:PatchRequest, PatchIfMissing:PatchRequest }")]
+        [RavenAction("/databases/*/docs", "PATCH", AuthorizationStatus.ValidUser)]
         public async Task Patch()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
@@ -503,7 +503,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/docs/class", "GET")]
+        [RavenAction("/databases/*/docs/class", "GET", AuthorizationStatus.ValidUser)]
         public Task GenerateClassFromDocument()
         {
             var id = GetStringQueryString("id");

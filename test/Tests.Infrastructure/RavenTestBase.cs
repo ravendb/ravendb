@@ -432,13 +432,14 @@ namespace FastTests
             CreatedStores.Clear();
         }
 
-        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath, IEnumerable<string> permissions, bool serverAdmin = false, RavenServer defaultServer = null)
+        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath, 
+            RavenServer.CertificateHolder serverCertificateHolder, 
+            Dictionary<string, DatabaseAccess> permissions, 
+            bool serverAdmin = false, 
+            RavenServer defaultServer = null)
         {
-            var serverCertificate = new X509Certificate2(serverCertPath);
-            var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
-
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
-
+            var serverCertificate = new X509Certificate2(serverCertPath);
             using (var store = GetDocumentStore(certificate: serverCertificate, defaultServer: defaultServer))
             {
                 var requestExecutor = store.GetRequestExecutor();
@@ -453,7 +454,7 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, IEnumerable<string> permissions, bool serverAdmin = false)
+        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             X509Certificate2 clientCertificate;
@@ -493,16 +494,20 @@ namespace FastTests
             return serverCertPath;
         }
 
-        protected void SetupAuthenticationInTest(out X509Certificate2 clientCertificate, out string dbName, 
+        protected void SetupAuthenticationInTest(out X509Certificate2 clientCertificate, out X509Certificate2 serverCertificate, out string dbName, DatabaseAccess access,
             [CallerMemberName]string caller = null)
         {
             dbName = caller + "_" + Interlocked.Increment(ref _counter);
-            SetupAuthenticationInTest(out clientCertificate, new[] { dbName });
+            SetupAuthenticationInTest(out clientCertificate, out serverCertificate, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName]= access
+            });
         }
 
         protected void SetupAuthenticationInTest(
-            out X509Certificate2 clientCertificate, 
-            IEnumerable<string> permissions, 
+            out X509Certificate2 clientCertificate,
+            out X509Certificate2 serverCertificate,
+            Dictionary<string, DatabaseAccess> permissions, 
             IDictionary<string, string> customSettings = null, 
             bool serverAdmin = false, 
             string serverUrl = null, 
@@ -510,7 +515,9 @@ namespace FastTests
             RavenServer defaultServer = null)
         {
             var serverCertPath = SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer);
-            clientCertificate = CreateAndPutClientCertificate(serverCertPath, permissions, serverAdmin, defaultServer);
+            var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
+            clientCertificate = CreateAndPutClientCertificate(serverCertPath, serverCertificateHolder, permissions, serverAdmin, defaultServer);
+            serverCertificate = new X509Certificate2(serverCertPath);
         }
     }
 }

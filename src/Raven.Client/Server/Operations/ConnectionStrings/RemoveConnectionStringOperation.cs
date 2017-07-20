@@ -37,7 +37,7 @@ namespace Raven.Client.Server.Operations.ConnectionStrings
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/connection-strings/remove?name={_databaseName}&connectionString={_connectionString.Name}&type={_connectionString.Type}";
+                url = $"{node.Url}/admin/connection-strings?name={_databaseName}&connectionString={_connectionString.Name}&type={_connectionString.Type}";
 
                 var request = new HttpRequestMessage
                     {

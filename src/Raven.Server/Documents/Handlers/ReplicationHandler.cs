@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class ReplicationHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/replication/tombstones", "GET", "/databases/{databaseName:string}/replication/tombstones?start={start:int}&take={take:int}")]
+        [RavenAction("/databases/*/replication/tombstones", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAllTombstones()
         {
             var start = GetStart();
@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
        
-        [RavenAction("/databases/*/replication/conflicts", "GET", "/databases/{databaseName:string}/replication/conflicts?[docId={documentId:string, optional} | etag={etag:long, optional}]")]
+        [RavenAction("/databases/*/replication/conflicts", "GET", AuthorizationStatus.ValidUser)]
         public Task GetReplicationConflicts()
         {
             var docId = GetStringQueryString("docId", required: false);
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/replication/performance", "GET")]
+        [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser)]
         public Task Performance()
         {
             JsonOperationContext context;
@@ -180,7 +180,7 @@ namespace Raven.Server.Documents.Handlers
         }
 
 
-        [RavenAction("/databases/*/replication/performance/live", "GET", SkipUsagesCount = true)]
+        [RavenAction("/databases/*/replication/performance/live", "GET", AuthorizationStatus.ValidUser, SkipUsagesCount = true)]
         public async Task PerformanceLive()
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
@@ -239,7 +239,7 @@ namespace Raven.Server.Documents.Handlers
             return true;
         }
 
-        [RavenAction("/databases/*/replication/topology", "GET")]
+        [RavenAction("/databases/*/replication/topology", "GET", AuthorizationStatus.ValidUser)]
         public Task GetReplicationTopology()
         {
             // TODO: Remove this, use "/databases/*/topology" isntead
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/active-connections", "GET")]
+        [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser)]
         public Task GetReplicationActiveConnections()
         {
             DocumentsOperationContext context;
@@ -286,7 +286,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", 
+        [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, 
             IsDebugInformationEndpoint = true)]
         public Task GetReplicationOugoingFailureStats()
         {
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", 
+        [RavenAction("/databases/*/replication/debug/incoming-last-activity-time", "GET", AuthorizationStatus.ValidUser, 
             IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingActivityTimes()
         {
@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/replication/debug/incoming-rejection-info", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingRejectionInfo()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetReplicationReconnectionQueue()
         {
             DocumentsOperationContext context;
@@ -414,7 +414,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", "/databases/{databaseName:string}/studio-tasks/suggest-conflict-resolution?docId={documentId:string}")]
+        [RavenAction("/databases/*/studio-tasks/suggest-conflict-resolution", "GET", AuthorizationStatus.ValidUser)]
         public Task SuggestConflictResolution()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");

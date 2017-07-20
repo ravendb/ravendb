@@ -16,7 +16,7 @@ namespace Raven.Server.Web.Studio
 {
     public class StudioFeedbackHandler : RequestHandler
     {
-        [RavenAction("/studio/feedback", "POST")]
+        [RavenAction("/studio/feedback", "POST", AuthorizationStatus.ValidUser)]
         public async Task Feedback()
         {
             FeedbackForm feedbackForm;

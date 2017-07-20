@@ -33,7 +33,7 @@ namespace Raven.Server.Web.Studio
         private const string ArrayStubsKey = "$a";
         private const string TrimmedValueKey = "$t";
 
-        [RavenAction("/databases/*/studio/collections/preview", "GET")]
+        [RavenAction("/databases/*/studio/collections/preview", "GET", AuthorizationStatus.ValidUser)]
         public Task PreviewCollection()
         {
             var start = GetStart();
@@ -295,7 +295,7 @@ namespace Raven.Server.Web.Studio
             columns.Remove(metadataField);
         }
 
-        [RavenAction("/databases/*/studio/collections/docs", "DELETE")]
+        [RavenAction("/databases/*/studio/collections/docs", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
