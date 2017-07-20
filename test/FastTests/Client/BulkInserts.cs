@@ -17,13 +17,14 @@ namespace FastTests.Client
         [InlineData(false)]
         public async Task Simple_Bulk_Insert(bool useSsl)
         {
+            string dbName = null; ;
             X509Certificate2 certificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, new[] { "CriteriaTestDB" });
+                SetupAuthenticationInTest(out certificate, out dbName);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => "CriteriaTestDB"))
+            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => dbName))
             {                
                 using (var bulkInsert = store.BulkInsert())
                 {

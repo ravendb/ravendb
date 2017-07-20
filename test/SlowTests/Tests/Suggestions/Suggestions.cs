@@ -29,7 +29,6 @@ namespace SlowTests.Tests.Suggestions
 
         public void Setup(IDocumentStore store)
         {
-            Console.WriteLine(((DocumentStore)store).Identifier);
             store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
             {
                 Name = "test",
