@@ -26,6 +26,7 @@ namespace Raven.Client.Documents.Queries.Suggestion
         public SuggestionQuery()
         {
             MaxSuggestions = DefaultMaxSuggestions;
+            Popularity = true;
         }
        
         public string IndexName { get; set; }
