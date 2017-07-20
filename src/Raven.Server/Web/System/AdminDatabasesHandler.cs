@@ -411,7 +411,7 @@ namespace Raven.Server.Web.System
                 });
         }
 
-        [RavenAction("/admin/periodic-backup/status", "GET", "/admin/delete-periodic-status?name={databaseName:string}")]
+        [RavenAction("/admin/periodic-backup/status", "GET", "/admin/periodic-backup/status?name={databaseName:string}")]
         public Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
