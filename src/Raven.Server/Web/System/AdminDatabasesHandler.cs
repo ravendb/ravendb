@@ -86,7 +86,7 @@ namespace Raven.Server.Web.System
         }
 
         // add database to already existing database group
-        [RavenAction("/admin/databases/add-node", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

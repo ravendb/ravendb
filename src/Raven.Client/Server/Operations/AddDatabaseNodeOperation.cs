@@ -40,7 +40,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/databases/add-node?name={_databaseName}";
+                url = $"{node.Url}/admin/databases/node?name={_databaseName}";
                 if (string.IsNullOrEmpty(_node) == false)
                 {
                     url += $"node={node}";
@@ -48,7 +48,7 @@ namespace Raven.Client.Server.Operations
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
+                    Method = HttpMethod.Put,
                 };
 
                 return request;
