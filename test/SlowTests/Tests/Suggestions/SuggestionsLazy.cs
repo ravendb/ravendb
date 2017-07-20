@@ -60,5 +60,49 @@ namespace SlowTests.Tests.Suggestions
                 }
             }
         }
+
+        [Fact]
+        public void LazyAsync()
+        {
+            using (var store = GetDocumentStore())
+            {
+                store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
+                {
+                    Name = "Test",
+                    Maps = { "from doc in docs.Users select new { doc.Name }" },
+                    Fields = new Dictionary<string, IndexFieldOptions>
+                    {
+                        {
+                            "Name",
+                            new IndexFieldOptions { Suggestions = true }
+                        }
+                    }
+                }}));
+
+                using (var s = store.OpenSession())
+                {
+                    s.Store(new User { Name = "Ayende" });
+                    s.Store(new User { Name = "Oren" });
+                    s.SaveChanges();
+                }
+
+                WaitForIndexing(store);
+
+                using (var s = store.OpenAsyncSession())
+                {
+                    var oldRequests = s.Advanced.NumberOfRequests;
+
+                    var suggestionQueryResult = s.Query<User>("test")
+                        .Where(x => x.Name == "Owen")
+                        .SuggestLazyAsync();
+
+                    Assert.Equal(oldRequests, s.Advanced.NumberOfRequests);
+                    Assert.Equal(1, suggestionQueryResult.Value.Result.Suggestions.Length);
+                    Assert.Equal("oren", suggestionQueryResult.Value.Result.Suggestions[0]);
+
+                    Assert.Equal(oldRequests + 1, s.Advanced.NumberOfRequests);
+                }
+            }
+        }
     }
 }
