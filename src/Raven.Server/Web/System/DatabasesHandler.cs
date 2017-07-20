@@ -170,8 +170,10 @@ namespace Raven.Server.Web.System
             }
             return Task.CompletedTask;
         }
-
-        [RavenAction("/databases/is-loaded", "GET", AuthorizationStatus.ValidUser)]
+        
+        // we can't use '/database/is-loaded` because that conflict with the `/databases/<db-name>`
+        // route prefix
+        [RavenAction("/debug/is-loaded", "GET", AuthorizationStatus.ValidUser)]
         public Task IsDatabaseLoaded()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

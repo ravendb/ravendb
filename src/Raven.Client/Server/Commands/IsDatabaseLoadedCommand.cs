@@ -18,7 +18,7 @@ namespace Raven.Client.Server.Commands
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
             //not sure if we need to escape database name here
-            url = $"{node.Url}/databases/is-loaded?name={node.Database}";
+            url = $"{node.Url}/debug/is-loaded?name={node.Database}";
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get,

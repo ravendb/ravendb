@@ -11,9 +11,9 @@ using Sparrow.Json;
 namespace Raven.Server.Documents.Handlers
 {
     public class ConfigurationHandler : DatabaseRequestHandler
-    {
+    {   
         [RavenAction("/databases/*/configuration/client", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetClientConfiguration2()
+        public Task GetClientConfiguration()
         {
             var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;
 
