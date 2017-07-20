@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
 {
     public class SqlEtlHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/etl/sql/test-sql-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/etl/sql/test-sql-connection", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task GetTestSqlConnection()
         {
             try
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/etl/sql/simulate", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/admin/etl/sql/simulate", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task PostSimulateSqlReplication()
         {
             DocumentsOperationContext context;
