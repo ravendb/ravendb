@@ -51,29 +51,29 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
+        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(SelectField[] selectFields, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
         {
             anyExtractableFromIndex = false;
             extractAllStoredFields = false;
 
-            if (fieldsToFetch == null || fieldsToFetch.Length == 0)
+            if (selectFields == null || selectFields.Length == 0)
                 return null;
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.OrdinalIgnoreCase);
-            for (var i = 0; i < fieldsToFetch.Length; i++)
+            for (var i = 0; i < selectFields.Length; i++)
             {
-                var fieldToFetch = fieldsToFetch[i];
+                var selectField = selectFields[i];
 
-                if (string.IsNullOrWhiteSpace(fieldToFetch.Name))
+                if (string.IsNullOrWhiteSpace(selectField.Name))
                     continue;
 
                 if (indexDefinition == null)
                 {
-                    result[fieldToFetch.Name] = new FieldToFetch(fieldToFetch.Name, false);
+                    result[selectField.Name] = new FieldToFetch(selectField.Name, selectField.Alias, false);
                     continue;
                 }
 
-                if (fieldToFetch.Name[0] == '_' && fieldToFetch.Name == Constants.Documents.Indexing.Fields.AllStoredFields)
+                if (selectField.Name[0] == '_' && selectField.Name == Constants.Documents.Indexing.Fields.AllStoredFields)
                 {
                     if (result.Count > 0)
                         result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
@@ -87,18 +87,18 @@ namespace Raven.Server.Documents.Queries
                             continue;
 
                         anyExtractableFromIndex = true;
-                        result[kvp.Key] = new FieldToFetch(kvp.Key, canExtractFromIndex: true);
+                        result[kvp.Key] = new FieldToFetch(kvp.Key, null, canExtractFromIndex: true);
                     }
 
                     return result;
                 }
 
                 IndexField value;
-                var extract = indexDefinition.TryGetField(fieldToFetch.Name, out value) && value.Storage == FieldStorage.Yes;
+                var extract = indexDefinition.TryGetField(selectField.Name, out value) && value.Storage == FieldStorage.Yes;
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[fieldToFetch.Name] = new FieldToFetch(fieldToFetch.Name, extract | indexDefinition.HasDynamicFields);
+                result[selectField.Name] = new FieldToFetch(selectField.Name, selectField.Alias, extract | indexDefinition.HasDynamicFields);
             }
 
             if (indexDefinition != null)
@@ -114,13 +114,16 @@ namespace Raven.Server.Documents.Queries
 
         public class FieldToFetch
         {
-            public FieldToFetch(string name, bool canExtractFromIndex)
+            public FieldToFetch(string name, string projectedName, bool canExtractFromIndex)
             {
                 Name = name;
+                ProjectedName = projectedName;
                 CanExtractFromIndex = canExtractFromIndex;
             }
 
             public readonly StringSegment Name;
+
+            public readonly string ProjectedName;
 
             public readonly bool CanExtractFromIndex;
         }

@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var mltQuery = mlt.Like(td.ScoreDocs[0].Doc);
             var tsdc = TopScoreDocCollector.Create(pageSize, true);
 
-            if (query.Metadata.Fields.Count > 0)
+            if (query.Metadata.WhereFields.Count > 0)
             {
                 var additionalQuery = QueryBuilder.BuildQuery(query.Metadata, null, _analyzer);
                 mltQuery = new BooleanQuery

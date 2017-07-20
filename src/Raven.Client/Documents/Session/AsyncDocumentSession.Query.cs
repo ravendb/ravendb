@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Session
             if (isIndex == false && isCollection == false)
                 collectionName = Conventions.GetCollectionName(typeof(T));
 
-            return new AsyncDocumentQuery<T>(this, indexName, collectionName, isMapReduce: isMapReduce);
+            return new AsyncDocumentQuery<T>(this, indexName, collectionName, isGroupBy: isMapReduce);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()

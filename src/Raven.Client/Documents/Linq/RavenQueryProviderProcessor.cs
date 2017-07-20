@@ -1648,7 +1648,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (mapReduceOperation == AggregationOperation.Count)
             {
-                _documentQuery.GroupByCount(renamedField);
+                _documentQuery.GroupByCount(mapReduceField);
                 return;
             }
 

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
@@ -10,6 +9,8 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
+        private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
+
         public QueryMetadata(string query, BlittableJsonReaderObject parameters)
         {
             var qp = new QueryParser();
@@ -39,9 +40,9 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Query Query;
 
-        public readonly HashSet<string> AllFieldNames = new HashSet<string>();
+        public readonly HashSet<string> IndexFieldNames = new HashSet<string>();
 
-        public readonly Dictionary<string, ValueTokenType> Fields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, ValueTokenType> WhereFields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
 
         public string[] GroupBy;
 
@@ -49,15 +50,17 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] SelectFields;
 
-        private void AddEmptyField(string fieldName)
+        private void AddExistField(string fieldName)
         {
-            AllFieldNames.Add(fieldName);
+            IndexFieldNames.Add(GetIndexFieldName(fieldName));
         }
 
-        private void AddField(string fieldName, ValueTokenType value)
+        private void AddWhereField(string fieldName, ValueTokenType value)
         {
-            AllFieldNames.Add(fieldName);
-            Fields[fieldName] = value;
+            var indexFieldName = GetIndexFieldName(fieldName);
+
+            IndexFieldNames.Add(indexFieldName);
+            WhereFields[indexFieldName] = value;
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -71,7 +74,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             if (Query.Where != null)
-                new FillFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
+                new FillWhereFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
 
             if (Query.GroupBy != null)
             {
@@ -123,7 +126,7 @@ namespace Raven.Server.Documents.Queries
                                 switch (methodName)
                                 {
                                     case "key":
-                                        fieldName = alias ?? "key";
+                                        fieldName = alias ?? "Key"; // TODO are - retrieve name from group by
                                         break;
                                     default:
                                         throw new NotSupportedException($"Unknown aggregation method: '{methodName}'");
@@ -162,7 +165,25 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            SelectFields = fields.ToArray();
+            SelectFields = new SelectField[fields.Count];
+
+            for (var i = 0; i < fields.Count; i++)
+            {
+                var field = fields[i];
+
+                SelectFields[i] = field;
+
+                if (field.Alias != null)
+                    _aliasToName[field.Alias] = field.Name;
+            }
+        }
+
+        public string GetIndexFieldName(string fieldNameOrAlias)
+        {
+            if (_aliasToName.TryGetValue(fieldNameOrAlias, out var indexFieldName))
+                return indexFieldName;
+
+            return fieldNameOrAlias;
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)
@@ -181,18 +202,18 @@ namespace Raven.Server.Documents.Queries
             //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
         }
 
-        private class FillFieldsAndParametersVisitor : WhereExpressionVisitor
+        private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
 
-            public FillFieldsAndParametersVisitor(QueryMetadata metadata, string queryText) : base(queryText)
+            public FillWhereFieldsAndParametersVisitor(QueryMetadata metadata, string queryText) : base(queryText)
             {
                 _metadata = metadata;
             }
 
             public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
             {
-                _metadata.AddField(fieldName, GetValueTokenType(parameters, value, unwrapArrays: false));
+                _metadata.AddWhereField(fieldName, GetValueTokenType(parameters, value, unwrapArrays: false));
             }
 
             public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
@@ -206,7 +227,7 @@ namespace Raven.Server.Documents.Queries
                 if (valueType1 != valueType2)
                     ThrowIncompatibleTypesOfParameters(fieldName, firstValue, secondValue);
 
-                _metadata.AddField(fieldName, valueType1);
+                _metadata.AddWhereField(fieldName, valueType1);
             }
 
             public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)
@@ -228,7 +249,7 @@ namespace Raven.Server.Documents.Queries
                     previousType = valueType;
                 }
 
-                _metadata.AddField(fieldName, previousType);
+                _metadata.AddWhereField(fieldName, previousType);
             }
 
             public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
@@ -250,7 +271,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (arguments.Count == 1)
                 {
-                    _metadata.AddEmptyField(fieldName);
+                    _metadata.AddExistField(fieldName);
                     return;
                 }
 
@@ -269,7 +290,7 @@ namespace Raven.Server.Documents.Queries
                     previousType = valueType;
                 }
 
-                _metadata.AddField(fieldName, previousType);
+                _metadata.AddWhereField(fieldName, previousType);
             }
         }
     }

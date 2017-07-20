@@ -2026,7 +2026,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(IndexQueryServerSide query)
         {
-            foreach (var field in query.Metadata.AllFieldNames)
+            foreach (var field in query.Metadata.IndexFieldNames)
             {
                 var f = field;
 

@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.LessThenEqual:
                 case OperatorType.GreaterThenEqual:
                     {
-                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
                         var (value, valueType) = GetValue(fieldName, query, metadata, parameters, expression.Value);
 
                         var (luceneFieldName, fieldType) = GetLuceneField(fieldName, valueType);
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 case OperatorType.Between:
                     {
-                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
                         var (valueFirst, valueFirstType) = GetValue(fieldName, query, metadata, parameters, expression.First);
                         var (valueSecond, valueSecondType) = GetValue(fieldName, query, metadata, parameters, expression.Second);
 
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Queries
                     }
                 case OperatorType.In:
                     {
-                        var fieldName = QueryExpression.Extract(query.QueryText, expression.Field);
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
 
                         var matches = new List<TermLuceneASTNode>(expression.Values.Count);
                         foreach (var valueToken in expression.Values)
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Queries
                                 matches.Add(CreateTermNode(value, valueType));
                         }
 
-                        var luceneFieldName = GetLuceneField(fieldName, metadata.Fields[fieldName]).LuceneFieldName;
+                        var luceneFieldName = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneFieldName;
 
                         return new MethodLuceneASTNode($"@in<{luceneFieldName}>", matches)
                         {
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Lucene:
                             return HandleLucene(query, expression, metadata, parameters, analyzer, boost);
                         case MethodType.Exists:
-                            return HandleExists(query, expression);
+                            return HandleExists(query, expression, metadata);
                         default:
                             throw new NotSupportedException($"Method '{methodType}' is not supported.");
                     }
@@ -222,16 +222,21 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static LuceneASTNodeBase HandleExists(Query query, QueryExpression expression)
+        private static LuceneASTNodeBase HandleExists(Query query, QueryExpression expression, QueryMetadata metadata)
         {
-            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
 
             return CreateFieldNode(fieldName, FieldName.FieldType.String, CreateTermNode("*", TermLuceneASTNode.TermType.WildCardTerm));
         }
 
+        private static string ExtractIndexFieldName(string queryText, FieldToken field, QueryMetadata metadata)
+        {
+            return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+        }
+
         private static LuceneASTNodeBase HandleLucene(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, string boost)
         {
-            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -245,7 +250,7 @@ namespace Raven.Server.Documents.Queries
 
         private static LuceneASTNodeBase HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
         {
-            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -261,7 +266,7 @@ namespace Raven.Server.Documents.Queries
 
         private static LuceneASTNodeBase HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
         {
-            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -284,7 +289,7 @@ namespace Raven.Server.Documents.Queries
 
         private static LuceneASTNodeBase HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string boost)
         {
-            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
@@ -360,7 +365,7 @@ namespace Raven.Server.Documents.Queries
 
             if (value.Type == ValueTokenType.Parameter)
             {
-                var expectedValueType = metadata.Fields[fieldName];
+                var expectedValueType = metadata.WhereFields[fieldName];
 
                 if (parameters == null)
                     throw new InvalidOperationException();
@@ -398,7 +403,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-                var expectedValueType = metadata.Fields[fieldName];
+                var expectedValueType = metadata.WhereFields[fieldName];
 
                 if (parameters == null)
                     throw new InvalidOperationException();

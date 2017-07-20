@@ -108,35 +108,34 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var fields = new Dictionary<string, DynamicQueryMappingItem>();
             var sorting = new Dictionary<string, DynamicSortInfo>();
 
-            foreach (var field in query.Metadata.Fields)
-                AddField(field.Key, field.Value);
-
-            void AddField(string fieldName, ValueTokenType valueType)
+            foreach (var field in query.Metadata.WhereFields)
             {
+                var fieldName = query.Metadata.GetIndexFieldName(field.Key);
+
                 if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                    return;
+                    continue;
 
                 fields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
 
-                switch (valueType)
+                switch (field.Value)
                 {
                     case ValueTokenType.Double:
                     case ValueTokenType.Long:
+                    {
+                        if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                            continue;
+
+                        if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                            continue;
+
+                        sorting[fieldName] = new DynamicSortInfo()
                         {
-                            if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
-                                return;
+                            Name = fieldName,
+                            FieldType = SortOptions.Numeric
+                        };
 
-                            if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
-                                return;
-
-                            sorting[fieldName] = (new DynamicSortInfo()
-                            {
-                                Name = fieldName,
-                                FieldType = SortOptions.Numeric
-                            });
-
-                            break;
-                        }
+                        break;
+                    }
                 }
             }
 
@@ -144,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Metadata.OrderBy)
                 {
-                    var fieldName = field.Name;
+                    var fieldName = query.Metadata.GetIndexFieldName(field.Name);
 
                     if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;

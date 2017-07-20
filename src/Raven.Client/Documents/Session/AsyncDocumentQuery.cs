@@ -28,8 +28,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isMapReduce)
-            : base(session, indexName, collectionName, isMapReduce)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy)
+            : base(session, indexName, collectionName, isGroupBy)
         {
         }
 
@@ -1102,7 +1102,7 @@ namespace Raven.Client.Documents.Session
                 TheSession,
                 IndexName,
                 CollectionName,
-                IsMapReduce)
+                IsGroupBy)
             {
                 PageSize = PageSize,
                 SelectTokens = SelectTokens,

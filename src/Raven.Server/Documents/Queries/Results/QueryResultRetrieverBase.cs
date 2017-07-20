@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, x.IsStored));
                 }
 
                 if (_fieldsToFetch.ExtractAllFromDocument)
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fields.ContainsKey(name))
                                 continue;
 
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, canExtractFromIndex: false);
+                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, canExtractFromIndex: false);
                         }
                     }
                 }
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
 
-            var name = fieldToFetch.Name.Value;
+            var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
             DynamicJsonArray array = null;
             FieldType fieldType = null;
@@ -236,7 +236,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, fieldToFetch.Name, out object value) == false)
                 return;
 
-            toFill[fieldToFetch.Name.Value] = value;
+            toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = value;
         }
 
         private class UniqueFieldNames : IEqualityComparer<IFieldable>

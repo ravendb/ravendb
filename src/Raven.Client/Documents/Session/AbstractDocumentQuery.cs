@@ -74,7 +74,7 @@ namespace Raven.Client.Documents.Session
 
         protected Dictionary<string, object> QueryParameters = new Dictionary<string, object>();
 
-        protected bool IsMapReduce;
+        protected bool IsGroupBy;
         /// <summary>
         /// The session for this query
         /// </summary>
@@ -213,9 +213,9 @@ namespace Raven.Client.Documents.Session
         protected AbstractDocumentQuery(InMemoryDocumentSessionOperations session,
                                      string indexName,
                                      string collectionName,
-                                     bool isMapReduce)
+                                     bool isGroupBy)
         {
-            IsMapReduce = isMapReduce;
+            IsGroupBy = isGroupBy;
             IndexName = indexName;
             CollectionName = collectionName;
 
@@ -545,6 +545,8 @@ namespace Raven.Client.Documents.Session
             if (FromToken.IsDynamic == false)
                 throw new InvalidOperationException("GroupBy only works with dynamic queries.");
 
+            IsGroupBy = true;
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             GroupByTokens.AddLast(GroupByToken.Create(fieldName));
@@ -562,11 +564,15 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
+            IsGroupBy = true;
+
             SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }
 
         public void GroupBySum(string fieldName, string projectedName = null)
         {
+            IsGroupBy = true;
+
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             SelectTokens.AddLast(GroupBySumToken.Create(fieldName, projectedName));
@@ -574,6 +580,8 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByCount(string projectedName = null)
         {
+            IsGroupBy = true;
+
             SelectTokens.AddLast(GroupByCountToken.Create(projectedName));
         }
 
@@ -1662,10 +1670,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         private string EnsureValidFieldName(string fieldName, bool isNestedPath)
         {
-            if (TheSession?.Conventions == null || isNestedPath)
-                return fieldName;
-
-            if (IsMapReduce)
+            if (TheSession?.Conventions == null || isNestedPath || IsGroupBy)
                 return fieldName;
 
             foreach (var rootType in RootTypes)
