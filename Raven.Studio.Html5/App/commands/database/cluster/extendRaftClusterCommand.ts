@@ -18,10 +18,6 @@ class extendRaftClusterCommand extends commandBase {
 
             var url = "/admin/cluster/join";
 
-            if (this.force) {
-                url += "?force=true";
-            }
-
             return this.post(url, ko.toJSON(this.connectionInfo), this.db, { dataType: undefined })
                 .done(() => this.reportSuccess("Server was added to cluster."))
                 .fail((response: JQueryXHR) => this.reportError("Unable to add server to cluster", response.responseText, response.statusText));
