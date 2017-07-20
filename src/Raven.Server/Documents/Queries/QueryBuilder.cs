@@ -268,11 +268,17 @@ namespace Raven.Server.Documents.Queries
             var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
+            if (valueType != ValueTokenType.String)
+                throw new InvalidOperationException();
+
             LuceneASTNodeBase node;
             var values = value.Split(' ');
 
             if (values.Length == 1)
-                node = CreateNode(CreateTermNode(values[0], valueType), null, boost);
+            {
+                var nValue = values[0];
+                node = CreateNode(CreateTermNode(nValue, GetTermType(nValue)), null, boost);
+            }
             else
             {
                 LuceneASTNodeBase left = null;
@@ -282,17 +288,35 @@ namespace Raven.Server.Documents.Queries
 
                     if (left == null)
                     {
-                        left = CreateTermNode(v, valueType);
+                        left = CreateTermNode(v, GetTermType(v));
                         continue;
                     }
 
-                    left = CreateNode(CreateTermNode(v, valueType), left, null);
+                    left = CreateNode(CreateTermNode(v, GetTermType(v)), left, null);
                 }
 
-                node = CreateNode(left, CreateTermNode(values[values.Length - 1], valueType), boost);
+                var rValue = values[values.Length - 1];
+                node = CreateNode(left, CreateTermNode(rValue, GetTermType(rValue)), boost);
             }
 
             return CreateFieldNode(fieldName, FieldName.FieldType.String, node);
+
+            TermLuceneASTNode.TermType GetTermType(string termValue)
+            {
+                if (string.IsNullOrEmpty(termValue))
+                    return TermLuceneASTNode.TermType.Quoted;
+
+                if (termValue[0] == '*')
+                    return TermLuceneASTNode.TermType.WildCardTerm;
+
+                if (termValue[termValue.Length - 1] == '*')
+                {
+                    if (termValue[termValue.Length - 2] != '\\')
+                        return TermLuceneASTNode.TermType.PrefixTerm;
+                }
+
+                return TermLuceneASTNode.TermType.Quoted;
+            }
 
             LuceneASTNodeBase CreateNode(LuceneASTNodeBase left, LuceneASTNodeBase right, string boostValue)
             {
