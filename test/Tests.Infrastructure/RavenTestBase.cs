@@ -107,7 +107,7 @@ namespace FastTests
                         name = $"{name}_{dbSuffixIdentifier}";
 
                     if (modifyName != null)
-                        name = modifyName(name);
+                        name = modifyName(name) ?? name;
 
                     var hardDelete = true;
                     var runInMemory = true;
@@ -491,6 +491,13 @@ namespace FastTests
                 DoNotReuseServer(customSettings);
 
             return serverCertPath;
+        }
+
+        protected void SetupAuthenticationInTest(out X509Certificate2 clientCertificate, out string dbName, 
+            [CallerMemberName]string caller = null)
+        {
+            dbName = caller + "_" + Interlocked.Increment(ref _counter);
+            SetupAuthenticationInTest(out clientCertificate, new[] { dbName });
         }
 
         protected void SetupAuthenticationInTest(

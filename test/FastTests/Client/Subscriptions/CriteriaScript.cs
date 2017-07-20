@@ -17,13 +17,14 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task BasicCriteriaTest(bool useSsl)
         {
+            string dbName = null;
             X509Certificate2 certificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, new[]{ "CriteriaTestDB" });
+                SetupAuthenticationInTest(out certificate, out dbName);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => "CriteriaTestDB"))
+            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => dbName))
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
                 await CreateDocuments(store, 1);
@@ -63,13 +64,14 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
+            string dbName = null;
             X509Certificate2 certificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out certificate, new[] { "CriteriaTestDB" });
+                SetupAuthenticationInTest(out certificate, out dbName);
             }
 
-            using (var store = GetDocumentStore(certificate: certificate, modifyName: s => "CriteriaTestDB"))
+            using (var store = GetDocumentStore(certificate: certificate, modifyName: s =>dbName))
             using (var subscriptionManager = new DocumentSubscriptions(store))
             {
                 await CreateDocuments(store, 1);
