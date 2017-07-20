@@ -205,9 +205,9 @@ namespace Raven.Server.ServerWide
             return _engine.GetTopology(context);
         }
 
-        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true)
+        public async Task AddNodeToClusterAsync(string nodeUrl, string nodeTag = null, bool validateNotInTopology = true, bool asWatcher = false)
         {
-            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology).WithCancellation(_shutdownNotification.Token);
+            await _engine.AddToClusterAsync(nodeUrl, nodeTag, validateNotInTopology, asWatcher).WithCancellation(_shutdownNotification.Token);
         }
 
         public async Task RemoveFromClusterAsync(string nodeTag)
