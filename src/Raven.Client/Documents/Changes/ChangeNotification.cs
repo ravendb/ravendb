@@ -10,7 +10,6 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Changes
 {
-    //TODO: Add change vector?
     public class DocumentChange : DatabaseChange
     {
         /// <summary>
@@ -39,6 +38,11 @@ namespace Raven.Client.Documents.Changes
         /// Document etag.
         /// </summary>
         public long? Etag { get; set; }
+
+        /// <summary>
+        /// Document change vector
+        /// </summary>
+        public string ChangeVector { get; set; }
 
         internal bool TriggeredByReplicationThread;
 

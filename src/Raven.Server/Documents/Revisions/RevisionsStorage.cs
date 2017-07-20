@@ -463,25 +463,16 @@ namespace Raven.Server.Documents.Revisions
             using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
-
-                if (table.VerifyKeyExists(keySlice))
-                    return; // revisions (and revisions tombstones)On are immutable, we can safely ignore this 
-                
-                using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tvb.Add(Bits.SwapBytes(newEtag));
-                    tvb.Add(Bits.SwapBytes(revisionEtag));
-                    tvb.Add(context.GetTransactionMarker());
-                    tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
-                    tvb.Add(collectionSlice);
-                    tvb.Add((int)DocumentFlags.None);
-                    tvb.Add(changeVector.Buffer, changeVector.Size);
-                    tvb.Add(null, 0);
-                    table.Set(tvb);
-                }
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(Bits.SwapBytes(newEtag));
+                tvb.Add(Bits.SwapBytes(revisionEtag));
+                tvb.Add(context.GetTransactionMarker());
+                tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
+                tvb.Add(collectionSlice);
+                tvb.Add((int)DocumentFlags.None);
+                tvb.Add(changeVector.Buffer, changeVector.Size);
+                tvb.Add(null, 0);
+                table.Set(tvb);
             }
         }
 

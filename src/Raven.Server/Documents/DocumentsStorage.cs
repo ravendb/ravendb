@@ -876,7 +876,7 @@ namespace Raven.Server.Documents
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
                 Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int size),
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size),
-                ChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref tvr)
+                ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr)
             };
 
             if (result.Type == DocumentTombstone.TombstoneType.Document)
@@ -1016,6 +1016,7 @@ namespace Raven.Server.Documents
                     Type = DocumentChangeTypes.Delete,
                     Etag = etag,
                     Id = id,
+                    ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
                     IsSystemDocument = collectionName.IsSystem,
                 });
