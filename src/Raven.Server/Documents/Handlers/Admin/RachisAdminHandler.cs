@@ -169,8 +169,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
         }
 
-        [RavenAction("/admin/cluster/add-node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/remove-node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
@@ -182,7 +181,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/add-node", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ServerAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
@@ -198,7 +197,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                     if (HttpContext.Request.IsHttps != remoteIsHttps)
                     {
-                        throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it uses HTTPS while the new node is using HTTP");
+                        throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
                     }
 
                     string topologyId;
@@ -262,7 +261,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/remove-node", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task DeleteNode()
         {
             SetupCORSHeaders();

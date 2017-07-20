@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Handlers
             NoContentStatus();
         }
 
-        [RavenAction("/databases/*/transformers/set-lock", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/transformers/set-lock", "POST", AuthorizationStatus.ValidUser)]
         public async Task SetLockMode()
         {
             var names = GetStringValuesQueryString("name");

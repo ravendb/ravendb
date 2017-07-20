@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class QueriesDebugHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/debug/queries/kill", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/debug/queries/kill", "POST", AuthorizationStatus.ValidUser)]
         public Task KillQuery()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("indexName");
