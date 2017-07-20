@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/changes/debug", "GET", AuthorizationStatus.ValidUser)]
         public Task GetConnectionsDebugInfo()
         {
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -172,7 +172,7 @@ namespace Raven.Server.Documents.Handlers
             await sendTask;
         }
 
-        [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/databases/*/changes", "DELETE", AuthorizationStatus.ValidUser)]
         public Task DeleteConnections()
         {
             var ids = GetStringValuesQueryString("id");

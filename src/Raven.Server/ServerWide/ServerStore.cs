@@ -1249,7 +1249,7 @@ namespace Raven.Server.ServerWide
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/rachis/send";
+                url = $"{node.Url}/admin/rachis/send";
 
                 var request = new HttpRequestMessage
                 {

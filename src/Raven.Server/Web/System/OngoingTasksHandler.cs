@@ -466,7 +466,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/tasks/state", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ToggleTaskState()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

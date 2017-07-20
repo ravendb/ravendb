@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation("Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType) 0, 
+                db.Operations.AddOperation(null,"Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType) 0, 
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         var p = new DeterminateProgress
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation("Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
+                db.Operations.AddOperation(null, "Operations Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                        throw new Exception("Something bad happened");
@@ -130,7 +130,7 @@ namespace FastTests.Server.Documents.Operations
 
                 db.Changes.OnOperationStatusChange += notifications.Add;
 
-                db.Operations.AddOperation("Cancellation Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
+                db.Operations.AddOperation(null, "Cancellation Test", (Raven.Server.Documents.Operations.Operations.OperationType)0,
                     onProgress => Task.Factory.StartNew<IOperationResult>(() =>
                     {
                         token.Token.ThrowIfCancellationRequested();

@@ -181,10 +181,19 @@ namespace FastTests.Server.Authentication
         [Fact]
         public void AllAdminRoutesHaveCorrectAuthorizationStatus()
         {
-            var routes = RouteScanner.Scan(attr => attr.Path.Contains("/admin/") && attr.RequiredAuthorization != AuthorizationStatus.ServerAdmin);
+            var routes = RouteScanner.Scan(attr =>
+                attr.Path.Contains("/admin/") && (attr.RequiredAuthorization != AuthorizationStatus.ServerAdmin &&
+                                                  attr.RequiredAuthorization != AuthorizationStatus.DatabaseAdmin));
             Assert.Empty(routes);
-
-            
+        }
+        
+        [Fact]
+        public void AllAdminAuthorizationStatusHaveCorrectRoutes()
+        {
+            var routes = RouteScanner.Scan(attr =>
+                !attr.Path.Contains("/admin/") && (attr.RequiredAuthorization == AuthorizationStatus.ServerAdmin ||
+                                                  attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
+            Assert.Empty(routes);
         }
 
         private static void StoreSampleDoc(DocumentStore store, string docName)

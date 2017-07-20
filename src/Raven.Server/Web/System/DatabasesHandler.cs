@@ -188,7 +188,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        [RavenAction("/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
         public Task GetConnectionStrings()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");

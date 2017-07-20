@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : RequestHandler
     {
-        [RavenAction("/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ApplyCommand()
         {
             TransactionOperationContext context;
