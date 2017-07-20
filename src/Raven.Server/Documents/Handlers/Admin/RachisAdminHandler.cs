@@ -173,7 +173,9 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/remove-node", "OPTIONS", "/admin/cluster/remove-node?nodeTag={nodeTag:string}", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         [RavenAction("/admin/cluster/reelect", "OPTIONS", "/admin/cluster/reelect", RequiredAuthorization = AuthorizationStatus.ValidUser)]
         [RavenAction("/admin/cluster/timeout", "OPTIONS", "/admin/cluster/timeout", RequiredAuthorization = AuthorizationStatus.ValidUser)]
-        
+        [RavenAction("/admin/cluster/promote", "OPTIONS", "/admin/cluster/promote", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+        [RavenAction("/admin/cluster/demote", "OPTIONS", "/admin/cluster/demote", RequiredAuthorization = AuthorizationStatus.ValidUser)]
+
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -275,6 +277,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             SetupCORSHeaders();
 
             Server.ServerStore.Engine.Timeout.ExecuteTimeoutBehavior();
+            NoContentStatus();
             return Task.CompletedTask;
         }
 
@@ -287,6 +290,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             if (ServerStore.IsLeader())
             {
                 ServerStore.Engine.CurrentLeader.StepDown();
+                NoContentStatus();
                 return Task.CompletedTask;
             }
             RedirectToLeader();
@@ -302,7 +306,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 NoContentStatus();
                 return;
             }
-            
+
+            SetupCORSHeaders();
+
             if (ServerStore.IsLeader() == false)
             {
                 RedirectToLeader();
@@ -335,6 +341,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 NoContentStatus();
                 return;
             }
+
+            SetupCORSHeaders();
 
             if (ServerStore.IsLeader() == false)
             {

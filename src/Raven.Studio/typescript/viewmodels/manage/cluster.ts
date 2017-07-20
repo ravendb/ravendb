@@ -3,35 +3,38 @@ import removeNodeFromClusterCommand = require("commands/database/cluster/removeN
 import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
 import promoteClusterNodeCommand = require("commands/database/cluster/promoteClusterNodeCommand");
 import demoteClusterNodeCommand = require("commands/database/cluster/demoteClusterNodeCommand");
+import forceLeaderTimeoutCommand = require("commands/database/cluster/forceLeaderTimeoutCommand");
 
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
+import router = require("plugins/router");
 
 class cluster extends viewModelBase {
 
     topology = clusterTopologyManager.default.topology;
 
     canDeleteNodes: KnockoutComputed<boolean>;
-
-    addNodeUrl = appUrl.forAddClusterNode();
+    canAddNodes: KnockoutComputed<boolean>;
 
     spinners = {
         stepdown: ko.observable<boolean>(false),
         delete: ko.observableArray<string>([]),
         promote: ko.observableArray<string>([]),
-        demote: ko.observableArray<string>([])
+        demote: ko.observableArray<string>([]),
+        forceTimeout: ko.observable<boolean>(false)
     }
 
     constructor() {
         super();
-        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote");
+        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote", "forceTimeout");
 
         this.initObservables();
     }
 
     private initObservables() {
-        this.canDeleteNodes = ko.pureComputed(() => this.topology().nodes().length > 1);
+        this.canDeleteNodes = ko.pureComputed(() => this.topology().leader() && this.topology().nodes().length > 1);
+        this.canAddNodes = ko.pureComputed(() => !!this.topology().leader());
     }
 
     activate(args: any) {
@@ -84,6 +87,22 @@ class cluster extends viewModelBase {
                     new removeNodeFromClusterCommand(node.tag())
                         .execute()
                         .always(() => this.spinners.delete.remove(node.tag()));
+                }
+            });
+    }
+
+    addNode() {
+        router.navigate(appUrl.forAddClusterNode());
+    }
+
+    forceTimeout() {
+        this.confirmationMessage("Are you sure?", `Do you want force timeout on waiting for leader?`, ["Cancel", "Yes, force"])
+            .done(result => {
+                if (result.can) {
+                    this.spinners.forceTimeout(true);
+                    new forceLeaderTimeoutCommand()
+                        .execute()
+                        .always(() => this.spinners.forceTimeout(false));
                 }
             });
     }
