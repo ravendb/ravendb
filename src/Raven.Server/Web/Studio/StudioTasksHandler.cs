@@ -16,7 +16,7 @@ namespace Raven.Server.Web.Studio
     public class StudioTasksHandler : RequestHandler
     {
         //TODO: split to specific handler
-        [RavenAction("/databases/*/studio-tasks/config", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/studio-tasks/config", "GET", AuthorizationStatus.ValidUser)]
         public Task Config()
         {
             //TODO: implement
@@ -25,15 +25,14 @@ namespace Raven.Server.Web.Studio
         }
 
         //TODO: split to specific handler
-        [RavenAction("/studio-tasks/server-configs", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/studio-tasks/server-configs", "GET", AuthorizationStatus.ValidUser)]
         public Task Get()
         {
             //TODO: implement
             return HttpContext.Response.WriteAsync("{\"IsGlobalAdmin\":true,\"CanReadWriteSettings\":true,\"CanReadSettings\":true,\"CanExposeConfigOverTheWire\":true}");
         }
 
-        //TODO: handle this in js ?
-        [RavenAction("/studio-tasks/new-encryption-key", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/studio-tasks/new-encryption-key", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetNewEncryption()
         {
             RandomNumberGenerator randomNumberGenerator = RandomNumberGenerator.Create();
@@ -44,8 +43,7 @@ namespace Raven.Server.Web.Studio
             await HttpContext.Response.WriteAsync($"\"{result}\"", Encoding.UTF8);
         }
 
-        //TODO: handle this in js ?
-        [RavenAction("/studio-tasks/is-base-64-key", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/studio-tasks/is-base-64-key", "POST", AuthorizationStatus.ValidUser)]
         public Task IsBase64Key()
         {
             StreamReader reader = new StreamReader(HttpContext.Request.Body);
@@ -71,7 +69,7 @@ namespace Raven.Server.Web.Studio
             public List<string> Functions;
         }
 
-        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST", AuthorizationStatus.ValidUser)]
         public Task ValidateCustomFunctions()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
