@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminRevisionsHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/revisions", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task DeleteRevisionsFor()
         {
             var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
