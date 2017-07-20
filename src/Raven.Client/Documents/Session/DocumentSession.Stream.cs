@@ -150,6 +150,7 @@ namespace Raven.Client.Documents.Session
         private IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
+
             var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);

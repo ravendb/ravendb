@@ -45,7 +45,7 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Fact]
+        [Fact(Skip = "Should remove the usage of stream form specific ETag")]
         public void CanStreamDocumentsFromSpecifiedEtag()
         {
             using (var store = GetDocumentStore())

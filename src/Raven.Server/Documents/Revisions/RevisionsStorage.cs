@@ -392,6 +392,7 @@ namespace Raven.Server.Documents.Revisions
                 {
                     IncrementCountOfRevisions(context, prefixSlice, -1);
                 }
+
                 return true;
             });
         }

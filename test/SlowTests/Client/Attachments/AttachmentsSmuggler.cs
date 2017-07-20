@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -208,8 +210,13 @@ namespace SlowTests.Client.Attachments
             var file = Path.GetTempFileName();
             try
             {
+                var dbId2 = new Guid("99999999-48c4-421e-9466-999999999999");
+                var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
+
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
+                    await SetDatabaseId(store1, dbId);
+                    
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
                     using (var session = store1.OpenSession())
                     {
@@ -219,7 +226,7 @@ namespace SlowTests.Client.Attachments
                     using (var emptyStream = new MemoryStream(new byte[0]))
                     {
                         var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "empty-file", emptyStream, "image/png"));
-                        Assert.True(result.ChangeVector.StartsWith("A:3"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 3, dbId), result.ChangeVector);
                         Assert.Equal("empty-file", result.Name);
                         Assert.Equal("users/1", result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
@@ -238,6 +245,8 @@ namespace SlowTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
+                    await SetDatabaseId(store2, dbId2);
+                  
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
@@ -255,7 +264,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.True(attachment.Details.ChangeVector.StartsWith("A:1"));
+                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 1, dbId), attachment.Details.ChangeVector);
                             Assert.Equal("empty-file", attachment.Details.Name);
                             Assert.Equal(0, attachment.Details.Size);
                             Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Details.Hash);
@@ -279,6 +288,7 @@ namespace SlowTests.Client.Attachments
             {
                 using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
                 {
+                    await SetDatabaseId(store1, new Guid("00000000-48c4-421e-9466-000000000000"));
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
                     AttachmentsRevisions.CreateDocumentWithAttachments(store1);
                     using (var bigStream = new MemoryStream(Enumerable.Range(1, 999 * 1024).Select(x => (byte)x).ToArray()))
@@ -297,6 +307,9 @@ namespace SlowTests.Client.Attachments
 
                 using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
                 {
+                    var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
+                    await SetDatabaseId(store2, dbId);
+                 
                     await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database);
 
                     for (var i = 0; i < 2; i++) // Make sure that we can import attachments twice and it will overwrite
@@ -316,7 +329,7 @@ namespace SlowTests.Client.Attachments
                             using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                             {
                                 attachment.Stream.CopyTo(attachmentStream);
-                                Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{2 + 20 * i}"));
+                                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 + 20 * i, dbId), attachment.Details.ChangeVector);
                                 Assert.Equal("big-file", attachment.Details.Name);
                                 Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                                 Assert.Equal(999 * 1024, attachmentStream.Position);

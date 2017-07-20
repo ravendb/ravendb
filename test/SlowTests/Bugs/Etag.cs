@@ -10,10 +10,10 @@ using Xunit;
 
 namespace SlowTests.Bugs
 {
-    public class Etag : RavenTestBase
+    public class ChangeVectorExists : RavenTestBase
     {
         [Fact]
-        public void WhenSaving_ThenGetsEtag()
+        public void WhenSaving_ThenGetsChangeVector()
         {
             using (var store = GetDocumentStore())
             {
@@ -26,7 +26,7 @@ namespace SlowTests.Bugs
                     session.SaveChanges();
                     
                     var metadata = session.Advanced.GetMetadataFor(foo);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata["@change-vector"]);
                 }
 
                 using (var session = store.OpenSession())
@@ -34,7 +34,7 @@ namespace SlowTests.Bugs
                     var loaded = session.Load<IndexWithTwoProperties.Foo>(foo.Id);
 
                     var metadata = session.Advanced.GetMetadataFor(loaded);
-                    Assert.NotNull(metadata["@etag"]);
+                    Assert.NotNull(metadata["@change-vector"]);
 
                 }
             }

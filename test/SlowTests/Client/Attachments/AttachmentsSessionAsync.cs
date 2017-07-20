@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -20,6 +21,9 @@ namespace SlowTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
+                var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store, dbId);
+            
                 var names = new[]
                 {
                     "profile.png",
@@ -83,7 +87,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = await session.Advanced.GetAttachmentAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{i+2}"));
+                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", i + 2, dbId), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -239,6 +243,9 @@ namespace SlowTests.Client.Attachments
         {
             using (var store = GetDocumentStore())
             {
+                var dbId = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store, dbId);
+              
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = new User {Name = "Fitzchak"};
@@ -293,7 +300,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = await session.Advanced.GetAttachmentAsync("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId), attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -307,7 +314,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:4"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 4, dbId), attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);

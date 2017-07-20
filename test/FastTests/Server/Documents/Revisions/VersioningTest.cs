@@ -32,7 +32,6 @@ namespace FastTests.Server.Documents.Revisions
                     },
                     ["Products"] = new RevisionsCollectionConfiguration
                     {
-
                         Active = false,
                     },
                 }

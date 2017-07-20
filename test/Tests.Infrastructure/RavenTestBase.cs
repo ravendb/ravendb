@@ -44,6 +44,13 @@ namespace FastTests
             return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
         }
 
+        protected async Task SetDatabaseId(DocumentStore store, Guid dbId)
+        {
+            var database = await GetDocumentDatabaseInstanceFor(store);
+            var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
+            type.Environment.DbId = dbId;
+        }
+
         private readonly object _getDocumentStoreSync = new object();
 
         protected async Task WaitForRaftIndexToBeAppliedInCluster(long index, TimeSpan timeout)

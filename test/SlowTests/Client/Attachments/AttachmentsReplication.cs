@@ -14,6 +14,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
@@ -22,6 +23,17 @@ namespace SlowTests.Client.Attachments
 {
     public class AttachmentsReplication : ReplicationTestsBase
     {
+        public static Guid dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+        public static Guid dbId2 = new Guid("99999999-48c4-421e-9466-000000000000");
+
+        private string ExpectedChangeVector(bool replicateDocumentFirst, long etag)
+        {
+            if (replicateDocumentFirst == false)
+                return  ChangeVectorUtils.FormatToChangeVector("A", etag, dbId1);
+
+            return ChangeVectorUtils.MergeVectors(ChangeVectorUtils.FormatToChangeVector("A", etag, dbId1), ChangeVectorUtils.FormatToChangeVector("A", 1, dbId2));
+        }
+
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -30,6 +42,9 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                await SetDatabaseId(store1, dbId1);
+                await SetDatabaseId(store2, dbId2);
+                
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -50,7 +65,7 @@ namespace SlowTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.True(result.ChangeVector.StartsWith("A:2"));
+                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 2), result.ChangeVector);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -59,7 +74,7 @@ namespace SlowTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.True(result.ChangeVector.StartsWith("A:4"));
+                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 4), result.ChangeVector);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -68,7 +83,7 @@ namespace SlowTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.True(result.ChangeVector.StartsWith("A:6"));
+                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 6), result.ChangeVector);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -131,21 +146,23 @@ namespace SlowTests.Client.Attachments
                             {
                                 if (i == 0)
                                 {
-                                    Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
+                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 2), attachment.Details.ChangeVector);
+
                                 }
                                 else if (i == 1)
                                 {
-                                    Assert.True(attachment.Details.ChangeVector.StartsWith("A:4")); ;
+                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 4), attachment.Details.ChangeVector);
+
                                 }
                                 else if (i == 2)
                                 {
-                                    // TODO: Investigate why we have this unstability in etag
-                                    Assert.True(attachment.Details.ChangeVector.StartsWith("A:6") || attachment.Details.ChangeVector.StartsWith("A:5"), $"actual change vector is: {attachment.Details.ChangeVector}");
+                                    // TODO: was unstable
+                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 6), attachment.Details.ChangeVector);
                                 }
                             }
                             else
                             {
-                                Assert.True(attachment.Details.ChangeVector.StartsWith($"A:{i+1}"));
+                                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 * i + 2, dbId1), attachment.Details.ChangeVector);
                             }
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
@@ -192,6 +209,9 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store1, dbId1);
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -200,7 +220,7 @@ namespace SlowTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", name, profileStream, name));
-                    Assert.True(result.ChangeVector.StartsWith("A:2"));
+                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), result.ChangeVector);
                     Assert.Equal(name, result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal(name, result.ContentType);
@@ -240,6 +260,11 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                var dbId2 = new Guid("99999999-48c4-421e-9466-999999999999");
+                await SetDatabaseId(store1, dbId1);
+                await SetDatabaseId(store2, dbId2);
+
                 using (var session = store1.OpenSession())
                 {
                     session.Store(new User { Name = "Fitzchak" }, "users/1");
@@ -278,7 +303,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:1"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -288,7 +313,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:2"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 6, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);
@@ -324,6 +349,9 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store1, dbId1);
+                
                 for (int i = 1; i <= 3; i++)
                 {
                     using (var session = store1.OpenSession())
@@ -349,7 +377,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/3", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:4"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 8, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("uuBtr5rVX6NAXzdW2DhuG04MGGyUzFzpS7TelHw3fJQ=", attachment.Details.Hash);
                         Assert.Equal(128 * 1024, attachmentStream.Position);
@@ -361,7 +389,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.True(attachment.Details.ChangeVector.StartsWith("A:6"));
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 10, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                         Assert.Equal(999 * 1024, attachmentStream.Position);
@@ -471,6 +499,9 @@ namespace SlowTests.Client.Attachments
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store1, dbId1);
+
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false, 4);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false, 4);
 
@@ -486,10 +517,11 @@ namespace SlowTests.Client.Attachments
                     "background-photo.jpg",
                     "fileNAME_#$1^%_בעברית.txt"
                 };
+                
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.True(result.ChangeVector.StartsWith("A:3"));
+                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 3, dbId1), result.ChangeVector);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -498,7 +530,7 @@ namespace SlowTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.True(result.ChangeVector.StartsWith("A:7"));
+                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 7, dbId1), result.ChangeVector);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -507,7 +539,7 @@ namespace SlowTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.True(result.ChangeVector.StartsWith("A:12"));
+                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 12, dbId1), result.ChangeVector);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -964,14 +996,6 @@ namespace SlowTests.Client.Attachments
 
                 await ResolveConflict(store1, store2, conflicts[1].Doc, "a1", hash2, "a1/png", 5);
             }
-        }
-
-        private async Task SetDatabaseId(DocumentStore store, Guid dbId)
-        {
-            //var database = await GetDocumentDatabaseInstanceFor(store);
-            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            var type = database.GetAllStoragesEnvironment().Single(t => t.Type == StorageEnvironmentWithType.StorageEnvironmentType.Documents);
-            type.Environment.DbId = dbId;
         }
 
         private void AssertConflict(GetConflictsResult.Conflict conflict, string name, string hash, string contentType, long size)

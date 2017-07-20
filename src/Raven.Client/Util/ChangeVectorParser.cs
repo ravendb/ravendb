@@ -282,7 +282,7 @@ namespace Raven.Client.Util
         public static ChangeVectorEntry[] ToChangeVector(this string changeVector)
         {
             if (changeVector == null)
-                return null;
+                return new ChangeVectorEntry[0];
 
             var list = new List<ChangeVectorEntry>();
             var start = 0;

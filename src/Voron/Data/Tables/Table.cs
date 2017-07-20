@@ -950,32 +950,48 @@ namespace Voron.Data.Tables
             }
         }
 
-        public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> beforeDelete = null)
+        public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> deletePredicate)
         {
             var pk = _schema.Key;
             var tree = GetTree(pk);
             TableValueHolder tableValueHolder = null;
-            while (true)
+            value = value.Clone(_tx.Allocator);
+            try
             {
-                using (var it = tree.Iterate(false))
+                while (true)
                 {
-                    if (it.Seek(value) == false)
-                        return;
-
-                    var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
-
-                    if (beforeDelete != null)
+                    using (var it = tree.Iterate(false))
                     {
-                        var ptr = DirectRead(id, out int size);
-                        if (tableValueHolder == null)
-                            tableValueHolder = new TableValueHolder();
-                        tableValueHolder.Reader = new TableValueReader(id, ptr, size);
-                        if (beforeDelete(tableValueHolder) == false)
+                        if (it.Seek(value) == false)
                             return;
-                    }
 
-                    Delete(id);
+                        while (true)
+                        {
+                            var id = it.CreateReaderForCurrent().ReadLittleEndianInt64();
+                            var ptr = DirectRead(id, out int size);
+                            if (tableValueHolder == null)
+                                tableValueHolder = new TableValueHolder();
+                            tableValueHolder.Reader = new TableValueReader(id, ptr, size);
+                            if (deletePredicate(tableValueHolder))
+                            {
+                                value.Release(_tx.Allocator);
+                                value = it.CurrentKey.Clone(_tx.Allocator);
+                                Delete(id);
+                                break;
+                            }
+                            else
+                            {
+                                if (it.MoveNext() == false)
+                                    return;
+                                continue;
+                            }
+                        }
+                    }
                 }
+            }
+            finally 
+            {
+                value.Release(_tx.Allocator);
             }
         }
 

@@ -591,8 +591,6 @@ namespace Raven.Server.Documents
             Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, KeyType keyType, AttachmentType type, 
             LazyStringValue changeVector, out Slice keySlice)
         {
-            var changeVectorSize = 0;
-
             var size = lowerIdSize + 3;
             if (type != AttachmentType.Document)
             {
@@ -628,8 +626,8 @@ namespace Raven.Server.Documents
 
             if (type != AttachmentType.Document)
             {
-                Memory.Copy(keyMem.Ptr + pos, changeVector.Buffer, changeVectorSize);
-                pos += changeVectorSize;
+                Memory.Copy(keyMem.Ptr + pos, changeVector.Buffer, changeVector.Size);
+                pos += changeVector.Size;
                 keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
             }
 
