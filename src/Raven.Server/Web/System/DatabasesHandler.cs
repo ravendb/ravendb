@@ -32,46 +32,7 @@ namespace Raven.Server.Web.System
     public class DatabasesHandler : RequestHandler
     {
 
-        protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
-        {
-            dbs = null;
-            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
-            var status = feature?.Status;
-            switch (status)
-            {
-                case null:
-                case RavenServer.AuthenticationStatus.None:
-                case RavenServer.AuthenticationStatus.NoCertificateProvided:
-                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
-                case RavenServer.AuthenticationStatus.Expired:
-                case RavenServer.AuthenticationStatus.NotYetValid:
-                    if (Server.Configuration.Security.AuthenticationEnabled == false)
-                        return true;
-
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
-                    return false;
-                case RavenServer.AuthenticationStatus.ServerAdmin:
-                    return true;
-                case RavenServer.AuthenticationStatus.Allowed:
-                    if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
-                    {
-                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
-                        return false;
-                    }
-
-                    dbs = feature.AuthorizedDatabases;
-                    return true;
-                default:
-                    ThrowInvalidAuthStatus(status);
-                    return false;
-            }
-        }
-
-        private static void ThrowInvalidAuthStatus(RavenServer.AuthenticationStatus? status)
-        {
-            throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
-        }
-
+     
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()
         {

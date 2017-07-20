@@ -41,8 +41,6 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        
-
         [RavenAction("/admin/databases", "GET", AuthorizationStatus.ServerAdmin)]
         public Task Get()
         {
@@ -286,19 +284,19 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/expiration/config", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/expiration/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigExpiration()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseExpiration, "read-expiration-config");
         }
 
-        [RavenAction("/admin/revisions/config", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/revisions/config", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ConfigRevisions()
         {
             await DatabaseConfigurations(ServerStore.ModifyDatabaseRevisions, "read-revisions-config");
         }
 
-        [RavenAction("/admin/periodic-backup", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/periodic-backup", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task UpdatePeriodicBackup()
         {
             await DatabaseConfigurations(ServerStore.ModifyPeriodicBackup,
@@ -363,9 +361,11 @@ namespace Raven.Server.Web.System
                 });
         }
         
-        [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task TestPerioidicBackupCredentials()
         {
+            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
+            
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
@@ -518,9 +518,14 @@ namespace Raven.Server.Web.System
             Action<DynamicJsonValue, BlittableJsonReaderObject, long> fillJson = null)
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
+                return;
+            
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
+            
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -711,19 +716,21 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/etl", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
-                fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
-        }
+       
+            var id = GetLongQueryString("id", required: false);
 
-        [RavenAction("/admin/etl/update", "PUT", AuthorizationStatus.ServerAdmin)]
-        public async Task UpdateEtl()
-        {
-            var id = GetLongQueryString("id");
+            if (id == null)
+            {
+                await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.AddEtl(_, databaseName, etlConfiguration), "etl-add",
+                    fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
 
-            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id, etlConfiguration), "etl-update",
+                return;
+            }
+            
+            await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration), "etl-update",
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
@@ -814,16 +821,20 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/connection-strings", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/connection-strings", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task PutConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
         }
 
-        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            
+            if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
+                return;
+            
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
             var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");

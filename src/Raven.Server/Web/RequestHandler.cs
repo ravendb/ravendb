@@ -8,9 +8,11 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -372,5 +374,46 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Remove("Content-Type");
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
+        
+        protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            dbs = null;
+            var status = feature?.Status;
+            switch (status)
+            {
+                case null:
+                case RavenServer.AuthenticationStatus.None:
+                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.Expired:
+                case RavenServer.AuthenticationStatus.NotYetValid:
+                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                        return true;
+
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                    return false;
+                case RavenServer.AuthenticationStatus.ServerAdmin:
+                    return true;
+                case RavenServer.AuthenticationStatus.Allowed:
+                    if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)
+                    {
+                        Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
+                        return false;
+                    }
+
+                    dbs = feature.AuthorizedDatabases;
+                    return true;
+                default:
+                    ThrowInvalidAuthStatus(status);
+                    return false;
+            }
+        }
+
+        private static void ThrowInvalidAuthStatus(RavenServer.AuthenticationStatus? status)
+        {
+            throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
+        }
+
     }
 }
