@@ -195,7 +195,8 @@ namespace Raven.Server.Web.System
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            TryGetAllowedDbs(dbName, out var allowedDbs, true);
+            if(TryGetAllowedDbs(dbName, out var allowedDbs, true) == false)
+                return Task.CompletedTask;
 
             ServerStore.EnsureNotPassive();
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
