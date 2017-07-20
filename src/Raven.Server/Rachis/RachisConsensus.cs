@@ -23,7 +23,6 @@ using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
 using Raven.Server.Config.Categories;
-using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
@@ -68,7 +67,7 @@ namespace Raven.Server.Rachis
 
         public override void SnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
         {
-            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex);
+            StateMachine.OnSnapshotInstalled(context, lastIncludedIndex, _serverStore);
         }
 
         public override Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null)
@@ -1278,7 +1277,7 @@ namespace Raven.Server.Rachis
 
         public abstract Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate, TransactionOperationContext context = null);
 
-        public void Bootstrap(ServerStore serverStore, string selfUrl, bool forNewCluster = false)
+        public void Bootstrap(string selfUrl, bool forNewCluster = false)
         {
             if (selfUrl == null)
                 throw new ArgumentNullException(nameof(selfUrl));
@@ -1304,33 +1303,12 @@ namespace Raven.Server.Rachis
                     new Dictionary<string, string>(),
                     "A"
                 );
-
                 
-
                 SetTopology(null, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
 
                 tx.Commit();
-            }
-
-            // We put a certificate in the local state to tell the server who to trust, and this is done before
-            // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
-            // create the cluster, we register those local certificates in the cluster.
-            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            {
-                using (ctx.OpenReadTransaction())
-                {
-                    foreach (var localCertKey in serverStore.Cluster.GetCertificateKeysFromLocalState(ctx))
-                    {
-                        // If there are trusted certificates in the local state, we will register them in the cluster now
-                        using (var localCertificate = serverStore.Cluster.GetLocalState(ctx, localCertKey))
-                        {
-                            var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
-                            serverStore.PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
-                        }
-                    }
-                }
             }
         }
 

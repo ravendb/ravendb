@@ -144,7 +144,7 @@ namespace Tests.Infrastructure
             };
             if (bootstrap)
             {
-                rachis.Bootstrap(serverStore, url);
+                rachis.Bootstrap(url);
             }
 
             rachis.Url = url;

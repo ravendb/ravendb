@@ -278,7 +278,7 @@ namespace SlowTests.Core.Querying
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void CanProvideSuggestionsAndLazySuggestions()
         {
             using (var store = GetDocumentStore())
@@ -315,17 +315,16 @@ namespace SlowTests.Core.Querying
                     Assert.Equal("jones", suggestionResult.Suggestions[1]);
                     Assert.Equal("johnson", suggestionResult.Suggestions[2]);
 
-                    throw new NotImplementedException();
-                    //Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
+                    Lazy<SuggestionQueryResult> lazySuggestionResult = users.SuggestLazy();
 
-                    //Assert.False(lazySuggestionResult.IsValueCreated);
+                    Assert.False(lazySuggestionResult.IsValueCreated);
 
-                    //suggestionResult = lazySuggestionResult.Value;
+                    suggestionResult = lazySuggestionResult.Value;
 
-                    //Assert.Equal(3, suggestionResult.Suggestions.Length);
-                    //Assert.Equal("john", suggestionResult.Suggestions[0]);
-                    //Assert.Equal("jones", suggestionResult.Suggestions[1]);
-                    //Assert.Equal("johnson", suggestionResult.Suggestions[2]);
+                    Assert.Equal(3, suggestionResult.Suggestions.Length);
+                    Assert.Equal("john", suggestionResult.Suggestions[0]);
+                    Assert.Equal("jones", suggestionResult.Suggestions[1]);
+                    Assert.Equal("johnson", suggestionResult.Suggestions[2]);
                 }
             }
         }

@@ -368,6 +368,7 @@ namespace Raven.Server.Documents.Revisions
                 var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
                 var newEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                context.LastDatabaseChangeVector = changeVector;
                 DeleteRevisions(context, table, prefixSlice, collectionName, long.MaxValue, null, changeVector);
                 DeleteCountOfRevisions(context, prefixSlice);
             }
@@ -445,13 +446,13 @@ namespace Raven.Server.Documents.Revisions
             var collectionName = new CollectionName(collection);
             var table = EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
 
-            if (table.ReadByKey(key, out TableValueReader tvr) == false)
-                return;
-
-            var revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
+            long revisionEtag = 0;
+            if (table.ReadByKey(key, out TableValueReader tvr))
+            {
+                revisionEtag = TableValueToEtag((int)Columns.Etag, ref tvr);
+                table.Delete(tvr.Id);
+            }
             CreateTombstone(context, key, revisionEtag, collectionName, changeVector);
-
-            table.Delete(tvr.Id);
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long revisionEtag, CollectionName collectionName, LazyStringValue changeVector)
@@ -462,16 +463,25 @@ namespace Raven.Server.Documents.Revisions
             using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
-                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                tvb.Add(Bits.SwapBytes(newEtag));
-                tvb.Add(Bits.SwapBytes(revisionEtag));
-                tvb.Add(context.GetTransactionMarker());
-                tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
-                tvb.Add(collectionSlice);
-                tvb.Add((int)DocumentFlags.None);
-                tvb.Add(changeVector.Buffer, changeVector.Size);
-                tvb.Add(null, 0);
-                table.Insert(tvb);
+                var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+
+                if (table.VerifyKeyExists(keySlice))
+                    return; // revisions (and revisions tombstones)On are immutable, we can safely ignore this 
+                
+                using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+                using (table.Allocate(out TableValueBuilder tvb))
+                {
+                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                    tvb.Add(Bits.SwapBytes(newEtag));
+                    tvb.Add(Bits.SwapBytes(revisionEtag));
+                    tvb.Add(context.GetTransactionMarker());
+                    tvb.Add((byte)DocumentTombstone.TombstoneType.Revision);
+                    tvb.Add(collectionSlice);
+                    tvb.Add((int)DocumentFlags.None);
+                    tvb.Add(changeVector.Buffer, changeVector.Size);
+                    tvb.Add(null, 0);
+                    table.Set(tvb);
+                }
             }
         }
 

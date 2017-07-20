@@ -13,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_7322())   
+                using (var test = new FastTests.Server.Documents.Revisions.RevisionsReplication())   
                 {
-                    test.TestClassesShouldNotInheritFromOtherTestClassesToNotMultiplyTests();
+                    test.WillDeleteOldRevisions().Wait() ;
                 }
             }
         }

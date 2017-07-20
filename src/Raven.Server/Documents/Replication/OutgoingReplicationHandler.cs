@@ -411,7 +411,7 @@ namespace Raven.Server.Documents.Replication
         {
             private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
-            private  Guid _dbId;
+            private Guid _dbId;
 
             public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
             {

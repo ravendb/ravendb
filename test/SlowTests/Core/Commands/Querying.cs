@@ -325,7 +325,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void CanGetSuggestions()
         {
             using (var store = GetDocumentStore())

@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             return new GetRequest
             {
                 Url = uri.Substring(0, separator),
-                Query = uri.Substring(separator, uri.Length - separator - 1)
+                Query = uri.Substring(separator, uri.Length - separator)
             };
         }
 

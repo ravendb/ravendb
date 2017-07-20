@@ -145,7 +145,8 @@ namespace Raven.Server.Documents
 
                     changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                     Debug.Assert(changeVector != null);
-
+                    context.LastDatabaseChangeVector = changeVector;
+                    
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                     void SetTableValue(TableValueBuilder tvb, LazyStringValue cv)
                     {
@@ -252,7 +253,10 @@ namespace Raven.Server.Documents
 
             var newEtag = _documentsStorage.GenerateNextEtag();
             if (changeVector == null)
+            {
                 changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
+                context.LastDatabaseChangeVector = changeVector;
+            }
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using (table.Allocate(out TableValueBuilder tvb))
@@ -709,6 +713,7 @@ namespace Raven.Server.Documents
 
                 var tombstoneEtag = _documentsStorage.GenerateNextEtag(); // TODO: Create tombstone here.
                 var changeVector = _documentsStorage.GetNewChangeVector(context, tombstoneEtag);
+                context.LastDatabaseChangeVector = changeVector;
 
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
                 using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, null, out Slice partialKeySlice))

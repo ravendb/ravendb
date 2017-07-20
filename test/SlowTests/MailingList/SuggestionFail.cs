@@ -56,7 +56,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void WillFail()
         {
             using (var store = GetDocumentStore())

@@ -14,6 +14,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -268,6 +269,39 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WriteQueryResult(context, result, metadataOnly: false, numberOfResults: out numberOfResults, partial: true);
+
+            writer.WriteEndObject();
+        }
+
+        public static void WriteSuggestionQueryResult(this BlittableJsonTextWriter writer, JsonOperationContext context, SuggestionQueryResultServerSide result)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(result.DurationInMs));
+            writer.WriteInteger(result.DurationInMs);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IndexName));
+            writer.WriteString(result.IndexName);
+            writer.WriteComma();
+           
+            writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IndexTimestamp));
+            writer.WriteString(result.IndexTimestamp.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.LastQueryTime));
+            writer.WriteString(result.LastQueryTime.ToString(Default.DateTimeFormatsToWrite));
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.IsStale));
+            writer.WriteBool(result.IsStale);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(result.ResultEtag));
+            writer.WriteInteger(result.ResultEtag);
 
             writer.WriteEndObject();
         }

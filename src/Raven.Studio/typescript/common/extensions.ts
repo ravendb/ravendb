@@ -192,22 +192,32 @@ class extensions {
                     .collapse({
                         toggle: valueUnwrapped
                     });
+
+                // mark element is being initialized to allow initial animation to take place
+                $(element).data('bs.collapse').initializing = true;
             },
 
             update: (element: any, valueAccessor: () => KnockoutObservable<boolean>) => {
                 const value = valueAccessor();
                 const valueUnwrapped = ko.unwrap(value);
+                const bsData = $(element).data('bs.collapse');
 
                 const action = valueUnwrapped ? "show" : "hide";
 
-                const transitioning = $(element).data('bs.collapse').transitioning;
+                const isInit = bsData.initializing;
 
-                if (!transitioning) {
-                    // if there isn't any other animation in progress - proceed
-                    $(element).collapse(action);
-                } else if (ko.isObservable(value)) {
-                    // have we another animation in progress - try to recover this state by reseting checkbox
-                    value(!value());
+                if (isInit) {
+                    delete bsData.initializing;
+                } else {
+                    const transitioning = bsData.transitioning;
+
+                    if (!transitioning) {
+                        // if there isn't any other animation in progress - proceed
+                        $(element).collapse(action);
+                    } else if (ko.isObservable(value)) {
+                        // have we another animation in progress - try to recover this state by reseting checkbox
+                        value(!value());
+                    }
                 }
             }
         };

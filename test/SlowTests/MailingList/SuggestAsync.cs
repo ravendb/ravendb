@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System.Linq;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
@@ -37,26 +38,26 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
-        public void DoWork()
+        [Fact]
+        public async Task DoWork()
         {
             using (var store = GetDocumentStore())
             {
                 new People_ByName().Execute(store);
                 using (IAsyncDocumentSession session = store.OpenAsyncSession())
                 {
-                    session.StoreAsync(new Person { Name = "Jack", Age = 20 }).Wait();
-                    session.StoreAsync(new Person { Name = "Steve", Age = 74 }).Wait();
-                    session.StoreAsync(new Person { Name = "Martin", Age = 34 }).Wait();
-                    session.StoreAsync(new Person { Name = "George", Age = 12 }).Wait();
+                    await session.StoreAsync(new Person { Name = "Jack", Age = 20 });
+                    await session.StoreAsync(new Person { Name = "Steve", Age = 74 });
+                    await session.StoreAsync(new Person { Name = "Martin", Age = 34 });
+                    await session.StoreAsync(new Person { Name = "George", Age = 12 });
 
-                    session.SaveChangesAsync().Wait();
+                    await session.SaveChangesAsync();
 
 
                     IRavenQueryable<Person> query = session.Query<Person, People_ByName>()
                                                            .Search(p => p.Name, "martin");
 
-                    query.SuggestAsync().Wait();
+                    await  query.SuggestAsync();
                 }
             }
         }

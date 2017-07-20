@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -20,6 +22,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private readonly Term _reduceKeyHash = new Term(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, "Dummy");
 
         protected readonly LuceneIndexWriter _writer;
+        protected readonly Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsWriters;
+        private readonly bool _hasSuggestions;
+
         private readonly LuceneDocumentConverterBase _converter;
         protected readonly DocumentDatabase DocumentDatabase;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
@@ -47,11 +52,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
 
             try
-            {
+            {                
                 _releaseWriteTransaction = directory.SetTransaction(writeTransaction, out _state);
-
                 _writer = persistence.EnsureIndexWriter(_state);
 
+                _suggestionsWriters = persistence.EnsureSuggestionIndexWriter(_state);
+                _hasSuggestions = _suggestionsWriters.Count > 0;
+                
                 _locker = directory.MakeLock("writing-to-index.lock");
 
                 if (_locker.Obtain() == false)
@@ -81,7 +88,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_writer != null) // TODO && _persistance._indexWriter.RamSizeInBytes() >= long.MaxValue)
             {
                 using (stats.For(IndexingOperation.Lucene.FlushToDisk))
+                {
                     _writer.Commit(_state); // just make sure changes are flushed to disk
+
+                    if (_hasSuggestions)
+                    {
+                        foreach (var item in _suggestionsWriters)
+                            item.Value.Commit(_state);
+                    }
+                }                    
             }
         }
 
@@ -101,6 +116,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 using (Stats.AddStats.Start())
                     _writer.AddDocument(_converter.Document, _analyzer, _state);
+
+                if (_hasSuggestions)
+                {
+                    using (Stats.SuggestionStats.Start())
+                    {
+                        foreach (var item in _suggestionsWriters)
+                        {
+                            var writer = item.Value;
+                            writer.AddDocument(_converter.Document, _state);
+                        }
+                    }
+                }
 
                 stats.RecordIndexingOutput();
 
@@ -147,6 +174,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             Stats.DeleteStats = stats.For(IndexingOperation.Lucene.Delete, start: false);
             Stats.AddStats = stats.For(IndexingOperation.Lucene.AddDocument, start: false);
             Stats.ConvertStats = stats.For(IndexingOperation.Lucene.Convert, start: false);
+            Stats.SuggestionStats = stats.For(IndexingOperation.Lucene.Suggestion, start: false);
         }
 
         protected class IndexWriteOperationStats
@@ -154,6 +182,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public IndexingStatsScope DeleteStats;
             public IndexingStatsScope ConvertStats;
             public IndexingStatsScope AddStats;
+            public IndexingStatsScope SuggestionStats;
         }
     }
 }
