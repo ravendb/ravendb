@@ -62,12 +62,8 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var first = true;
 
-                        int i = 0;
-
                         foreach (var itemDetails in fetcher.GetDataToSend(context, state, patch, 0))
                         {
-                            i++;
-
                             if (first == false)
                                 writer.WriteComma();
 
