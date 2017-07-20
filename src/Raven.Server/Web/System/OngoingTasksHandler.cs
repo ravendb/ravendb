@@ -591,13 +591,26 @@ namespace Raven.Server.Web.System
         {
             var id = GetLongQueryString("id");
             // ReSharper disable once PossibleInvalidOperationException
-            var state = ServerStore.Operations.GetOperation(id)?.State;
-
-            if (state == null)
+            var operation = ServerStore.Operations.GetOperation(id);
+            if (operation == null)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 return Task.CompletedTask;
             }
+
+            if (operation.Database == null) // server level op
+            {
+                if (TryGetServerAdmin() == false)
+                    return Task.CompletedTask;
+            }
+            else if (TryGetAllowedDbs(operation.Database.Name, out var _, requireAdmin: false) == false)
+            {
+                return Task.CompletedTask;
+            }
+            
+            var state = operation.State;
+            
+            
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {

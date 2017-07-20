@@ -307,7 +307,7 @@ namespace Raven.Server.Documents.Handlers
 
             var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.Operations.AddOperation(indexName, operationType, onProgress =>
+            var task = Database.Operations.AddOperation(Database,indexName, operationType, onProgress =>
                     operation(queryRunner, indexName, query, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ =>

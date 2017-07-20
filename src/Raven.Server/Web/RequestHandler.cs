@@ -374,6 +374,32 @@ namespace Raven.Server.Web
             HttpContext.Response.Headers.Remove("Content-Type");
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
+
+        protected bool TryGetServerAdmin()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var status = feature?.Status;
+            switch (status)
+            {
+                case null:
+                case RavenServer.AuthenticationStatus.None:
+                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.Expired:
+                case RavenServer.AuthenticationStatus.Allowed:
+                case RavenServer.AuthenticationStatus.NotYetValid:
+                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                        return true;
+
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, null);
+                    return false;
+                case RavenServer.AuthenticationStatus.ServerAdmin:
+                    return true;
+                default:
+                    ThrowInvalidAuthStatus(status);
+                    return false;
+            }
+        }
         
         protected bool TryGetAllowedDbs(string dbName, out Dictionary<string, DatabaseAccess> dbs, bool requireAdmin)
         {

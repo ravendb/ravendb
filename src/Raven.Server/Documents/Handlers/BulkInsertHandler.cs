@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Handlers
             var operationCancelToken = CreateOperationToken();
             var id = GetLongQueryString("id");
 
-            await Database.Operations.AddOperation("Bulk Insert", Operations.Operations.OperationType.BulkInsert,
+            await Database.Operations.AddOperation(Database,"Bulk Insert", Operations.Operations.OperationType.BulkInsert,
                 progress => DoBulkInsert(progress, operationCancelToken.Token),
                 id,
                 operationCancelToken

@@ -24,6 +24,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             var operationId = Database.Operations.GetNextOperationId();
 
             Database.Operations.AddOperation(
+                Database,
                 "Compact index: " + index.Name,
                 Operations.Operations.OperationType.IndexCompact,
                 onProgress => Task.Factory.StartNew(() => index.Compact(onProgress), token.Token), operationId, token);

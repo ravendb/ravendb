@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Operations
         }
 
         public Task<IOperationResult> AddOperation(
+            DocumentDatabase db,
             string description, 
             OperationType operationType, 
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
@@ -122,6 +123,7 @@ namespace Raven.Server.Documents.Operations
 
             var operation = new Operation
             {
+                Database = db,
                 Id = id,
                 Description = operationDescription,
                 Token = token,
@@ -266,6 +268,9 @@ namespace Raven.Server.Documents.Operations
             public OperationDescription Description;
 
             public OperationState State;
+            
+            [JsonIgnore]
+            public DocumentDatabase Database;
 
             public bool Killable => Token != null;
 

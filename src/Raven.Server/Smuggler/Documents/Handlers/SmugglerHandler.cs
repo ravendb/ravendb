@@ -109,6 +109,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     {
                         await
                             Database.Operations.AddOperation(
+                                Database,
                                 "Export database: " + Database.Name,
                                 Operations.OperationType.DatabaseExport,
                                 onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
@@ -326,7 +327,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
-                await Database.Operations.AddOperation("Import to: " + Database.Name,
+                await Database.Operations.AddOperation(Database,"Import to: " + Database.Name,
                     Operations.OperationType.DatabaseImport,
                     onProgress =>
                     {

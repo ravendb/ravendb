@@ -152,7 +152,7 @@ namespace Raven.Server.Web.System
             WriteFileFromZip(zipFilePath, fileName);
         }
 
-        [RavenAction("/", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/", "GET", AuthorizationStatus.UnauthenticatedClients)]
         public Task RavenRoot()
         {
             HttpContext.Response.Headers["Location"] = "/studio/index.html";

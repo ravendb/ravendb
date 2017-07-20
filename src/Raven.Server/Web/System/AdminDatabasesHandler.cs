@@ -486,6 +486,7 @@ namespace Raven.Server.Web.System
                     token.Token);
 
                 var task = ServerStore.Operations.AddOperation(
+                    null,
                     "Restoring database: " + databaseName,
                     Documents.Operations.Operations.OperationType.DatabaseRestore,
                     taskFactory: onProgress => Task.Run(async () => await restoreBackupTask.Execute(onProgress), token.Token),
