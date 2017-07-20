@@ -314,7 +314,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 status.Version++;
 
                 // save the backup status
-                //await WriteStatus(status);
+                await WriteStatus(status);
             }
         }
 
