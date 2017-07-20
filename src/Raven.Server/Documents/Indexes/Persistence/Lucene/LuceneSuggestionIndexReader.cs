@@ -262,6 +262,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private string[] QueryOverMultipleWords(SuggestionQueryServerSide parameters, string queryText)
         {
+            parameters.Popularity = false;
             var individualTerms = queryText.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
 
             var result = new HashSet<string>();
