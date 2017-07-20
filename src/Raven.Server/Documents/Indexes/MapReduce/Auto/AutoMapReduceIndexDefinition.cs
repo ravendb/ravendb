@@ -35,6 +35,14 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             return GroupByFields.ContainsKey(field);
         }
 
+        public override bool TryGetField(string field, out IndexField value)
+        {
+            if (base.TryGetField(field, out value))
+                return true;
+
+            return GroupByFields.TryGetValue(field, out value);
+        }
+
         protected override void PersistFields(JsonOperationContext context, BlittableJsonTextWriter writer)
         {
             PersistMapFields(context, writer);

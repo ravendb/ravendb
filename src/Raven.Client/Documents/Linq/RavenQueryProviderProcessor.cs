@@ -1523,8 +1523,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     if (entireExpression.Parameters[0].Name == parameterExpression.Name)
                     {
-                        throw new NotImplementedException();
-                        //AddGroupByFieldToRenameIfNeeded(fieldMember);
+                        _documentQuery.GroupByKey(null, GetSelectPath(fieldMember));
                     }
                     break;
                 case ExpressionType.MemberAccess:
@@ -1634,7 +1633,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                                 var firstPart = GetMember(methodCallExpression.Arguments[0]);
                                 var secondPart = GetMember(methodCallExpression.Arguments[1]);
 
-                                mapReduceField = $"{firstPart.Path},{secondPart.Path}";
+                                mapReduceField = $"{firstPart.Path}[].{secondPart.Path}";
 
                                 break;
                             }

@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
@@ -103,7 +102,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
-                Assert.Equal("Auto/Addresses/ByCountReducedByCity", indexDefinitions[0].Name);
+                Assert.Equal("Auto/Addresses/ByCountSortByCountReducedByCity", indexDefinitions[0].Name);
             }
         }
 

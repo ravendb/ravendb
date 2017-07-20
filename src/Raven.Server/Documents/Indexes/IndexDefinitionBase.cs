@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes
             return MapFields[field];
         }
 
-        public bool TryGetField(string field, out IndexField value)
+        public virtual bool TryGetField(string field, out IndexField value)
         {
             field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 

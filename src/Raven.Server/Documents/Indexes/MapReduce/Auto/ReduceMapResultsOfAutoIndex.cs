@@ -32,10 +32,20 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                     foreach (var propertyName in obj.GetPropertyNames())
                     {
-                        if (_indexDefinition.TryGetField(propertyName, out IndexField indexField))
+                        IndexField indexField;
+                        if (_indexDefinition.TryGetField(propertyName, out indexField))
                         {
                             switch (indexField.Aggregation)
                             {
+                                case AggregationOperation.None:
+                                    if (obj.TryGet(propertyName, out string stringValue) == false)
+                                        throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
+
+                                    aggregatedResult[propertyName] = new PropertyResult
+                                    {
+                                        ResultValue = stringValue
+                                    };
+                                    break;
                                 case AggregationOperation.Count:
                                 case AggregationOperation.Sum:
 
@@ -67,13 +77,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                 default:
                                     throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.Aggregation}' to aggregate on");
                             }
-                        }
-                        else if (obj.TryGet(propertyName, out string stringValue))
-                        {
-                            aggregatedResult[propertyName] = new PropertyResult
-                            {
-                                ResultValue = stringValue
-                            };
                         }
 
                         if (_indexDefinition.ContainsGroupByField(propertyName) == false)
