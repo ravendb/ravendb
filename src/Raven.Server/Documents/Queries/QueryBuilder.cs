@@ -12,6 +12,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser.Lucene;
 using Sparrow.Json;
 using Query = Raven.Server.Documents.Queries.Parser.Query;
+using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -236,7 +237,8 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 throw new InvalidOperationException();
 
-            var q = LegacyQueryBuilder.BuildQuery(value, QueryOperator.Or, fieldName, analyzer);
+            var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
+            var q = parser.Parse(value);
 
             return BoostNode(new RawLuceneASTNode(q), boost);
         }

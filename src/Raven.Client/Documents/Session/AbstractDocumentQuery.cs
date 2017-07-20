@@ -1378,7 +1378,7 @@ If you really want to do in memory filtering on the data returned from the query
             throw new InvalidOperationException("Cannot add INTERSECT at this point.");
         }
 
-        public void Exists(string fieldName)
+        public void WhereExists(string fieldName)
         {
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();

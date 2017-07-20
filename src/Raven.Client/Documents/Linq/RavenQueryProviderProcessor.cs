@@ -983,7 +983,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     _documentQuery.OpenSubclause();
-                    _documentQuery.Exists(expressionInfo.Path);
+                    _documentQuery.WhereExists(expressionInfo.Path);
                     _documentQuery.AndAlso();
                     _documentQuery.NegateNext();
                 }

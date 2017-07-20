@@ -671,6 +671,18 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
+        TSelf WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        TSelf WhereExists(string fieldName);
+
+        /// <summary>
         ///     Filter matches to be inside the specified radius
         /// </summary>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>

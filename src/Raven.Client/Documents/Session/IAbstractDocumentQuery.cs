@@ -180,6 +180,8 @@ namespace Raven.Client.Documents.Session
         /// <param name = "value">The value.</param>
         void WhereLessThanOrEqual(string fieldName, object value);
 
+        void WhereExists(string fieldName);
+
         /// <summary>
         ///   Add an AND to the query
         /// </summary>
@@ -326,7 +328,6 @@ namespace Raven.Client.Documents.Session
         void AddRootType(Type type);
         void SetTransformer(string transformer);
         void Distinct();
-        void Exists(string fieldName);
 
         /// <summary>
         /// Performs a query matching ANY of the provided values against the given field (OR)

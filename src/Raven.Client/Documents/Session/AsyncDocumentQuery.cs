@@ -329,6 +329,22 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        public IAsyncDocumentQuery<T> WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
+        {
+            WhereExists(GetMemberQueryPath(propertySelector.Body));
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExists(string fieldName)
+        {
+            WhereExists(fieldName);
+            return this;
+        }
+
+        /// <summary>
         /// Add an AND to the query
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AndAlso()
