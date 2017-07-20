@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminIndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/admin/indexes/compact", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/indexes/compact", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Compact()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/indexes/stop", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Stop()
         {
             var types = HttpContext.Request.Query["type"];
@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/start", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/indexes/start", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Start()
         {
             var types = HttpContext.Request.Query["type"];
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/enable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/indexes/enable", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Enable()
         {
             var name = GetStringQueryString("name");
@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return NoContent();
         }
 
-        [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/databases/*/admin/indexes/disable", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task Disable()
         {
             var name = GetStringQueryString("name");
