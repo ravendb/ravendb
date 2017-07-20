@@ -109,7 +109,7 @@ namespace Raven.Server.Documents
             {
                 while (_runTransactions)
                 {
-                    if (_operations.Count == 0)
+                    if (_operations.IsEmpty)
                     {
                         using (var generalMeter = GeneralWaitPerformanceMetrics.MeterPerformanceRate())
                         {
