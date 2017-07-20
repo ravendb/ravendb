@@ -827,6 +827,45 @@ namespace Raven.Server.Web.System
             await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
         }
 
+        [RavenAction("/admin/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task UpdateConflictResolver()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
+                return;
+
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            ServerStore.EnsureNotPassive();
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "read-conflict-resolver");
+                var conflictResolver = (ConflictSolver)EntityToBlittable.ConvertToEntity(typeof(ConflictSolver), "convert-conflict-resolver", json, DocumentConventions.Default);
+
+                using (context.OpenReadTransaction())
+                {
+                    var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+
+                    var (index, _) = await ServerStore.ModifyConflictSolverAsync(name, conflictResolver);
+                    await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["RaftCommandIndex"] = index,
+                            ["Key"] = name,
+                            [nameof(DatabaseRecord.ConflictSolverConfig)] = databaseRecord.ConflictSolverConfig.ToJson()
+                        });
+                        writer.Flush();
+                    }
+                }
+            }
+        }
         [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
         public async Task RemoveConnectionString()
         {
