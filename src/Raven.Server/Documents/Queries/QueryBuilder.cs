@@ -152,13 +152,21 @@ namespace Raven.Server.Documents.Queries
                         };
                     }
                 case OperatorType.And:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters, analyzer, boost), ToLuceneNode(query, expression.Right, metadata, parameters, analyzer, boost), OperatorLuceneASTNode.Operator.AND,
-                        true);
-                case OperatorType.Or:
-                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters, analyzer, boost), ToLuceneNode(query, expression.Right, metadata, parameters, analyzer, boost), OperatorLuceneASTNode.Operator.OR,
-                        true);
                 case OperatorType.AndNot:
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters, analyzer, boost),
+                            ToLuceneNode(query, expression.Right, metadata, parameters, analyzer, boost), OperatorLuceneASTNode.Operator.AND,
+                            true)
+                    {
+                        Prefix = expression.Type == OperatorType.AndNot ? LuceneASTNodeBase.PrefixOperator.Minus : LuceneASTNodeBase.PrefixOperator.None
+                    };
+                case OperatorType.Or:
                 case OperatorType.OrNot:
+                    return new OperatorLuceneASTNode(ToLuceneNode(query, expression.Left, metadata, parameters, analyzer, boost),
+                        ToLuceneNode(query, expression.Right, metadata, parameters, analyzer, boost), OperatorLuceneASTNode.Operator.OR,
+                        true)
+                    {
+                        Prefix = expression.Type == OperatorType.OrNot ? LuceneASTNodeBase.PrefixOperator.Minus : LuceneASTNodeBase.PrefixOperator.None
+                    };
                 case OperatorType.Method:
                     var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
                     var methodType = GetMethodType(methodName);
@@ -175,6 +183,8 @@ namespace Raven.Server.Documents.Queries
                             return HandleEndsWith(query, expression, metadata, parameters, boost);
                         case MethodType.Lucene:
                             return HandleLucene(query, expression, metadata, parameters, analyzer, boost);
+                        case MethodType.Exists:
+                            return HandleExists(query, expression);
                         default:
                             throw new NotSupportedException($"Method '{methodType}' is not supported.");
                     }
@@ -209,6 +219,13 @@ namespace Raven.Server.Documents.Queries
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+        }
+
+        private static LuceneASTNodeBase HandleExists(Query query, QueryExpression expression)
+        {
+            var fieldName = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[0]);
+
+            return CreateFieldNode(fieldName, FieldName.FieldType.String, CreateTermNode("*", TermLuceneASTNode.TermType.WildCardTerm));
         }
 
         private static LuceneASTNodeBase HandleLucene(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, string boost)
@@ -645,6 +662,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "lucene", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Lucene;
 
+            if (string.Equals(methodName, "exists", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Exists;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
         }
 
@@ -659,7 +679,8 @@ namespace Raven.Server.Documents.Queries
             Boost,
             StartsWith,
             EndsWith,
-            Lucene
+            Lucene,
+            Exists
         }
     }
 }
