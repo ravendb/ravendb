@@ -30,7 +30,7 @@ class getCollectionsCountCommand extends commandBase {
         this.post("/multi_get?parallel=yes", JSON.stringify(requests), this.ownerDb, null, 0)
             .done((result) => {
                 for (var i = 0; i < this.collections.length; i++) {
-                    this.collections[i].documentCount(result[i].Result.TotalResults);
+                    this.collections[i].documentCount(result[i].Result.TotalResults || 0);
                 }
                 task.resolve(this.collections);
             })
