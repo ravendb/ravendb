@@ -482,6 +482,30 @@ namespace Raven.Client.Documents
         }
 
         /// <summary>
+        /// LazyAsync Suggest alternative values for the queried term
+        /// </summary>
+        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable queryable)
+        {
+            return SuggestLazyAsync(queryable, new SuggestionQuery());
+        }
+
+        /// <summary>
+        /// LazyAsync Suggest alternative values for the queried term
+        /// </summary>
+        public static Lazy<Task<SuggestionQueryResult>> SuggestLazyAsync(this IQueryable source, SuggestionQuery query)
+        {
+            var inspector = source as IRavenQueryInspector;
+            if (inspector == null)
+                throw new ArgumentException("You can only use Raven Queryable with suggests");
+
+            SetSuggestionQueryParameters(inspector, query, true);
+
+            var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
+            var documentSession = (AsyncDocumentSession)inspector.Session;
+            return documentSession.AddLazyOperation<SuggestionQueryResult>(lazyOperation, null);
+        }
+
+        /// <summary>
         /// Register the query as a lazy async query in the session and return a lazy async
         /// instance that will evaluate the query only when needed
         /// </summary>
