@@ -55,8 +55,8 @@ class documentBasedColumnsProvider {
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
     }
 
-    findColumns(viewportWidth: number, results: pagedResult<document>): virtualColumn[] {
-        const columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth));
+    findColumns(viewportWidth: number, results: pagedResult<document>, prioritizedColumns?: string[]): virtualColumn[] {
+        const columnNames = this.findColumnNames(results, Math.floor(viewportWidth / documentBasedColumnsProvider.minColumnWidth), prioritizedColumns);
 
         // Insert the row selection checkbox column as necessary.
         const initialColumns: virtualColumn[] = [];
@@ -119,15 +119,11 @@ class documentBasedColumnsProvider {
         return Array.from(uniquePropertyNames);
     }
 
-    private findColumnNames(results: pagedResult<document>, limit: number): string[] {
+    private findColumnNames(results: pagedResult<document>, limit: number, prioritizedColumns?: string[]): string[] {
         const columnNames = documentBasedColumnsProvider.extractUniquePropertyNames(results);
 
-        if (columnNames.length > limit) {
-            columnNames.length = limit;
-        }
+        prioritizedColumns = prioritizedColumns || ["__metadata", "Name"];
 
-        // Put Id and Name columns first.
-        const prioritizedColumns = ["__metadata", "Name"];
         prioritizedColumns
             .reverse()
             .forEach(c => {
@@ -137,6 +133,10 @@ class documentBasedColumnsProvider {
                     columnNames.unshift(c);
                 }
             });
+
+        if (columnNames.length > limit) {
+            columnNames.length = limit;
+        }
 
         return columnNames;
     }
