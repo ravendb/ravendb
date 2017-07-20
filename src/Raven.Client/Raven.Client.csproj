@@ -28,32 +28,8 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="RavenDB.Client.targets">
-      <PackagePath>build</PackagePath>
-      <Pack>true</Pack>
-    </Content>
     <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
       <PackagePath>lib/netstandard1.3/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\..\libs\libsodium\x64\libsodium.dll">
-      <PackagePath>runtimes/win/native/libsodium.x64.dll</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.dll">
-      <PackagePath>runtimes/win/native/libsodium.x86.dll</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\..\libs\libsodium\x64\libsodium.so">
-      <PackagePath>runtimes/linux/native/libsodium.x64.so</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.so">
-      <PackagePath>runtimes/linux/native/libsodium.x86.so</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\..\libs\libsodium\x86\libsodium.arm.so">
-      <PackagePath>runtimes/linux/native/libsodium.arm.so</PackagePath>
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
