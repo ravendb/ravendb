@@ -1,5 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
+import clusterTopology = require("models/database/cluster/clusterTopology");
+
 class clusterNode {
     tag = ko.observable<string>();
     serverUrl = ko.observable<string>();
@@ -19,14 +21,6 @@ class clusterNode {
         }
     });
 
-    canBePromoted: KnockoutComputed<boolean>;
-    canBeDemoted: KnockoutComputed<boolean>;
-
-    constructor() {
-        this.canBeDemoted = ko.pureComputed(() => this.type() === "Member" || this.type() === "Promotable");
-        this.canBePromoted = ko.pureComputed(() => this.type() === "Watcher");
-    }
-
     updateWith(incoming: clusterNode) {
         this.tag(incoming.tag());
         this.type(incoming.type());
@@ -43,6 +37,49 @@ class clusterNode {
         node.errorDetails(errorDetails);
         return node;
     }
+
+    createCanBePromotedObservable(topologyProvider: KnockoutObservable<clusterTopology>) {
+        return ko.pureComputed(() => {
+            const topology = topologyProvider();
+            if (!topology.leader()) {
+                return false;
+            }
+            return this.type() === "Watcher";
+        });
+    }
+
+    createCanBeDemotedObservable(topologyProvider: KnockoutObservable<clusterTopology>) {
+        return ko.pureComputed(() => {
+            const topology = topologyProvider();
+            if (!topology.leader()) {
+                return false;
+            }
+            return topology.leader() !== this.tag() && (this.type() === "Member" || this.type() === "Promotable");
+        });
+    }
+
+    createStateObservable(topologyProvider: KnockoutObservable<clusterTopology>) {
+        return ko.pureComputed(() => {
+            const topology = topologyProvider();
+            if (!topology.leader()) {
+                return this.type() === "Watcher" ? "Waiting" : "Voting";
+            }
+
+            return this.connected() ? "Active" : "Error";
+        });
+    }
+
+    createStateClassObservable(topologyProvider: KnockoutObservable<clusterTopology>) {
+        return ko.pureComputed(() => {
+            const topology = topologyProvider();
+            if (!topology.leader()) {
+                return this.type() === "Watcher" ? "state-default" : "state-info";
+            }
+
+            return this.connected() ? "state-success" : "state-danger";
+        });
+    }
+
 }
 
 export = clusterNode;
