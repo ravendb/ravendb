@@ -43,8 +43,7 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }),
-                        CancellationToken.None);
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 var deleteResult = await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
@@ -78,8 +77,7 @@ namespace SlowTests.Client.Indexing
 
                 operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }),
-                        CancellationToken.None);
+                    .SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
 
                 var e = Assert.Throws<RavenException>(() =>
                 {
@@ -118,8 +116,7 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }),
-                        CancellationToken.None);
+                    .SendAsync(new PatchByIndexOperation(indexName, new IndexQuery(), new PatchRequest { Script = "this.LastName = 'Test';" }, new QueryOperationOptions { AllowStale = false }));
 
                 await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15));

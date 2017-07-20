@@ -373,7 +373,7 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingSuggest()
         {
             using (var store = GetDocumentStore())
@@ -393,7 +393,7 @@ namespace FastTests.Client.Queries
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed,Suggestions = true} }
+                        { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Suggestions = true} }
                     },
                     Name = "test"
                 }}));
@@ -407,6 +407,7 @@ namespace FastTests.Client.Queries
                     var query = session.Query<Image>("test")
                         .Search(x => x.Tags, "animal lover")
                         .Suggest();
+
                     Assert.NotEmpty(query.Suggestions);
                     Assert.Equal("animal", query.Suggestions[0]);
                 }

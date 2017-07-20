@@ -19,6 +19,14 @@ class clusterNode {
         }
     });
 
+    canBePromoted: KnockoutComputed<boolean>;
+    canBeDemoted: KnockoutComputed<boolean>;
+
+    constructor() {
+        this.canBeDemoted = ko.pureComputed(() => this.type() === "Member" || this.type() === "Promotable");
+        this.canBePromoted = ko.pureComputed(() => this.type() === "Watcher");
+    }
+
     updateWith(incoming: clusterNode) {
         this.tag(incoming.tag());
         this.type(incoming.type());

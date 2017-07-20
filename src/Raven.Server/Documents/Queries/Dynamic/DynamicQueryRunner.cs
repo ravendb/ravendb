@@ -17,10 +17,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryRunner
     {
-        public const string DynamicIndex = "dynamic";
-
-        public const string DynamicIndexPrefix = "dynamic/";
-
         public const string CollectionIndexPrefix = "collection/";
 
         private readonly IndexStore _indexStore;
@@ -36,20 +32,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _context = context;
             _token = token;
             _documents = documents;
-        }
-
-        public static bool IsDynamicIndex(string indexName)
-        {
-            if (indexName == null || indexName.Length < DynamicIndex.Length)
-                return false;
-
-            if (indexName.StartsWith(DynamicIndex, StringComparison.OrdinalIgnoreCase) == false)
-                return false;
-
-            if (indexName.Length == DynamicIndex.Length)
-                return true;
-
-            return indexName[DynamicIndex.Length] == '/';
         }
 
         public async Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
@@ -201,9 +183,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task<(Index Index, string Collection)> MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
         {
-            var collection = dynamicIndexName.Length == DynamicIndex.Length
+            var collection = dynamicIndexName.Length == Index.DynamicIndex.Length
                 ? Constants.Documents.Collections.AllDocumentsCollection
-                : dynamicIndexName.Substring(DynamicIndexPrefix.Length);
+                : dynamicIndexName.Substring(Index.DynamicIndexPrefix.Length);
 
             var map = DynamicQueryMapping.Create(collection, query);
 
@@ -303,7 +285,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQueryServerSide query)
         {
-            var collection = dynamicIndexName.Substring(DynamicIndexPrefix.Length);
+            var collection = dynamicIndexName.Substring(Index.DynamicIndexPrefix.Length);
             var map = DynamicQueryMapping.Create(collection, query);
             var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
 

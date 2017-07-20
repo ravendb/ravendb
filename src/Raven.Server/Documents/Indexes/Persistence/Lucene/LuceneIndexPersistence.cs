@@ -32,21 +32,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private static readonly StopAnalyzer StopAnalyzer = new StopAnalyzer(Version.LUCENE_30);
 
         private LuceneIndexWriter _indexWriter;
+        private Dictionary<string, LuceneSuggestionIndexWriter> _suggestionsIndexWriters;
 
         private SnapshotDeletionPolicy _snapshotter;
 
         private LuceneVoronDirectory _directory;
+        private readonly Dictionary<string, LuceneVoronDirectory> _suggestionsDirectories;
+        private readonly Dictionary<string, IndexSearcherHolder> _suggestionsIndexSearcherHolders;
 
         private readonly IndexSearcherHolder _indexSearcherHolder;
 
         private bool _disposed;
 
         private bool _initialized;
-        private Dictionary<string, object> _fields;
+        private readonly Dictionary<string, IndexField> _fields;
 
         public LuceneIndexPersistence(Index index)
         {
             _index = index;
+            _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
+            _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
 
             var fields = index.Definition.MapFields.Values.ToList();
 
@@ -72,8 +77,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     throw new NotSupportedException(_index.Type.ToString());
             }
 
-            _fields = fields.ToDictionary(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name), x => (object)null);
+            _fields = fields.ToDictionary(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name), x => x );
             _indexSearcherHolder = new IndexSearcherHolder(state => new IndexSearcher(_directory, true, state), _index._indexStorage.DocumentDatabase);
+
+            foreach (var field in _fields)
+            {
+                if ( !field.Value.HasSuggestions )
+                    continue;
+
+                string fieldName = field.Key;
+                _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+            }
         }
 
         public void Clean()
@@ -87,29 +101,54 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (_initialized)
                 throw new InvalidOperationException();
 
-            _directory = new LuceneVoronDirectory(environment);
-
             using (var tx = environment.WriteTransaction())
-            {
-                IState state;
-                using (_directory.SetTransaction(tx, out state))
-                {
-                    CreateIndexStructure(state);
-                    RecreateSearcher(tx);
+            {                
+                InitializeMainIndexStorage(tx, environment);
+                InitializeSuggestionsIndexStorage(tx, environment);
 
-                    // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
-                    tx.LowLevelTransaction.ModifyPage(0); 
-                }
-
+                // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
+                tx.LowLevelTransaction.ModifyPage(0);
+                
                 tx.Commit();
             }
 
             _initialized = true;
         }
 
-        private void CreateIndexStructure(IState state)
+        private void InitializeSuggestionsIndexStorage(Transaction tx, StorageEnvironment environment)
         {
-            new IndexWriter(_directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED, state).Dispose();
+            foreach (var field in _fields)
+            {
+                if (!field.Value.HasSuggestions)
+                    continue;
+
+                var directory = new LuceneVoronDirectory(tx, environment, $"Suggestions-{field.Key}");
+                _suggestionsDirectories[field.Key] = directory;
+                
+                IState state;
+                using (directory.SetTransaction(tx, out state))
+                {
+                    CreateIndexStructure(directory, state);
+                    RecreateSuggestionsSearcher(tx, field.Key);
+                }                
+            }            
+        }
+
+        private void InitializeMainIndexStorage(Transaction tx, StorageEnvironment environment)
+        {
+            _directory = new LuceneVoronDirectory(tx, environment);
+
+            IState state;
+            using (_directory.SetTransaction(tx, out state))
+            {
+                CreateIndexStructure(_directory, state);
+                RecreateSearcher(tx);
+            }
+        }
+
+        private void CreateIndexStructure(LuceneVoronDirectory directory, IState state)
+        {
+            new IndexWriter(directory, _dummyAnalyzer, IndexWriter.MaxFieldLength.UNLIMITED, state).Dispose();
         }
 
         public IndexWriteOperation OpenIndexWriter(Transaction writeTransaction)
@@ -149,6 +188,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return new IndexFacetedReadOperation(_index.Definition.Name, _index.Definition.MapFields, _directory, _indexSearcherHolder, readTransaction, _index._indexStorage.DocumentDatabase);
         }
 
+        public LuceneSuggestionIndexReader OpenSuggestionIndexReader(Transaction readTransaction, string field)
+        {
+            CheckDisposed();
+            CheckInitialized();
+
+            if (!_suggestionsDirectories.TryGetValue(field, out LuceneVoronDirectory directory))
+                throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
+
+            if (!_suggestionsIndexSearcherHolders.TryGetValue(field, out IndexSearcherHolder holder))
+                throw new InvalidOperationException($"No suggestions index found for field '{field}'.");
+
+            return new LuceneSuggestionIndexReader(_index, directory, holder, readTransaction);
+        }
+
+        internal IndexSearcherHolder RecreateSuggestionsSearcher(Transaction asOfTx, string fieldKey)
+        {
+            // TODO: Retrieve from hash-table the appropriate searcher holder
+            //       Set the index searcher on the holder
+            //       Return holder.
+            var holder = _suggestionsIndexSearcherHolders[fieldKey];
+            holder.SetIndexSearcher(asOfTx);
+            return holder;
+        }
+        
         internal void RecreateSearcher(Transaction asOfTx)
         {
             _indexSearcherHolder.SetIndexSearcher(asOfTx);
@@ -172,6 +235,39 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
+        internal Dictionary<string, LuceneSuggestionIndexWriter> EnsureSuggestionIndexWriter(IState state)
+        {
+            if (_suggestionsIndexWriters != null)
+                return _suggestionsIndexWriters;
+            
+            _suggestionsIndexWriters = new Dictionary<string, LuceneSuggestionIndexWriter>();
+
+            foreach (var item in _fields)
+            {
+                if (!item.Value.HasSuggestions)
+                    continue;
+
+                string field = item.Key;
+                
+                try
+                {
+                    var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
+                    // TODO [ppekrol] support for IndexReaderWarmer?
+                    var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field], 
+                                        snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, 
+                                        _index._indexStorage.DocumentDatabase, state);
+
+                    _suggestionsIndexWriters[field] = writer;
+                }
+                catch (Exception e)
+                {
+                    throw new IndexWriteException(e);
+                }
+            }
+
+            return _suggestionsIndexWriters;
+        }
+
         public bool ContainsField(string field)
         {
             if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
@@ -192,8 +288,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             _indexWriter?.Analyzer?.Dispose();
             _indexWriter?.Dispose();
+
+            if (_suggestionsIndexWriters != null)
+            {
+                foreach (var writer in _suggestionsIndexWriters)
+                {
+                    writer.Value?.Dispose();
+                }
+            }
+
             _converter?.Dispose();
             _directory?.Dispose();
+
+            foreach (var directory in _suggestionsDirectories)
+            {
+                directory.Value?.Dispose();
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

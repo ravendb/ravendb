@@ -9,8 +9,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
@@ -30,13 +30,10 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Raven.Client.Server.PeriodicBackup;
-using Raven.Server.Config;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
-using Sparrow.LowMemory;
-using Voron.Platform.Win32;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -865,6 +862,9 @@ namespace Raven.Server.Web.System
         {
             var name = GetStringQueryString("database", false);
             var isServerScript = GetBoolValueQueryString("server-script", false) ?? false;
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate.FriendlyName;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var content = await context.ReadForMemoryAsync(RequestBodyStream(), "read-admin-script");
@@ -879,6 +879,11 @@ namespace Raven.Server.Web.System
                 if (isServerScript)
                 {
                     var console = new AdminJsConsole(Server);
+                    if (console.Log.IsOperationsEnabled)
+                    {
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert?? "None"}");
+                    }
+
                     result = console.ApplyServerScript(adminJsScript);
                 }
 
@@ -892,6 +897,10 @@ namespace Raven.Server.Web.System
                     }
 
                     var console = new AdminJsConsole(database);
+                    if (console.Log.IsOperationsEnabled)
+                    {
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert?? "None"}");
+                    }
                     result = console.ApplyScript(adminJsScript);
                 }
 

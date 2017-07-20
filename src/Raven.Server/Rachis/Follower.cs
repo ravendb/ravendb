@@ -220,7 +220,7 @@ namespace Raven.Server.Rachis
                 _engine.Log.Info($"Follower {_engine.Tag}: Got a negotiation request for term {negotiation.Term} where our term is {_engine.CurrentTerm}");
             }
             if (negotiation.Term > _engine.CurrentTerm)
-            {               
+            {
                 _engine.FoundAboutHigherTerm(negotiation.Term);
             }
 
@@ -271,7 +271,8 @@ namespace Raven.Server.Rachis
                 {
                     if (_engine.Log.IsInfoEnabled)
                     {
-                        _engine.Log.Info($"Follower {_engine.Tag}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
+                        _engine.Log.Info(
+                            $"Follower {_engine.Tag}: Got installed snapshot with last index={snapshot.LastIncludedIndex} while our lastCommitIndex={lastCommitIndex}, will just ignore it");
                     }
                     //This is okay to ignore because we will just get the commited entries again and skip them
                     ReadInstallSnapshotAndIgnoreContent(context);
@@ -300,7 +301,7 @@ namespace Raven.Server.Rachis
                         throw new InvalidOperationException(message);
                     }
                 }
-                                
+
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                 {
@@ -335,12 +336,9 @@ namespace Raven.Server.Rachis
             });
 
             _engine.Timeout.Defer(_connection.Source);
-
-            using (context.OpenReadTransaction())
-            {
-                // notify the state machine
-                _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
-            }
+            
+            // notify the state machine
+            _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
 
             _engine.Timeout.Defer(_connection.Source);
         }

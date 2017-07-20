@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client;
@@ -16,7 +17,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Revisions
 {
-    public class RevisionsReplication : ReplicationTestsBase
+    public class RevisionsReplication : ReplicationTestsBase, IDocumentTombstoneAware
     {
         private void WaitForMarker(DocumentStore store1, DocumentStore store2)
         {
@@ -171,6 +172,11 @@ namespace FastTests.Server.Documents.Revisions
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
+                var database = await GetDocumentDatabaseInstanceFor(store1);
+                var database2 = await GetDocumentDatabaseInstanceFor(store2);
+                database.DocumentTombstoneCleaner.Subscribe(this);
+                database2.DocumentTombstoneCleaner.Subscribe(this);
+
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);
                 await SetupReplicationAsync(store1, store2);
@@ -236,6 +242,7 @@ namespace FastTests.Server.Documents.Revisions
 
                 statistics = store2.Admin.Send(new GetStatisticsOperation());
                 Assert.Equal(useSession ? 3 : 2, statistics.CountOfDocuments);
+               
                 Assert.Equal(0, statistics.CountOfRevisionDocuments); 
             }
         }
@@ -255,6 +262,15 @@ namespace FastTests.Server.Documents.Revisions
         private class Product
         {
             public string Name { get; set; }
+        }
+
+        public Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
+        {
+            return new Dictionary<string, long>
+            {
+                ["Products"] = 0,
+                ["Users"] = 0
+            };
         }
     }
 }

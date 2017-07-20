@@ -17,7 +17,7 @@ namespace SlowTests.Tests.Suggestions
 {
     public class SuggestionsLazy : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingLinq()
         {
             using (var store = GetDocumentStore())
@@ -40,9 +40,9 @@ namespace SlowTests.Tests.Suggestions
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
-
-                    s.Query<User>("Test").Customize(x => x.WaitForNonStaleResults()).ToList();
                 }
+
+                WaitForIndexing(store);
 
                 using (var s = store.OpenSession())
                 {

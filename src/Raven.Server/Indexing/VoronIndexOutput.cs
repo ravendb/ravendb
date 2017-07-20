@@ -13,13 +13,15 @@ namespace Raven.Server.Indexing
         public static readonly int MaxFileChunkSize = 128 * 1024 * 1024;
 
         private readonly string _name;
+        private readonly string _tree;
         private readonly Transaction _tx;
         private readonly Stream _file;
         private readonly string _fileTempPath;
 
-        public VoronIndexOutput(StorageEnvironmentOptions options, string name, Transaction tx)
+        public VoronIndexOutput(StorageEnvironmentOptions options, string name, Transaction tx, string tree)
         {
             _name = name;
+            _tree = tree;
             _tx = tx;
             _fileTempPath = options.TempPath.Combine(name + "_" + Guid.NewGuid()).FullPath;
             //TODO: Pass this flag
@@ -54,7 +56,7 @@ namespace Raven.Server.Indexing
         {
             base.Dispose(disposing);
             
-            var files = _tx.ReadTree("Files");
+            var files = _tx.ReadTree(_tree);
 
             using (Slice.From(_tx.Allocator, _name, out Slice nameSlice))
             {

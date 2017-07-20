@@ -20,6 +20,7 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;
@@ -29,7 +30,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
-    public class IndexReadOperation : IndexOperationBase
+    public sealed class IndexReadOperation : IndexOperationBase
     {
         private static readonly string[] IntersectSeparators = { Constants.Documents.Querying.IntersectSeparator };
 
@@ -46,8 +47,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private readonly IState _state;
 
-        public IndexReadOperation(Index index, LuceneVoronDirectory directory,
-            IndexSearcherHolder searcherHolder, Transaction readTransaction)
+        public IndexReadOperation(Index index, LuceneVoronDirectory directory, IndexSearcherHolder searcherHolder, Transaction readTransaction)
             : base(index.Name, LoggingSource.Instance.GetLogger<IndexReadOperation>(index._indexStorage.DocumentDatabase.Name))
         {
             try

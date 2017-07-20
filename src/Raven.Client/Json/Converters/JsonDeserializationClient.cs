@@ -4,8 +4,10 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
@@ -82,6 +84,8 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, FacetedQueryResult> FacetedQueryResult = GenerateJsonDeserializationRoutine<FacetedQueryResult>();
 
+        public static readonly Func<BlittableJsonReaderObject, SuggestionQueryResult> SuggestQueryResult = GenerateJsonDeserializationRoutine<SuggestionQueryResult>();
+
         public static readonly Func<BlittableJsonReaderObject, TermsQueryResult> TermsQueryResult = GenerateJsonDeserializationRoutine<TermsQueryResult>();
 
         public static readonly Func<BlittableJsonReaderObject, IndexingStatus> IndexingStatus = GenerateJsonDeserializationRoutine<IndexingStatus>();
@@ -144,7 +148,7 @@ namespace Raven.Client.Json.Converters
 
         internal static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 
-        internal static readonly Func<BlittableJsonReaderObject, Raven.Client.Documents.Operations.Configuration.GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<Raven.Client.Documents.Operations.Configuration.GetClientConfigurationOperation.Result>();
+        internal static readonly Func<BlittableJsonReaderObject, GetClientConfigurationOperation.Result> ClientConfigurationResult = GenerateJsonDeserializationRoutine<GetClientConfigurationOperation.Result>();                
 
         internal static readonly Func<BlittableJsonReaderObject, S3Settings> S3Settings = GenerateJsonDeserializationRoutine<S3Settings>();
 

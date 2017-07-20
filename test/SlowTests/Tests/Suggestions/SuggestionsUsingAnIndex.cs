@@ -44,21 +44,22 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void ExactMatch()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new DefaultSuggestionIndex());
+                new DefaultSuggestionIndex().Execute(documentStore);
+                //documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
                     s.Store(new User { Name = "Ayende" });
                     s.Store(new User { Name = "Oren" });
                     s.SaveChanges();
-
-                    s.Query<User, DefaultSuggestionIndex>().Customize(x => x.WaitForNonStaleResults()).ToList();
                 }
+
+                WaitForIndexing(documentStore);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -75,12 +76,13 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingLinq()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new DefaultSuggestionIndex());
+                new DefaultSuggestionIndex().Execute(documentStore);
+                // documentStore.ExecuteIndex();
 
                 using (var s = documentStore.OpenSession())
                 {
@@ -103,12 +105,13 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingLinq_with_typo_with_options_multiple_fields()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new DefaultSuggestionIndex());
+                new DefaultSuggestionIndex().Execute(documentStore);
+                //documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
@@ -132,12 +135,13 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingLinq_with_typo_multiple_fields_in_reverse_order()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new DefaultSuggestionIndex());
+                new DefaultSuggestionIndex().Execute(documentStore);
+                //documentStore.ExecuteIndex(new DefaultSuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
@@ -161,12 +165,13 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void UsingLinq_WithOptions()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new SuggestionIndex());
+                new SuggestionIndex().Execute(documentStore);
+                //documentStore.ExecuteIndex(new SuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {
@@ -189,12 +194,13 @@ namespace SlowTests.Tests.Suggestions
             }
         }
 
-        [Fact(Skip = "RavenDB-6573")]
+        [Fact]
         public void WithTypo()
         {
             using (var documentStore = GetDocumentStore())
             {
-                documentStore.ExecuteIndex(new SuggestionIndex());
+                new SuggestionIndex().Execute(documentStore);
+                //documentStore.ExecuteIndex(new SuggestionIndex());
 
                 using (var s = documentStore.OpenSession())
                 {

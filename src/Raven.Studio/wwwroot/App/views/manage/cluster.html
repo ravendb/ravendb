@@ -45,11 +45,14 @@
                         <div class="flex-separator"></div>
                         <div class="actions-container">
                             <div class="actions">
-                                <!-- TODO 
-                                <button class="btn btn-default"><i class="icon-arrow-filled-up"></i> <span>Promote</span></button>
-                                <button class="btn btn-default"><i class="icon-arrow-filled-down"></i> <span>Demote</span></button>
-                                    
-                                    -->
+                                <button class="btn btn-default" title="Promote watcher to become member/promotable" 
+                                        data-bind="click: _.partial($parent.promote, $data), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, disable: _.includes($root.spinners.promote(), tag()), visible: canBePromoted" >
+                                    <i class="icon-arrow-filled-up"></i> <span>Promote</span>
+                                </button>
+                                <button class="btn btn-default" title="Demote cluster node to watcher" 
+                                        data-bind="click: _.partial($parent.demote, $data), css: { 'btn-spinner': _.includes($root.spinners.demote(), tag()) }, disable: _.includes($root.spinners.demote(), tag()), visible: $root.topology().leader() !== tag() && canBeDemoted()" >
+                                    <i class="icon-arrow-filled-down"></i> <span>Demote</span>
+                                </button>
                                 <button class="btn btn-default" 
                                         data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
                                     <i class="icon-stepdown"></i> <span>Step down</span>

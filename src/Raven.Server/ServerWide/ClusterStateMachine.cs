@@ -174,7 +174,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
                         // Once the certificate is in the cluster, no need to keep it locally so we delete it.
-                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key)) //TODO iftah, also when install snapshot
+                        if (cmd.TryGet(nameof(PutCertificateCommand.Name), out string key))
                             DeleteLocalState(context, key);
                         break;
                     case nameof(PutClientConfigurationCommand):
@@ -198,10 +198,7 @@ namespace Raven.Server.ServerWide
             if (leader == null)
                 return;
 
-            leader.SetStateOf(index, tcs =>
-            {
-                tcs.TrySetException(e);
-            });
+            leader.SetStateOf(index, tcs => { tcs.TrySetException(e); });
         }
 
         private static bool ValidatePropertyExistence(BlittableJsonReaderObject cmd, string propertyTypeName, string propertyName, out string errorMessage)
@@ -227,7 +224,8 @@ namespace Raven.Server.ServerWide
                 var record = ReadDatabase(context, updateCommand.DatabaseName);
                 if (record == null)
                 {
-                    NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
+                    NotifyLeaderAboutError(index, leader,
+                        new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist"));
                     return;
                 }
 
@@ -338,7 +336,8 @@ namespace Raven.Server.ServerWide
                     {
                         if (items.ReadByKey(valueNameLowered, out TableValueReader reader) == false && addDatabaseCommand.RaftCommandIndex != 0)
                         {
-                            NotifyLeaderAboutError(index, leader, new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
+                            NotifyLeaderAboutError(index, leader,
+                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " does not exists, but had a non zero etag"));
                             return;
                         }
 
@@ -348,7 +347,8 @@ namespace Raven.Server.ServerWide
                         if (actualEtag != addDatabaseCommand.RaftCommandIndex.Value)
                         {
                             NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag + " but was expecting " + addDatabaseCommand.RaftCommandIndex));
+                                new ConcurrencyException("Concurrency violation, the database " + addDatabaseCommand.Name + " has etag " + actualEtag +
+                                                         " but was expecting " + addDatabaseCommand.RaftCommandIndex));
                             return;
                         }
                     }
@@ -391,7 +391,8 @@ namespace Raven.Server.ServerWide
                 var delCmd = JsonDeserializationCluster.DeleteValueCommand(cmd);
                 if (delCmd.Name.StartsWith("db/"))
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
+                    NotifyLeaderAboutError(index, leader,
+                        new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
                     return;
                 }
                 using (Slice.From(context.Allocator, delCmd.Name, out Slice str))
@@ -413,7 +414,8 @@ namespace Raven.Server.ServerWide
                 var command = (PutValueCommand<T>)CommandBase.CreateFrom(cmd);
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                 {
-                    NotifyLeaderAboutError(index, leader, new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated Database calls"));
+                    NotifyLeaderAboutError(index, leader,
+                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated Database calls"));
                     return;
                 }
 
@@ -511,7 +513,8 @@ namespace Raven.Server.ServerWide
                         if (databaseRecordJson == null)
                         {
                             if (updateCommand.ErrorOnDatabaseDoesNotExists)
-                                NotifyLeaderAboutError(index, leader, DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
+                                NotifyLeaderAboutError(index, leader,
+                                    DatabaseDoesNotExistException.CreateWithMessage(databaseName, $"Could not execute update command of type '{type}'."));
                             return null;
                         }
 
@@ -520,7 +523,8 @@ namespace Raven.Server.ServerWide
                         if (updateCommand.RaftCommandIndex != null && etag != updateCommand.RaftCommandIndex.Value)
                         {
                             NotifyLeaderAboutError(index, leader,
-                                new ConcurrencyException($"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
+                                new ConcurrencyException(
+                                    $"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
                             return null;
                         }
 
@@ -552,7 +556,6 @@ namespace Raven.Server.ServerWide
 
             return databaseRecord;
         }
-
 
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
@@ -604,7 +607,6 @@ namespace Raven.Server.ServerWide
                 do
                 {
                     yield return it.CurrentKey.ToString();
-
                 } while (it.MoveNext());
             }
         }
@@ -622,6 +624,23 @@ namespace Raven.Server.ServerWide
                         yield break;
 
                     yield return GetCurrentItem(context, result.Value);
+                }
+            }
+        }
+
+        public IEnumerable<string> ItemKeysStartingWith(TransactionOperationContext context, string prefix, int start, int take)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            var dbKey = prefix.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, start))
+                {
+                    if (take-- <= 0)
+                        yield break;
+
+                    yield return GetCurrentItemKey(context, result.Value);
                 }
             }
         }
@@ -681,7 +700,6 @@ namespace Raven.Server.ServerWide
         public BlittableJsonReaderObject Read<T>(TransactionOperationContext<T> context, string name, out long etag)
             where T : RavenTransaction
         {
-
             var dbKey = name.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice key))
             {
@@ -727,7 +745,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc, out long etag)
+        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
+            out long etag)
         {
             var ptr = reader.Read(2, out int size);
             doc = new BlittableJsonReaderObject(ptr, size, context);
@@ -768,9 +787,8 @@ namespace Raven.Server.ServerWide
                     }
                     using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
                     {
-
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        if(reply.AuthorizationSuccessful == false)
+                        if (reply.AuthorizationSuccessful == false)
                         {
                             throw new AuthorizationException("Unable to access " + url + " because " + reply.Message);
                         }
@@ -786,20 +804,38 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex)
+        public override void OnSnapshotInstalled(TransactionOperationContext context, long lastIncludedIndex, ServerStore serverStore)
         {
-            var listOfDatabaseName = GetDatabaseNames(context).ToList();
-            //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
-            var onDatabaseChanged = DatabaseChanged;
-            if (onDatabaseChanged != null)
+            using (context.OpenWriteTransaction())
             {
-                _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
-                TaskExecutor.Execute(_ =>
+                // Lets read all the certificate keys from the cluster, and delete the matching ones from the local state
+                var clusterCertificateKeys = serverStore.Cluster.ItemKeysStartingWith(context, Constants.Certificates.Prefix, 0, int.MaxValue);
+
+                foreach (var key in clusterCertificateKeys)
                 {
-                    foreach (var db in listOfDatabaseName)
-                        onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
-                }, null);
+                    using (var localCertificate = GetLocalState(context, key))
+                    {
+                        if (localCertificate == null)
+                            continue;
+                        DeleteLocalState(context, key);
+                    }
+                }
+                //There is potentially a lot of work to be done here so we are responding to the change on a separate task.
+                var onDatabaseChanged = DatabaseChanged;
+                if (onDatabaseChanged != null)
+                {
+                    var listOfDatabaseName = GetDatabaseNames(context).ToList();
+                    TaskExecutor.Execute(_ =>
+                    {
+                        foreach (var db in listOfDatabaseName)
+                            onDatabaseChanged.Invoke(this, (db, lastIncludedIndex, "SnapshotInstalled"));
+                    }, null);
+                }
+
+                context.Transaction.Commit();
             }
+            
+            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
         }
     }
 

@@ -20,7 +20,7 @@ namespace Raven.Server.Json
             // save it, might as well reduce the cost
 
             if (value.Length < 2048 && _reader == null)
-                return new StringReader(GetStringFor(value));
+                return new ReusableStringReader(GetStringFor(value));
 
             if (_mmapStream == null)
                 _mmapStream = new MmapStream(null, 0);

@@ -22,6 +22,7 @@ using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Json;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.NotificationCenter.Notifications;
@@ -122,7 +123,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public ClusterStateMachine Cluster => _engine.StateMachine;
+        public ClusterStateMachine Cluster => _engine?.StateMachine;
         public string LeaderTag => _engine.LeaderTag;
         public RachisConsensus.State CurrentState => _engine.CurrentState;
         public string NodeTag => _engine.Tag;
@@ -1036,7 +1037,7 @@ namespace Raven.Server.ServerWide
 
         public void SecedeFromCluster()
         {
-            Engine.Bootstrap(this, NodeHttpServerUrl, forNewCluster: true);
+            Engine.Bootstrap(NodeHttpServerUrl, forNewCluster: true);
         }
 
         public Task<(long Etag, object Result)> WriteDatabaseRecordAsync(
@@ -1069,7 +1070,26 @@ namespace Raven.Server.ServerWide
         {
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
-                _engine.Bootstrap(this, _ravenServer.ServerStore.NodeHttpServerUrl);
+                _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
+                
+                // We put a certificate in the local state to tell the server who to trust, and this is done before
+                // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
+                // create the cluster, we register those local certificates in the cluster.
+                using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                {
+                    using (ctx.OpenReadTransaction())
+                    {
+                        foreach (var localCertKey in Cluster.GetCertificateKeysFromLocalState(ctx))
+                        {
+                            // If there are trusted certificates in the local state, we will register them in the cluster now
+                            using (var localCertificate = Cluster.GetLocalState(ctx, localCertKey))
+                            {
+                                var certificateDefinition = JsonDeserializationServer.CertificateDefinition(localCertificate);
+                                PutValueInClusterAsync(new PutCertificateCommand(localCertKey, certificateDefinition));
+                            }
+                        }
+                    }
+                }
             }
         }
 
