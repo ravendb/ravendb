@@ -37,6 +37,7 @@ namespace FastTests
         {
             var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory);
             db = database;
+            Debug.Assert(database != null);
             return new DisposableAction(() =>
             {
                 DeleteDatabase(database.Name);
