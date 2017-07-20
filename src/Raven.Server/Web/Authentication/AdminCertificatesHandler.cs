@@ -69,7 +69,8 @@ namespace Raven.Server.Web.Authentication
             {
                 ValidatePermissions(certificateJson, out var permissions, out var serverAdmin);
 
-                certificateJson.TryGet("Certificate", out string certificate);
+                if(certificateJson.TryGet("Certificate", out string certificate) == false)
+                    throw new ArgumentException("'Certificate' is a mandatory property");
 
                 var certificateDefinition = new CertificateDefinition()
                 {
@@ -78,7 +79,16 @@ namespace Raven.Server.Web.Authentication
                     ServerAdmin = serverAdmin
                 };
 
-                var x509Certificate = new X509Certificate2(Convert.FromBase64String(certificate));
+                byte[] certBytes;
+                try
+                {
+                    certBytes = Convert.FromBase64String(certificate);
+                }
+                catch (Exception e)
+                {
+                    throw new ArgumentException("Unable to parse the 'Certificate' property, expected Base64 value", e);
+                }
+                var x509Certificate = new X509Certificate2(certBytes);
                 if (x509Certificate.HasPrivateKey)
                 {
                     // avoid storing the private key
