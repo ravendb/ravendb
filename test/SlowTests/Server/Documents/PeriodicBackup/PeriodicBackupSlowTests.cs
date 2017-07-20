@@ -464,7 +464,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("Backup location can't be null or empty", e.InnerException.Message);
 
-                restoreConfiguration.BackupLocation = "C:\\test";
+                restoreConfiguration.BackupLocation = "~\\test\\test\\test\\test\\test";
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("Backup location doesn't exist", e.InnerException.Message);
