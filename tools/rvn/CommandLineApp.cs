@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -55,32 +57,30 @@ namespace rvn
         {
             _app.Command("admin-channel", cmd =>
             {
-                cmd.Description = "Named Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery.";
+                cmd.ExtendedHelpText = cmd.Description = "Open Named Pipe Connection to RavenDB with PID. If PID ommited - will try auto pid discovery.";
                 cmd.HelpOption(HelpOptionString);
                 var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
                 cmd.OnExecute(() =>
                 {
-                    if (int.TryParse(pidArg.Value, out var pid))
+                    if (string.IsNullOrEmpty(pidArg.Value)) 
                     {
-                        AdminChannel.Connect(pid);
+                        AdminChannel.Connect(null);
                     }
-                    else
+                    else 
                     {
-                        return ExitWithError("RavenDB server PID argument is mandatory.", cmd);
+                        if (int.TryParse(pidArg.Value, out var pid)) {
+                            AdminChannel.Connect(pid);
+                        }
+                        else {
+                            return ExitWithError("RavenDB server PID argument is mandatory.", cmd);
+                        }
                     }
 
                     return 0;
                 });
             });
         }
-
-        private static int ExitWithError(string errMsg, CommandLineApplication cmd)
-        {
-            cmd.ShowHelp();
-            cmd.Error.WriteLine(errMsg);
-            return 1;
-        }
-
+        
         private static void ConfigureWindowsServiceCommand()
         {
             const string defaultServiceName = "RavenDB";
@@ -92,17 +92,17 @@ namespace rvn
 
             _app.Command("windows-service", cmd =>
             {
-                cmd.Description = "allows to perform an operation on RavenDB Server run as Windows Service";
+                cmd.Description = "Allows to perform an operation on RavenDB Server run as Windows Service";
                 cmd.HelpOption(HelpOptionString);
                 ConfigureServiceNameOption(cmd);
 
                 cmd.Command("register", subcmd =>
                 {
                     var serviceNameOpt = ConfigureServiceNameOption(subcmd);
-                    var serverDirOpt = subcmd.Option("--server-dir", "RavenDB Server directory", CommandOptionType.SingleValue);
+                    var serverDirOpt = ConfigureServerDirOption(subcmd);
 
-                    subcmd.Description = "registers RavenDB Server as Windows Service";
-                    subcmd.ExtendedHelpText = "\r\nRegisters RavenDB Server as Windows Service. Any additional arguments passed after command options are going to be passed to the server run as Windows Service.";
+                    subcmd.Description = "Registers RavenDB Server as Windows Service";
+                    subcmd.ExtendedHelpText = "\r\nRegisters RavenDB Server as Windows Service. Any additional arguments passed after command options are going to be passed to the server.";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.OnExecute(() =>
@@ -120,7 +120,7 @@ namespace rvn
                 cmd.Command("unregister", subcmd =>
                 {
                     var serviceNameOpt = ConfigureServiceNameOption(subcmd);
-                    subcmd.Description = "unregisters RavenDB Server Windows Service";
+                    subcmd.ExtendedHelpText = subcmd.Description = "Unregisters RavenDB Server Windows Service";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.OnExecute(() =>
@@ -133,7 +133,7 @@ namespace rvn
                 cmd.Command("start", subcmd =>
                 {
                     var serviceNameOpt = ConfigureServiceNameOption(subcmd);
-                    subcmd.Description = "starts RavenDB Server Windows Service";
+                    subcmd.Description = "Starts RavenDB Server Windows Service";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.OnExecute(() =>
@@ -146,7 +146,7 @@ namespace rvn
                 cmd.Command("stop", subcmd =>
                 {
                     var serviceNameOpt = ConfigureServiceNameOption(subcmd);
-                    subcmd.Description = "stops RavenDB Server Windows Service";
+                    subcmd.ExtendedHelpText = subcmd.Description = "Stops RavenDB Server Windows Service";
                     subcmd.HelpOption(HelpOptionString);
 
                     subcmd.OnExecute(() =>
@@ -164,21 +164,20 @@ namespace rvn
             });
         }
 
-        private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
-        {
-            return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
-        }
-
         private static void ConfigureOfflineOperationCommand()
         {
             _app.Command("offline-operation", cmd =>
             {
-                cmd.Description = "Performs an offline operation on the RavenDB server.";
+                const string systemDirArgText = "[RavenDB system directory]";
+                const string systemDirArgDescText = "RavenDB system directory";
+
+                cmd.Description = "Performs an offline operation on the RavenDB Server.";
                 cmd.HelpOption(HelpOptionString);
 
                 cmd.Command("init-keys", subcmd =>
                 {
-                    subcmd.Description = "Generates encryption keys";
+                    subcmd.ExtendedHelpText = subcmd.Description = "Initialize keys";
+                    subcmd.HelpOption(HelpOptionString);
                     subcmd.OnExecute(() =>
                     {
                         OfflineOperations.InitKeys();
@@ -188,44 +187,32 @@ namespace rvn
 
                 cmd.Command("get-key", subcmd =>
                 {
-                    subcmd.Description = "exports unprotected server store encryption key to a given directory";
+                    subcmd.Description = "Exports unprotected server store encryption key";
                     subcmd.ExtendedHelpText =
-                        "\r\nExports unprotected server store encryption key to RavenDB directory. This key will allow decryption of the server store and must be secured. This is REQUIRED when restoring backups from an encrypted server store.";
+                        "\r\nExports unprotected server store encryption key. This key will allow decryption of the server store and must be secured. This is REQUIRED when restoring backups from an encrypted server store.";
                     subcmd.HelpOption(HelpOptionString);
 
-                    var pathArg = subcmd.Argument("[path]", "RavenDB directory path");
-                    subcmd.OnExecute(() =>
+                    subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
-                        if (string.IsNullOrEmpty(pathArg.Value) == false)
+                        subcmd.OnExecute(() =>
                         {
-                            OfflineOperations.GetKey(pathArg.Value);
-                        }
-                        else
-                        {
-                            return ExitWithError("RavenDB directory path argument is mandatory.", subcmd);
-                        }
-
-                        return 0;
+                            return PerformOfflineOperation(
+                                () => OfflineOperations.GetKey(systemDir.Value), systemDir, subcmd);
+                        });
                     });
                 });
 
                 cmd.Command("put-key", subcmd =>
                 {
-                    subcmd.Description = @"restores and protects the key for current OS user";
+                    subcmd.Description = @"Restores and protects the key for current OS user";
                     subcmd.HelpOption(HelpOptionString);
-                    var path = subcmd.Argument("[path]", "RavenDB directory path");
-                    subcmd.OnExecute(() =>
+                    subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
-                        if (string.IsNullOrEmpty(path.Value) == false)
+                        subcmd.OnExecute(() =>
                         {
-                            OfflineOperations.PutKey(path.Value);
-                        }
-                        else
-                        {
-                            return ExitWithError("RavenDB directory path argument is mandatory.", subcmd);
-                        }
-
-                        return 0;
+                            return PerformOfflineOperation(
+                                () => OfflineOperations.PutKey(systemDir.Value), systemDir, subcmd);
+                        });
                     });
 
                     subcmd.ExtendedHelpText =
@@ -234,7 +221,8 @@ namespace rvn
 
                 cmd.Command("trust", subcmd =>
                 {
-                    subcmd.Description = "";
+                    subcmd.Description = string.Empty;
+                    subcmd.HelpOption(HelpOptionString);
 
                     var keyArg = subcmd.Argument("[key]", "key");
                     var tagArg = subcmd.Argument("[tag]", "tag");
@@ -256,53 +244,76 @@ namespace rvn
 
                 cmd.Command("encrypt", subcmd =>
                 {
-                    subcmd.Description = "encrypts RavenDB files and saves the key to the same directory";
+                    subcmd.Description = "Encrypts RavenDB files and saves the key to the same directory";
                     subcmd.ExtendedHelpText = $"\r\nEncrypts RavenDB files and saves the key to a given directory. This key file (secret.key.encrypted) is protected for the current OS user. Once encrypted, The server will only work for the current OS user. It is recommended that you do that as part of the initial setup of the server, before it is running. Encrypted server store can only talk to other encrypted server stores, and only over SSL.\r\n{ EncryptionCommandsNote }";
                     subcmd.HelpOption(HelpOptionString);
-                    subcmd.Argument("[path]", "RavenDB directory path");
-                    subcmd.OnExecute(() =>
+                    subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
-                        var path = cmd.Arguments[0].Value;
-                        if (string.IsNullOrEmpty(path) == false)
+                        subcmd.OnExecute(() =>
                         {
-                            OfflineOperations.Encrypt(path);
-                        }
-                        else
-                        {
-                            return ExitWithError("RavenDB directory path argument is mandatory.", subcmd);
-                        }
-
-                        return 0;
+                            return PerformOfflineOperation(
+                                () => OfflineOperations.Encrypt(systemDir.Value), systemDir, subcmd);
+                        });
                     });
                 });
 
                 cmd.Command("decrypt", subcmd =>
                 {
                     subcmd.ExtendedHelpText = $"\r\nDecrypts RavenDB files in a given directory using the key inserted earlier using the put-key command.\r\n{ EncryptionCommandsNote }";
-                    subcmd.Description = "descrypts RavenDB files";
-                    subcmd.Argument("[path]", "RavenDB directory path");
-                    subcmd.OnExecute(() =>
+                    subcmd.HelpOption(HelpOptionString);
+                    subcmd.Description = "Decrypts RavenDB files";
+                    subcmd.Argument(systemDirArgText, systemDirArgDescText, systemDir =>
                     {
-                        var path = cmd.Arguments[0].Value;
-                        if (string.IsNullOrEmpty(path) == false)
+                        subcmd.OnExecute(() =>
                         {
-                            OfflineOperations.Decrypt(path);
-                        }
-                        else
-                        {
-                            return ExitWithError("RavenDB directory path argument is mandatory.", subcmd);
-                        }
-
-                        return 0;
+                            return PerformOfflineOperation(
+                                () => OfflineOperations.Decrypt(systemDir.Value), systemDir, subcmd);
+                        });
                     });
                 });
-
-                cmd.OnExecute(() =>
-                {
-                    _app.ShowHelp();
-                    return 0;
-                });
             });
+        }
+
+        private static int ExitWithError(string errMsg, CommandLineApplication cmd)
+        {
+            cmd.Error.WriteLine(errMsg);
+            cmd.ShowHelp();
+            return 1;
+        }
+
+        private static CommandOption ConfigureServiceNameOption(CommandLineApplication cmd)
+        {
+            return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
+        }
+
+        private static CommandOption ConfigureServerDirOption(CommandLineApplication cmd) {
+            return cmd.Option("--server-dir", "RavenDB Server directory", CommandOptionType.SingleValue);
+        }
+
+        private static void ValidateRavenSystemDir(CommandArgument systemDirArg) 
+        {
+            if (string.IsNullOrEmpty(systemDirArg.Value))
+            {
+                throw new InvalidOperationException("RavenDB system directory argument is mandatory.");
+            }
+
+            if (Directory.Exists(systemDirArg.Value) == false) 
+            {
+                throw new InvalidOperationException($"Directory does not exist: { systemDirArg.Value }.");
+            }
+        }
+
+        private static int PerformOfflineOperation(Action offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd) {
+            try 
+            {
+                ValidateRavenSystemDir(systemDirArg);
+                offlineOperation();
+                return 0;
+            }
+            catch (InvalidOperationException e) 
+            {
+                return ExitWithError(e.Message, cmd);
+            }
         }
     }
 }
