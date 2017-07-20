@@ -63,7 +63,7 @@ namespace Raven.Database
 
         private readonly TaskScheduler backgroundTaskScheduler;
 
-        private readonly ThreadLocal<bool> disableAllTriggers = new ThreadLocal<bool>(() => false);
+        private readonly ThreadLocal<DisableTriggerState> disableAllTriggers = new ThreadLocal<DisableTriggerState>(() => new DisableTriggerState{Disabled = false});
 
         private readonly object idleLocker = new object();
 
@@ -884,13 +884,13 @@ namespace Raven.Database
         ///     need to be able to run without interference from any other bundle.
         /// </summary>
         /// <returns></returns>
-        public IDisposable DisableAllTriggersForCurrentThread()
+        public IDisposable DisableAllTriggersForCurrentThread(HashSet<Type> except = null)
         {
             if (disposed)
                 return new DisposableAction(() => { });
 
-            bool old = disableAllTriggers.Value;
-            disableAllTriggers.Value = true;
+            var old = disableAllTriggers.Value;
+            disableAllTriggers.Value = new DisableTriggerState{Disabled = true, Except = except };
             return new DisposableAction(() =>
             {
                 if (disposed)
