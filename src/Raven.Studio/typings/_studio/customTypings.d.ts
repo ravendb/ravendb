@@ -85,6 +85,12 @@ interface DirtyFlag {
     forceDirty(): void;
 }
 
+interface Cronstrue {
+    toString(string: string): string;
+}
+
+declare var cronstrue: Cronstrue;
+
 interface Spinner {
     stop() :void;
     spin(): Spinner;

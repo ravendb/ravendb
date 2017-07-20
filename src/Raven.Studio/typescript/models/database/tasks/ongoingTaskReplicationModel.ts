@@ -6,7 +6,7 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class ongoingTaskReplicationModel extends ongoingTask {
 
-    editUrl: KnockoutComputed<string>; 
+    editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
     destinationURL = ko.observable<string>();

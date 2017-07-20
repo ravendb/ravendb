@@ -5,7 +5,7 @@
                 <button type="button" data-bind="click: close" class="close" data-dismiss="modal" aria-label="Close"><i aria-hidden="true" class="icon-cancel"></i></button>
                 <h4 class="modal-title" id="newDatabaseLabel">
                     <i class="icon-new-database"></i>
-                    <span>New database</span>
+                    <span>New database <span data-bind="visible: databaseModel.isFromBackup">from backup</span></span>
                 </h4>
             </div>
             <div class="modal-body">
@@ -13,7 +13,33 @@
                     <div class="modal-settings-panel-main">
                         <div class="form-group" data-bind="validationElement: databaseModel.name">
                             <h3>NAME</h3>
-                            <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control">
+                            <input type="text" id="resourceName" data-bind="textInput: databaseModel.name" autofocus class="form-control" placeholder="Enter database name">
+                        </div>
+                        
+                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup, validationElement: databaseModel.backupDirectory">
+                            <h3>BACKUP DIRECTORY</h3>
+                            <div class="input-group">
+                                <input type="text" id="backupDirectory" 
+                                       data-bind="textInput: databaseModel.backupDirectory, hasFocus: databaseModel.isFocusOnBackupDirectory, disable: databaseModel.spinners.fetchingRestorePoints()" 
+                                       class="form-control" placeholder="Enter backup directory path">
+                            </div>
+                        </div>
+                        
+                        <div class="form-group" data-bind="visible: databaseModel.isFromBackup">
+                            <h3>RESTORE POINT</h3>
+                            <div data-bind="validationElement: databaseModel.selectedRestorePoint, validationOptions: { insertMessages: false }">
+                                <div class="dropdown btn-block">
+                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" 
+                                            data-bind="disable: databaseModel.restorePoints().length == 0, attr: { title: databaseModel.restorePoints().length == 0 ? 'No restore points in selected directory' : '' }, , disable: databaseModel.spinners.fetchingRestorePoints()">
+                                        <span data-bind="text: databaseModel.restorePoints().length == 0 ? 'Select backup directory' : (!databaseModel.selectedRestorePoint() ? 'Select restore point..' : databaseModel.selectedRestorePoint()), textinput: databaseModel.selectedRestorePoint"></span>
+                                        <span class="caret"></span>
+                                    </button>
+                                    <ul class="dropdown-menu max-height" data-bind="foreach: databaseModel.restorePoints">
+                                        <li><a href="#" data-bind="text: $data.Key, click: $parent.databaseModel.useRestorePoint.bind($parent.databaseModel, $data), attr: { 'title': 'File name: ' + $data.Details.FileName }"></a></li>
+                                    </ul>
+                                </div>
+                                <span class="help-block" data-bind="validationMessage: databaseModel.selectedRestorePoint"></span>
+                            </div>
                         </div>
 
                         <div class="settings-group" data-bind="foreach: getAvailableSections()">
@@ -103,15 +129,21 @@
     <h3>Replication configuration</h3>
     <div data-bind="with: databaseModel.replication">
         <div class="form-group" style="min-height: 62px">
-            <div class="input-group" data-bind="css: {'has-warning' : $root.showReplicationFactorWarning}, validationElement: replicationFactor">
+            <div class="input-group" data-bind="css: { 'has-warning': (!$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning()) }, validationElement: replicationFactor">
                 <span class="input-group-addon">Replication factor</span>
-                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.disableReplicationFactorInput" class="form-control">
-                <div class="help-block" data-bind="visible: $root.showReplicationFactorWarning">With replication factor set to 1 data won't be replicated.</div>
+                <input type="number" min="0" data-bind="numericInput: replicationFactor, disable: $root.databaseModel.isFromBackup || $root.disableReplicationFactorInput" class="form-control">
+                <div class="help-block" data-bind="visible: !$root.databaseModel.isFromBackup && $root.showReplicationFactorWarning">
+                    With replication factor set to 1 data won't be replicated.
+                </div>
+                <div class="help-block" data-bind="visible: $root.databaseModel.isFromBackup">
+                    The backup will be restored only to the current node <br/>
+                    After restore this database can be added to other nodes using the 'Manage group' button
+                </div>
             </div>
         </div>
 
         <div class="toggle">
-            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
+            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.databaseModel.isFromBackup || $root.enforceManualNodeSelection">
             <label for="manual_mode">Set replication nodes manually</label>
         </div>
         <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</small>

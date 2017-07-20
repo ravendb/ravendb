@@ -580,8 +580,8 @@ namespace Raven.Server.Documents
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var database = _serverStore.Cluster.ReadDatabase(context, Name);
-                Debug.Assert(database != null);
+                var databaseRecord = _serverStore.Cluster.ReadDatabase(context, Name);
+                Debug.Assert(databaseRecord != null);
 
                 var zipArchiveEntry = package.CreateEntry(RestoreSettings.FileName, CompressionLevel.Optimal);
                 using (var zipStream = zipArchiveEntry.Open())
@@ -594,7 +594,7 @@ namespace Raven.Server.Documents
 
                     // save the database record
                     writer.WritePropertyName(nameof(RestoreSettings.DatabaseRecord));
-                    var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(database, DocumentConventions.Default, context);
+                    var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, DocumentConventions.Default, context);
                     context.Write(writer, databaseRecordBlittable);
 
                     // save the database values (subscriptions, periodic backups statuses, etl states...)
@@ -606,16 +606,15 @@ namespace Raven.Server.Documents
                     foreach (var keyValue in ClusterStateMachine.ReadValuesStartingWith(context,
                         Helpers.ClusterStateMachineValuesPrefix(Name)))
                     {
-                        if (first)
+                        if (first == false)
                         {
                             writer.WriteComma();
-                            first = false;
                         }
 
-                        writer.WriteStartObject();
+                        first = false;
+
                         writer.WritePropertyName(keyValue.Key.ToString());
                         context.Write(writer, keyValue.Value);
-                        writer.WriteEndObject();
                     }
                     writer.WriteEndObject();
                     // end of dictionary

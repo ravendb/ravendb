@@ -118,7 +118,7 @@ class ongoingTasks extends viewModelBase {
         this.existingNodes(Array.from(nodesSet).sort());
 
         this.replicationTasks(_.sortBy(this.replicationTasks(), x => x.taskName().toUpperCase()));
-        this.backupTasks(_.sortBy(this.backupTasks(), x => x.taskName().toUpperCase())); 
+        this.backupTasks(_.sortBy(this.backupTasks(), x => !x.taskName() ? "" : x.taskName().toUpperCase())); 
         this.etlTasks(_.sortBy(this.etlTasks(), x => x.taskName().toUpperCase())); 
         this.sqlTasks(_.sortBy(this.sqlTasks(), x => x.taskName().toUpperCase())); 
         this.subscriptionTasks(_.sortBy(this.subscriptionTasks(), x => x.taskName().toUpperCase())); 

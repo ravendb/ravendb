@@ -73,15 +73,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-revisions',
             dynamicHash: appUrls.revisions
         }),
-        /* TODO: move to tasks in menu
-        new leafMenuItem({
-            route: 'databases/settings/periodicExport',
-            moduleId: 'viewmodels/database/settings/periodicExport',
-            title: 'Periodic Export',
-            nav: true,
-            css: 'icon-periodic-export',
-            dynamicHash: appUrls.periodicExport
-        }),*/
         new leafMenuItem({
             route: 'databases/settings/customFunctionsEditor',
             moduleId: 'viewmodels/database/settings/customFunctionsEditor',

@@ -74,13 +74,13 @@ namespace Raven.Client.Server.PeriodicBackup
             if (WasEnabled(other))
                 return true;
 
-            if (other.AwsRegionName.Equals(AwsRegionName) == false)
+            if (other.AwsRegionName != AwsRegionName)
                 return false;
 
-            if (other.BucketName.Equals(BucketName) == false)
+            if (other.BucketName != BucketName)
                 return false;
 
-            if (other.RemoteFolderName.Equals(RemoteFolderName) == false)
+            if (other.RemoteFolderName != RemoteFolderName)
                 return false;
 
             return true;
@@ -107,10 +107,10 @@ namespace Raven.Client.Server.PeriodicBackup
             if (WasEnabled(other))
                 return true;
 
-            if (other.AwsRegionName.Equals(AwsRegionName) == false)
+            if (other.AwsRegionName != AwsRegionName)
                 return false;
 
-            if (other.VaultName.Equals(VaultName) == false)
+            if (other.VaultName != VaultName)
                 return false;
 
             return true;
@@ -129,9 +129,9 @@ namespace Raven.Client.Server.PeriodicBackup
         /// </summary>
         public string RemoteFolderName { get; set; }
 
-        public string StorageAccount { get; set; }
+        public string AccountName { get; set; }
 
-        public string StorageKey { get; set; }
+        public string AccountKey { get; set; }
 
         public override bool HasSettings()
         {
@@ -146,7 +146,7 @@ namespace Raven.Client.Server.PeriodicBackup
             if (WasEnabled(other))
                 return true;
 
-            return other.RemoteFolderName?.Equals(RemoteFolderName) ?? false;
+            return other.RemoteFolderName == RemoteFolderName;
         }
     }
 }

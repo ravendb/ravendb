@@ -15,6 +15,7 @@ interface computedAppUrls {
     newIndex: KnockoutComputed<string>;
     editIndex: (indexName?: string) => KnockoutComputed<string>;
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
+    editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     newTransformer: KnockoutComputed<string>;
     editTransformer: (transformerName?: string) => KnockoutComputed<string>;
@@ -39,7 +40,6 @@ interface computedAppUrls {
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     quotas: KnockoutComputed<string>;
-    periodicExport: KnockoutComputed<string>;
     replications: KnockoutComputed<string>;
     etl: KnockoutComputed<string>;
     hotSpare: KnockoutComputed<string>;

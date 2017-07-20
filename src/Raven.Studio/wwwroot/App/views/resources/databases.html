@@ -3,7 +3,10 @@
         <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
             <i class="icon-xl icon-empty-set text-muted"></i>
             <h2 class="text-center">No databases have been created</h2>
-            <p class="lead text-center text-muted">Go ahead and<a href="#" data-bind="click: createNewDatabase">&nbsp;create one now</a></p>
+            <p class="lead text-center text-muted">Go ahead and <a href="#" data-bind="click: _.partial(newDatabase, false)">&nbsp;create one now</a>
+                or <a href="#" data-bind="click: _.partial(newDatabase, true)">create one from backup</a>
+            </p>
+            <p class="lead text-center text-muted"></p>
         </div>
     </div>
 </div>
@@ -70,16 +73,20 @@
                     </div>
                 </div>
                 <div class="btn-group">
-                    <button type="button" class="btn btn-primary" data-bind="click: newDatabase">
+                    <button type="button" class="btn btn-primary" data-bind="click: _.partial(newDatabase, false)">
                         <i class="icon-new-database"></i>
                         <span>New database</span>
                     </button>
-                    <button type="button" class="btn btn-primary dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                    <button type="button" class="btn btn-primary dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                         <span class="caret"></span>
                         <span class="sr-only">Toggle Dropdown</span>
                     </button>
                     <ul class="dropdown-menu">
-                        <li><a href="#"><i class="icon-backup"></i> <span>New database from backup</span></a></li>
+                        <li>
+                            <a href="#" data-bind="click: _.partial(newDatabase, true)">
+                                <i class="icon-backup"></i> New database from backup
+                            </a>
+                        </li>
                     </ul>
                 </div>
             </div>
@@ -259,7 +266,7 @@
 
     <div class="properties-item" data-bind="visible: backupEnabled()">
         <div data-bind="attr: { class: 'properties-value value-only ' + backupStatus() }">
-            <a class="set-size text-disabled" title="Backup. Click to set periodic backup" data-bind="attr: { href: $root.periodicExportUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
+            <a class="set-size text-disabled" title="Backup. Click to set periodic backup" data-bind="attr: { href: $root.periodicBackupUrl($data) }, css: { 'link-disabled': !canNavigateToDatabase() || isBeingDeleted() }">
                 <i class="icon-backup"></i>
                 <span data-bind="text: backupStatus() !== 'text-danger' ? 'Backed up ' + lastFullOrIncrementalBackup() : 'Never backed up'"></span>
             </a>

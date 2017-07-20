@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RestoreBackupTask>("RestoreBackupTask");
 
         private readonly ServerStore _serverStore;
-        private readonly RestoreBackupConfiguraion _restoreConfiguration;
+        private readonly RestoreBackupConfiguration _restoreConfiguration;
         private readonly JsonOperationContext _context;
         private readonly string _nodeTag;
         private readonly CancellationToken _cancellationToken;
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private bool _hasEncryptionKey;
 
         public RestoreBackupTask(ServerStore serverStore, 
-            RestoreBackupConfiguraion restoreConfiguration, 
+            RestoreBackupConfiguration restoreConfiguration, 
             JsonOperationContext context, 
             string nodeTag, 
             CancellationToken cancellationToken)
@@ -147,6 +147,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // restoring to the current node
                 databaseRecord.Topology.Members.Add(_nodeTag);
 
+                // TODO: disribute key in cluster?
+                // TODO: _restoreConfiguration.ReplicationFactor ? 
+                // TODO: _restoreConfiguration.TopologyMembers ? 
+
                 var (newEtag, _) = await _serverStore.WriteDatabaseRecordAsync(
                     databaseName, databaseRecord, null, restoreSettings.DatabaseValues, isRestore:  true);
                 await _serverStore.Cluster.WaitForIndexNotification(newEtag);
@@ -237,9 +241,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             return dataDirectory;
         }
 
-        private static List<string> GetFilesForRestore(string backupLocation)
+        private List<string> GetFilesForRestore(string backupLocation)
         {
-            return Directory.GetFiles(backupLocation)
+            var orderedFiles = Directory.GetFiles(backupLocation)
                 .Where(file =>
                 {
                     var extension = Path.GetExtension(file);
@@ -248,7 +252,20 @@ namespace Raven.Server.Documents.PeriodicBackup
                         Constants.Documents.PeriodicBackup.FullBackupExtension.Equals(extension, StringComparison.OrdinalIgnoreCase) ||
                         Constants.Documents.PeriodicBackup.SnapshotExtension.Equals(extension, StringComparison.OrdinalIgnoreCase);
                 })
-                .ToList();
+                .OrderBy(x => x);
+
+            if (string.IsNullOrWhiteSpace(_restoreConfiguration.LastFileNameToRestore))
+                return orderedFiles.ToList();
+
+            var filesToRestore = new List<string>();
+            foreach (var file in orderedFiles)
+            {
+                filesToRestore.Add(file);
+                if (file.Equals(_restoreConfiguration.LastFileNameToRestore, StringComparison.OrdinalIgnoreCase))
+                    break;
+            }
+
+            return filesToRestore;
         }
 
         private void SmugglerRestore(

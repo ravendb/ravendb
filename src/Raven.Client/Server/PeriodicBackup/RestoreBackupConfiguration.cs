@@ -1,12 +1,14 @@
 namespace Raven.Client.Server.PeriodicBackup
 {
-    public class RestoreBackupConfiguraion
+    public class RestoreBackupConfiguration
     {
+        public string DatabaseName { get; set; }
+
         public string BackupLocation { get; set; }
 
-        public string DataDirectory { get; set; }
+        public string LastFileNameToRestore { get; set; }
 
-        public string DatabaseName { get; set; }
+        public string DataDirectory { get; set; }
 
         public string JournalsStoragePath { get; set; }
 

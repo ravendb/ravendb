@@ -23,7 +23,7 @@ class database {
             if (!!license.licenseStatus() && license.licenseStatus().IsCommercial) {
                 var attributes = license.licenseStatus().Attributes;
                 var result = this.activeBundles()
-                    .map(bundleName => this.attributeValue(attributes, bundleName === "periodicBackup" ? "periodicExport" : bundleName))
+                    .map(bundleName => this.attributeValue(attributes, bundleName))
                     .reduce((a, b) => /^true$/i.test(a) && /^true$/i.test(b), true);
                 return result;
             }

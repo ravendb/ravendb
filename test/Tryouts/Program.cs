@@ -13,9 +13,9 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.Revisions.RevisionsReplication())   
+                using (var test = new SlowTests.MailingList.SuggestionFail())   
                 {
-                    test.WillDeleteOldRevisions().Wait() ;
+                    test.WillFail();
                 }
             }
         }

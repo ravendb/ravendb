@@ -12,9 +12,9 @@ namespace Raven.Client.Server.Operations
 {
     public class RestoreBackupOperation : IServerOperation<RestoreBackupOperationResult>
     {
-        private readonly RestoreBackupConfiguraion _restoreConfiguration;
+        private readonly RestoreBackupConfiguration _restoreConfiguration;
 
-        public RestoreBackupOperation(RestoreBackupConfiguraion restoreConfiguration)
+        public RestoreBackupOperation(RestoreBackupConfiguration restoreConfiguration)
         {
             _restoreConfiguration = restoreConfiguration;
         }
@@ -28,10 +28,10 @@ namespace Raven.Client.Server.Operations
     public class RestoreBackupCommand : RavenCommand<RestoreBackupOperationResult>
     {
         public override bool IsReadRequest => false;
-        private readonly RestoreBackupConfiguraion _restoreConfiguration;
+        private readonly RestoreBackupConfiguration _restoreConfiguration;
         private readonly JsonOperationContext _context;
 
-        public RestoreBackupCommand(RestoreBackupConfiguraion restoreConfiguration, JsonOperationContext context)
+        public RestoreBackupCommand(RestoreBackupConfiguration restoreConfiguration, JsonOperationContext context)
         {
             _restoreConfiguration = restoreConfiguration;
             _context = context ?? throw new ArgumentNullException(nameof(context));

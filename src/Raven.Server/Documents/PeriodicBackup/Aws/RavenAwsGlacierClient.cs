@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public async Task<string> UploadArchive(string glacierVaultName, Stream stream, string archiveDescription, int timeoutInSeconds)
         {
-            await ValidateAwsRegion();
             var url = $"{GetUrl(null)}/-/vaults/{glacierVaultName}/archives";
 
             var now = SystemTime.UtcNow;
@@ -43,7 +42,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
             };
 
-            var headers = ConvertToHeaders(glacierVaultName, content.Headers);
+            var headers = ConvertToHeaders(content.Headers, glacierVaultName);
 
             var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Post, url, now, headers);
@@ -68,6 +67,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             return response.Headers
                 .GetValues("x-amz-archive-id")
                 .First();
+        }
+
+        public async Task TestConnection()
+        {
+            var url = $"{GetUrl(null)}/-/vaults&limit=1";
+
+            var now = SystemTime.UtcNow;
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-amz-glacier-version", "2012-06-01"},
+                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)}
+                }
+            };
+
+            var headers = ConvertToHeaders(requestMessage.Headers);
+
+            var client = GetClient();
+            var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
+            client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
+
+            var response = await client.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
         }
     }
 }

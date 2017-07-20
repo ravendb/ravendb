@@ -33,7 +33,8 @@
     "Sortable": "1.4.2",
     "qrcode.js": "qrcode-js#*",
     "favico.js": "^0.3.10",
-    "bootstrap-duration-picker": "^2.1.3"
+    "bootstrap-duration-picker": "^2.1.3",
+    "cronstrue": "v0.8.0"
   },
   "resolutions": {
     "jquery": "^2.2.0",

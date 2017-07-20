@@ -42,7 +42,7 @@ class messagePublisher {
         const toastrMethod = messagePublisher.getDisplayMethod(type);
 
         const messageAndOptionalException = recentError.tryExtractMessageAndException(details);
-
+        
         toastrMethod(recentError.trimMessage(messageAndOptionalException.message), title, {
             showDuration: messagePublisher.getDisplayDuration(type),
             closeButton: true

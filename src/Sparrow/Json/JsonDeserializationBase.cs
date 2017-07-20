@@ -261,7 +261,7 @@ namespace Sparrow.Json
         private static Dictionary<TK, TV> ToDictionary<TK, TV>(BlittableJsonReaderObject json, string name, Func<BlittableJsonReaderObject, TV> converter)
         {
             var isStringKey = typeof(TK) == typeof(string);
-            var dictionary = isStringKey ? 
+            var dictionary = isStringKey ?
                 new Dictionary<TK, TV>((IEqualityComparer<TK>)StringComparer.OrdinalIgnoreCase) :
                 new Dictionary<TK, TV>();
 
@@ -272,14 +272,38 @@ namespace Sparrow.Json
             foreach (var propertyName in obj.GetPropertyNames())
             {
                 object val;
-                if (obj.TryGetMember(propertyName, out val))
+                if (obj.TryGetMember(propertyName, out val) == false)
+                    continue;
+
+                dynamic key;
+                if (isStringKey)
+                    key = propertyName;
+                else
+                    key = (TK)Convert.ChangeType(propertyName, typeof(TK));
+
+                var typeOfValue = typeof(TV);
+                if (typeOfValue.IsConstructedGenericType && typeOfValue.GetGenericTypeDefinition() == typeof(Dictionary<,>))
                 {
-                    dynamic key;
-                    if (isStringKey)
-                        key = propertyName;
+                    var keyType = typeOfValue.GenericTypeArguments[0];
+                    var valueType = typeOfValue.GenericTypeArguments[1];
+                    var newConverter = GetConverterFromCache(valueType);
+                    var methodInfo = typeof(JsonDeserializationBase)
+                        .GetMethod("ToDictionary", BindingFlags.NonPublic | BindingFlags.Static);
+                    var method = methodInfo.MakeGenericMethod(keyType, valueType);
+                    var result = method.Invoke(null, new[] { obj, key, newConverter });
+                    dictionary[key] = (TV)Convert.ChangeType(result, typeOfValue);
+                }
+                else
+                {
+                    if (typeOfValue != typeof(object) &&
+                        val is BlittableJsonReaderObject blittableJsonReaderObject)
+                    {
+                        dictionary[key] = converter(blittableJsonReaderObject);
+                    }
                     else
-                        key = (TK)Convert.ChangeType(propertyName, typeof(TK));
-                    dictionary[key] = converter((BlittableJsonReaderObject)val);
+                    {
+                        dictionary[key] = val;
+                    }
                 }
             }
             return dictionary;
@@ -319,7 +343,7 @@ namespace Sparrow.Json
                 object val;
                 if (obj.TryGet(propertyName, out val))
                 {
-                    dic[propertyName] = val.ToString();
+                    dic[propertyName] = val?.ToString();
                 }
             }
             return dic;

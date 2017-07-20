@@ -54,7 +54,15 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask', 
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
-            title: 'Create External Replication Task',
+            title: 'External Replication Task',
+            nav: false,
+            dynamicHash: editExternalReplicationTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editPeriodicBackupTask', 
+            moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
+            title: 'Backup Task',
             nav: false,
             dynamicHash: editExternalReplicationTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
@@ -62,7 +70,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/tasks/editSubscriptionTask',
             moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
-            title: 'Create Subscription Task',
+            title: 'Subscription Task',
             nav: false,
             dynamicHash: editSubscriptionTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'

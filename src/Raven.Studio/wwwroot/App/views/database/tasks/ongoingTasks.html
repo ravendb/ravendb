@@ -168,14 +168,13 @@
                         </div>
                     </div>-->
                 <!-- backup -->
-                <!-- TODO... -->
-                <!--<div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
+                <div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
                             <h5>BACKUP</h5><hr>
                         </div>
                         <div data-bind="foreach: backupTasks">
                             <div class="panel destination-item periodic-backup">
-                                 Todo: change class name to just backup ...
+                                <!--<div data-bind="text: !taskName ? ('Backup Task #' + taskId) : taskName"></div>-->
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
@@ -196,7 +195,7 @@
                                 </div>
                             </div>
                         </div>
-                    </div>-->
+                    </div>
                 <!-- subscription -->
 
                 <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">

@@ -40,6 +40,7 @@ class appUrl {
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
+        editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
@@ -69,7 +70,6 @@ class appUrl {
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
-        periodicExport: ko.pureComputed(() => appUrl.forPeriodicExport(appUrl.currentDatabase())),
         replications: ko.pureComputed(() => appUrl.forReplications(appUrl.currentDatabase())),
         etl: ko.pureComputed(() => appUrl.forEtl(appUrl.currentDatabase())),
         hotSpare: ko.pureComputed(() => appUrl.forHotSpare()),
@@ -401,10 +401,6 @@ class appUrl {
         return "#databases/settings/quotas?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forPeriodicExport(db: database | databaseInfo): string {
-        return "#databases/settings/periodicExport?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forReplications(db: database | databaseInfo): string {
         return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
     }
@@ -587,6 +583,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const taskPart = taskId ? "&taskId=" + taskId : "";
         return "#databases/tasks/editExternalReplicationTask?" + databasePart + taskPart;
+    }
+
+    static forEditPeriodicBackupTask(db: database | databaseInfo, taskId?: number): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        return "#databases/tasks/editPeriodicBackupTask?" + databasePart + taskPart;
     }
 
     static forEditSubscription(db: database | databaseInfo, taskId?: number, taskName?: string): string {

@@ -29,28 +29,39 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
     {
         private readonly string _accountName;
         private readonly byte[] _accountKey;
-        private readonly string _azureServerUrl;
-        private const string AzureStorageVersion = "2011-08-18";
-        private const int MaxUploadPutBlobInBytes = 64*1024*1024; //64MB
-        private const int OnePutBlockSizeLimitInBytes = 4*1024*1024; //4MB
-        private const long TotalBlocksSizeLimitInBytes = 195*1024*1024*1024L; //195GB
+        private readonly string _serverUrlForContainer;
+        private readonly string _baseServerUrl;
+        private const string AzureStorageVersion = "2016-05-31";
+        private const int MaxUploadPutBlobInBytes = 256*1024*1024; //256MB
+        private const int OnePutBlockSizeLimitInBytes = 100*1024*1024; //100MB
+        private const long TotalBlocksSizeLimitInBytes = 475L*1024*1024*1024*1024L/100; //4.75TB
 
         public RavenAzureClient(string accountName, string accountKey, string containerName, bool isTest = false)
         {
             _accountName = accountName;
-            _accountKey = Convert.FromBase64String(accountKey);
-            _azureServerUrl = GetUrl(containerName, isTest);
+
+            try
+            {
+                _accountKey = Convert.FromBase64String(accountKey);
+            }
+            catch (Exception e)
+            {
+                throw new ArgumentException("Wrong format for account key", e);
+            }
+
+            _serverUrlForContainer = GetUrlForContainer(containerName.ToLower(), isTest);
+            _baseServerUrl = GetUrlForContainer(string.Empty, isTest);
         }
 
-        private string GetUrl(string containerName, bool isTest = false)
+        private string GetUrlForContainer(string containerName, bool isTest = false)
         {
             var template = isTest == false ? "https://{0}.blob.core.windows.net/{1}" : "http://localhost:10000/{0}/{1}";
-            return string.Format(template, _accountName, containerName.ToLower());
+            return string.Format(template, _accountName, containerName);
         }
 
         public async Task PutContainer()
         {
-            var url = _azureServerUrl + "?restype=container";
+            var url = _serverUrlForContainer + "?restype=container";
 
             var now = SystemTime.UtcNow;
             var content = new EmptyContent
@@ -63,7 +74,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
 
             var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
@@ -79,12 +90,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             if (stream.Length > MaxUploadPutBlobInBytes)
             {
-                //for blobs over 64MB
+                //for blobs over 256MB
                 await PutBlockApi(key, stream, metadata);
                 return;
             }
 
-            var url = _azureServerUrl + "/" + key;
+            var url = _serverUrlForContainer + "/" + key;
 
             var now = SystemTime.UtcNow;
             var content = new StreamContent(stream)
@@ -102,7 +113,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
             var client = GetClient(TimeSpan.FromHours(1));
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
 
             var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
@@ -114,11 +125,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
         {
             if (stream.Length > TotalBlocksSizeLimitInBytes)
-                throw new InvalidOperationException($"Can't upload more than 195GB to Azure, current upload size: {stream.Length/1024/1024/1024}GB");
+                throw new InvalidOperationException($"Can't upload more than 4.75TB to Azure, current upload size: {new Size(stream.Length).HumaneSize}");
 
             var threads = ProcessorInfo.ProcessorCount/2 + 1;
-            //max size of in memory queue is: 100MB
-            var queue = new BlockingCollection<ByteArrayWithBlockId>(Math.Min(25, threads*2));
+            //max size of in memory queue is: 500MB
+            var queue = new BlockingCollection<ByteArrayWithBlockId>(Math.Min(5, threads*2));
             //List of block ids; the blocks will be committed in the order in this list
             var blockIds = new List<string>();
 
@@ -128,7 +139,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
                 tasks[0] = fillQueueTask;
 
-                var baseUrl = _azureServerUrl + "/" + key;
+                var baseUrl = _serverUrlForContainer + "/" + key;
                 for (var i = 1; i < threads; i++)
                 {
                     var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
@@ -140,14 +151,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 {
                     //wait for all tasks to complete
                     await Task.WhenAll(tasks);
-
-                    //put block list
-                    await PutBlockList(baseUrl, blockIds, metadata);
                 }
                 catch (Exception)
                 {
                     GetExceptionsFromTasks(tasks);
                 }
+
+                //put block list
+                await PutBlockList(baseUrl, blockIds, metadata);
             }
         }
 
@@ -172,7 +183,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             var fillQueueTask = Task.Run(() =>
             {
-                // Put Block is limited to 4MB per block
+                // Put Block is limited to 100MB per block
                 var buffer = new byte[OnePutBlockSizeLimitInBytes];
 
                 try
@@ -294,7 +305,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 }
             };
 
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
 
             HttpResponseMessage response = null;
             try
@@ -316,8 +327,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 (response != null && response.StatusCode == HttpStatusCode.RequestEntityTooLarge))
                 throw StorageException.FromResponseMessage(response);
 
-            //wait for one second before trying again to send the request
-            //maybe there was a network issue?
+            // wait for one second before trying again to send the request
+            // maybe there was a network issue?
             await Task.Delay(1000);
             await PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
         }
@@ -343,7 +354,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
             var client = GetClient(TimeSpan.FromHours(1));
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("PUT", url, content.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
 
             var response = await client.PutAsync(url, content);
             if (response.IsSuccessStatusCode)
@@ -373,7 +384,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task<Blob> GetBlob(string key)
         {
-            var url = _azureServerUrl + "/" + key;
+            var url = _serverUrlForContainer + "/" + key;
 
             var now = SystemTime.UtcNow;
 
@@ -387,7 +398,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue("GET", url, requestMessage.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get.Method, url, requestMessage.Headers);
 
             var response = await client.SendAsync(requestMessage);
             if (response.StatusCode == HttpStatusCode.NotFound)
@@ -400,6 +411,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var headers = response.Headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
 
             return new Blob(data, headers);
+        }
+
+        public async Task TestConnection()
+        {
+            var url = _baseServerUrl + "?comp=list&maxresults=1";
+
+            var now = SystemTime.UtcNow;
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get.Method, url, requestMessage.Headers);
+
+            var response = await client.SendAsync(requestMessage).ConfigureAwait(false);
+
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
         }
 
         private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(string httpMethod, string url, HttpHeaders httpHeaders)

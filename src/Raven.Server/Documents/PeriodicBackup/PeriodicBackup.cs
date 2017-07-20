@@ -12,6 +12,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public PeriodicBackupConfiguration Configuration { get; set; }
 
+        public PeriodicBackupStatus BackupStatus { get; set; }
+
         public bool Disposed { get; set; }
 
         public void DisableFutureBackups()

@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-amz-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var headers = ConvertToHeaders(bucketName, content.Headers);
+            var headers = ConvertToHeaders(content.Headers, bucketName);
 
             var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
@@ -58,7 +58,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public async Task<Blob> GetObject(string bucketName, string key)
         {
-            await ValidateAwsRegion();
             var url = GetUrl(bucketName) + "/" + key;
 
             var now = SystemTime.UtcNow;
@@ -74,7 +73,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
             };
 
-            var headers = ConvertToHeaders(bucketName, requestMessage.Headers);
+            var headers = ConvertToHeaders(requestMessage.Headers, bucketName);
 
             var client = GetClient();
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
@@ -96,10 +95,39 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public override string GetHost(string bucketName)
         {
-            if (AwsRegion == "us-east-1")
+            if (bucketName == null)
+                return "s3.amazonaws.com";
+
+            if (AwsRegion == DefaultRegion)
                 return $"{bucketName}.s3.amazonaws.com";
 
             return $"{bucketName}.s3-{AwsRegion}.amazonaws.com";
+        }
+
+        public async Task TestConnection()
+        {
+            var url = GetUrl(null);
+            var now = SystemTime.UtcNow;
+
+            var payloadHash = RavenAwsHelper.CalculatePayloadHash(null);
+
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
+                    {"x-amz-content-sha256", payloadHash}
+                }
+            };
+
+            var headers = ConvertToHeaders(requestMessage.Headers);
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, now, headers);
+
+            var response = await client.SendAsync(requestMessage);
+            if (response.IsSuccessStatusCode == false)
+                throw StorageException.FromResponseMessage(response);
         }
     }
 }

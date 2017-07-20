@@ -6,14 +6,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
-using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
 using Raven.Client.Util;
 
@@ -25,21 +22,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public const string DefaultRegion = "us-east-1";
 
-        private static bool _endpointsLoaded;
-
-        private static readonly Dictionary<string, string> AwsRegionNames = new Dictionary<string, string>();
-
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
-        private readonly string _awsRegionName;
 
-        protected string AwsRegion { get; private set; }
+        protected string AwsRegion { get; }
 
         protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName)
         {
+            awsRegionName = awsRegionName.ToLower();
+
             _awsAccessKey = awsAccessKey;
             _awsSecretKey = Encoding.UTF8.GetBytes("AWS4" + awsSecretKey);
-            AwsRegion = _awsRegionName = awsRegionName;
+            AwsRegion = awsRegionName;
         }
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
@@ -62,10 +56,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
-        protected Dictionary<string, string> ConvertToHeaders(string name, HttpHeaders headers)
+        protected Dictionary<string, string> ConvertToHeaders(HttpHeaders headers, string name = null)
         {
             var result = headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
-            result.Add("Host", GetHost(name));
+
+            if(string.IsNullOrWhiteSpace(name) == false)
+                result.Add("Host", GetHost(name));
 
             return result;
         }
@@ -129,72 +125,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             using (var hash = new HMACSHA256(key))
                 return hash.ComputeHash(Encoding.UTF8.GetBytes("aws4_request"));
-        }
-
-        public async Task ValidateAwsRegion()
-        {
-            string region;
-            if (AwsRegionNames.TryGetValue(_awsRegionName.ToLower(), out region))
-            {
-                AwsRegion = region;
-                return;
-            }
-
-            if (_endpointsLoaded)
-                throw new InvalidOperationException("Given endpoint is invalid: " + _awsRegionName);
-
-            await LoadEndpoints();
-
-            await ValidateAwsRegion();
-        }
-
-        private async Task LoadEndpoints()
-        {
-            AwsRegionNames.Clear();
-
-            var response = await GetClient().GetAsync("http://aws-sdk-configurations.amazonwebservices.com/endpoints.xml");
-            if (response.IsSuccessStatusCode)
-            {
-                using (var stream = await response.Content.ReadAsStreamAsync())
-                using (var reader = new StreamReader(stream))
-                    LoadEndpointsFromReader(reader);
-
-                return;
-            }
-
-            foreach (var endpoint in new[]
-            {
-                "us-east-1",
-                "us-east-2",
-                "us-west-1",
-                "us-west-2",
-                "eu-west-1",
-                "eu-central-1",
-                "ap-northeast-1",
-                "ap-northeast-2",
-                "ap-southeast-1",
-                "ap-southeast-2",
-                "ap-south-1",
-                "sa-east-1",
-                "us-gov-west-1"
-            })
-            {
-                AwsRegionNames.Add(endpoint, endpoint);
-            }
-        }
-
-        private static void LoadEndpointsFromReader(TextReader reader)
-        {
-            var xDocument = XDocument.Load(reader);
-            xDocument.DescendantNodes();
-
-            foreach (var node in xDocument.Descendants("Region"))
-            {
-                var nodeName = node.Element("Name").Value.ToLower();
-                AwsRegionNames.Add(nodeName, nodeName);
-            }
-
-            _endpointsLoaded = true;
         }
     }
 }

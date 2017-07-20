@@ -1,0 +1,264 @@
+<form class="content-margin" data-bind="with: configuration">
+    <div class="toolbar" data-bind="with: $root">
+        <button data-bind="click: savePeriodicBackup" type="submit" class="btn btn-primary">
+            <i class="icon-save"></i> <span>Save</span>
+        </button>
+        <button data-bind="click: cancelOperation" class="btn btn-default">
+            <i class="icon-cancel"></i><span>Cancel</span>
+        </button>
+    </div>
+    <div class="panel">
+        <div class="padding">
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-sm-4 col-lg-2">Task name</label>
+                <div class="col-sm-4 col-lg-4">
+                    <input data-bind="textInput: name" id="taskName" type="text" class="form-control" placeholder="Enter a descriptive name for the periodic backup task"/>
+                </div>
+            </div>
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="icon-info text-info"></i></label>
+                <div class="col-sm-4 col-lg-4" data-bind="validationElement: backupType, validationOptions: { insertMessages: false }">
+                    <div class="dropdown btn-block">
+                        <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
+                            <span data-bind="text: backupType() || 'Select backup type..'"></span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu max-height" data-bind="foreach: backupOptions">
+                            <li><a href="#" data-bind="text: $data, click: $parent.useBackupType.bind($parent, $data)"></a></li>
+                        </ul>
+                    </div>
+                    <span class="help-block" data-bind="validationMessage: backupType"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3>Schedule <i class="icon-info text-info"></i></h3>
+    <div class="panel">
+        <div class="padding">
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Full</label>
+                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: fullBackupFrequency">
+                    <div class="dropdown btn-block">
+                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                               id="fullBackupFrequencyInput"
+                               data-bind="textInput: fullBackupFrequency"
+                               placeholder="Cron expression, e.g. 0 1 * * * - every day at 01:00 AM">
+                        <ul class="dropdown-menu max-height" data-bind="foreach: createBackupFrequencyAutoCompleter(true), autoComplete: '#' + 'fullBackupFrequencyInput'">
+                            <li data-bind="click: $parent.useCronExprssion.bind($parent, true, $data)">
+                                <a href="#" data-bind="text: $data.label"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-xs-4 col-sm-4">
+                    <span data-bind="text: fullBackupHumanReadable"></span>
+                </div>
+            </div>
+            <div class="row flex-row margin-bottom">
+                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Inceremental</label>
+                <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: incrementalBackupFrequency">
+                    <div class="dropdown btn-block">
+                        <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                               id="incrementalBackupFrequencyInput"
+                               data-bind="textInput: incrementalBackupFrequency"
+                               placeholder="Cron expression, e.g. */30 * * * * - every 30 minutes">
+                        <ul class="dropdown-menu max-height" data-bind="foreach: createBackupFrequencyAutoCompleter(false), autoComplete: '#' + 'incrementalBackupFrequencyInput'">
+                            <li data-bind="click: $parent.useCronExprssion.bind($parent, false, $data)">
+                                <a href="#" data-bind="text: $data.label"></a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-xs-6 col-sm-4">
+                    <span data-bind="text: incrementalBackupHumanReadable"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <h3>Destination <i class="icon-info text-info"></i></h3>
+
+    <div class="panel" data-bind="with: localSettings">
+        <div class="padding">
+            <div class="toggle">
+                <input id="toggle-local" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-local">Local</label>
+            </div>
+            
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Backup directory</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: folderPath">
+                            <input data-bind="textInput: folderPath" , type="text" class="form-control" placeholder="Full directory backup path" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" data-bind="with: s3Settings">
+        <div class="padding">
+            <div class="toggle">
+                <input id="toggle-amazons3" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-amazons3">Amazon S3</label>
+            </div>
+
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Bucket name
+                            <span id="s3-info"><i class="icon-info text-info"></i></span>
+                        </label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
+                            <input data-bind="textInput: bucketName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: remoteFolderName">
+                            <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region<i class="icon-info text-info"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                            <div class="dropdown btn-block">
+                                <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                       id="s3RegionInput"
+                                       data-bind="textInput: selectedAwsRegion"
+                                       placeholder="Select an AWS region">
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <ul class="dropdown-menu max-height" data-bind="foreach: createAwsRegionAutoCompleter(true), autoComplete: '#' + 's3RegionInput'">
+                                    <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
+                                        <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+                            <input data-bind="textInput: awsAccessKey" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                            <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                            <i class="icon-rocket"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" data-bind="with: azureSettings">
+        <div class="padding">
+            <div class="toggle">
+                <input id="toggle-azure" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-azure">Azure</label>
+            </div>
+
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Storage container</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: storageContainer">
+                            <input data-bind="textInput: storageContainer" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Remote folder name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: remoteFolderName">
+                            <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountName">
+                            <input data-bind="textInput: accountName" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Account key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: accountKey">
+                            <input data-bind="textInput: accountKey" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
+                            <i class="icon-rocket"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="panel" data-bind="with: glacierSettings">
+        <div class="padding">
+            <div class="toggle">
+                <input id="toggle-amazonglacier" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-amazonglacier">Amazon Glacier</label>
+            </div>
+
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Vault name <i class="icon-info text-info"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: vaultName">
+                            <input data-bind="textInput: vaultName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region name <i class="icon-info text-info"></i></label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                            <div class="dropdown btn-block">
+                                <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
+                                       id="glacierRegionInput"
+                                       data-bind="textInput: selectedAwsRegion"
+                                       placeholder="Select an AWS region">
+                                <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
+                                <ul class="dropdown-menu max-height" data-bind="foreach: createAwsRegionAutoCompleter(false), autoComplete: '#' + 'glacierRegionInput'">
+                                    <li data-bind="click: $parent.useAwsRegion.bind($parent, $data)">
+                                        <a href="#" data-bind="text: $data.label + ' - ' + $data.value"></a>
+                                    </li>
+                                </ul>
+                            </div>
+                            <span class="help-block" data-bind="validationMessage: awsRegionName"></span>
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Access key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsAccessKey">
+                            <input data-bind="textInput: awsAccessKey" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Secret key</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsSecretKey">
+                            <input data-bind="textInput: awsSecretKey" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data)" class="btn btn-info">
+                            <i class="icon-rocket"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>

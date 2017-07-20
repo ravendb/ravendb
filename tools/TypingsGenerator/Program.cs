@@ -28,6 +28,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
@@ -191,7 +192,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlEtlTable));
 
             // backup
-            //TODO: scripter.AddType(typeof(PeriodicBackupConfiguration));
+            scripter.AddType(typeof(PeriodicBackupConfiguration));
+            scripter.AddType(typeof(PeriodicBackupTestConnectionType));
+            scripter.AddType(typeof(RestoreBackupConfiguration));
+            scripter.AddType(typeof(RestorePoints));
 
             // custom functions
             scripter.AddType(typeof(CustomFunctions));
@@ -245,7 +249,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskType));
             scripter.AddType(typeof(OngoingTaskState));
             scripter.AddType(typeof(OngoingTaskConnectionStatus));
-            scripter.AddType(typeof(BackupType));
             scripter.AddType(typeof(NodeId));
             scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(ExternalReplication));
