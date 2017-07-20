@@ -1,0 +1,36 @@
+﻿#infoPackageSection {
+    .info-package-items {
+        list-style: none;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-around;
+        padding: 0;
+
+        .item {
+            display: block;
+            width: 88px;
+            text-align: center;
+            line-height: 14px;
+            margin-bottom: @grid-gutter-width;
+
+            i {
+                display: block;
+                margin: auto;
+                width: 66px;
+                height: 66px;
+                border: 3px solid @gray;
+                color: @gray;
+                border-radius: 50%;
+                font-size: 37px;
+                line-height: 58px;
+                margin-bottom: @grid-gutter-width/2;
+            }
+
+            span {
+                margin-left: 0;
+                display: block;
+                font-size: 14px;
+            }
+        }
+    }
+}
