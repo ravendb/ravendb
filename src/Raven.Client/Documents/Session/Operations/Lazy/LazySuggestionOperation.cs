@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                Url = "/queries?op=facets",
+                Url = "/queries?op=suggest",
                 Method = HttpMethod.Post,
                 Content = new SuggestionQueryContent(_conventions, _query)
             };
