@@ -17,8 +17,8 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Queries.Suggestions;
-using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -135,16 +135,13 @@ namespace Raven.Server.Documents.Queries
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
 
-        public SuggestionQueryResultServerSide ExecuteSuggestionQuery(string indexName, SuggestionQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
-        {            
+        public SuggestionQueryResultServerSide ExecuteSuggestionQuery(SuggestionQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
             // Check pre-requisites for the query to happen. 
-            
-            if (Index.IsDynamicIndex(indexName))
-                throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
-                    
+
             if (string.IsNullOrWhiteSpace(query.Term))
                 throw new InvalidOperationException("Suggestions queries require a term.");
 
@@ -155,12 +152,12 @@ namespace Raven.Server.Documents.Queries
 
             // Check definition for the index. 
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.IndexName);
             var indexDefinition = index.GetIndexDefinition();
             if (indexDefinition == null)
                 throw new InvalidOperationException($"Could not find specified index '{this}'.");
 
-            if ( indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
+            if (indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
                 throw new InvalidOperationException($"Index '{this}' does not have a field '{query.Field}'.");
 
             if (field.Suggestions == null)
@@ -183,7 +180,7 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(string indexName, MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
             if (query == null)
                 throw new ArgumentNullException(nameof(query));

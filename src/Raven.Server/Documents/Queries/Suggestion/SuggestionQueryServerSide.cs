@@ -1,38 +1,47 @@
 ﻿using System;
-using System.Collections.Generic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Server.Json;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Queries.Suggestions
+namespace Raven.Server.Documents.Queries.Suggestion
 {
-    public class SuggestionQueryServerSide : IIndexQuery
+    public class SuggestionQueryServerSide : SuggestionQuery, IIndexQuery
     {
-        public static float DefaultAccuracy = 0.5f;
+        private int _pageSize;
 
-        public static int DefaultMaxSuggestions = 15;
-
-        public static StringDistanceTypes DefaultDistance = StringDistanceTypes.Levenshtein;
-
-        /// <summary>
-        /// Create a new instance of <seealso cref="SuggestionQuery"/>
-        /// </summary>
-        public SuggestionQueryServerSide()
+        public int PageSize
         {
-            Accuracy = 0.5f;
-            Distance = DefaultDistance;
-            MaxSuggestions = DefaultMaxSuggestions;
+            get => _pageSize;
+            set
+            {
+                _pageSize = value;
+                PageSizeSet = true;
+            }
         }
 
+        protected internal bool PageSizeSet { get; private set; }
+
+        public static SuggestionQueryServerSide Create(BlittableJsonReaderObject json)
+        {
+            var result = JsonDeserializationServer.SuggestionQuery(json);
+
+            if (string.IsNullOrWhiteSpace(result.IndexName))
+                throw new InvalidOperationException($"Index query does not contain '{nameof(IndexName)}' field.");
+
+            result.ApplyDefaultValuesIfNecessary();
+            return result;
+        }
 
         public static SuggestionQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)
         {
+            if (httpContext.Request.Query.TryGetValue("index", out var index) == false || index.Count == 0 || string.IsNullOrWhiteSpace(index[0]))
+                throw new InvalidOperationException("Missing mandatory query string parameter 'index'.");
+
             var result = new SuggestionQueryServerSide
             {
-                // all defaults which need to have custom value
-                PageSize = pageSize,                
+                IndexName = index[0]
             };
 
             foreach (var item in httpContext.Request.Query)
@@ -74,60 +83,20 @@ namespace Raven.Server.Documents.Queries.Suggestions
                 }
             }
 
+            result.ApplyDefaultValuesIfNecessary();
             return result;
         }
 
-        private int _pageSize;
-        
-        /// <summary>
-        /// Maximum number of records that will be retrieved.
-        /// </summary>
-        public int PageSize
+        private void ApplyDefaultValuesIfNecessary()
         {
-            get => _pageSize;
-            set
-            {
-                _pageSize = value;
-                PageSizeSet = true;
-            }
+            if (Accuracy.HasValue == false)
+                Accuracy = DefaultAccuracy;
+
+            if (Distance.HasValue == false)
+                Distance = DefaultDistance;
+
+            if (MaxSuggestions == 0)
+                MaxSuggestions = DefaultMaxSuggestions;
         }
-
-        /// <summary>
-        /// Whether the page size was explicitly set or still at its default value
-        /// </summary>
-        protected internal bool PageSizeSet { get; private set; }
-
-        /// <summary>
-        /// Term is what the user likely entered, and will used as the basis of the suggestions.
-        /// </summary>
-        public string Term { get; set; }
-
-        /// <summary>
-        /// Field to be used in conjunction with the index.
-        /// </summary>
-        public string Field { get; set; }       
-
-        /// <summary>
-        /// Maximum number of suggestions to return.
-        /// <para>Value:</para>
-        /// <para>Default value is 15.</para>
-        /// </summary>
-        /// <value>Default value is 15.</value>
-        public int MaxSuggestions { get; set; }
-
-        /// <summary>
-        /// String distance algorithm to use. If <c>null</c> then default algorithm is used (Levenshtein).
-        /// </summary>
-        public StringDistanceTypes Distance { get; set; }
-
-        /// <summary>
-        /// Suggestion accuracy. If <c>null</c> then default accuracy is used (0.5f).
-        /// </summary>
-        public float Accuracy { get; set; }
-
-        /// <summary>
-        /// Whatever to return the terms in order of popularity
-        /// </summary>
-        public bool Popularity { get; set; }
     }
 }

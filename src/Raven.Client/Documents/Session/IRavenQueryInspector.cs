@@ -19,6 +19,8 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IRavenQueryInspector
     {
+        string IndexName { get; }
+
         /// <summary>
         /// The query session
         /// </summary>

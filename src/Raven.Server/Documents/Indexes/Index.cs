@@ -15,7 +15,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Util;
 using Raven.Server.Config.Categories;
@@ -31,7 +30,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Sorting;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
@@ -47,7 +46,6 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
-using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using Voron.Debugging;
@@ -156,25 +154,6 @@ namespace Raven.Server.Documents.Indexes
             MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
-
-        public const string DynamicIndex = "dynamic";
-
-        public const string DynamicIndexPrefix = "dynamic/";
-
-        public static bool IsDynamicIndex(string indexName)
-        {
-            if (indexName == null || indexName.Length < DynamicIndex.Length)
-                return false;
-
-            if (indexName.StartsWith(DynamicIndex, StringComparison.OrdinalIgnoreCase) == false)
-                return false;
-
-            if (indexName.Length == DynamicIndex.Length)
-                return true;
-
-            return indexName[DynamicIndex.Length] == '/';
-        }
-
 
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
@@ -2454,7 +2433,7 @@ namespace Raven.Server.Documents.Indexes
             {
                 return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);
             }
-        }       
+        }
 
         private struct QueryDoneRunning : IDisposable
         {

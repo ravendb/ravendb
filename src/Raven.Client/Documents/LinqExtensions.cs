@@ -19,7 +19,6 @@ using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Http;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
@@ -427,9 +426,9 @@ namespace Raven.Client.Documents
             var inspector = source as IRavenQueryInspector;
             if (inspector == null)
                 throw new ArgumentException("You can only use Raven Queryable with suggests");
-           
+
             SetSuggestionQueryParameters(inspector, query);
-            
+
             var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
 
             var documentSession = ((DocumentSession)inspector.Session);
@@ -438,7 +437,7 @@ namespace Raven.Client.Documents
 
         private static void SetSuggestionQueryParameters(IRavenQueryInspector inspector, SuggestionQuery query, bool isAsync = false)
         {
-            query.IndexName = isAsync ? inspector.AsyncIndexQueried : inspector.IndexQueried;
+            query.IndexName = inspector.IndexName;
 
             if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
                 return;

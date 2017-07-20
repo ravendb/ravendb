@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.MoreLikeThis;
+using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -12,6 +13,55 @@ namespace Raven.Client.Extensions
         public static void WriteFacetQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, FacetQuery query)
         {
             writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query, conventions, context));
+        }
+
+        public static void WriteSuggestionQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, SuggestionQuery query)
+        {
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(query.IndexName));
+            writer.WriteString(query.IndexName);
+            writer.WriteComma();
+
+            if (query.Popularity)
+            {
+                writer.WritePropertyName(nameof(query.Popularity));
+                writer.WriteBool(query.Popularity);
+                writer.WriteComma();
+            }
+
+            if (query.Accuracy.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.Accuracy));
+                writer.WriteDouble(query.Accuracy.Value);
+                writer.WriteComma();
+            }
+
+            if (query.Distance.HasValue)
+            {
+                writer.WritePropertyName(nameof(query.Distance));
+                writer.WriteString(query.Distance.Value.ToString());
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrEmpty(query.Field) == false)
+            {
+                writer.WritePropertyName(nameof(query.Field));
+                writer.WriteString(query.Field);
+                writer.WriteComma();
+            }
+
+            if (string.IsNullOrEmpty(query.Term) == false)
+            {
+                writer.WritePropertyName(nameof(query.Term));
+                writer.WriteString(query.Term);
+                writer.WriteComma();
+            }
+
+            writer.WritePropertyName(nameof(query.MaxSuggestions));
+            writer.WriteInteger(query.MaxSuggestions);
+
+            writer.WriteEndObject();
         }
 
         public static void WriteMoreLikeThisQuery(this BlittableJsonTextWriter writer, DocumentConventions conventions, JsonOperationContext context, MoreLikeThisQuery query)

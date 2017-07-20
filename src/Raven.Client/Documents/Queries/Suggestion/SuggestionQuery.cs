@@ -4,9 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Text;
-
 namespace Raven.Client.Documents.Queries.Suggestion
 {
     /// <summary>
@@ -28,9 +25,9 @@ namespace Raven.Client.Documents.Queries.Suggestion
             MaxSuggestions = DefaultMaxSuggestions;
             Popularity = true;
         }
-       
+
         public string IndexName { get; set; }
-        
+
         /// <summary>
         /// Term is what the user likely entered, and will used as the basis of the suggestions.
         /// </summary>
@@ -63,30 +60,5 @@ namespace Raven.Client.Documents.Queries.Suggestion
         /// Whether to return the terms in order of popularity
         /// </summary>
         public bool Popularity { get; set; }
-
-        protected virtual void CreateRequestUri(StringBuilder uri)
-        {
-            uri.Append($"/queries/{Uri.EscapeUriString(IndexName)}?&op=suggest&terms={Term}&field={Field}");
-
-            if (Accuracy.HasValue && (Math.Abs(Accuracy.Value - DefaultAccuracy) >= 0.0001))
-                uri.Append($"&accuracy={Accuracy.Value}");
-            if (Distance.HasValue && Distance.Value != DefaultDistance)
-                uri.Append($"&distance={Enum.GetName(typeof(StringDistanceTypes), Distance.Value)}");
-            if (MaxSuggestions != DefaultMaxSuggestions)
-                uri.Append($"&maxSuggestions={MaxSuggestions}");
-            if (Popularity)
-                uri.Append($"&popular=true");
-        }
-
-        public string GetRequestUri()
-        {
-            if (string.IsNullOrEmpty(IndexName))
-                throw new InvalidOperationException("Index name cannot be null or empty");
-
-            var uri = new StringBuilder();
-            CreateRequestUri(uri);
-
-            return uri.ToString();
-        }
     }
 }

@@ -13,6 +13,7 @@ using Raven.Server.Documents.Operations;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -54,6 +55,12 @@ namespace Raven.Server.Documents.Handlers
                     return;
                 }
 
+                if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
+                {
+                    Suggest(context, token, HttpMethod.Post);
+                    return;
+                }
+
                 await Query(context, token, HttpMethod.Post).ConfigureAwait(false);
             }
         }
@@ -87,12 +94,12 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "suggest", StringComparison.OrdinalIgnoreCase))
                 {
-                    Suggest(context, indexName, token);
+                    Suggest(context, token, HttpMethod.Get);
                     return;
 
                 }
                 
-                await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
+                await Query(context, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
 
@@ -165,11 +172,11 @@ namespace Raven.Server.Documents.Handlers
             if (method == HttpMethod.Get)
                 return IndexQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
 
-            var indexQueryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
+            var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
             // read from cache here
 
-            return IndexQueryServerSide.Create(indexQueryJson);
+            return IndexQueryServerSide.Create(json);
         }
 
         private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
@@ -180,11 +187,11 @@ namespace Raven.Server.Documents.Handlers
                 throw new NotImplementedException();
             }
 
-            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
+            var json = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
 
             // read from cache here
 
-            return MoreLikeThisQueryServerSide.Create(indexQueryJson);
+            return MoreLikeThisQueryServerSide.Create(json);
         }
 
         private (FacetQueryServerSide FacetQuery, long? FacetsEtag) GetFacetQuery(JsonOperationContext context, HttpMethod method)
@@ -195,21 +202,36 @@ namespace Raven.Server.Documents.Handlers
                 throw new NotImplementedException();
             }
 
-            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "facet/query");
+            var json = context.ReadForMemory(RequestBodyStream(), "facet/query");
 
             // read from cache here
 
-            return FacetQueryServerSide.Create(indexQueryJson);
+            return FacetQueryServerSide.Create(json);
         }
 
-        private void Suggest(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private SuggestionQueryServerSide GetSuggestionQuery(JsonOperationContext context, HttpMethod method)
+        {
+            if (method == HttpMethod.Get)
+            {
+                //MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
+                throw new NotImplementedException();
+            }
+
+            var indexQueryJson = context.ReadForMemory(RequestBodyStream(), "suggestion/query");
+
+            // read from cache here
+
+            return SuggestionQueryServerSide.Create(indexQueryJson);
+        }
+
+        private void Suggest(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = SuggestionQueryServerSide.Create(HttpContext, GetPageSize(), context);
+            var query = GetSuggestionQuery(context, method);
             var runner = new QueryRunner(Database, context);
 
-            var result = runner.ExecuteSuggestionQuery(indexName, query, context, existingResultEtag, token);
+            var result = runner.ExecuteSuggestionQuery(query, context, existingResultEtag, token);
             if (result.NotModified)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -223,14 +245,14 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteSuggestionQueryResult(context, result);
             }
 
-            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggest)} ({indexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
+            AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Suggest)} ({query.IndexName})", HttpContext, result.Suggestions.Length, query.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
-        private void MoreLikeThis(DocumentsOperationContext context, string indexName, OperationCancelToken token)
+        private void MoreLikeThis(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
             var existingResultEtag = GetLongFromHeaders("If-None-Match");
 
-            var query = MoreLikeThisQueryServerSide.Create(HttpContext, GetPageSize(), context);
+            var query = GetMoreLikeThisQuery(context, method);
             var runner = new QueryRunner(Database, context);
 
             var result = runner.ExecuteMoreLikeThisQuery(query, context, existingResultEtag, token);

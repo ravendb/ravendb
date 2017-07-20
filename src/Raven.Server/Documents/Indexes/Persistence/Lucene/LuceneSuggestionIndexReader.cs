@@ -8,6 +8,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
@@ -98,7 +99,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         private string[] QueryOverSingleWord<TDistance>(SuggestionQueryServerSide parameters, string word, TDistance sd) 
             where TDistance : IStringDistance
         {
-            float min = parameters.Accuracy;
+            float min = parameters.Accuracy.Value;
             string field = parameters.Field;
             int numSug = parameters.MaxSuggestions;
             bool morePopular = parameters.Popularity;

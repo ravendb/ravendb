@@ -249,6 +249,8 @@ namespace Raven.Client.Documents.Linq
                                                       _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
         }
 
+        public string IndexName => _indexName;
+
         public InMemoryDocumentSessionOperations Session => _session;
 
         ///<summary>
