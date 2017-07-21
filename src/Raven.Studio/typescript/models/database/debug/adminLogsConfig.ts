@@ -5,7 +5,6 @@ import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntr
 class adminLogsConfig {
     entries = ko.observableArray<adminLogsConfigEntry>();
     maxEntries = ko.observable<number>();
-    singleAuthToken = ko.observable<singleAuthToken>();
 
     clone(): adminLogsConfig {
         var newConfig = new adminLogsConfig();

@@ -33,9 +33,8 @@ class databaseNotificationCenterClient extends abstractNotificationCenterClient 
         }
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "?singleUseAuthToken=" + token.Token;
-        return endpoints.databases.databaseNotificationCenter.notificationCenterWatch + connectionString;
+    protected webSocketUrlFactory() {
+        return endpoints.databases.databaseNotificationCenter.notificationCenterWatch;
     }
 
     watchAllDatabaseStatsChanged(onChange: (e: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged) => void) {

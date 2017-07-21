@@ -20,9 +20,8 @@ class serverNotificationCenterClient extends abstractNotificationCenterClient {
         return "Server Notification Center Client";
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "?singleUseAuthToken=" + token.Token;
-        return endpoints.global.serverNotificationCenter.notificationCenterWatch + connectionString;
+    protected webSocketUrlFactory() {
+        return endpoints.global.serverNotificationCenter.adminNotificationCenterWatch;
     }
 
     protected onMessage(actionDto: Raven.Server.NotificationCenter.Notifications.Notification) {

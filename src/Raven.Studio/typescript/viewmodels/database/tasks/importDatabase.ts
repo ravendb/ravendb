@@ -9,7 +9,6 @@ import eventsCollector = require("common/eventsCollector");
 import appUrl = require("common/appUrl");
 import copyToClipboard = require("common/copyToClipboard");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import EVENTS = require("common/constants/events");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
@@ -191,14 +190,13 @@ class importDatabase extends viewModelBase {
         const fileInput = document.querySelector(importDatabase.filePickerTag) as HTMLInputElement;
         const db = this.activeDatabase();
 
-        $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
-            .then(([operationId]: [number], [token]: [singleAuthToken]) => {
-
+        this.getNextOperationId(db)
+            .done((operationId: number) => {
                 notificationCenter.instance.openDetailsForOperationById(db, operationId);
 
                 notificationCenter.instance.monitorOperation(db, operationId);
 
-                new importDatabaseCommand(db, operationId, token, fileInput.files[0], this.model)
+                new importDatabaseCommand(db, operationId, fileInput.files[0], this.model)
                     .execute()
                     .always(() => this.isUploading(false));
             });
@@ -212,14 +210,6 @@ class importDatabase extends viewModelBase {
         return new getNextOperationId(db).execute()
             .fail((qXHR, textStatus, errorThrown) => {
                 messagePublisher.reportError("Could not get next task id.", errorThrown);
-                this.isUploading(false);
-            });
-    }
-
-    private getAuthToken(db: database): JQueryPromise<singleAuthToken> {
-        return new getSingleAuthTokenCommand(db).execute()
-            .fail((qXHR, textStatus, errorThrown) => {
-                messagePublisher.reportError("Could not get single auth token.", errorThrown);
                 this.isUploading(false);
             });
     }

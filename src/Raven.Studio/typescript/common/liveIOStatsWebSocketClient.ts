@@ -23,9 +23,8 @@ class liveIOStatsWebSocketClient extends abstractWebSocketClient<Raven.Server.Do
         return "Live I/O Stats";
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "?singleUseAuthToken=" + token.Token;
-        return endpoints.databases.ioMetrics.debugIoMetricsLive + connectionString;
+    protected webSocketUrlFactory() {
+        return endpoints.databases.ioMetrics.debugIoMetricsLive;
     }
 
     get autoReconnect() {

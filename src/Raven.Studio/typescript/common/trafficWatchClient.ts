@@ -21,14 +21,14 @@ class trafficWatchClient {
     private commandBase = new commandBase();
     private adminLogsHandlers = ko.observableArray<changesCallback<logNotificationDto>>();
 
-    constructor(private databasePath: string, private token:string) {
+    constructor(private databasePath: string) {
         this.connectionOpeningTask = $.Deferred();
         this.connectionClosingTask = $.Deferred();
         this.eventsId = idGenerator.generateId();
     }
 
     public connect() {
-        var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
+        var connectionString = '&id=' + this.eventsId;
         if ("WebSocket" in window) {
             this.connectWebSocket(connectionString);
         } else {

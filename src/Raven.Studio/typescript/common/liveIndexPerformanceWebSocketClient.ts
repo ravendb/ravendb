@@ -27,9 +27,8 @@ class liveIndexPerformanceWebSocketClient extends abstractWebSocketClient<result
         return "Live Indexing Performance";
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "?singleUseAuthToken=" + token.Token;
-        return endpoints.databases.index.indexesPerformanceLive + connectionString;
+    protected webSocketUrlFactory() {
+        return endpoints.databases.index.indexesPerformanceLive;
     }
 
     get autoReconnect() {
