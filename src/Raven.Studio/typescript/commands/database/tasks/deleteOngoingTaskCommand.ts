@@ -10,7 +10,7 @@ class deleteOngoingTaskCommand extends commandBase {
 
     execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
         const args = { name: this.db.name, id: this.taskId, type: this.taskType, taskName: this.taskName };
-        const url = endpoints.global.ongoingTasks.adminTasksDelete + this.urlEncodeArgs(args);
+        const url = endpoints.global.ongoingTasks.adminTasks + this.urlEncodeArgs(args);
 
         return this.post<Raven.Client.Server.Operations.ModifyOngoingTaskResult>(url, null)
             .done(() => this.reportSuccess(`Successfullly deleted ${this.taskType} task`))

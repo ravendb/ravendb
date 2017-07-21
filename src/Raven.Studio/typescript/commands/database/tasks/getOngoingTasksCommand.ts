@@ -9,7 +9,7 @@ class getOngoingTasksCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
-        const url = endpoints.global.ongoingTasks.adminOngoingTasks;
+        const url = endpoints.global.ongoingTasks.ongoingTasks;
         const args = { databaseName: this.db.name };
 
         return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args)

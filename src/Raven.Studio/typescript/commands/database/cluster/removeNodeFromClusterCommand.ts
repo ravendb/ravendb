@@ -11,7 +11,7 @@ class removeNodeFromClusterCommand extends commandBase {
         const args = {
             nodeTag: this.nodeTag
         };
-        const url = endpoints.global.rachisAdmin.adminClusterRemoveNode + this.urlEncodeArgs(args);
+        const url = endpoints.global.rachisAdmin.adminClusterNode + this.urlEncodeArgs(args);
 
         return this.del<void>(url, null, null, { dataType: undefined });
     }

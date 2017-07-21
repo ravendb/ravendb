@@ -17,7 +17,7 @@ class getSingleAuthTokenCommand extends commandBase {
             };
         }
             
-        return this.query(endpoints.databases.singleAuthToken.singleAuthToken, args, this.db);
+        return this.query("", args, this.db);
     }
 }
 
