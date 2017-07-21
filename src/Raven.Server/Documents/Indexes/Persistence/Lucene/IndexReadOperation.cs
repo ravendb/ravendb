@@ -19,7 +19,6 @@ using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
-using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
 using Raven.Server.ServerWide.Context;

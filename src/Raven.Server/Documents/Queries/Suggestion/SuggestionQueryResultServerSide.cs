@@ -1,9 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Documents.Queries;
 
-namespace Raven.Server.Documents.Queries.Suggestions
+namespace Raven.Server.Documents.Queries.Suggestion
 {
     public class SuggestionQueryResult 
     {

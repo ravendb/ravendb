@@ -9,7 +9,6 @@ using Lucene.Net.Store;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions;
 using Raven.Server.Documents.Queries.Suggestion;
-using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Indexing;
 using Sparrow.Logging;
 using Voron.Impl;

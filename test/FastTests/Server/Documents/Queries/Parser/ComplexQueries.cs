@@ -32,7 +32,7 @@ SELECT sum(Age), Name as Username
 FROM Users
 WHERE boost(Age > 15, 2) 
 ORDER BY LastName
-", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Age\"}]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"Where\":{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"GreaterThen\",\"Field\":\"Age\",\"Value\":\"15\"},2]},\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}]}")]
+", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Age\"}]}},{\"Expression\":\"Name\",\"Alias\":\"Username\"}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"Where\":{\"Type\":\"Method\",\"Method\":\"boost\",\"Arguments\":[{\"Type\":\"GreaterThan\",\"Field\":\"Age\",\"Value\":\"15\"},2]},\"OrderBy\":[{\"Field\":\"LastName\",\"Ascending\":true}]}")]
         [InlineData(@"FROM Users
 ORDER BY Age AS double DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\"},\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
         [InlineData("FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":{\"Index\":false,\"Source\":\"Posts\"},\"Where\":{\"Type\":\"Equal\",\"Field\":\"Tags[].Name\",\"Value\":\"Any'\"}}")]

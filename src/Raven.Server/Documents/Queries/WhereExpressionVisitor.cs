@@ -29,10 +29,10 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Type)
             {
                 case OperatorType.Equal:
-                case OperatorType.LessThen:
-                case OperatorType.GreaterThen:
-                case OperatorType.LessThenEqual:
-                case OperatorType.GreaterThenEqual:
+                case OperatorType.LessThan:
+                case OperatorType.GreaterThan:
+                case OperatorType.LessThanEqual:
+                case OperatorType.GreaterThanEqual:
                     VisitFieldToken(QueryExpression.Extract(_queryText, expression.Field), expression.Value ?? expression.First, parameters);
                     return;
                 case OperatorType.Between:

@@ -31,7 +31,6 @@ using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestion;
-using Raven.Server.Documents.Queries.Suggestions;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;

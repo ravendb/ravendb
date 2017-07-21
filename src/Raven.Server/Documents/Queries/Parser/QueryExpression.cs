@@ -97,26 +97,26 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(" ");
                     break;
                 case OperatorType.Equal:
-                case OperatorType.LessThen:
-                case OperatorType.GreaterThen:
-                case OperatorType.LessThenEqual:
-                case OperatorType.GreaterThenEqual:
+                case OperatorType.LessThan:
+                case OperatorType.GreaterThan:
+                case OperatorType.LessThanEqual:
+                case OperatorType.GreaterThanEqual:
                     writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
                     switch (Type)
                     {
                         case OperatorType.Equal:
                             writer.Write(" = ");
                             break;
-                        case OperatorType.LessThen:
+                        case OperatorType.LessThan:
                             writer.Write(" < ");
                             break;
-                        case OperatorType.GreaterThen:
+                        case OperatorType.GreaterThan:
                             writer.Write(" > ");
                             break;
-                        case OperatorType.LessThenEqual:
+                        case OperatorType.LessThanEqual:
                             writer.Write(" <= ");
                             break;
-                        case OperatorType.GreaterThenEqual:
+                        case OperatorType.GreaterThanEqual:
                             writer.Write(" >= ");
                             break;
                         default:
@@ -211,10 +211,10 @@ namespace Raven.Server.Documents.Queries.Parser
             switch (Type)
             {
                 case OperatorType.Equal:
-                case OperatorType.LessThen:
-                case OperatorType.GreaterThen:
-                case OperatorType.LessThenEqual:
-                case OperatorType.GreaterThenEqual:
+                case OperatorType.LessThan:
+                case OperatorType.GreaterThan:
+                case OperatorType.LessThanEqual:
+                case OperatorType.GreaterThanEqual:
                     writer.WritePropertyName("Field");
                     WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
                     writer.WritePropertyName("Value");

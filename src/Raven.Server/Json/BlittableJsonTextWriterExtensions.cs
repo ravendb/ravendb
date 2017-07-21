@@ -14,7 +14,7 @@ using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Queries.Suggestions;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;

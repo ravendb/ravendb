@@ -3,10 +3,10 @@
     public enum OperatorType
     {
         Equal,
-        LessThen,
-        GreaterThen,
-        LessThenEqual,
-        GreaterThenEqual,
+        LessThan,
+        GreaterThan,
+        LessThanEqual,
+        GreaterThanEqual,
         Between,
         In,
         Method,

@@ -370,16 +370,16 @@ namespace Raven.Server.Documents.Queries.Parser
             switch (match)
             {
                 case "<":
-                    type = OperatorType.LessThen;
+                    type = OperatorType.LessThan;
                     break;
                 case ">":
-                    type = OperatorType.GreaterThen;
+                    type = OperatorType.GreaterThan;
                     break;
                 case "<=":
-                    type = OperatorType.LessThenEqual;
+                    type = OperatorType.LessThanEqual;
                     break;
                 case ">=":
-                    type = OperatorType.GreaterThenEqual;
+                    type = OperatorType.GreaterThanEqual;
                     break;
                 case "=":
                 case "==":
