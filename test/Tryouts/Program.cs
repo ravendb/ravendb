@@ -13,9 +13,17 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.Indexing.IndexMerging())   
+                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())   
                 {
-                    test.IndexMergeWithQueryExpressionSyntax();
+                    try
+                    {
+                        test.ServerSideWriteAssurance().Wait();
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.Beep();
+                    }
                 }
             }
         }

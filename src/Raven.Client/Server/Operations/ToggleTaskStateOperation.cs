@@ -56,7 +56,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/tasks/state?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
+                url = $"{node.Url}/admin/tasks/state?name={_databaseName}&key={_taskId}&type={_type}&disable={_disable}";
 
                 var request = new HttpRequestMessage
                 {
