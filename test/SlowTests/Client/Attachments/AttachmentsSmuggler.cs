@@ -264,7 +264,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", "empty-file"))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 1, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:1", attachment.Details.ChangeVector);
                             Assert.Equal("empty-file", attachment.Details.Name);
                             Assert.Equal(0, attachment.Details.Size);
                             Assert.Equal("DldRwCblQ7Loqy6wYJnaodHl30d3j3eH+qtFzfEv46g=", attachment.Details.Hash);
