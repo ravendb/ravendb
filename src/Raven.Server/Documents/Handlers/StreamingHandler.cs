@@ -44,13 +44,8 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
-                var changeVector = GetLongQueryString("ChangeVector", false);
                 IEnumerable<Document> documents;
-                if (changeVector != null)
-                {
-                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, changeVector.Value, start, pageSize);
-                }
-                else if (HttpContext.Request.Query.ContainsKey("startsWith"))
+                if (HttpContext.Request.Query.ContainsKey("startsWith"))
                 {
                     documents = Database.DocumentsStorage.GetDocumentsStartingWith(context,
                         HttpContext.Request.Query["startsWith"],

@@ -53,35 +53,25 @@ namespace Raven.Client.Documents.Session.Operations
             return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
         }
 
-        public StreamCommand CreateRequest(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
-            if (fromChangeVector != null && startsWith != null)
-                throw new InvalidOperationException("Either fromEtag or startsWith must be null, you can't specify both");
-
             var sb = new StringBuilder("streams/docs?");
 
-            if (fromChangeVector != null)
+            if (startsWith != null)
             {
-                sb.Append("changeVector=").Append(fromChangeVector).Append("&");
+                sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
             }
-            else
+            if (matches != null)
             {
-                if (startsWith != null)
-                {
-                    sb.Append("startsWith=").Append(Uri.EscapeDataString(startsWith)).Append("&");
-                }
-                if (matches != null)
-                {
-                    sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
-                }
-                if (exclude != null)
-                {
-                    sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
-                }
-                if (startAfter != null)
-                {
-                    sb.Append("startAfter=").Append(Uri.EscapeDataString(startAfter)).Append("&");
-                }
+                sb.Append("matches=").Append(Uri.EscapeDataString(matches)).Append("&");
+            }
+            if (exclude != null)
+            {
+                sb.Append("exclude=").Append(Uri.EscapeDataString(exclude)).Append("&");
+            }
+            if (startAfter != null)
+            {
+                sb.Append("startAfter=").Append(Uri.EscapeDataString(startAfter)).Append("&");
             }
 
             if (string.IsNullOrEmpty(transformer) == false)

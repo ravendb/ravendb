@@ -152,21 +152,11 @@ namespace Raven.Client.Documents.Session
             return StreamAsync(indexQuery, token);
         }
 
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
-        {
-            return StreamAsync<T>(fromChangeVector, startsWith: null, matches: null, start: start, pageSize: pageSize, transformer: transformer, transformerParameters: transformerParameters, token: token);
-        }
-
-        public Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
+        public async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string startsWith, string matches = null, int start = 0,
                                    int pageSize = Int32.MaxValue, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
         {
-            return StreamAsync<T>(fromChangeVector: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize, startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters, token: token);
-        }
-
-        private async Task<IAsyncEnumerator<StreamResult<T>>> StreamAsync<T>(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null, CancellationToken token = default(CancellationToken))
-        {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,
+            var command = streamOperation.CreateRequest(startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);

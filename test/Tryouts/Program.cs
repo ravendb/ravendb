@@ -13,11 +13,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_3145())   
+                using (var test = new SlowTests.Issues.RavenDB_5303())   
                 {
                     try
                     {
-                        test.ShouldWork();
+                        test.can_load_documents_with_transformer_with_load_document_streaming();
                     }
                     catch (Exception e)
                     {

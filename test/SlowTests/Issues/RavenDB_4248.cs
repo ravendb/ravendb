@@ -66,7 +66,7 @@ namespace SlowTests.Issues
                         Assert.Equal(2, count);
                     }
 
-                    using (var enumerator = session.Advanced.Stream<SimpleTransformer.Result>(fromChangeVector:null, transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
+                    using (var enumerator = session.Advanced.Stream<SimpleTransformer.Result>(startsWith:"", transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
                         Assert.Equal(2, count);
                     }
 
-                    using (var enumerator = await session.Advanced.StreamAsync<SimpleTransformer.Result>(fromChangeVector:null, transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
+                    using (var enumerator = await session.Advanced.StreamAsync<SimpleTransformer.Result>(startsWith:"", transformer: transformer.TransformerName, transformerParameters: new Dictionary<string, object> { { "Name", "Test" } }))
                     {
                         var count = 0;
                         while (await enumerator.MoveNextAsync())

@@ -54,17 +54,6 @@ namespace Raven.Client.Documents.Session
         ///     Stream the results of documents search to the client, converting them to CLR types along the way.
         ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
         /// </summary>
-        /// <param name="fromChangeVector"></param>
-        /// <param name="start">number of documents that should be skipped</param>
-        /// <param name="pageSize">maximum number of documents that will be retrieved</param>
-        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
-        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null);
-
-        /// <summary>
-        ///     Stream the results of documents search to the client, converting them to CLR types along the way.
-        ///     <para>Does NOT track the entities in the session, and will not includes changes there when SaveChanges() is called</para>
-        /// </summary>
         /// <param name="startsWith">prefix for which documents should be returned e.g. "products/"</param>
         /// <param name="matches">
         ///     pipe ('|') separated values for which document ID (after 'idPrefix') should be matched ('?'

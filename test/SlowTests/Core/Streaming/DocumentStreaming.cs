@@ -44,49 +44,5 @@ namespace SlowTests.Core.Streaming
                 Assert.Equal(200, count);
             }
         }
-
-        [Fact(Skip = "Should remove the usage of stream form specific ETag")]
-        public void CanStreamDocumentsFromSpecifiedEtag()
-        {
-            using (var store = GetDocumentStore())
-            {
-                string changeVectorEntries;
-
-                using (var session = store.OpenSession())
-                {
-                    User hundredthUser = null;
-
-                    for (int i = 0; i < 200; i++)
-                    {
-                        var user = new User();
-                        session.Store(user);
-
-                        if (i == 100)
-                        {
-                            hundredthUser = user;
-                        }
-                    }
-                    session.SaveChanges();
-
-                    changeVectorEntries = session.Advanced.GetChangeVectorFor(hundredthUser);
-                }
-
-                int count = 0;
-                var ids = new List<KeyValuePair<string, string>>();
-                using (var session = store.OpenSession())
-                {
-                    using (var reader = session.Advanced.Stream<User>(fromChangeVector:changeVectorEntries))
-                    {
-                        while (reader.MoveNext())
-                        {
-                            count++;
-                            ids.Add(new KeyValuePair<string, string>(reader.Current.Id, reader.Current.ChangeVector));
-                            Assert.IsType<User>(reader.Current.Document);
-                        }
-                    }
-                }
-                Assert.Equal(100, count);
-            }
-        }
     }
 }
