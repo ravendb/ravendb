@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private async Task WaitForIndexesAsync(TimeSpan timeout, LazyStringValue lastChangeVector, HashSet<string> modifiedCollections)
+        private async Task WaitForIndexesAsync(TimeSpan timeout, string lastChangeVector, HashSet<string> modifiedCollections)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
             // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Handlers
             public Queue<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
             public DocumentDatabase Database;
-            public LazyStringValue LastChangeVector;
+            public string LastChangeVector;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             public HashSet<string> ModifiedCollections;
 
@@ -288,7 +288,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
-                            LastChangeVector = context.GetLazyString(putResult.ChangeVector);
+                            LastChangeVector = putResult.ChangeVector;
                             ModifiedCollections?.Add(putResult.Collection.Name);
 
                             // Make sure all the metadata fields are always been add
@@ -315,7 +315,7 @@ namespace Raven.Server.Documents.Handlers
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, patchResult.ModifiedDocument.Size);
 
                             if (patchResult.ChangeVector != null)
-                                LastChangeVector = context.GetLazyString(patchResult.ChangeVector);
+                                LastChangeVector = patchResult.ChangeVector;
 
                             if (patchResult.Collection != null)
                                 ModifiedCollections?.Add(patchResult.Collection);
@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 if (deleted != null)
                                 {
-                                    LastChangeVector = context.GetLazyString(deleted.Value.ChangeVector);
+                                    LastChangeVector = deleted.Value.ChangeVector;
                                     ModifiedCollections?.Add(deleted.Value.Collection.Name);
                                 }
 
@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 for (var j = 0; j < deleteResults.Count; j++)
                                 {
-                                    LastChangeVector = context.GetLazyString(deleteResults[j].ChangeVector);
+                                    LastChangeVector = deleteResults[j].ChangeVector;
                                     ModifiedCollections?.Add(deleteResults[j].Collection.Name);
                                 }
 
@@ -370,7 +370,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
                                     cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
-                                LastChangeVector = context.GetLazyString(attachmentPutResult.ChangeVector);
+                                LastChangeVector = attachmentPutResult.ChangeVector;
 
                                 if (_documentsToUpdateAfterAttachmentChange == null)
                                     _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -413,10 +413,9 @@ namespace Raven.Server.Documents.Handlers
                     {
                         var changeVector = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
                         if (changeVector != null)
-                            LastChangeVector = context.GetLazyString(changeVector);
+                            LastChangeVector = changeVector;
                     }
                 }
-
                 return Reply.Count;
             }
 

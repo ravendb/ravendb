@@ -770,7 +770,7 @@ namespace Raven.Server.Documents.Replication
             return _numberOfSiblings / 2 + 1;
         }
 
-        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, LazyStringValue lastChangeVector)
+        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
         {
             if (_numberOfSiblings == 0)
             {
@@ -827,7 +827,7 @@ namespace Raven.Server.Documents.Replication
             return result.Task;
         }
 
-        private int ReplicatedPast(LazyStringValue changeVector)
+        private int ReplicatedPast(string changeVector)
         {
             int count = 0;
             foreach (var destination in _outgoing)

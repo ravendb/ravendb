@@ -14,11 +14,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationIndexesAndTransformers())   
+                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())   
                 {
                     try
                     {
-                        test.Can_replicate_multiple_indexes_and_multiple_transformers().Wait();
+                        test.ServerSideWriteAssurance().Wait();
                     }
                     catch (Exception e)
                     {

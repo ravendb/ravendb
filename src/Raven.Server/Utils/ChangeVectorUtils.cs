@@ -47,7 +47,7 @@ namespace Raven.Server.Utils
 
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString)
         {
-            if (localAsString == null)
+            if (localAsString == null || remoteAsString == null)
                 return ConflictStatus.Update;
 
             var local = localAsString.ToChangeVector();
