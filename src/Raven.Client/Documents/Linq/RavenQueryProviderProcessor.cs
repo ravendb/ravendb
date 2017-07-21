@@ -1353,6 +1353,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         var originalField = GetSelectPath((MemberExpression)newExpression.Arguments[index]);
 
                         _documentQuery.GroupBy(originalField);
+
+                        AddGroupByAliasIfNeeded(newExpression.Members[index], originalField);
                     }
                     break;
                 case ExpressionType.MemberInit:
@@ -1368,11 +1370,26 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         var originalField = GetSelectPath((MemberExpression)field.Expression);
 
                         _documentQuery.GroupBy(originalField);
+
+                        AddGroupByAliasIfNeeded(field.Member, originalField);
                     }
                     break;
                 default:
                     throw new NotSupportedException("Node not supported in GroupBy: " + body.NodeType);
 
+            }
+        }
+
+        private void AddGroupByAliasIfNeeded(MemberInfo aliasMember, string originalField)
+        {
+            var alias = GetSelectPath(aliasMember);
+
+            if (alias != null && originalField.Equals(alias, StringComparison.Ordinal) == false)
+            {
+                if (_documentQuery is DocumentQuery<T> docQuery)
+                    docQuery.AddGroupByAlias(originalField, alias);
+                else if (_documentQuery is AsyncDocumentQuery<T> asyncDocQuery)
+                    asyncDocQuery.AddGroupByAlias(originalField, alias);
             }
         }
 
@@ -1535,7 +1552,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         var projectedName = ExtractProjectedName(fieldMember);
 
-                        _documentQuery.GroupByKey(null, projectedName);
+                        if (projectedName.Equals("Key", StringComparison.Ordinal))
+                            _documentQuery.GroupByKey(null);
+                        else
+                            _documentQuery.GroupByKey(null, projectedName);
                     }
                     else if (name.StartsWith("Key.", StringComparison.Ordinal))
                     {
@@ -1647,7 +1667,10 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             if (mapReduceOperation == AggregationOperation.Count)
             {
-                _documentQuery.GroupByCount(mapReduceField);
+                if (mapReduceField.Equals("Count", StringComparison.Ordinal))
+                    _documentQuery.GroupByCount();
+                else
+                    _documentQuery.GroupByCount(mapReduceField);
                 return;
             }
 

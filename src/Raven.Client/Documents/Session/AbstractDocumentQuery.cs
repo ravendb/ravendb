@@ -33,6 +33,7 @@ namespace Raven.Client.Documents.Session
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         private static readonly Regex EscapePostfixWildcard = new Regex(@"\\\*(\s|$)", RegexOptions.Compiled);
+        private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
 
         protected QueryOperator DefaultOperator;
         protected bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
@@ -539,6 +540,11 @@ namespace Raven.Client.Documents.Session
             SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
         }
+        
+        internal void AddGroupByAlias(string fieldName, string projectedName)
+        {
+            _aliasToGroupByFieldName[projectedName] = fieldName;
+        }
 
         public void GroupBy(string fieldName, params string[] fieldNames)
         {
@@ -565,6 +571,12 @@ namespace Raven.Client.Documents.Session
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
             IsGroupBy = true;
+
+            if (projectedName != null && _aliasToGroupByFieldName.TryGetValue(projectedName, out var aliasedFieldName))
+            {
+                if (fieldName == null || fieldName.Equals(projectedName, StringComparison.Ordinal))
+                    fieldName = aliasedFieldName;
+            }
 
             SelectTokens.AddLast(GroupByKeyToken.Create(fieldName, projectedName));
         }
