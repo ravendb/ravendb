@@ -7,9 +7,9 @@ class getStudioConfig extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<singleAuthToken> {
+    execute(): JQueryPromise<void> {
         var url = "/studio-tasks/config";
-        var getTask = this.query(url, null, this.db);
+        var getTask = this.query<void>(url, null, this.db);
         return getTask;
     }
 }

@@ -98,35 +98,15 @@ class adminLogs extends viewModelBase {
             return;
         }
 
-        var tokenDeferred = $.Deferred();
-
-        if (!this.adminLogsConfig().singleAuthToken()) {
-            /*
-            new getSingleAuthTokenCommand(appUrl.getSystemDatabase(), true)
-                .execute()
-                .done((tokenObject: singleAuthToken) => {
-                    this.adminLogsConfig().singleAuthToken(tokenObject);
-                    tokenDeferred.resolve();
-                })
-                .fail(() => {
-                    app.showBootstrapMessage("You are not authorized to trace this database", "Authorization error");
-                });*/
-        } else {
-            tokenDeferred.resolve();
-        }
-
-        tokenDeferred.done(() => {
-            this.adminLogsClient(new adminLogsClient(this.adminLogsConfig().singleAuthToken().Token));
-            this.adminLogsClient().connect();
-            var categoriesConfig = this.adminLogsConfig().entries().map(e => e.toDto());
-            this.adminLogsClient().configureCategories(categoriesConfig);
-            this.adminLogsClient().connectionOpeningTask.done(() => {
-                this.connected(true);
-                this.adminLogsClient().watchAdminLogs((event: logDto) => {
-                    this.onLogMessage(event);
-                });
+        this.adminLogsClient(new adminLogsClient());
+        this.adminLogsClient().connect();
+        var categoriesConfig = this.adminLogsConfig().entries().map(e => e.toDto());
+        this.adminLogsClient().configureCategories(categoriesConfig);
+        this.adminLogsClient().connectionOpeningTask.done(() => {
+            this.connected(true);
+            this.adminLogsClient().watchAdminLogs((event: logDto) => {
+                this.onLogMessage(event);
             });
-            this.adminLogsConfig().singleAuthToken(null);
         });
     }
 

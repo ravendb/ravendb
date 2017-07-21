@@ -26,7 +26,7 @@ class adminLogsClient {
     private commandBase = new commandBase();
     private adminLogsHandlers = ko.observableArray<changesCallback<logDto>>();
 
-    constructor(private token: string) {
+    constructor() {
         this.eventsId = idGenerator.generateId();
         this.resourcePath = appUrl.baseUrl;
         this.connectionOpeningTask = $.Deferred();
@@ -34,7 +34,7 @@ class adminLogsClient {
     }
 
     public connect() {
-        var connectionString = 'singleUseAuthToken=' + this.token + '&id=' + this.eventsId;
+        var connectionString = 'id=' + this.eventsId;
         if ("WebSocket" in window) {
             this.connectWebSocket(connectionString);
         } else {

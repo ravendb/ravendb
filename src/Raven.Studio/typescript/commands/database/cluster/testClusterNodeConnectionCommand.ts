@@ -13,7 +13,7 @@ class testClusterNodeConnectionCommand extends commandBase {
         };
         const url = endpoints.global.testConnection.adminTestConnection + this.urlEncodeArgs(args);
 
-        return this.query(url, null)
+        return this.post(url, null)
             .fail((response: JQueryXHR) => this.reportError(`Failed to test connection`, response.responseText, response.statusText));
     }
 }

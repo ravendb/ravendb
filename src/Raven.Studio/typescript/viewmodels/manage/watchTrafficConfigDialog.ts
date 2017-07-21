@@ -1,7 +1,6 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import appUrl = require("common/appUrl");
 import databasesManager = require("common/shell/databasesManager");
 import database = require("models/resources/database");
@@ -81,30 +80,15 @@ class watchTrafficConfigDialog extends dialogViewModelBase {
 
         var resourcePath = appUrl.forDatabaseQuery(tracedResource);
         
-        var getTokenTask = new getSingleAuthTokenCommand(tracedResource, this.watchedResourceMode() === "AdminView").execute();
-
-        getTokenTask
-            .done((tokenObject: singleAuthToken) => {
-                this.configurationTask.resolve({
-                    Resource: tracedResource,
-                    ResourceName: tracedResource.name,
-                    ResourcePath: resourcePath,
-                    MaxEntries: this.maxEntries(),
-                    WatchedResourceMode: this.watchedResourceMode(),
-                    SingleAuthToken:tokenObject
-                });
-                dialog.close(this);
-            })
-            .fail((e) => {
-                var response = JSON.parse(e.responseText);
-                var msg = e.statusText;
-                if ("Error" in response) {
-                    msg += ": " + response.Error;
-                } else if ("Reason" in response) {
-                    msg += ": " + response.Reason;
-                }
-                app.showBootstrapMessage(msg, "Error");
+        this.configurationTask.resolve({
+            Resource: tracedResource,
+            ResourceName: tracedResource.name,
+            ResourcePath: resourcePath,
+            MaxEntries: this.maxEntries(),
+            WatchedResourceMode: this.watchedResourceMode(),
         });
+
+        dialog.close(this);
     }
     
     generateBindingInputId(index: number) {

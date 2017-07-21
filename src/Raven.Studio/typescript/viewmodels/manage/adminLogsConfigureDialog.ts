@@ -2,7 +2,6 @@
 import app = require("durandal/app");
 import dialog = require("plugins/dialog");
 import dialogViewModelBase = require("viewmodels/dialogViewModelBase");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import adminLogsConfig = require("models/database/debug/adminLogsConfig");
 import adminLogsConfigEntry = require("models/database/debug/adminLogsConfigEntry");
 
@@ -32,24 +31,8 @@ class adminLogsConfigureDialog extends dialogViewModelBase {
     }
 
     startServerLogging() {
-        var getTokenTask = new getSingleAuthTokenCommand(null, true).execute();
-
-        getTokenTask
-            .done((tokenObject: singleAuthToken) => {
-                this.logConfig.singleAuthToken(tokenObject);
-                this.configurationTask.resolve(this.logConfig);
-                dialog.close(this);
-            })
-            .fail((e) => {
-                var response = JSON.parse(e.responseText);
-                var msg = e.statusText;
-                if ("Error" in response) {
-                    msg += ": " + response.Error;
-                } else if ("Reason" in response) {
-                    msg += ": " + response.Reason;
-                }
-                app.showBootstrapMessage(msg, "Error");
-            });
+        this.configurationTask.resolve(this.logConfig);
+        dialog.close(this);
     }
 
     addCategory() {

@@ -23,7 +23,7 @@ namespace Raven.Server.Web.System
 {
     public class OngoingTasksHandler : DatabasesHandler
     {
-        [RavenAction("ongoing-tasks", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/ongoing-tasks", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTasks()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("databaseName");

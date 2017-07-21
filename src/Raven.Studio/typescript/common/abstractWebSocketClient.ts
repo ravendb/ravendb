@@ -2,8 +2,6 @@
 
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
-import messagePublisher = require("common/messagePublisher");
 
 abstract class abstractWebSocketClient<T> {
 
@@ -38,14 +36,14 @@ abstract class abstractWebSocketClient<T> {
 
     protected abstract get connectionDescription(): string;
 
-    // it should return something like: /changes?foo=bar&singleUseAuthToken=123
-    protected abstract webSocketUrlFactory(token: singleAuthToken): string;
+    // it should return something like: /changes?foo=bar
+    protected abstract webSocketUrlFactory(): string;
 
     protected isHeartBeat(e: any): boolean {
         return !e.data.trim();
     }
 
-    private connect(action: (token: singleAuthToken) => void, recoveringFromWebsocketFailure: boolean = false) {
+    private connect(action: () => void, recoveringFromWebsocketFailure: boolean = false) {
         if (this.disposed) {
             if (!!this.connectToWebSocketTask)
                 this.connectToWebSocketTask.resolve();
@@ -55,42 +53,18 @@ abstract class abstractWebSocketClient<T> {
             this.connectToWebSocketTask = $.Deferred<void>();
         }
 
-        new getSingleAuthTokenCommand(this.db)
-            .execute()
-            .done((tokenObject: singleAuthToken) => {
-                action.call(this, tokenObject);
-            })
-            .fail((e) => {
-                if (this.disposed) {
-                    this.connectToWebSocketTask.reject();
-                    return;
-                }
-                    
-                const error = !!e.responseJSON ? e.responseJSON.Error : e.responseText;
-                if (e.status === 0) {
-                    // Connection has closed so try to reconnect every 3 seconds.
-                    setTimeout(() => this.connect(action), 3 * 1000);
-                }
-                else if (e.status === ResponseCodes.ServiceUnavailable) {
-                    // We're still loading the database, try to reconnect every 2 seconds.
-                    setTimeout(() => this.connect(action, true), 2 * 1000);
-                }
-                else if (e.status !== ResponseCodes.Forbidden) { // authorized connection
-                    messagePublisher.reportError(error || "Failed to connect to changes", e.responseText, e.StatusText);
-                    this.connectToWebSocketTask.reject();
-                }
-            });
+        action.call(this);
     }
 
     protected onClose(e: CloseEvent) {
         // empty
     }
 
-    private connectWebSocket(token: singleAuthToken) {
+    private connectWebSocket() {
         let connectionOpened: boolean = false;
         
         const wsProtocol = window.location.protocol === "https:" ? "wss://" : "ws://";
-        const queryString = this.webSocketUrlFactory(token);
+        const queryString = this.webSocketUrlFactory();
         const url = wsProtocol + window.location.host + this.resourcePath + queryString;
         this.webSocket = new WebSocket(url);
 

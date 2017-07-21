@@ -27,8 +27,8 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
         return this.db.fullTypeName + " = " + this.db.name;
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "singleUseAuthToken=" + token.Token + "&throttleConnection=true";
+    protected webSocketUrlFactory() {
+        const connectionString = "throttleConnection=true";
         return "/changes?" + connectionString;
     }
 

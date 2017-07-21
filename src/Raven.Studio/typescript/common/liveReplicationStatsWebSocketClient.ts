@@ -25,9 +25,8 @@ class liveReplicationStatsWebSocketClient extends abstractWebSocketClient<result
         return "Live Replication Stats";
     }
 
-    protected webSocketUrlFactory(token: singleAuthToken) {
-        const connectionString = "?singleUseAuthToken=" + token.Token;
-        return endpoints.databases.replication.replicationPerformanceLive + connectionString;
+    protected webSocketUrlFactory() {
+        return endpoints.databases.replication.replicationPerformanceLive;
     }
 
     get autoReconnect() {
