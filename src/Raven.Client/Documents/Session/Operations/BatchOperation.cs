@@ -58,10 +58,10 @@ namespace Raven.Client.Documents.Session.Operations
                     continue;
 
                 if (batchResult.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false || changeVector == null)
-                    throw new InvalidOperationException("PUT response is invalid. @etag is missing.");
+                    throw new InvalidOperationException("PUT response is invalid. @change-vector is missing on " + documentInfo.Id);
 
                 if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
-                    throw new InvalidOperationException("PUT response is invalid. @id is missing.");
+                    throw new InvalidOperationException("PUT response is invalid. @id is missing on " + documentInfo.Id);
 
                 documentInfo.Metadata.Modifications = null;
                 documentInfo.Metadata.Modifications = new DynamicJsonValue(documentInfo.Metadata);

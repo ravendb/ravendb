@@ -168,7 +168,7 @@ namespace Raven.Server.Documents
                         {
                             var oldChangeVector = TableValueToChangeVector(context,(int)AttachmentsTable.ChangeVector, ref oldValue);
                             if (oldChangeVector.CompareTo(expectedChangeVector) != 0)
-                                throw new ConcurrencyException($"Attachment {name} has change vector {oldChangeVector}, but Put was called with the change vector {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                                throw new ConcurrencyException($"Attachment {name} has change vector '{oldChangeVector}', but Put was called with the change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
                                 {
                                     ActualChangeVector = oldChangeVector,
                                     ExcpectedChangeVector = expectedChangeVector
@@ -209,7 +209,7 @@ namespace Raven.Server.Documents
                             }
                         }
 
-                        if (expectedChangeVector != null)
+                        if (expectedChangeVector != null && expectedChangeVector.Length != 0)
                         {
                             ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedChangeVector);
                         }
@@ -680,7 +680,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingAttachment(string documentId, string name, LazyStringValue expectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Attachment {name} of '{documentId}' does not exist, but Put was called with change vector {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Attachment {name} of '{documentId}' does not exist, but Put was called with change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExcpectedChangeVector = expectedChangeVector
             };
