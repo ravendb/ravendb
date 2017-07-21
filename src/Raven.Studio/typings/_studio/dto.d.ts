@@ -323,7 +323,7 @@ interface subscriptionDataFromUI {
     TaskName: string;
     Script: string;
     Collection: string;
-    ChangeVectorEntry: Array<Raven.Client.Documents.Replication.Messages.ChangeVectorEntry>;
+    ChangeVectorEntry: string;
     IncludeRevisions: boolean;
 } 
 

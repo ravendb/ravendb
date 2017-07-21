@@ -62,8 +62,9 @@ class document implements documentBase {
         if (meta) {
             //TODO: bulkDoc.Metadata = meta;
 
-            if (meta["@etag"]) {
-                bulkDoc.Etag = meta["@etag"];
+            if (meta["@change-vector"]) {
+                // TODO: Fixme!
+                //bulkDoc.ChangeVector = meta["@change-vector"];
             }
         }
 

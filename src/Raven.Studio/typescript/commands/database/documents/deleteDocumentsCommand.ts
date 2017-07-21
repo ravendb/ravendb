@@ -12,7 +12,7 @@ class deleteDocumentsCommand extends executeBulkDocsCommand {
         return {
             Id: id,
             Type: "DELETE",
-            Etag: null
+            ChangeVector: null
         } as Raven.Server.Documents.Handlers.BatchRequestParser.CommandData;
     }
 }

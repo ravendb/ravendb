@@ -10,7 +10,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     collections = collectionsTracker.default.collections;
 
     script = ko.observable<string>();
-    fromChangeVector = ko.observableArray<Raven.Client.Documents.Replication.Messages.ChangeVectorEntry>([]); 
+    fromChangeVector = ko.observable<string>(null); 
     applyScript = ko.observable<boolean>(true); 
     includeRevisions = ko.observable<boolean>(false);
     areRevisionsDefinedForCollection = ko.observable<boolean>(true);
@@ -152,7 +152,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                      Script: "",
                      IncludeRevisions: false
                 },
-                ChangeVector: [],
+                ChangeVector: null,
                 LastEtagReachedInServer: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,
