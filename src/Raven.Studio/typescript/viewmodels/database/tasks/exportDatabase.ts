@@ -14,7 +14,6 @@ import collectionsStats = require("models/database/documents/collectionsStats");
 
 import validateExportDatabaseOptionsCommand = require("commands/database/studio/validateExportDatabaseOptionsCommand");
 import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
@@ -196,25 +195,16 @@ class exportDatabase extends viewModelBase {
             });
     }
 
-    private getAuthToken(db: database): JQueryPromise<singleAuthToken> {
-        return new getSingleAuthTokenCommand(db).execute()
-            .fail((qXHR, textStatus, errorThrown) => {
-                messagePublisher.reportError("Could not get single auth token for download.", errorThrown);
-                exportDatabase.isExporting(false);
-            });
-    }
-
     private startDownload(args: Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions) {
         const $form = $("#exportDownloadForm");
         const db = this.activeDatabase();
         const $downloadOptions = $("[name=DownloadOptions]", $form);
 
-        $.when<any>(this.getNextOperationId(db), this.getAuthToken(db))
-            .then(([operationId]:[number], [token]:[singleAuthToken]) => {
+        this.getNextOperationId(db)
+            .done((operationId: number) => {
                 const url = endpoints.databases.smuggler.smugglerExport;
-                const authToken = (url.indexOf("?") === -1 ? "?" : "&") + "singleUseAuthToken=" + token.Token;
-                const operationPart = "&operationId=" + operationId;
-                $form.attr("action", appUrl.forDatabaseQuery(db) + url + authToken + operationPart);
+                const operationPart = "?operationId=" + operationId;
+                $form.attr("action", appUrl.forDatabaseQuery(db) + url + operationPart);
                 $downloadOptions.val(JSON.stringify(args, (key, value) => {
                     if (key === "TransformScript" && value === "") {
                         return undefined;
@@ -229,7 +219,6 @@ class exportDatabase extends viewModelBase {
                     .fail((exception: Raven.Client.Documents.Operations.OperationExceptionResult) => {
                         messagePublisher.reportError("Could not export database: " + exception.Message, exception.Error, null, false);
                     }).always(() => exportDatabase.isExporting(false));
-
             });
     }
 }

@@ -2,7 +2,6 @@ import app = require("durandal/app");
 import viewModelBase = require("viewmodels/viewModelBase");
 import watchTrafficConfigDialog = require("viewmodels/manage/watchTrafficConfigDialog");
 import trafficWatchClient = require("common/trafficWatchClient");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import moment = require("moment");
 import fileDownloader = require("common/fileDownloader");
 import enableQueryTimings = require("commands/database/query/enableQueryTimings");
@@ -11,7 +10,7 @@ import accessHelper = require("viewmodels/shell/accessHelper");
 import eventsCollector = require("common/eventsCollector");
 
 class trafficWatch extends viewModelBase {
-    logConfig = ko.observable<{ Resource: database; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string; SingleAuthToken: singleAuthToken }>();
+    logConfig = ko.observable<{ Resource: database; ResourceName:string; ResourcePath: string; MaxEntries: number; WatchedResourceMode: string }>();
     watchClient: trafficWatchClient;
     isConnected = ko.observable(false);
     recentEntries = ko.observableArray<any>([]);
@@ -166,35 +165,16 @@ class trafficWatch extends viewModelBase {
             return;
         }
 
-        var tokenDeferred = $.Deferred();
-
-        if (!this.logConfig().SingleAuthToken) {
-            new getSingleAuthTokenCommand(this.logConfig().Resource, this.logConfig().WatchedResourceMode === "AdminView")
-                .execute()
-                .done((tokenObject: singleAuthToken) => {
-                    this.logConfig().SingleAuthToken = tokenObject;
-                    tokenDeferred.resolve();
-                })
-                .fail((e) => {
-                    app.showBootstrapMessage("You are not authorized to trace this database", "Authorization error");
-                });
-        } else {
-            tokenDeferred.resolve();
-        }
-
-        tokenDeferred.done(() => {
-            this.watchClient = new trafficWatchClient(this.logConfig().ResourcePath, this.logConfig().SingleAuthToken.Token);
-            this.watchClient.connect();
-            this.watchClient.connectionOpeningTask.done(() => {
-                this.isConnected(true);
-                this.watchClient.watchTraffic((event: logNotificationDto) => {
-                    this.processHttpTraceMessage(event);
-                });
-                if (!this.startTraceTime()) {
-                    this.startTraceTime(this.now());
-                }
+        this.watchClient = new trafficWatchClient(this.logConfig().ResourcePath);
+        this.watchClient.connect();
+        this.watchClient.connectionOpeningTask.done(() => {
+            this.isConnected(true);
+            this.watchClient.watchTraffic((event: logNotificationDto) => {
+                this.processHttpTraceMessage(event);
             });
-            this.logConfig().SingleAuthToken = null;
+            if (!this.startTraceTime()) {
+                this.startTraceTime(this.now());
+            }
         });
     }
     

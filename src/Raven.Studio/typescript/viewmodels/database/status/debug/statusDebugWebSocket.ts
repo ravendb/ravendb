@@ -1,6 +1,5 @@
 import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
-import getSingleAuthTokenCommand = require("commands/auth/getSingleAuthTokenCommand");
 import eventsCollector = require("common/eventsCollector");
 
 class statusDebugWebSocket extends viewModelBase {
@@ -16,22 +15,8 @@ class statusDebugWebSocket extends viewModelBase {
         eventsCollector.default.reportEvent("web-socket", "test");
 
         if ("WebSocket" in window) {
-            var getTokenTask = new getSingleAuthTokenCommand(this.activeDatabase()).execute();
-
-            getTokenTask
-                .done((tokenObject: singleAuthToken) => {
-                    var token = tokenObject.Token;
-                    var connectionString = 'singleUseAuthToken=' + token + '&id=test&coolDownWithDataLoss=1000&isMultyTenantTransport=false';
-                    this.connectWebSocket(connectionString);
-                })
-                .fail((e) => {
-                    if (e.status == 0) {
-                        this.appendLog("Connection has closed (during getToken)");
-                    }
-                    else { // authorized connection
-                        this.appendLog(e.responseJSON.Error);
-                    }
-                });
+            var connectionString = '&id=test&coolDownWithDataLoss=1000&isMultyTenantTransport=false';
+            this.connectWebSocket(connectionString);
         } else {
             this.appendLog("Looks like your browser doesn't support web sockets");
         }
