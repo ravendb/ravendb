@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
@@ -9,6 +10,9 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
+        private const string GroupByKeyFieldMarker = "__groupByKey";
+        private const string CountFieldName = "Count";
+
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters)
@@ -20,6 +24,7 @@ namespace Raven.Server.Documents.Queries
             IsDynamic = Query.From.Index == false;
 
             var fromToken = Query.From.From;
+
             if (IsDynamic)
                 CollectionName = QueryExpression.Extract(Query.QueryText, fromToken);
             else
@@ -70,12 +75,9 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 if (IsGroupBy)
-                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT");
+                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()");
             }
-
-            if (Query.Where != null)
-                new FillWhereFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
-
+            
             if (Query.GroupBy != null)
             {
                 GroupBy = new string[Query.GroupBy.Count];
@@ -84,6 +86,12 @@ namespace Raven.Server.Documents.Queries
                     GroupBy[i] = QueryExpression.Extract(Query.QueryText, Query.GroupBy[i]);
             }
 
+            if (IsGroupBy)
+                AdjustGroupByFieldNames();
+
+            if (Query.Where != null)
+                new FillWhereFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
+
             if (Query.OrderBy != null)
             {
                 OrderBy = new (string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
@@ -91,7 +99,7 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
                     var fieldInfo = Query.OrderBy[i];
-                    OrderBy[i] = ((QueryExpression.Extract(Query.QueryText, fieldInfo.Field), fieldInfo.FieldType, fieldInfo.Ascending));
+                    OrderBy[i] = (GetIndexFieldName(QueryExpression.Extract(Query.QueryText, fieldInfo.Field)), fieldInfo.FieldType, fieldInfo.Ascending);
                 }
             }
         }
@@ -126,7 +134,11 @@ namespace Raven.Server.Documents.Queries
                                 switch (methodName)
                                 {
                                     case "key":
-                                        fieldName = alias ?? "Key"; // TODO are - retrieve name from group by
+                                        fieldName = GroupByKeyFieldMarker;
+
+                                        if (alias == null)
+                                            throw new NotSupportedException("TODO arek - an alias after key() is mandatory at the moment e.g. 'SELECT key() as City ...'");
+
                                         break;
                                     default:
                                         throw new NotSupportedException($"Unknown aggregation method: '{methodName}'");
@@ -137,7 +149,7 @@ namespace Raven.Server.Documents.Queries
                                 switch (aggregation)
                                 {
                                     case AggregationOperation.Count:
-                                        fieldName = "Count";
+                                        fieldName = CountFieldName;
                                         break;
                                     case AggregationOperation.Sum:
 
@@ -154,7 +166,9 @@ namespace Raven.Server.Documents.Queries
                                 }
                             }
 
-                            fields.Add(new SelectField(fieldName ?? methodName, alias, aggregation));
+                            Debug.Assert(fieldName != null);
+
+                            fields.Add(new SelectField(fieldName, alias, aggregation));
 
                             break;
                         }
@@ -184,6 +198,27 @@ namespace Raven.Server.Documents.Queries
                 return indexFieldName;
 
             return fieldNameOrAlias;
+        }
+
+        private void AdjustGroupByFieldNames()
+        {
+            for (int i = 0; i < SelectFields.Length; i++)
+            {
+                var selectField = SelectFields[i];
+
+                if (selectField.Name.Equals(GroupByKeyFieldMarker) == false)
+                    continue;
+
+                if (GroupBy.Length == 1)
+                {
+                    var realFieldName = GroupBy[0];
+
+                    SelectFields[i] = new SelectField(realFieldName, selectField.Alias, selectField.AggregationOperation);
+                    _aliasToName[selectField.Alias] = realFieldName;
+                }
+                else
+                    throw new NotImplementedException("TODO arek");
+            }
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)

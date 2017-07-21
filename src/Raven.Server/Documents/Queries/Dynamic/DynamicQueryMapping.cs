@@ -105,17 +105,17 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ForCollection = query.Metadata.CollectionName
             };
 
-            var fields = new Dictionary<string, DynamicQueryMappingItem>();
-            var sorting = new Dictionary<string, DynamicSortInfo>();
+            var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.OrdinalIgnoreCase);
+            var sorting = new Dictionary<string, DynamicSortInfo>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var field in query.Metadata.WhereFields)
             {
-                var fieldName = query.Metadata.GetIndexFieldName(field.Key);
+                var fieldName = field.Key;
 
                 if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
-                fields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
+                mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
 
                 switch (field.Value)
                 {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Metadata.OrderBy)
                 {
-                    var fieldName = query.Metadata.GetIndexFieldName(field.Name);
+                    var fieldName = field.Name;
 
                     if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         }
                     }
 
-                    fields[field.Name] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
+                    mapFields[field.Name] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
                 }
             }
 
@@ -181,14 +181,36 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 foreach (var selectField in query.Metadata.SelectFields)
                 {
-                    if (fields.TryGetValue(selectField.Name, out var existingField) == false)
+                    if (mapFields.TryGetValue(selectField.Name, out var existingField) == false)
                     {
-                        if (selectField.AggregationOperation != AggregationOperation.None)
-                            fields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
+                        if (selectField.AggregationOperation == AggregationOperation.None)
+                            continue;
+
+                        mapFields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
+
+                        if (selectField.AggregationOperation != AggregationOperation.Sum)
+                            continue;
+
+                        if (sorting.TryGetValue(selectField.Name, out var _) == false)
+                        {
+                            sorting[selectField.Name] = new DynamicSortInfo()
+                            {
+                                FieldType = SortOptions.Numeric,
+                                Name = selectField.Name
+                            };
+                        }
                     }
                     else if (selectField.AggregationOperation != AggregationOperation.None)
                     {
                         existingField.AggregationOperation = selectField.AggregationOperation;
+                    }
+                    else
+                    {
+                        Debug.Assert(query.Metadata.GroupBy.Contains(selectField.Name));
+                        // the field was specified in GROUP BY and WHERE
+                        // let's remove it since GROUP BY fields are passed separately
+
+                        mapFields.Remove(selectField.Name);
                     }
                 }
 
@@ -196,7 +218,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             // TODO arek - get rid of linq
-            result.MapFields = fields.Values
+            result.MapFields = mapFields.Values
                 .OrderByDescending(x => x.Name.Length)
                 .ToArray();
 

@@ -244,7 +244,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
-                Assert.Equal("Auto/OrderLines/ByQuantityReducedByProductName", indexDefinitions[0].Name);
+                Assert.Equal("Auto/OrderLines/ByQuantitySortByQuantityReducedByProductName", indexDefinitions[0].Name);
             }
         }
 
@@ -294,31 +294,27 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                 using (var commands = store.Commands())
                 {
+                    // create auto map reduce index
                     var command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
                     {
-                        Query = "FROM Addresses",
-                        //DynamicMapReduceFields = new[]
-                        //{
-                        //    new DynamicMapReduceField
-                        //    {
-                        //        Name = "City",
-                        //        ClientSideName = null,
-                        //        IsGroupBy = true,
-                        //        OperationType = FieldMapReduceOperation.None
-                        //    },
-                        //    new DynamicMapReduceField
-                        //    {
-                        //        Name = "Count",
-                        //        ClientSideName = "TotalCount",
-                        //        IsGroupBy = false,
-                        //        OperationType = FieldMapReduceOperation.Count
-                        //    }
-                        //},
-                        //FieldsToFetch = new[] { "City" },
+                        Query = "SELECT count() as TotalCount FROM Addresses GROUP BY City",
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
                     commands.RequestExecutor.Execute(command, commands.Context);
+
+                    // retrieve only City field
+                    command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    {
+                        Query = "SELECT City FROM Addresses GROUP BY City",
+                        WaitForNonStaleResultsAsOfNow = true
+                    });
+
+                    commands.RequestExecutor.Execute(command, commands.Context);
+
+                    var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+
+                    Assert.Equal(1, indexDefinitions.Length); // the above queries should be handled by the same auto index
 
                     var result = command.Result;
                     var results = new DynamicArray(result.Results);
