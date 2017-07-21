@@ -49,11 +49,11 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                             first = false;
                             var cacheKey = GetCacheKey(command, out string _);
-                            using (_cache.Get(_context, cacheKey, out long cachedEtag, out var _))
+                            using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out var _))
                             {
                                 var headers = new DynamicJsonValue();
-                    if (cachedChangeVector != null)
-                        headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
+                                if (cachedChangeVector != null)
+                                    headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
                                 foreach (var header in command.Headers)
                                     headers[header.Key] = header.Value;

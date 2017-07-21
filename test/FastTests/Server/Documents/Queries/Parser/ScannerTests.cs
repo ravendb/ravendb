@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using System.Globalization;
+using Xunit;
 using Raven.Server.Documents.Queries.Parser;
 
 namespace FastTests.Server.Documents.Queries.Parser
@@ -61,9 +62,9 @@ namespace FastTests.Server.Documents.Queries.Parser
             var result = qs.TryNumber();
             Assert.NotNull(result);
             if (result == NumberToken.Double)
-                Assert.Equal((double) expected, double.Parse(q.Substring(qs.TokenStart, qs.TokenLength)));
+                Assert.Equal((double)expected, double.Parse(q.Substring(qs.TokenStart, qs.TokenLength), CultureInfo.InvariantCulture));
             else
-                Assert.Equal((long) expected, long.Parse(q.Substring(qs.TokenStart, qs.TokenLength)));
+                Assert.Equal((long)expected, long.Parse(q.Substring(qs.TokenStart, qs.TokenLength), CultureInfo.InvariantCulture));
         }
 
         [Theory]
