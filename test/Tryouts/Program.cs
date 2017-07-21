@@ -3,6 +3,7 @@ using SlowTests.Bugs;
 using SlowTests.Issues;
 using FastTests.Voron.Storage;
 using SlowTests.Cluster;
+using Raven.Server.Documents.Replication;
 
 namespace Tryouts
 {
@@ -13,11 +14,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_5303())   
+                using (var test = new RavenDB_5617())   
                 {
                     try
                     {
-                        test.can_load_documents_with_transformer_with_load_document_streaming();
+                        test.CanAutomaticallyWaitForIndexes_ForSpecificIndex();
                     }
                     catch (Exception e)
                     {

@@ -1,0 +1,23 @@
+﻿using Sparrow.Json;
+
+namespace Raven.Server.Documents.Replication
+{
+    internal class ReplicationMessageReply
+    {
+        internal enum ReplyType
+        {
+            None,
+            Ok,
+            Error
+        }
+
+        public ReplyType Type { get; set; }
+        public long LastEtagAccepted { get; set; }
+        public string Exception { get; set; }
+        public string Message { get; set; }
+        public string MessageType { get; set; }
+        public string DatabaseChangeVector { get; set; }
+        public string DatabaseId { get; set; }
+        public long CurrentEtag { get; set; }
+    }
+}
