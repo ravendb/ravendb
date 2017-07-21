@@ -120,7 +120,7 @@ namespace Raven.Server.Utils
                     return false;
 
                 cv[i].Etag = etag;
-                changeVector = cv.ToJson();
+                changeVector = cv.SerializeVector();
                 return true;
             }
             
@@ -130,7 +130,7 @@ namespace Raven.Server.Utils
                 DbId = dbId,
                 Etag = etag
             };
-            changeVector = cv.ToJson();
+            changeVector = cv.SerializeVector();
             return true;
         }
 
@@ -180,7 +180,7 @@ namespace Raven.Server.Utils
             {
                 merged.Add(vectorB[ib]);
             }
-            return merged.ToArray().ToJson();
+            return merged.SerializeVector();
         }
 
         public static string MergeVectors(List<LazyStringValue> changeVectors)
@@ -209,7 +209,7 @@ namespace Raven.Server.Utils
                 Etag = kvp.Value
             }).ToArray();
 
-            return merged.ToJson();
+            return merged.SerializeVector();
         }
     }
 }

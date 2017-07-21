@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -41,7 +42,7 @@ namespace Raven.Server.Documents.Handlers
                 var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
                 
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;
-                stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
+                stats.DatabaseId = ChangeVectorEntry.GuidToTruncatedBase64(Database.DocumentsStorage.Environment.DbId);
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
 

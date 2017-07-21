@@ -52,7 +52,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -74,7 +74,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 30, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -96,7 +96,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 2, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -118,7 +118,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[0], Etag = 10, NodeTag = 2 },
             };
 
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -141,7 +141,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 40, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[1], Etag = 10, NodeTag = 0 }
             };
 
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -181,7 +181,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 3, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         [Fact]
@@ -204,7 +204,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[2], Etag = 300, NodeTag = 2 }
             };
 
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
 
@@ -679,7 +679,7 @@ namespace SlowTests.Server.Replication
                 new ChangeVectorEntry { DbId = dbIds[0], Etag = 75, NodeTag = 0 },
             };
 
-            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.ToJson(), local.ToJson()));
+            Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
         private class UserIndex : AbstractIndexCreationTask<User>

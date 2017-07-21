@@ -55,7 +55,7 @@ namespace SlowTests.Issues
                         DbId = db.DbId,
                         Etag = maxConflictEtag - 1
                     };
-                    session.Store(new User { Name = "James Doe" }, cv.ToJson(), "users/1");
+                    session.Store(new User { Name = "James Doe" }, cv.SerializeVector(), "users/1");
                     Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
 
@@ -108,7 +108,7 @@ namespace SlowTests.Issues
                         DbId = db.DbId,
                         Etag = maxConflictEtag - 1
                     };
-                    session.Delete("users/1", cv.ToJson());
+                    session.Delete("users/1", cv.SerializeVector());
                     Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
                 }
 

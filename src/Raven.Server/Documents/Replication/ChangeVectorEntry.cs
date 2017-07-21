@@ -1,6 +1,8 @@
 using System;
+using System.Diagnostics;
 using System.Text;
 using Raven.Client.Extensions;
+using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -9,16 +11,43 @@ namespace Raven.Server.Documents.Replication
         public Guid DbId;
         public long Etag;
         public int NodeTag;
-        public void Append(StringBuilder sb)
+
+        [ThreadStatic] private static char[] _threadBuffer;
+        
+        public unsafe void Append(StringBuilder sb)
         {
             ChangeVectorExtensions.ToBase26(sb, NodeTag);
             sb.Append(":");
             sb.Append(Etag);
             sb.Append("-");
-            //TODO: Fix this allocation mess
-            sb.Append(Convert.ToBase64String(DbId.ToByteArray()));
+
+            GuidToTruncatedBase64(sb, DbId);
+        }
+
+        public static unsafe void GuidToTruncatedBase64(StringBuilder sb, Guid id)
+        {
+            if (_threadBuffer == null)
+                _threadBuffer = new char[24];
+            fixed (char* buffer = _threadBuffer)
+            {
+                var result = Base64.ConvertToBase64Array(buffer, (byte*)&id, 0, 16);
+                Debug.Assert(result == 24);
+            }
+            sb.Append(_threadBuffer, 0, 22);
         }
         
+        public static unsafe string GuidToTruncatedBase64(Guid id)
+        {
+            if (_threadBuffer == null)
+                _threadBuffer = new char[24];
+            fixed (char* buffer = _threadBuffer)
+            {
+                var result = Base64.ConvertToBase64Array(buffer, (byte*)&id, 0, 16);
+                Debug.Assert(result == 24);
+            }
+            return new string(_threadBuffer, 0, 22);
+        }
+
         public override string ToString()
         {
             var sb = new StringBuilder();

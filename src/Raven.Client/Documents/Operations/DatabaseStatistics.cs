@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Operations
         /// <summary>
         /// Database identifier.
         /// </summary>
-        public Guid DatabaseId { get; set; }
+        public string DatabaseId { get; set; }
 
         /// <summary>
         /// Indicates if process is 64-bit

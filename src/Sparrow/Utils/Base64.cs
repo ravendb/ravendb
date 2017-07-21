@@ -33,7 +33,7 @@ namespace Sparrow.Utils
             return (int)outlen;
         }
 
-        public static unsafe int ConvertToBase64Array(byte* outChars, byte* inData, int offset, int length)
+        public static unsafe int ConvertToBase64Array(char* outChars, byte* inData, int offset, int length)
         {
             int lengthmod3 = length % 3;
             int calcLength = offset + (length - lengthmod3);
@@ -46,10 +46,10 @@ namespace Sparrow.Utils
             {
                 for (i = offset; i < calcLength; i += 3)
                 {
-                    outChars[j] = (byte)base64[(inData[i] & 0xfc) >> 2];
-                    outChars[j + 1] = (byte)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                    outChars[j + 2] = (byte)base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
-                    outChars[j + 3] = (byte)base64[(inData[i + 2] & 0x3f)];
+                    outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                    outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                    outChars[j + 2] = base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
+                    outChars[j + 3] = base64[(inData[i + 2] & 0x3f)];
                     j += 4;
                 }
 
@@ -59,17 +59,17 @@ namespace Sparrow.Utils
                 switch (lengthmod3)
                 {
                     case 2: //One character padding needed
-                        outChars[j] = (byte)base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = (byte)base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
-                        outChars[j + 2] = (byte)base64[(inData[i + 1] & 0x0f) << 2];
-                        outChars[j + 3] = (byte)base64[64]; //Pad
+                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                        outChars[j + 2] = base64[(inData[i + 1] & 0x0f) << 2];
+                        outChars[j + 3] = base64[64]; //Pad
                         j += 4;
                         break;
                     case 1: // Two character padding needed
-                        outChars[j] = (byte)base64[(inData[i] & 0xfc) >> 2];
-                        outChars[j + 1] = (byte)base64[(inData[i] & 0x03) << 4];
-                        outChars[j + 2] = (byte)base64[64]; //Pad
-                        outChars[j + 3] = (byte)base64[64]; //Pad
+                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = base64[(inData[i] & 0x03) << 4];
+                        outChars[j + 2] = base64[64]; //Pad
+                        outChars[j + 3] = base64[64]; //Pad
                         j += 4;
                         break;
                 }

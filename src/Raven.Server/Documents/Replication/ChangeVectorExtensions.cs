@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Text;
 using Sparrow.Json;
+using System.Collections.Generic;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -39,13 +40,27 @@ namespace Raven.Server.Documents.Replication
             return result;
         }
 
-        public static string ToJson(this ChangeVectorEntry[] self)
+        public static string SerializeVector(this ChangeVectorEntry[] self)
         {
             if (self == null)
                 return null;
 
             var sb = new StringBuilder();
             for (int i = 0; i < self.Length; i++)
+            {
+                if (i != 0)
+                    sb.Append(", ");
+                self[i].Append(sb);
+            }
+            return sb.ToString();
+        }
+        public static string SerializeVector(this List<ChangeVectorEntry> self)
+        {
+            if (self == null)
+                return null;
+
+            var sb = new StringBuilder();
+            for (int i = 0; i < self.Count; i++)
             {
                 if (i != 0)
                     sb.Append(", ");
