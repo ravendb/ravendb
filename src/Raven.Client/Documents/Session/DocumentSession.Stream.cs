@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;

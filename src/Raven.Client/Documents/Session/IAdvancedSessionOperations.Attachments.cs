@@ -6,7 +6,6 @@
 
 using System.IO;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Session
 {

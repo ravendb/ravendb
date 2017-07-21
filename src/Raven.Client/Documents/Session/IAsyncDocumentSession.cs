@@ -7,7 +7,6 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Session
 {

@@ -24,6 +24,7 @@ using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 using Facet = Raven.Client.Documents.Queries.Facets.Facet;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Json
 {

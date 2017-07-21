@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;

@@ -2,7 +2,6 @@ using System;
 using System.Linq.Expressions;
 using Lambda2Js;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Subscriptions
 {

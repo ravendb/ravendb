@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

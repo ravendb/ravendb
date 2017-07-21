@@ -8,7 +8,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Session
 {

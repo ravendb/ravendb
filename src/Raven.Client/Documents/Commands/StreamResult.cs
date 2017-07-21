@@ -1,6 +1,5 @@
 ﻿using System.IO;
 using System.Net.Http;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Commands

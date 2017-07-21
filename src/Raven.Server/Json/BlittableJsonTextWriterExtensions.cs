@@ -47,21 +47,6 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static void WriteChangeVectorEntry(this BlittableJsonTextWriter writer, ChangeVectorEntry entry)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(entry.Etag));
-            writer.WriteInteger(entry.Etag);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(entry.DbId));
-            writer.WriteString(entry.DbId.ToString());
-
-            writer.WriteEndObject();
-        }
-
-
         public static void WriteExplanation(this BlittableJsonTextWriter writer, JsonOperationContext context, DynamicQueryToIndexMatcher.Explanation explanation)
         {
             writer.WriteStartObject();

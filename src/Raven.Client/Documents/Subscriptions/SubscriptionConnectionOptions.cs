@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions

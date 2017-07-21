@@ -4,8 +4,6 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using Raven.Client.Documents.Replication.Messages;
-
 namespace Raven.Client.Documents.Commands.Batches
 {
     /// <summary>

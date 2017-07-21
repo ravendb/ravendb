@@ -10,7 +10,6 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session

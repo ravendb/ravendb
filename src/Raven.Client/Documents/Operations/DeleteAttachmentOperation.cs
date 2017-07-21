@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Util;
 using Sparrow.Json;

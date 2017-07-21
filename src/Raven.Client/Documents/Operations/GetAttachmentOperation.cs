@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;

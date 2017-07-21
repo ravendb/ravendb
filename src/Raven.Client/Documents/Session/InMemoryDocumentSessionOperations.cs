@@ -18,7 +18,6 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Extensions;
 using Raven.Client.Http;

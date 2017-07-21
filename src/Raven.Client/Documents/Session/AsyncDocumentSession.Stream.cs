@@ -7,7 +7,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
