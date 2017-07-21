@@ -204,7 +204,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc.Id, doc, _ctx, out shouldSkip);
 
             Assert.Equal(2, _sut.Document.GetFields().Count);
-            Assert.Equal("NYC", _sut.Document.GetField("Address_City").ReaderValue.ReadToEnd());
+            Assert.Equal("NYC", _sut.Document.GetField("Address.City").ReaderValue.ReadToEnd());
             Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
 
@@ -239,12 +239,12 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc.Id, doc, _ctx, out shouldSkip);
 
             Assert.Equal(4, _sut.Document.GetFields().Count);
-            Assert.Equal(2, _sut.Document.GetFields("Friends_Name").Length);
+            Assert.Equal(2, _sut.Document.GetFields("Friends[].Name").Length);
 
-            Assert.Equal("Joe", _sut.Document.GetFields("Friends_Name")[0].ReaderValue.ReadToEnd());
-            Assert.Equal("John", _sut.Document.GetFields("Friends_Name")[1].ReaderValue.ReadToEnd());
+            Assert.Equal("Joe", _sut.Document.GetFields("Friends[].Name")[0].ReaderValue.ReadToEnd());
+            Assert.Equal("John", _sut.Document.GetFields("Friends[].Name")[1].ReaderValue.ReadToEnd());
 
-            Assert.Equal("true", _sut.Document.GetField("Friends_Name_IsArray").StringValue(null));
+            Assert.Equal("true", _sut.Document.GetField("Friends[].Name_IsArray").StringValue(null));
 
             Assert.Equal("users/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }
@@ -296,13 +296,13 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _sut.SetDocument(doc.Id, doc, _ctx, out shouldSkip);
 
             Assert.Equal(5, _sut.Document.GetFields().Count);
-            Assert.Equal(3, _sut.Document.GetFields("Companies_Products_Name").Length);
+            Assert.Equal(3, _sut.Document.GetFields("Companies[].Products[].Name").Length);
 
-            Assert.Equal("Headphones CX7", _sut.Document.GetFields("Companies_Products_Name")[0].ReaderValue.ReadToEnd());
-            Assert.Equal("Keyboard AD3", _sut.Document.GetFields("Companies_Products_Name")[1].ReaderValue.ReadToEnd());
-            Assert.Equal("Optical Mouse V2", _sut.Document.GetFields("Companies_Products_Name")[2].ReaderValue.ReadToEnd());
+            Assert.Equal("Headphones CX7", _sut.Document.GetFields("Companies[].Products[].Name")[0].ReaderValue.ReadToEnd());
+            Assert.Equal("Keyboard AD3", _sut.Document.GetFields("Companies[].Products[].Name")[1].ReaderValue.ReadToEnd());
+            Assert.Equal("Optical Mouse V2", _sut.Document.GetFields("Companies[].Products[].Name")[2].ReaderValue.ReadToEnd());
 
-            Assert.Equal("true", _sut.Document.GetField("Companies_Products_Name_IsArray").StringValue(null));
+            Assert.Equal("true", _sut.Document.GetField("Companies[].Products[].Name_IsArray").StringValue(null));
 
             Assert.Equal("companies/1", _sut.Document.GetField(Constants.Documents.Indexing.Fields.DocumentIdFieldName).StringValue(null));
         }

@@ -115,7 +115,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Tags[].Name"));
-            Assert.Equal("Auto/Users/ByTags_Name", definition.Name);
+            Assert.Equal("Auto/Users/ByTags[].Name", definition.Name);
         }
 
 
@@ -129,7 +129,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("User.Name"));
-            Assert.Equal("Auto/Users/ByUser_Name", definition.Name);
+            Assert.Equal("Auto/Users/ByUser.Name", definition.Name);
         }
 
         [Fact]
@@ -161,7 +161,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Address.Country"));
-            Assert.Equal("Auto/Users/ByAddress_CountryAndName", definition.Name);
+            Assert.Equal("Auto/Users/ByAddress.CountryAndName", definition.Name);
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Address.Country");
@@ -179,7 +179,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Name"));
             Assert.True(definition.ContainsField("Address.ZipCode"));
-            Assert.Equal("Auto/Users/ByAddress_ZipCodeAndNameSortByAddress_ZipCode", definition.Name);
+            Assert.Equal("Auto/Users/ByAddress.ZipCodeAndNameSortByAddress.ZipCode", definition.Name);
             var nameField = definition.GetField("Name");
             Assert.Null(nameField.Sort);
             var ageField = definition.GetField("Address.ZipCode");

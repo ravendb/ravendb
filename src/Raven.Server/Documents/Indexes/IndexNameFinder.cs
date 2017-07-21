@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
             if (groupBy == null)
                 throw new ArgumentNullException(nameof(groupBy));
 
-            var reducedByFields = string.Join("And", groupBy.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
+            var reducedByFields = string.Join("And", groupBy.Select(x => x.Name).OrderBy(x => x));
 
             return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
         }
@@ -39,10 +39,10 @@ namespace Raven.Server.Documents.Indexes
             if (fields.Count == 0)
                 return $"Auto/{collection}";
             
-            var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(x => x.Name).OrderBy(x => x));
 
             var sortOptions = fields.Where(x => x.Sort != null && x.Sort.Value != SortOptions.String && x.Sort.Value != SortOptions.None)
-                .Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name))
+                .Select(x => x.Name)
                 .ToArray();
 
             if (sortOptions.Length > 0)

@@ -21,67 +21,6 @@ namespace Raven.Server.Documents.Indexes
         
         public bool HasSuggestions { get; set; }
 
-        public static string ReplaceInvalidCharactersInFieldName(string field)
-        {
-            // we allow only \w which is equivalent to [a-zA-Z_0-9]
-            const int a = 'a';
-            const int z = 'z';
-            const int A = 'A';
-            const int Z = 'Z';
-            const int Zero = '0';
-            const int Nine = '9';
-            const int Underscore = '_';
-            const int CollectionSeparator_1 = '[';
-            const int CollectionSeparator_2 = ']';
-            const int CollectionSeparator_3 = '.';
-
-            if (string.IsNullOrEmpty(field))
-                return field;
-
-            char[] input = null;
-
-            var resultLength = field.Length;
-            var collectionSeparatorShift = 0;
-
-            for (var i = 0; i < field.Length; i++)
-            {
-                var ch = field[i];
-                if (ch >= a && ch <= z)
-                    continue;
-
-                if (ch >= A && ch <= Z)
-                    continue;
-
-                if (ch >= Zero && ch <= Nine)
-                    continue;
-
-                if (ch == Underscore)
-                    continue;
-
-                if (input == null)
-                {
-                    input = new char[field.Length];
-                    field.CopyTo(0, input, 0, field.Length);
-                }
-
-                input[i + collectionSeparatorShift] = '_';
-
-                if (ch == CollectionSeparator_1 && (i + 2) < field.Length && field[i + 1] == CollectionSeparator_2 && field[i + 2] == CollectionSeparator_3)
-                {
-                    // found collection separator  "[]."
-                    // let's replace it to single '_' character 
-
-                    field.CopyTo(i + 3, input, i + collectionSeparatorShift + 1, field.Length - (i + 3));
-
-                    collectionSeparatorShift -= 2;
-                    i += 2;
-                    resultLength -= 2;
-                }
-            }
-
-            return input == null ? field : new string(input, 0, resultLength);
-        }
-
         public IndexField()
         {
             Indexing = FieldIndexing.Default;

@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     throw new NotSupportedException(_index.Type.ToString());
             }
 
-            _fields = fields.ToDictionary(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name), x => x );
+            _fields = fields.ToDictionary(x => x.Name, x => x);
             _indexSearcherHolder = new IndexSearcherHolder(state => new IndexSearcher(_directory, true, state), _index._indexStorage.DocumentDatabase);
 
             foreach (var field in _fields)
@@ -272,7 +272,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _index.Type.IsMap();
 
             field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-            field = IndexField.ReplaceInvalidCharactersInFieldName(field);
 
             return _fields.ContainsKey(field);
         }

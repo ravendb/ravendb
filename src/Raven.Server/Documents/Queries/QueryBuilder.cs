@@ -363,8 +363,6 @@ namespace Raven.Server.Documents.Queries
 
         private static (string LuceneFieldName, LuceneFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetLuceneField(string fieldName, ValueTokenType valueType)
         {
-            fieldName = IndexField.ReplaceInvalidCharactersInFieldName(fieldName);
-
             switch (valueType)
             {
                 case ValueTokenType.String:

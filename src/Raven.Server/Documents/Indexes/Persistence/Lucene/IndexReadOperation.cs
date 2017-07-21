@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         break;
                 }
 
-                sort.Add(new SortField(IndexField.ReplaceInvalidCharactersInFieldName(field.Name), (int)sortOptions, field.Ascending == false));
+                sort.Add(new SortField(field.Name, (int)sortOptions, field.Ascending == false));
             }
 
             return new Sort(sort.ToArray());
