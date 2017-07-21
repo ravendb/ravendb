@@ -132,7 +132,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    Aggregation = AggregationOperation.Count
+                    Aggregation = AggregationOperation.Count,
+                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -230,7 +231,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    Aggregation = AggregationOperation.Count
+                    Aggregation = AggregationOperation.Count,
+                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -248,7 +250,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    Aggregation = AggregationOperation.Count
+                    Aggregation = AggregationOperation.Count,
+                    Sort = SortOptions.Numeric
                 },
                 new IndexField
                 {

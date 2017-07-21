@@ -88,7 +88,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Count"));
-            Assert.Equal("Auto/Users/ByCountReducedByLocation", definition.Name);
+            Assert.Equal("Auto/Users/ByCountSortByCountReducedByLocation", definition.Name);
         }
 
         [Fact]
@@ -111,7 +111,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
             _sut = DynamicQueryMapping.Create(
-                new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count as long"));
+                new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 

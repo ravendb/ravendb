@@ -181,21 +181,25 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     if (mapFields.TryGetValue(selectField.Name, out var existingField) == false)
                     {
-                        if (selectField.AggregationOperation == AggregationOperation.None)
-                            continue;
-
-                        mapFields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
-
-                        if (selectField.AggregationOperation != AggregationOperation.Sum)
-                            continue;
-
-                        if (sorting.TryGetValue(selectField.Name, out var _) == false)
+                        switch (selectField.AggregationOperation)
                         {
-                            sorting[selectField.Name] = new DynamicSortInfo()
-                            {
-                                FieldType = SortOptions.Numeric,
-                                Name = selectField.Name
-                            };
+                            case AggregationOperation.None:
+                                break;
+                            case AggregationOperation.Count:
+                            case AggregationOperation.Sum:
+                                mapFields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
+                                if (sorting.TryGetValue(selectField.Name, out var _) == false)
+                                {
+                                    sorting[selectField.Name] = new DynamicSortInfo()
+                                    {
+                                        FieldType = SortOptions.Numeric,
+                                        Name = selectField.Name
+                                    };
+                                }
+                                break;
+                            default:
+                                ThrowUnknownAggregationOperation(selectField.AggregationOperation);
+                                break;
                         }
                     }
                     else if (selectField.AggregationOperation != AggregationOperation.None)
@@ -214,6 +218,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 result.GroupByFields = query.Metadata.GroupBy;
             }
+
 
             // TODO arek - get rid of linq
             result.MapFields = mapFields.Values
@@ -242,6 +247,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 default:
                     throw new ArgumentException(ordering.ToString());
             }
+        }
+
+        private static void ThrowUnknownAggregationOperation(AggregationOperation operation)
+        {
+            throw new InvalidOperationException($"Unknown aggregation operation defined: {operation}");
         }
     }
 }
