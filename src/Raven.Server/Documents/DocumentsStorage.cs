@@ -293,7 +293,7 @@ namespace Raven.Server.Documents
             var val = tree.Read(GlobalChangeVector);
             if (val == null)
             {
-                return null;
+                return context.GetLazyString(string.Empty);
             }
             return context.GetLazyString(Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length));
         }

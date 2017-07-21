@@ -15,11 +15,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationResolveToDatabase())   
+                using (var test = new SlowTests.Server.Replication.ReplicationOfConflicts())   
                 {
                     try
                     {
-                        test.ResolveToTombstone().Wait();
+                        test.ReplicateTombstoneConflict().Wait();
                     }
                     catch (Exception e)
                     {
