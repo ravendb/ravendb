@@ -143,7 +143,7 @@ namespace FastTests.Server.Documents.Indexing.Static
 
                 var queryResult =
                     await
-                        index.Query(new IndexQueryServerSide(),
+                        index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
                             DocumentsOperationContext.ShortTermSingleUse(database),
                             OperationCancelToken.None);
 
@@ -202,7 +202,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     tx.Commit();
                 }
 
-                queryResult = await index.Query(new IndexQueryServerSide(),
+                queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"),
                             DocumentsOperationContext.ShortTermSingleUse(database),
                             OperationCancelToken.None);
 

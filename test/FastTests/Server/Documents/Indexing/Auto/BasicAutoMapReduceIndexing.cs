@@ -1,14 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
-using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -36,7 +33,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}'"), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                     var result = queryResult.Results[0].Data;
@@ -52,17 +49,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_L_Range:[2 TO 10]"
-                    }, context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
-                    queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_L_Range:[10 TO NULL]"
-                    }, context, OperationCancelToken.None);
+                    queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
                 }
@@ -93,7 +84,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'")
                     {
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     }, context, OperationCancelToken.None);
@@ -131,7 +122,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -156,7 +147,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -173,7 +164,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -201,7 +192,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -215,7 +206,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -338,13 +329,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     new IndexField
                     {
-                        Name = "Lines,Quantity",
+                        Name = "Lines[].Quantity",
                         Aggregation = AggregationOperation.Sum,
                         Storage = FieldStorage.Yes
                     },
                     new IndexField
                     {
-                        Name = "Lines,Price",
+                        Name = "Lines[].Price",
                         Aggregation = AggregationOperation.Sum,
                         Storage = FieldStorage.Yes
                     }
@@ -364,10 +355,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "ShipTo_Country:Poland"
-                    }, context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE ShipTo.Country = 'Poland'"), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                     var result = queryResult.Results[0].Data;
@@ -376,13 +364,13 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     Assert.True(result.TryGet("ShipTo.Country", out location));
                     Assert.Equal("Poland", location);
 
-                    var price = result["Lines,Price"] as LazyNumberValue;
+                    var price = result["Lines[].Price"] as LazyNumberValue;
 
                     Assert.NotNull(price);
 
                     Assert.Equal(63.6, price, 1);
 
-                    var quantity = result["Lines,Quantity"];
+                    var quantity = result["Lines[].Quantity"];
 
                     Assert.Equal(9L, quantity);
                 }
@@ -465,7 +453,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -501,7 +489,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -540,7 +528,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                     var results = queryResult.Results;
 
@@ -623,7 +611,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var results = (await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None)).Results;
+                    var results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None)).Results;
 
                     Assert.Equal(6, results.Count);
 
@@ -631,7 +619,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     {
                         var employeeNumber = i % 2 + 1;
                         var companyNumber = i % 3 + 1;
-                        results = (await index.Query(new IndexQueryServerSide
+                        results = (await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Employee = 'employees/{employeeNumber}' AND Company = 'companies/{companyNumber}'")
                         {
                             Query = $"Employee:employees/{employeeNumber} AND Company:companies/{companyNumber}"
                         }, context, OperationCancelToken.None)).Results;

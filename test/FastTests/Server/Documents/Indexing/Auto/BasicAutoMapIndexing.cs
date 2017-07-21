@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
 
-                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQueryServerSide(), null, OperationCancelToken.None));
+                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQueryServerSide($"FROM INDEX'{index.Name}'"), null, OperationCancelToken.None));
                 Assert.IsType<ObjectDisposedException>(ex);
 
                 index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField

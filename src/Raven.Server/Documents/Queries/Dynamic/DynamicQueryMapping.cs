@@ -10,8 +10,6 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries.Parser;
-using Raven.Server.Documents.Queries.Sorting;
-
 namespace Raven.Server.Documents.Queries.Dynamic
 {
     public class DynamicQueryMapping

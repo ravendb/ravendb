@@ -75,7 +75,7 @@ select new
                         Assert.Equal(numberOfDocs, firstRunStats.MapSuccesses);
                         Assert.Equal(0, firstRunStats.MapErrors);
 
-                        var queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        var queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.False(queryResult.IsStale);
 

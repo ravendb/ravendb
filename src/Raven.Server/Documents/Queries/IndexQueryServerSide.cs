@@ -23,8 +23,9 @@ namespace Raven.Server.Documents.Queries
         [JsonIgnore]
         public QueryMetadata Metadata { get; private set; }
 
-        public IndexQueryServerSide()
+        private IndexQueryServerSide()
         {
+            // for deserialization
         }
 
         public IndexQueryServerSide(QueryMetadata metadata)
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents.Queries
             if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
                 throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
-            var result = new IndexQueryServerSide
+            var result = new IndexQueryServerSide()
             {
                 Query = EscapingHelper.UnescapeLongDataString(query[0]),
                 // all defaults which need to have custom value

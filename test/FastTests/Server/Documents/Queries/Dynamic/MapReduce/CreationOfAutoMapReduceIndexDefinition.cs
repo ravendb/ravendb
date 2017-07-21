@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Parser;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
@@ -93,21 +94,17 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Error_when_no_group_by_field()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT count() FROM Users"));
+            var ex = Assert.Throws<QueryParser.ParseException>(() => new IndexQueryServerSide("SELECT count() FROM Users GROUP BY"));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => _sut.CreateAutoIndexDefinition());
-
-            Assert.Contains("no group by field", ex.Message);
+            Assert.Contains("Unable to get field for GROUP BY", ex.Message);
         }
 
         [Fact]
         public void Error_when_no_aggregation_field()
         {
-            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location"));
+            var ex = Assert.Throws<InvalidOperationException>(() => new IndexQueryServerSide("FROM Users GROUP BY Location"));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => _sut.CreateAutoIndexDefinition());
-
-            Assert.Contains("no aggregation", ex.Message);
+            Assert.Contains("needs to have at least one aggregation operation", ex.Message);
         }
 
         [Fact]
