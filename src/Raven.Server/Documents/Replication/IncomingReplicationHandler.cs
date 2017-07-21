@@ -780,7 +780,6 @@ namespace Raven.Server.Documents.Replication
             private readonly IncomingReplicationHandler _incoming;
 
             private ChangeVectorEntry[] _changeVector = new ChangeVectorEntry[0];
-            private LazyStringValue _rcvdChangeVector;
 
             private readonly long _lastEtag;
             private readonly byte* _buffer;
@@ -807,20 +806,21 @@ namespace Raven.Server.Documents.Replication
                     var currentDatabaseChangeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = database.DocumentsStorage.GetDatabaseChangeVector(context));
 
-                    var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
+                    var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector.ToString();
 
                     foreach (var item in _incoming._replicatedItems)
                     {
                         context.TransactionMarkerOffset = item.TransactionMarker;
 
                         ++operationsCount;
+                        using (var rcvdChangeVector = context.GetLazyString(item.ChangeVector))
                         using (item)
                         {
                             Debug.Assert(item.Flags.HasFlag(DocumentFlags.Artificial) == false);
 
-                            _rcvdChangeVector = context.GetLazyString(item.ChangeVector);
-
-                            maxReceivedChangeVectorByDatabase = context.GetLazyString(ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase));
+                           
+                            maxReceivedChangeVectorByDatabase =
+                                ChangeVectorUtils.MergeVectors(item.ChangeVector, maxReceivedChangeVectorByDatabase);
 
                             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
                             {
@@ -828,7 +828,7 @@ namespace Raven.Server.Documents.Replication
                                     _incoming._log.Info($"AttachmentPUT '{item.Name}' - '{item.Key}', with change vector = {_changeVector.Format()}");
 
                                 database.DocumentsStorage.AttachmentsStorage.PutDirect(context, item.Key, item.Name,
-                                    item.ContentType, item.Base64Hash, _rcvdChangeVector);
+                                    item.ContentType, item.Base64Hash, rcvdChangeVector);
 
                                 if (_incoming._replicatedAttachmentStreams.TryGetValue(item.Base64Hash, out ReplicationAttachmentStream attachmentStream))
                                 {
@@ -847,13 +847,13 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (_incoming._log.IsInfoEnabled)
                                     _incoming._log.Info($"AttachmentDELETE '{item.Key}', with change vector = {_changeVector.Format()}");
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, _rcvdChangeVector);
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, item.Key, false, "$fromReplication", null, rcvdChangeVector);
                             }
                             else if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
                             {
                                 if (_incoming._log.IsInfoEnabled)
                                     _incoming._log.Info($"RevisionDELETE '{item.Key}', with change vector = {_changeVector.Format()}");
-                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, _rcvdChangeVector);
+                                database.DocumentsStorage.RevisionsStorage.DeleteRevision(context, item.Key, item.Collection, rcvdChangeVector);
                             }
                             else
                             {
@@ -885,7 +885,7 @@ namespace Raven.Server.Documents.Replication
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionPUT '{item.Id}', with change vector = {_changeVector.Format()}");
                                         database.DocumentsStorage.RevisionsStorage.Put(context, item.Id, document, item.Flags,
-                                            NonPersistentDocumentFlags.FromReplication, _rcvdChangeVector, item.LastModifiedTicks);
+                                            NonPersistentDocumentFlags.FromReplication, rcvdChangeVector, item.LastModifiedTicks);
                                         continue;
                                     }
 
@@ -899,12 +899,12 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         if (_incoming._log.IsInfoEnabled)
                                             _incoming._log.Info($"RevisionDELETE '{item.Id}', with change vector = {_changeVector.Format()}");
-                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, _rcvdChangeVector,
+                                        database.DocumentsStorage.RevisionsStorage.Delete(context, item.Id, document, rcvdChangeVector,
                                             item.LastModifiedTicks, NonPersistentDocumentFlags.FromReplication);
                                         continue;
                                     }
 
-                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, _rcvdChangeVector,
+                                    var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, rcvdChangeVector,
                                         out LazyStringValue conflictingVector);
                                     switch (conflictStatus)
                                     {
@@ -917,7 +917,7 @@ namespace Raven.Server.Documents.Replication
 #if DEBUG
                                                 AttachmentsStorage.AssertAttachments(document, item.Flags);
 #endif
-                                                database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, _rcvdChangeVector,
+                                                database.DocumentsStorage.Put(context, item.Id, null, document, item.LastModifiedTicks, rcvdChangeVector,
                                                     item.Flags, NonPersistentDocumentFlags.FromReplication);
                                             }
                                             else
@@ -931,7 +931,7 @@ namespace Raven.Server.Documents.Replication
                                                     database.DocumentsStorage.Delete(
                                                         context, keySlice, item.Id, null,
                                                         item.LastModifiedTicks,
-                                                        _rcvdChangeVector,
+                                                        rcvdChangeVector,
                                                         new CollectionName(item.Collection),
                                                         NonPersistentDocumentFlags.FromReplication);
                                                 }
@@ -940,7 +940,7 @@ namespace Raven.Server.Documents.Replication
                                         case ConflictStatus.Conflict:
                                             if (_incoming._log.IsInfoEnabled)
                                                 _incoming._log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {_changeVector.Format()}");
-                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, _rcvdChangeVector, conflictingVector, item.Flags);
+                                            _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, rcvdChangeVector, conflictingVector, item.Flags);
                                             break;
                                         case ConflictStatus.AlreadyMerged:
                                             if (_incoming._log.IsInfoEnabled)
@@ -967,7 +967,7 @@ namespace Raven.Server.Documents.Replication
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
                     // instead of : SetDatabaseChangeVector -> maxReceivedChangeVectorByDatabase , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
-                    context.LastDatabaseChangeVector = maxReceivedChangeVectorByDatabase;
+                    context.LastDatabaseChangeVector = context.GetLazyString(maxReceivedChangeVectorByDatabase);
 
                     // instead of : SetLastReplicateEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)

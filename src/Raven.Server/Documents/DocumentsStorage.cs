@@ -1134,6 +1134,7 @@ namespace Raven.Server.Documents
                     lowerId,
                     newEtag,
                     docChangeVector);
+                context.LastDatabaseChangeVector = changeVector;
             }
             else
             {
