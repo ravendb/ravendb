@@ -193,7 +193,9 @@ class periodicExport extends viewModelBase {
                 task = new savePeriodicExportSetupCommand(this.backupSetup(), db, false, this.useAlternativeEditMethod()).execute();
             }
             task.done((resultArray) => {
-                if (!this.useAlternativeEditMethod()) {
+                // when no changes were made to database document server responds with NotModified, so resultArray[0] is undefined
+                // as result etag doesn't change
+                if (!this.useAlternativeEditMethod() && resultArray[0]) {
                     var newEtag = resultArray[0].ETag;
                     this.backupSetup().setEtag(newEtag);
                 }
