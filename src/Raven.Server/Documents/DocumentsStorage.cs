@@ -918,7 +918,7 @@ namespace Raven.Server.Documents
             if (local.Tombstone != null)
             {
                 if (expectedChangeVector != null && expectedChangeVector.Length != 0)
-                    throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with etag {expectedChangeVector}. " +
+                    throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
@@ -966,7 +966,7 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null && doc.ChangeVector.CompareTo(expectedChangeVector) != 0)
                 {
                     throw new ConcurrencyException(
-                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with etag {expectedChangeVector}. " +
+                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with change vector '{expectedChangeVector}'. " +
                         "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualChangeVector = doc.ChangeVector,
@@ -1032,7 +1032,7 @@ namespace Raven.Server.Documents
                 // we adding a tombstone without having any previous document, it could happened if this was called
                 // from the incoming replication or if we delete document that wasn't exist at the first place.
                 if (expectedChangeVector != null && expectedChangeVector.Length != 0)
-                    throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with etag {expectedChangeVector}. " +
+                    throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 if (collectionName == null)

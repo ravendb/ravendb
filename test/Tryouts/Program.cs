@@ -13,11 +13,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new FastTests.Client.Lazy.Async.LazyAsync())   
+                using (var test = new SlowTests.Issues.RavenDB_3145())   
                 {
                     try
                     {
-                        test.LazyLoadById().Wait();
+                        test.ShouldWork();
                     }
                     catch (Exception e)
                     {

@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
+                var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
                 var cmd = new DeleteDocumentCommand(id, changeVector, Database, catchConcurrencyErrors: true);
                 await Database.TxMerger.Enqueue(cmd);
@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(PutResult.ChangeVector));
-                    writer.WriteInteger(cmd.PutResult.Etag);
+                    writer.WriteString(cmd.PutResult.ChangeVector);
 
                     writer.WriteEndObject();
                 }
