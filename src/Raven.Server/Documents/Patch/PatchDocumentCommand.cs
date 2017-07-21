@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
-        private readonly bool _skipPatchIfEtagMismatch;
+        private readonly bool _skipPatchIfChangeVectorMismatch;
         private readonly bool _debugMode;
 
         private readonly JsonOperationContext _externalContext;
@@ -26,14 +26,14 @@ namespace Raven.Server.Documents.Patch
 
         private DocumentPatcherBase.SingleScriptRun _run;
 
-        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfEtagMismatch, bool debugMode, PatcherOperationScope scope, DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
+        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfChangeVectorMismatch, bool debugMode, PatcherOperationScope scope, DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
         {
             _externalContext = context;
             _scope = scope;
             _run = run;
             _id = id;
             _expectedChangeVector = expectedChangeVector;
-            _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
+            _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
             _debugMode = debugMode;
             _database = database;
             _logger = logger;
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Patch
             {
                 if (originalDocument == null)
                 {
-                    if (_skipPatchIfEtagMismatch)
+                    if (_skipPatchIfChangeVectorMismatch)
                     {
                         PatchResult = new PatchResult { Status = PatchStatus.Skipped };
                         return 1;
@@ -62,13 +62,13 @@ namespace Raven.Server.Documents.Patch
                     throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
                     {
                         ActualChangeVector = null,
-                        ExcpectedChangeVector = _expectedChangeVector,
+                        ExpectedChangeVector = _expectedChangeVector,
                     };
                 }
 
                 if (originalDocument.ChangeVector.CompareTo(_expectedChangeVector) != 0)
                 {
-                    if (_skipPatchIfEtagMismatch)
+                    if (_skipPatchIfChangeVectorMismatch)
                     {
                         PatchResult = new PatchResult { Status = PatchStatus.Skipped };
                         return 1;
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Patch
                     throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
                     {
                         ActualChangeVector = originalDocument.ChangeVector,
-                        ExcpectedChangeVector = _expectedChangeVector
+                        ExpectedChangeVector = _expectedChangeVector
                     };
                 }
             }

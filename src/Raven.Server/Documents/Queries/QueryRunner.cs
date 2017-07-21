@@ -255,7 +255,7 @@ namespace Raven.Server.Documents.Queries
         {
             return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfEtagMismatch: false, debugMode: false);
+                var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
                 {

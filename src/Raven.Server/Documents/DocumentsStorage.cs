@@ -902,12 +902,12 @@ namespace Raven.Server.Documents
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id, 
-            LazyStringValue excpectedChangeVector, long? lastModifiedTicks = null, LazyStringValue changeVector = null, 
+            LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, LazyStringValue changeVector = null, 
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
             {
-                var result = ConflictsStorage.DeleteConflicts(context, lowerId, excpectedChangeVector, changeVector);
+                var result = ConflictsStorage.DeleteConflicts(context, lowerId, expectedChangeVector, changeVector);
                 if (result != null)
                     return result;
             }
@@ -917,8 +917,8 @@ namespace Raven.Server.Documents
 
             if (local.Tombstone != null)
             {
-                if (excpectedChangeVector != null)
-                    throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with etag {excpectedChangeVector}. " +
+                if (expectedChangeVector != null && expectedChangeVector.Length != 0)
+                    throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with etag {expectedChangeVector}. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
@@ -963,14 +963,14 @@ namespace Raven.Server.Documents
             {
                 // just delete the document
                 var doc = local.Document;
-                if (excpectedChangeVector != null && doc.ChangeVector.CompareTo(excpectedChangeVector) != 0)
+                if (expectedChangeVector != null && doc.ChangeVector.CompareTo(expectedChangeVector) != 0)
                 {
                     throw new ConcurrencyException(
-                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with etag {excpectedChangeVector}. " +
+                        $"Document {lowerId} has etag {doc.Etag}, but Delete was called with etag {expectedChangeVector}. " +
                         "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualChangeVector = doc.ChangeVector,
-                        ExcpectedChangeVector = excpectedChangeVector
+                        ExpectedChangeVector = expectedChangeVector
                     };
                 }
 
@@ -1031,8 +1031,8 @@ namespace Raven.Server.Documents
             {
                 // we adding a tombstone without having any previous document, it could happened if this was called
                 // from the incoming replication or if we delete document that wasn't exist at the first place.
-                if (excpectedChangeVector != null)
-                    throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with etag {excpectedChangeVector}. " +
+                if (expectedChangeVector != null && expectedChangeVector.Length != 0)
+                    throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with etag {expectedChangeVector}. " +
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 if (collectionName == null)

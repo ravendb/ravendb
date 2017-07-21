@@ -14,7 +14,7 @@ namespace Voron.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public string ExcpectedChangeVector { get; set; }
+        public string ExpectedChangeVector { get; set; }
 
         /// <summary>
         /// Actual Etag.

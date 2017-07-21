@@ -385,7 +385,7 @@ namespace FastTests.Server.Documents.Patching
                             Script = "output(__document_id)",
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: true,
                         test: false);
 

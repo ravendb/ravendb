@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         Patched,
         /// <summary>
-        /// The document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match
+        /// The document was not patched, because skipPatchIfChangeVectorMismatch was set and the etag did not match
         /// </summary>
         Skipped,
         /// <summary>
@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Operations
         /// <para>- DocumentDoesNotExists - document does not exists, operation was a no-op,</para>
         /// <para>- Patched - document was properly patched,</para>
         /// <para>- Created - document did not exist, but patchIfMissing was specified and new document was created,</para>
-        /// <para>- Skipped - document was not patched, because skipPatchIfEtagMismatch was set and the etag did not match,</para>
+        /// <para>- Skipped - document was not patched, because skipPatchIfChangeVectorMismatch was set and the etag did not match,</para>
         /// <para>- NotModified - neither document body not metadata was changed during patch operation</para>
         /// </summary>
         public PatchStatus Status { get; set; }

@@ -144,7 +144,7 @@ namespace SlowTests.Core.Commands
                         "
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: true,
                         test: false);
 
@@ -199,7 +199,7 @@ namespace SlowTests.Core.Commands
                             output(postId);"
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: true,
                         test: false);
 
@@ -230,7 +230,7 @@ namespace SlowTests.Core.Commands
                             output(postId);"
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: true,
                         test: false);
 
@@ -279,7 +279,7 @@ namespace SlowTests.Core.Commands
                             Script = @"this.Title = 'abcd'",
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: false,
                         test: true);
 
@@ -314,7 +314,7 @@ namespace SlowTests.Core.Commands
                             output(postId);"
                         },
                         patchIfMissing: null,
-                        skipPatchIfEtagMismatch: false,
+                        skipPatchIfChangeVectorMismatch: false,
                         returnDebugInformation: false,
                         test: true);
 

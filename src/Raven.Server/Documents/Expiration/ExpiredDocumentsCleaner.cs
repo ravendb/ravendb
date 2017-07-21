@@ -228,7 +228,7 @@ namespace Raven.Server.Documents.Expiration
                     {
                         if (ids.Id != null)
                         {
-                            var deleted = _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, excpectedChangeVector: null);
+                            var deleted = _database.DocumentsStorage.Delete(context, ids.LowerId, ids.Id, expectedChangeVector: null);
 
                             if (_logger.IsInfoEnabled && deleted == null)
                                 _logger.Info($"Tried to delete expired document '{ids.Id}' but document was not found.");

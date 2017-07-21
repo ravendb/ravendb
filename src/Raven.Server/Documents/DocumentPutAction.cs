@@ -376,7 +376,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Document {id} does not exist, but Put was called with change vector {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ExcpectedChangeVector = excpectedChangeVector
+                ExpectedChangeVector = excpectedChangeVector
             };
         }
 
@@ -393,7 +393,7 @@ namespace Raven.Server.Documents
                 $"Document {id} has change vector {oldChangeVector}, but Put was called with {(expectedChangeVector.Length == 0 ? "expecting new document" : "change vector " + expectedChangeVector)}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ActualChangeVector = oldChangeVector,
-                ExcpectedChangeVector = expectedChangeVector
+                ExpectedChangeVector = expectedChangeVector
             };
         }
 

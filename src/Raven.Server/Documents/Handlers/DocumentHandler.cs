@@ -421,7 +421,7 @@ namespace Raven.Server.Documents.Handlers
 
             var isTest = GetBoolValueQueryString("test", required: false) ?? false;
             var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
-            var skipPatchIfEtagMismatch = GetBoolValueQueryString("skipPatchIfEtagMismatch", required: false) ?? false;
+            var skipPatchIfChangeVectorMismatch = GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
@@ -439,7 +439,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var command = Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfEtagMismatch, debugMode, isTest);
+                var command = Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch, debugMode, isTest);
 
                 if (isTest == false)
                     await Database.TxMerger.Enqueue(command);

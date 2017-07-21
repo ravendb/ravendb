@@ -171,7 +171,7 @@ namespace Raven.Server.Documents
                                 throw new ConcurrencyException($"Attachment {name} has change vector '{oldChangeVector}', but Put was called with the change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
                                 {
                                     ActualChangeVector = oldChangeVector,
-                                    ExcpectedChangeVector = expectedChangeVector
+                                    ExpectedChangeVector = expectedChangeVector
                                 };
                         }
 
@@ -682,7 +682,7 @@ namespace Raven.Server.Documents
             throw new ConcurrencyException(
                 $"Attachment {name} of '{documentId}' does not exist, but Put was called with change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
             {
-                ExcpectedChangeVector = expectedChangeVector
+                ExpectedChangeVector = expectedChangeVector
             };
         }
 
@@ -702,7 +702,7 @@ namespace Raven.Server.Documents
                 {
                     if (expectedChangeVector != null)
                         throw new ConcurrencyException($"Document {documentId} does not exist, " +
-                                                       $"but delete was called with etag {expectedChangeVector} to remove attachment {name}. " +
+                                                       $"but delete was called with change vector '{expectedChangeVector}' to remove attachment {name}. " +
                                                        $"Optimistic concurrency violation, transaction will be aborted.");
 
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
@@ -799,7 +799,7 @@ namespace Raven.Server.Documents
             {
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
-                                                   $"but delete was called with etag {expectedChangeVector}. " +
+                                                   $"but delete was called with change vector '{expectedChangeVector}'. " +
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
                 // this basically means that we tried to delete attachment that doesn't exist.
@@ -814,10 +814,10 @@ namespace Raven.Server.Documents
             {
                 if (expectedChangeVector != null && currentChangeVector != expectedChangeVector)
                 {
-                    throw new ConcurrencyException($"Attachment {name} with key '{key}' has etag {currentChangeVector}, but Delete was called with etag {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                    throw new ConcurrencyException($"Attachment {name} with key '{key}' has change vector '{currentChangeVector}', but Delete was called with change vector '{expectedChangeVector}'. Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ActualChangeVector = currentChangeVector,
-                        ExcpectedChangeVector = expectedChangeVector
+                        ExpectedChangeVector = expectedChangeVector
                     };
                 }
 
