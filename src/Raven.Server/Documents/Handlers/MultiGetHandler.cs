@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers
                             continue;
                         }
 
-                        if (request.TryGet("Method", out method) == false)
+                        if (request.TryGet("Method", out method) == false || string.IsNullOrEmpty(method))
                             method = HttpMethod.Get.Method;
 
                         httpContext.Request.Method = method;

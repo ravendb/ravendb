@@ -13,16 +13,17 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.DocumentsCrud())   
+                using (var test = new FastTests.Client.Lazy.Async.LazyAsync())   
                 {
                     try
                     {
-                        test.WillVerifyEtags_VerifyNew();
+                        test.LazyLoadById().Wait();
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
                         Console.Beep();
+                        return;
                     }
                 }
             }
