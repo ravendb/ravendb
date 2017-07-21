@@ -69,16 +69,16 @@ namespace Raven.Server.Documents.Patch
         public ObjectInstance ToJsObject(Engine engine, Document document)
         {
             var instance = ToJsObject(engine, document.Data);
-            return ApplyMetadataIfNecessary(instance, document.Id, document.Etag, document.LastModified, document.Flags, document.IndexScore);
+            return ApplyMetadataIfNecessary(instance, document.Id, document.ChangeVector, document.LastModified, document.Flags, document.IndexScore);
         }
 
         public ObjectInstance ToJsObject(Engine engine, DocumentConflict document, string propertyName)
         {
             var instance = ToJsObject(engine, document.Doc, propertyName);
-            return ApplyMetadataIfNecessary(instance, document.Id, document.Etag, document.LastModified, flags: null, indexScore: null);
+            return ApplyMetadataIfNecessary(instance, document.Id, document.ChangeVector, document.LastModified, flags: null, indexScore: null);
         }
 
-        private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue id, long etag, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
+        private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue id, string changeVector, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
         {
             var metadataValue = instance.Get(Constants.Documents.Metadata.Key);
             if (metadataValue == null || metadataValue.IsObject() == false)
@@ -86,8 +86,8 @@ namespace Raven.Server.Documents.Patch
 
             var metadata = metadataValue.AsObject();
 
-//            if (etag > 0)
-//                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
+            if (changeVector != null)
+                metadata.FastAddProperty(Constants.Documents.Metadata.ChangeVector, changeVector, true, true, true);
 
             if (lastModified.HasValue && lastModified != default(DateTime))
                 metadata.FastAddProperty(Constants.Documents.Metadata.LastModified, lastModified.Value.GetDefaultRavenFormat(), true, true, true);

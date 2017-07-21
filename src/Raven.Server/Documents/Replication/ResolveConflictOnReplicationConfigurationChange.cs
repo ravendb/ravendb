@@ -367,23 +367,7 @@ namespace Raven.Server.Documents.Replication
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it
-            //TODO: figure out the sort, now when we use strings.
-//            conflicts.Sort((x, y) =>
-//            {
-//                if (x.ChangeVector.Length != y.ChangeVector.Length)
-//                {
-//                    return x.ChangeVector.Length.CompareTo(y.ChangeVector.Length);
-//                }
-//                
-//                fixed (ChangeVectorEntry* px = x.ChangeVector)
-//                fixed (ChangeVectorEntry* py = y.ChangeVector)
-//                {
-//                    var hashX = Hashing.XXHash64.Calculate((byte*)px, (ulong)(sizeof(ChangeVectorEntry) * x.ChangeVector.Length));
-//                    var hashy = Hashing.XXHash64.Calculate((byte*)py, (ulong)(sizeof(ChangeVectorEntry) * y.ChangeVector.Length));
-//
-//                    return hashX.CompareTo(hashy);
-//                }
-//            });
+            conflicts.Sort((x, y) => x.ChangeVector.CompareTo(y.ChangeVector));
             
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;

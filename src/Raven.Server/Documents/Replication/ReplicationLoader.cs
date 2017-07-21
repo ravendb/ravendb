@@ -603,7 +603,6 @@ namespace Raven.Server.Documents.Replication
                 failureInfo.OnError(e);
                 failureInfo.DestinationDbId = instance.DestinationDbId;
                 failureInfo.LastHeartbeatTicks = instance.LastHeartbeatTicks;
-                failureInfo.LastAcceptedDocumentEtag = instance.LastAcceptedDocumentEtag;
 
                 _reconnectQueue.Add(failureInfo);
 
@@ -736,8 +735,6 @@ namespace Raven.Server.Documents.Replication
             public string DestinationDbId;
 
             public bool External;
-
-            public long LastAcceptedDocumentEtag;
 
             public long LastHeartbeatTicks;
 

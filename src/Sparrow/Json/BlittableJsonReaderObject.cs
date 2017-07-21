@@ -401,23 +401,6 @@ namespace Sparrow.Json
             return TryGet(new StringSegment(name), out str);
         }
 
-        public bool TryGetWithNull(string name, out string str)
-        {
-            object result;
-            if (TryGetMember(name, out result) == false)
-            {
-                str = null;
-                return false;
-            }
-            if (result == null)
-            {
-                // we manage to get the value, which is null.
-                str = null;
-                return true;
-            }
-            return ChangeTypeToString(result, out str);
-        }
-
         public bool TryGet(StringSegment name, out string str)
         {
             object result;
@@ -426,19 +409,17 @@ namespace Sparrow.Json
                 str = null;
                 return false;
             }
-            //TODO: bah!
-            if (result == null && name.Equals("@change-vector"))
-            {
-                // we manage to get the value, which is null.
-                str = null;
-                return true;
-            }
             return ChangeTypeToString(result, out str);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static bool ChangeTypeToString(object result, out string str)
         {
+            if (result == null)
+            {
+                str = null;
+                return true;
+            }
             var lazyCompressedStringValue = result as LazyCompressedStringValue;
             if (lazyCompressedStringValue != null)
             {

@@ -40,7 +40,6 @@ namespace Raven.Server.Documents.Replication
         private Thread _sendingThread;
         internal readonly ReplicationLoader _parent;
         internal long _lastSentDocumentEtag;   
-        public long LastAcceptedDocumentEtag; // TODO: delete this?
 
         internal DateTime _lastDocumentSentTime;
 
@@ -448,7 +447,6 @@ namespace Raven.Server.Documents.Replication
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
-            LastAcceptedDocumentEtag = replicationBatchReply.LastEtagAccepted;
 
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
             if (_external == false)

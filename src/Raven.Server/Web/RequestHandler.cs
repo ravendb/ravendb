@@ -160,6 +160,9 @@ namespace Raven.Server.Web
             if (headers.Count == 0)
                 return null;
 
+            if (headers[0].Length < 2)
+                return headers[0];
+
             string raw = headers[0][0] == '\"'
                 ? headers[0].Substring(1, headers[0].Length - 2)
                 : headers[0];
