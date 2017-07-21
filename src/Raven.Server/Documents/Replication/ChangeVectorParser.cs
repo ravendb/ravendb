@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Replication
             return 0;
         }
 
-        private static int ParseNodeTag(string changeVector, int start, int end)
+        public static int ParseNodeTag(string changeVector, int start, int end)
         {
             AssertValidNodeTagChar(changeVector[end]);
 

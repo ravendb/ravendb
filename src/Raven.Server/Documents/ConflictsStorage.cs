@@ -436,8 +436,8 @@ namespace Raven.Server.Documents
                 conflictChangeVectors.Count == 0)
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
 
-            var newChangeVector = ChangeVectorUtils.NewChangeVector(context, _documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
-            conflictChangeVectors.Add(newChangeVector);
+            var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
+            conflictChangeVectors.Add(context.GetLazyString(newChangeVector));
             return context.GetLazyString(ChangeVectorUtils.MergeVectors(conflictChangeVectors));
         }
 
@@ -449,7 +449,7 @@ namespace Raven.Server.Documents
                 ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref str);
                 return context.GetLazyString(str);
             }
-            return ChangeVectorUtils.NewChangeVector(context,_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
+            return context.GetLazyString(ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId));
         }
 
         public bool ShouldThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, Slice lowerId, long? expectedEtag, out long? currentMaxConflictEtag)
@@ -500,7 +500,9 @@ namespace Raven.Server.Documents
             }
             if (documentChangeVector != null)
                 mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector));
-             var newChangeVector = ChangeVectorUtils.NewChangeVector(context, _documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
+             var newChangeVector = context.GetLazyString(
+                 ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId)
+                 );
              mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector));
 
             return (mergedChangeVectorEntries, result.NonPersistentFlags);

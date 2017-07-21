@@ -35,16 +35,6 @@ namespace Raven.Server.Utils
             return dic;
         }
 
-        public static string FormatToChangeVector(string nodeTag, long etag, Guid dbId)
-        {
-            return $"{nodeTag}:{etag}-{Convert.ToBase64String(dbId.ToByteArray())}";
-        }
-
-        public static LazyStringValue NewChangeVector(DocumentsOperationContext ctx, string nodeTag, long etag, Guid dbId)
-        {
-            return ctx.GetLazyString($"{nodeTag}:{etag}-{Convert.ToBase64String(dbId.ToByteArray())}");
-        }
-
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString)
         {
             if (localAsString == null || remoteAsString == null)
@@ -210,6 +200,22 @@ namespace Raven.Server.Utils
             }).ToArray();
 
             return merged.SerializeVector();
+        }
+
+        [ThreadStatic]
+        private static ChangeVectorEntry[] _newChangeVectorBuffer;
+
+        public static string NewChangeVector(string nodeTag, long etag, Guid dbId)
+        {
+            if (_newChangeVectorBuffer == null)
+                _newChangeVectorBuffer = new ChangeVectorEntry[1];
+            _newChangeVectorBuffer[0] = new ChangeVectorEntry
+            {
+                DbId = dbId,
+                Etag = etag,
+                NodeTag = ChangeVectorParser.ParseNodeTag(nodeTag, 0, nodeTag.Length-1),
+            };
+            return _newChangeVectorBuffer.SerializeVector();
         }
     }
 }

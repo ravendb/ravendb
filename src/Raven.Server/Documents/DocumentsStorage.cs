@@ -302,7 +302,7 @@ namespace Raven.Server.Documents
         {
             var changeVector = GetDatabaseChangeVector(context);
             if (changeVector == null)
-                return ChangeVectorUtils.NewChangeVector(context,_documentDatabase.ServerStore.NodeTag,newEtag,_documentDatabase.DbId);
+                return context.GetLazyString(ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId)); ;
 
             var str = changeVector.ToString();
             ChangeVectorUtils.TryUpdateChangeVector(Environment.DbId, newEtag, ref str);

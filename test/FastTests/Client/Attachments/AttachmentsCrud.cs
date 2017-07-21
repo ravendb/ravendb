@@ -37,7 +37,7 @@ namespace FastTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), result.ChangeVector);
+                    Assert.Contains("A:2", result.ChangeVector);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -47,7 +47,7 @@ namespace FastTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 4, dbId1), result.ChangeVector);
+                    Assert.Contains("A:4", result.ChangeVector);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -57,7 +57,7 @@ namespace FastTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream));
-                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 6, dbId1), result.ChangeVector);
+                    Assert.Contains("A:6", result.ChangeVector);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -109,7 +109,7 @@ namespace FastTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 + 2 * i, dbId1), attachment.Details.ChangeVector);
+                            Assert.Contains("A:" + (2 + 2 * i), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -315,7 +315,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), attachment.Details.ChangeVector);
+                        Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -325,7 +325,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 6, dbId1), attachment.Details.ChangeVector);
+                        Assert.Contains("A:6", attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);

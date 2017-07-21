@@ -211,8 +211,10 @@ namespace Raven.Server.Documents.Transformers
                     var (etag, _) = await _serverStore.SendToLeaderAsync(command);
 
                     await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
-
+                    
                     var instance = GetTransformer(definition.Name);
+                    if(instance == null)
+                        throw new InvalidOperationException("The transformer " + definition.Name + " does not exists even though it was creted on raft index " + etag +" and we waited for it");
                     return instance.Etag;
                 }
                 catch (CommandExecutionException e)

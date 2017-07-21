@@ -329,7 +329,7 @@ namespace SlowTests.Client.Attachments
                             using (var attachment = session.Advanced.GetAttachment("users/1", "big-file"))
                             {
                                 attachment.Stream.CopyTo(attachmentStream);
-                                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 + 20 * i, dbId), attachment.Details.ChangeVector);
+                                Assert.Contains("A:" + (2 + 20 * i), attachment.Details.ChangeVector);
                                 Assert.Equal("big-file", attachment.Details.Name);
                                 Assert.Equal("zKHiLyLNRBZti9DYbzuqZ/EDWAFMgOXB+SwKvjPAINk=", attachment.Details.Hash);
                                 Assert.Equal(999 * 1024, attachmentStream.Position);

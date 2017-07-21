@@ -87,7 +87,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = await session.Advanced.GetAttachmentAsync(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", i + 2, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:"+(i+2), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -300,7 +300,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = await session.Advanced.GetAttachmentAsync("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId), attachment.Details.ChangeVector);
+                        Assert.Contains("A:2", attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -314,7 +314,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = await session.Advanced.GetAttachmentAsync(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 4, dbId), attachment.Details.ChangeVector);
+                        Assert.Contains("A:4", attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);

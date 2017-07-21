@@ -117,7 +117,7 @@ namespace SlowTests.Client.Attachments
             using (var profileStream = new MemoryStream(new byte[] {1, 2, 3}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 3, dbId), result.ChangeVector);
+                Assert.Contains("A:3", result.ChangeVector);
                 Assert.Equal(names[0], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("image/png", result.ContentType);
@@ -126,7 +126,7 @@ namespace SlowTests.Client.Attachments
             using (var backgroundStream = new MemoryStream(new byte[] {10, 20, 30, 40, 50}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 7, dbId), result.ChangeVector);
+                Assert.Contains("A:7", result.ChangeVector);
                 Assert.Equal(names[1], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -135,7 +135,7 @@ namespace SlowTests.Client.Attachments
             using (var fileStream = new MemoryStream(new byte[] {1, 2, 3, 4, 5}))
             {
                 var result = store.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 12, dbId), result.ChangeVector);
+                Assert.Contains("A:12", result.ChangeVector);
                 Assert.Equal(names[2], result.Name);
                 Assert.Equal("users/1", result.DocumentId);
                 Assert.Equal("", result.ContentType);
@@ -222,11 +222,11 @@ namespace SlowTests.Client.Attachments
                     if (name == names[0])
                     {
                         if (expectedCount == 1)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 3, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:3", attachment.Details.ChangeVector);
                         else if (expectedCount == 2)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 7, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:7", attachment.Details.ChangeVector);
                         else if (expectedCount == 3)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 12, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:12", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3}, readBuffer.Take(3));
@@ -237,9 +237,9 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[1])
                     {
                         if (expectedCount == 2)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 7, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:7", attachment.Details.ChangeVector);
                         else if (expectedCount == 3)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 12, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:12", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {10, 20, 30, 40, 50}, readBuffer.Take(5));
@@ -250,7 +250,7 @@ namespace SlowTests.Client.Attachments
                     else if (name == names[2])
                     {
                         if (expectedCount == 3)
-                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 12, dbId), attachment.Details.ChangeVector);
+                            Assert.Contains("A:12", attachment.Details.ChangeVector);
                         else
                             throw new ArgumentOutOfRangeException(nameof(i));
                         Assert.Equal(new byte[] {1, 2, 3, 4, 5}, readBuffer.Take(5));
