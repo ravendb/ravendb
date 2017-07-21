@@ -12,7 +12,7 @@ class addNodeToDatabaseGroupCommand extends commandBase {
             name: this.databaseName,
             node: this.nodeTagToAdd
         };
-        const url = endpoints.global.adminDatabases.adminDatabasesAddNode + this.urlEncodeArgs(args);
+        const url = endpoints.global.adminDatabases.adminDatabasesNode + this.urlEncodeArgs(args);
 
         return this.post(url, null)
             .done(() => this.reportSuccess("Node " + this.nodeTagToAdd +" was added to database group " + this.databaseName))

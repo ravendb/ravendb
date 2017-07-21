@@ -11,7 +11,7 @@ class addNodeToClusterCommand extends commandBase {
         const args = {
             url: this.serverUrl
         };
-        const url = endpoints.global.rachisAdmin.adminClusterAddNode + this.urlEncodeArgs(args);
+        const url = endpoints.global.rachisAdmin.adminClusterNode + this.urlEncodeArgs(args);
 
         return this.post(url, null, null, { dataType: undefined })
             .done(() => this.reportSuccess(`Successfully added node to cluster`))
