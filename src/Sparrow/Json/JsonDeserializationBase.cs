@@ -86,8 +86,10 @@ namespace Sparrow.Json
             if (type == typeof(string) ||
                 type == typeof(bool) ||
                 type == typeof(long) ||
+                type == typeof(ulong) ||
                 type == typeof(int) ||
                 type == typeof(uint) ||
+                type == typeof(float) ||
                 type == typeof(double) ||
                 type == typeof(decimal) ||
                 type.GetTypeInfo().IsEnum ||
@@ -197,11 +199,11 @@ namespace Sparrow.Json
                 return Expression.Call(methodToCall, json, Expression.Constant(propertyName), converterExpression);
             }
 
-// extract proper value from blittable if we have relevant type
+            // extract proper value from blittable if we have relevant type
             if (propertyType == typeof(object) || propertyType.GetTypeInfo().IsPrimitive)
             {
                 var methodToCall = typeof(JsonDeserializationBase).GetMethod(nameof(GetPrimitiveProperty), BindingFlags.NonPublic | BindingFlags.Static).MakeGenericMethod(propertyType);
-                return Expression.Call(methodToCall, json, Expression.Constant(propertyName));                
+                return Expression.Call(methodToCall, json, Expression.Constant(propertyName));
             }
 
             // ToObject
@@ -239,7 +241,7 @@ namespace Sparrow.Json
         }
 
         private static Dictionary<string, T> ToDictionaryOfPrimitive<T>(BlittableJsonReaderObject json, string name)
-            where T : struct 
+            where T : struct
         {
             var dic = new Dictionary<string, T>(StringComparer.OrdinalIgnoreCase);
 
@@ -491,8 +493,8 @@ namespace Sparrow.Json
 
         private static T GetPrimitiveProperty<T>(BlittableJsonReaderObject json, string prop)
         {
-            return !json.TryGet(prop, out T val) ? 
-                throw new InvalidCastException($"Failed to fetch property name = {prop} of type {typeof(T).Name} from json with value : [{json}]") : 
+            return !json.TryGet(prop, out T val) ?
+                throw new InvalidCastException($"Failed to fetch property name = {prop} of type {typeof(T).Name} from json with value : [{json}]") :
                 val;
         }
 
@@ -530,7 +532,7 @@ namespace Sparrow.Json
 
             foreach (BlittableJsonReaderObject item in array.Items)
                 list.Add(converter(item));
-            
+
             return list.ToArray();
         }
     }
