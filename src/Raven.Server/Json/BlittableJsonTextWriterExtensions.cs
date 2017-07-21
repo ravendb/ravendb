@@ -284,7 +284,7 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(result.IndexName));
             writer.WriteString(result.IndexName);
             writer.WriteComma();
-           
+
             writer.WriteArray(nameof(result.Suggestions), result.Suggestions);
             writer.WriteComma();
 
@@ -1255,160 +1255,183 @@ namespace Raven.Server.Json
             WriteMetadata(writer, document, metadata);
         }
 
-        public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
+        public static void WriteDocumentPropertiesWithoutMetdata(this BlittableJsonTextWriter writer, JsonOperationContext context, Document document)
         {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName("OperationId");
-            writer.WriteInteger(operationId);
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
-        {
-            writer.WriteStartObject();
-            writer.WritePropertyName("Results");
-            writer.WriteStartArray();
+            if (_buffers == null)
+                _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
 
             var first = true;
-            var count = 0;
 
-            foreach (var id in results)
+            var size = document.Data.GetPropertiesByInsertionOrder(_buffers);
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+            for (var i = 0; i < size; i++)
             {
+                document.Data.GetPropertyByIndex(_buffers.Properties[i], ref prop);
                 if (first == false)
+                {
                     writer.WriteComma();
-
-                writer.WriteString(id);
-                count++;
-
+                }
                 first = false;
+                writer.WritePropertyName(prop.Name);
+                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
+        }
 
-            writer.WriteEndArray();
+    public static void WriteOperationId(this BlittableJsonTextWriter writer, JsonOperationContext context, long operationId)
+    {
+        writer.WriteStartObject();
+
+        writer.WritePropertyName("OperationId");
+        writer.WriteInteger(operationId);
+
+        writer.WriteEndObject();
+    }
+
+    public static void WriteArrayOfResultsAndCount(this BlittableJsonTextWriter writer, IEnumerable<string> results)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("Results");
+        writer.WriteStartArray();
+
+        var first = true;
+        var count = 0;
+
+        foreach (var id in results)
+        {
+            if (first == false)
+                writer.WriteComma();
+
+            writer.WriteString(id);
+            count++;
+
+            first = false;
+        }
+
+        writer.WriteEndArray();
+        writer.WriteComma();
+
+        writer.WritePropertyName("Count");
+        writer.WriteInteger(count);
+
+        writer.WriteEndObject();
+    }
+
+    public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
+    {
+        writer.WriteStartObject();
+        writer.WritePropertyName("Results");
+
+        writer.WriteStartArray();
+
+        var first = true;
+
+        foreach (var tree in trees)
+        {
+            if (first == false)
+                writer.WriteComma();
+
+            writer.WriteStartObject();
+
+            writer.WritePropertyName(nameof(ReduceTree.Name));
+            writer.WriteString(tree.Name);
             writer.WriteComma();
 
-            writer.WritePropertyName("Count");
-            writer.WriteInteger(count);
+            writer.WritePropertyName(nameof(ReduceTree.DisplayName));
+            writer.WriteString(tree.DisplayName);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(ReduceTree.Depth));
+            writer.WriteInteger(tree.Depth);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(ReduceTree.PageCount));
+            writer.WriteInteger(tree.PageCount);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(ReduceTree.NumberOfEntries));
+            writer.WriteInteger(tree.NumberOfEntries);
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(ReduceTree.Root));
+            writer.WriteTreePagesRecursively(new[] { tree.Root });
 
             writer.WriteEndObject();
+
+            first = false;
         }
 
-        public static void WriteReduceTrees(this BlittableJsonTextWriter writer, IEnumerable<ReduceTree> trees)
+        writer.WriteEndArray();
+
+        writer.WriteEndObject();
+    }
+
+    public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
+    {
+        var first = true;
+
+        foreach (var page in pages)
         {
+            if (first == false)
+                writer.WriteComma();
+
             writer.WriteStartObject();
-            writer.WritePropertyName("Results");
 
-            writer.WriteStartArray();
+            writer.WritePropertyName(nameof(TreePage.PageNumber));
+            writer.WriteInteger(page.PageNumber);
+            writer.WriteComma();
 
-            var first = true;
+            writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
+            if (page.AggregationResult != null)
+                writer.WriteObject(page.AggregationResult);
+            else
+                writer.WriteNull();
+            writer.WriteComma();
 
-            foreach (var tree in trees)
+            writer.WritePropertyName(nameof(ReduceTreePage.Children));
+            if (page.Children != null)
             {
-                if (first == false)
-                    writer.WriteComma();
-
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(ReduceTree.Name));
-                writer.WriteString(tree.Name);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTree.DisplayName));
-                writer.WriteString(tree.DisplayName);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTree.Depth));
-                writer.WriteInteger(tree.Depth);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTree.PageCount));
-                writer.WriteInteger(tree.PageCount);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTree.NumberOfEntries));
-                writer.WriteInteger(tree.NumberOfEntries);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTree.Root));
-                writer.WriteTreePagesRecursively(new[] { tree.Root });
-
-                writer.WriteEndObject();
-
-                first = false;
+                writer.WriteStartArray();
+                WriteTreePagesRecursively(writer, page.Children);
+                writer.WriteEndArray();
             }
+            else
+                writer.WriteNull();
+            writer.WriteComma();
 
-            writer.WriteEndArray();
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteTreePagesRecursively(this BlittableJsonTextWriter writer, IEnumerable<ReduceTreePage> pages)
-        {
-            var first = true;
-
-            foreach (var page in pages)
+            writer.WritePropertyName(nameof(ReduceTreePage.Entries));
+            if (page.Entries != null)
             {
-                if (first == false)
-                    writer.WriteComma();
+                writer.WriteStartArray();
 
-                writer.WriteStartObject();
-
-                writer.WritePropertyName(nameof(TreePage.PageNumber));
-                writer.WriteInteger(page.PageNumber);
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTreePage.AggregationResult));
-                if (page.AggregationResult != null)
-                    writer.WriteObject(page.AggregationResult);
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTreePage.Children));
-                if (page.Children != null)
+                var firstEntry = true;
+                foreach (var entry in page.Entries)
                 {
-                    writer.WriteStartArray();
-                    WriteTreePagesRecursively(writer, page.Children);
-                    writer.WriteEndArray();
-                }
-                else
-                    writer.WriteNull();
-                writer.WriteComma();
-
-                writer.WritePropertyName(nameof(ReduceTreePage.Entries));
-                if (page.Entries != null)
-                {
-                    writer.WriteStartArray();
-
-                    var firstEntry = true;
-                    foreach (var entry in page.Entries)
-                    {
-                        if (firstEntry == false)
-                            writer.WriteComma();
-
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(MapResultInLeaf.Data));
-                        writer.WriteObject(entry.Data);
+                    if (firstEntry == false)
                         writer.WriteComma();
 
-                        writer.WritePropertyName(nameof(MapResultInLeaf.Source));
-                        writer.WriteString(entry.Source);
+                    writer.WriteStartObject();
 
-                        writer.WriteEndObject();
+                    writer.WritePropertyName(nameof(MapResultInLeaf.Data));
+                    writer.WriteObject(entry.Data);
+                    writer.WriteComma();
 
-                        firstEntry = false;
-                    }
+                    writer.WritePropertyName(nameof(MapResultInLeaf.Source));
+                    writer.WriteString(entry.Source);
 
-                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+
+                    firstEntry = false;
                 }
-                else
-                    writer.WriteNull();
 
-                writer.WriteEndObject();
-                first = false;
+                writer.WriteEndArray();
             }
+            else
+                writer.WriteNull();
+
+            writer.WriteEndObject();
+            first = false;
         }
     }
+}
 }

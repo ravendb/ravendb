@@ -13,11 +13,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())   
+                using (var test = new FastTests.Server.ServerStore())   
                 {
                     try
                     {
-                        test.ServerSideWriteAssurance().Wait();
+                        test.Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property();
                     }
                     catch (Exception e)
                     {

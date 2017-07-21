@@ -71,11 +71,15 @@ namespace Raven.Server.Web.System
 
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        writer.WriteDocument(context, new Document
+                        writer.WriteStartObject();
+                        writer.WriteDocumentPropertiesWithoutMetdata(context, new Document
                         {
-                            Etag = etag,
                             Data = dbDoc,
                         });
+                        writer.WriteComma();
+                        writer.WritePropertyName("Etag");
+                        writer.WriteInteger(etag);
+                        writer.WriteEndObject();
                     }
                 }
             }

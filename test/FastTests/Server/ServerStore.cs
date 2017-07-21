@@ -61,10 +61,8 @@ namespace FastTests.Server
                         requestExecutor.Execute(command, context);
                     }
 
-                    var result = command.Result;
-                    var hasMetadataProperty = result.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
-                    var hasChangeVector = metadata.TryGetChangeVector(out string changeVector);
-                    Assert.True(hasMetadataProperty && hasChangeVector && changeVector != null, $"{hasMetadataProperty} - {hasChangeVector} - {changeVector}");
+                    var hasEtag = command.Result.TryGet("Etag", out long etag);
+                    Assert.True(hasEtag && etag != 0, $"{hasEtag} - {etag}");
                 }
             }
         }
