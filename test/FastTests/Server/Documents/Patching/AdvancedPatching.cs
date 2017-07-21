@@ -713,7 +713,7 @@ this.Value = another.Value;
                     }));
                 });
 
-                Assert.Contains("Invalid ETag value for document 'Items/1'", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector invalid-etag. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -739,7 +739,7 @@ this.Value = another.Value;
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exist, but Put was called with etag 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 

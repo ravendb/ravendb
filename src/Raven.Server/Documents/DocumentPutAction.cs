@@ -72,7 +72,7 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderObject oldDoc = null;
                 if (oldValue.Pointer == null)
                 {
-                    if (excpectedChangeVector != null)
+                    if (excpectedChangeVector != null && excpectedChangeVector.Length > 0)
                     {
                         ThrowConcurrentExceptionOnMissingDoc(id, excpectedChangeVector);
                     }
@@ -374,7 +374,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingDoc(string id, LazyStringValue excpectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} does not exist, but Put was called with etag {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} does not exist, but Put was called with change vector {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExcpectedChangeVector = excpectedChangeVector
             };
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentException(string id, LazyStringValue expectedChangeVector, LazyStringValue oldChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} has etag {oldChangeVector}, but Put was called with etag {expectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} has change vector {oldChangeVector}, but Put was called with {(expectedChangeVector.Length == 0 ? "expecting new document" : "change vector " + expectedChangeVector)}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ActualChangeVector = oldChangeVector,
                 ExcpectedChangeVector = expectedChangeVector

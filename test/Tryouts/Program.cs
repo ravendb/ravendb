@@ -13,11 +13,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.ServerStore())   
+                using (var test = new FastTests.Server.Documents.DocumentsCrud())   
                 {
                     try
                     {
-                        test.Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property();
+                        test.WillVerifyEtags_VerifyNew();
                     }
                     catch (Exception e)
                     {

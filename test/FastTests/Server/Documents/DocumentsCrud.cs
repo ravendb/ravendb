@@ -488,12 +488,38 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc));
+                    var changeVector = ctx.GetLazyString("");
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
                 }
 
                 ctx.Transaction.Commit();
             }
         }
+
+        [Fact]
+        public void WillVerifyEtags_VerifyNew()
+        {
+            using (var ctx = DocumentsOperationContext.ShortTermSingleUse(_documentDatabase))
+            {
+                ctx.OpenWriteTransaction();
+
+                using (var doc = ctx.ReadObject(new DynamicJsonValue
+                {
+                    ["Name"] = "Oren",
+                    ["@metadata"] = new DynamicJsonValue
+                    {
+                        ["@collection"] = "Users"
+                    }
+                }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                {
+                    var changeVector = ctx.GetLazyString("");
+                    _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc);
+                }
+
+                ctx.Transaction.Commit();
+            }
+        }
+
 
         [Fact]
         public void PutDocumentWithoutId()
