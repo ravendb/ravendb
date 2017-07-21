@@ -9,6 +9,7 @@ using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Sparrow;
 using Xunit;
+using System.Threading;
 
 namespace SlowTests.Server.Documents.Revisions
 {
@@ -22,7 +23,7 @@ namespace SlowTests.Server.Documents.Revisions
             {
                 var database1 = await GetDocumentDatabaseInstanceFor(store1);
                 database1.Configuration.Replication.MaxItemsCount = 1;
-                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new AsyncManualResetEvent();
+                database1.ReplicationLoader.DebugWaitAndRunReplicationOnce = new ManualResetEventSlim();
 
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store1.Database, false);
                 await RevisionsHelper.SetupRevisions(Server.ServerStore, store2.Database, false);

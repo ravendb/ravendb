@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 if (_parent.DebugWaitAndRunReplicationOnce != null)
                                 {
-                                    _parent.DebugWaitAndRunReplicationOnce.WaitAsync().Wait(_cts.Token);
+                                    _parent.DebugWaitAndRunReplicationOnce.Wait(_cts.Token);
                                     _parent.DebugWaitAndRunReplicationOnce.Reset();
                                 }
 
