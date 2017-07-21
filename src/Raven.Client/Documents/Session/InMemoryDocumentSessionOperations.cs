@@ -392,7 +392,7 @@ more responsive application.
             var entity = ConvertToEntity(entityType, id, document);
 
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
-                throw new InvalidOperationException("Document must have Change Vector");
+                throw new InvalidOperationException("Document " + id + " must have Change Vector");
 
             if (noTracking == false)
             {
@@ -1343,7 +1343,7 @@ more responsive application.
             if (metadata.TryGet(Constants.Documents.Metadata.Id, out id) == false)
                 throw new InvalidOperationException("Document must have an id");
             if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out changeVector) == false)
-                throw new InvalidOperationException("Document must have an Change Vector");
+                throw new InvalidOperationException("Document " + id + " must have an Change Vector");
 
             var newDocumentInfo = new DocumentInfo
             {

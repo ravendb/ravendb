@@ -17,6 +17,7 @@ using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
 using Xunit;
 using Constants = Raven.Client.Constants;
+using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Server.Replication
 {

@@ -5,6 +5,7 @@ using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Xunit;
+using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Issues
 {

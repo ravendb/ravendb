@@ -8,6 +8,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Utils
 {

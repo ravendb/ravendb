@@ -9,6 +9,7 @@ using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;
 using User = SlowTests.Core.Utils.Entities.User;
+using Raven.Server.Documents.Replication;
 
 namespace SlowTests.Core.Session
 {

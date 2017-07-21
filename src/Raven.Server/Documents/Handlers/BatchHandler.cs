@@ -21,6 +21,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Exceptions;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Documents.Handlers
 {
