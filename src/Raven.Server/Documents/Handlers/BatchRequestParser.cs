@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector, commandData.Patch,
                             commandData.PatchIfMissing,
-                            skipPatchIfEtagMismatch: false, debugMode: false);
+                            skipPatchIfChangeVectorMismatch: false, debugMode: false);
                     }
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
@@ -512,7 +512,13 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'e')
                         return CommandPropertyName.ContentType;
                     return CommandPropertyName.NoSuchProperty;
-
+                    
+                case 12:
+                    if (*(long*)state.StringBuffer == 7302135340735752259 &&
+                        *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
+                        return CommandPropertyName.ChangeVector;
+                    
+                    return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;
             }
