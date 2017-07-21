@@ -204,15 +204,7 @@ namespace Raven.Server.Documents.Replication
                 using (documentsOperationContext.OpenReadTransaction())
                 using (var configTx = configurationContext.OpenReadTransaction())
                 {
-                    var changeVector = new DynamicJsonArray();
-                    foreach (var changeVectorEntry in Database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext))
-                    {
-                        changeVector.Add(new DynamicJsonValue
-                        {
-                            [nameof(ChangeVectorEntry.DbId)] = changeVectorEntry.DbId.ToString(),
-                            [nameof(ChangeVectorEntry.Etag)] = changeVectorEntry.Etag
-                        });
-                    }
+                    var changeVector = Database.DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext);
 
                     var lastEtagFromSrc = Database.DocumentsStorage.GetLastReplicateEtagFrom(
                         documentsOperationContext, getLatestEtagMessage.SourceDatabaseId);
@@ -223,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.Type)] = "Ok",
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
-                        [nameof(ReplicationMessageReply.ChangeVector)] = changeVector
+                        [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector
                     };
 
                     documentsOperationContext.Write(writer, response);
@@ -781,10 +773,7 @@ namespace Raven.Server.Documents.Replication
             return _numberOfSiblings / 2 + 1;
         }
 
-        public async Task<int> WaitForReplicationAsync(
-            int numberOfReplicasToWaitFor,
-            TimeSpan waitForReplicasTimeout,
-            long lastEtag)
+        public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, LazyStringValue lastChangeVector)
         {
             if (_numberOfSiblings == 0)
             {
@@ -806,13 +795,13 @@ namespace Raven.Server.Documents.Replication
             while (true)
             {
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
-                var past = ReplicatedPast(lastEtag);
+                var past = ReplicatedPast(lastChangeVector);
                 if (past >= numberOfReplicasToWaitFor)
                     return past;
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
                 if (remaining < TimeSpan.Zero)
-                    return ReplicatedPast(lastEtag);
+                    return ReplicatedPast(lastChangeVector);
 
                 var timeout = TimeoutManager.WaitFor(remaining);
 
@@ -820,12 +809,12 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
                     {
-                        return ReplicatedPast(lastEtag);
+                        return ReplicatedPast(lastChangeVector);
                     }
                 }
                 catch (OperationCanceledException)
                 {
-                    return ReplicatedPast(lastEtag);
+                    return ReplicatedPast(lastChangeVector);
                 }
             }
         }
@@ -841,12 +830,12 @@ namespace Raven.Server.Documents.Replication
             return result.Task;
         }
 
-        private int ReplicatedPast(long etag)
+        private int ReplicatedPast(LazyStringValue changeVector)
         {
             int count = 0;
             foreach (var destination in _outgoing)
             {
-                if (destination.LastAcceptedDocumentEtag >= etag)
+                if (ChangeVectorUtils.GetConflictStatus(destination.LastAcceptedChangeVector,changeVector) == ConflictStatus.AlreadyMerged)
                     count++;
             }
             return count;

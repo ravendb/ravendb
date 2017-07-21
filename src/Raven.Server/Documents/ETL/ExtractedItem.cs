@@ -1,5 +1,4 @@
-﻿using Raven.Client.Documents.Replication.Messages;
-using Sparrow.Json;
+﻿using Sparrow.Json;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -34,7 +33,7 @@ namespace Raven.Server.Documents.ETL
 
         public long Etag { get; protected set; }
 
-        public ChangeVectorEntry[] ChangeVector;
+        public LazyStringValue ChangeVector;
 
         public bool IsDelete { get; protected set; }
 

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Client.Subscriptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Sparrow;
 using Xunit;
 

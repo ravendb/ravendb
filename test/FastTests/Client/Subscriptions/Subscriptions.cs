@@ -28,7 +28,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(1, subscriptionsConfig.Count);
                 Assert.Equal(subscriptionCreationParams.Criteria.Collection, subscriptionsConfig[0].Criteria.Collection);
                 Assert.Equal(subscriptionCreationParams.Criteria.Script, subscriptionsConfig[0].Criteria.Script);
-                Assert.Equal(0, subscriptionsConfig[0].ChangeVector.Length);
+                Assert.Null(subscriptionsConfig[0].ChangeVector);
                 Assert.Equal(subsId, subscriptionsConfig[0].SubscriptionId);
             }
         }

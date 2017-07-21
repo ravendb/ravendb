@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.Globalization;
 using Raven.Client;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
-        public ChangeVectorEntry[] ChangeVector;
+        public LazyStringValue ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;
@@ -61,11 +61,9 @@ namespace Raven.Server.Documents
                     [Constants.Documents.Metadata.Key] = mutatedMetadata = new DynamicJsonValue()
                 };
             }
-
-            mutatedMetadata[Constants.Documents.Metadata.Etag] = Etag;
             mutatedMetadata[Constants.Documents.Metadata.Id] = Id;
             if (ChangeVector != null)
-                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector.ToJson();
+                mutatedMetadata[Constants.Documents.Metadata.ChangeVector] = ChangeVector;
             if (Flags != DocumentFlags.None)
                 mutatedMetadata[Constants.Documents.Metadata.Flags] = Flags.ToString();
             if (IndexScore.HasValue)

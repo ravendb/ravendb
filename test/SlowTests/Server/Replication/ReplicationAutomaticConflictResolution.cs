@@ -10,7 +10,12 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
+using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -82,7 +87,7 @@ output(out);
 return out;
 ", "Users");
                 await SetupReplicationAsync(master, slave);
-                long? etag;
+                string changeVectorFor;
                 using (var session = slave.OpenSession())
                 {
                     session.Store(new User
@@ -91,7 +96,7 @@ return out;
                         Age = 12
                     }, "users/1");
                     session.SaveChanges();
-                    etag = session.Advanced.GetEtagFor(session.Load<User>("users/1"));
+                    changeVectorFor = session.Advanced.GetChangeVectorFor(session.Load<User>("users/1"));
                 }
 
                 using (var session = master.OpenSession())
@@ -104,7 +109,7 @@ return out;
                     session.SaveChanges();
                 }
 
-                Assert.True(WaitForBiggerEtag(slave, etag));
+                Assert.True(WaitForBiggerChangeVector(slave, changeVectorFor));
 
                 using (var session = slave.OpenSession())
                 {
@@ -130,7 +135,6 @@ return out;
                 await SetupReplicationAsync(master, slave);
                 await SetScriptResolutionAsync(slave, @"return;", "Users");
 
-                long? etag;
                 using (var session = slave.OpenSession())
                 {
                     session.Store(new User
@@ -139,7 +143,7 @@ return out;
                         Age = 1
                     }, "users/1");
                     session.SaveChanges();
-                    etag = session.Advanced.GetEtagFor(session.Load<User>("users/1"));
+                    session.Advanced.GetChangeVectorFor(session.Load<User>("users/1"));
                 }
 
                 using (var session = master.OpenSession())
@@ -156,7 +160,7 @@ return out;
             }
         }
 
-        public bool WaitForBiggerEtag(DocumentStore store, long? etag)
+        public bool WaitForBiggerChangeVector(DocumentStore store, string changeVector)
         {
             var sw = Stopwatch.StartNew();
             while (sw.ElapsedMilliseconds < 10000)
@@ -164,7 +168,7 @@ return out;
                 using (var session = store.OpenSession())
                 {
                     var doc = session.Load<User>("users/1");
-                    if (session.Advanced.GetEtagFor(doc) > etag)
+                    if (ChangeVectorUtils.GetConflictStatus(session.Advanced.GetChangeVectorFor(doc),changeVector) == ConflictStatus.Update)
                         return true;
                 }
                 Thread.Sleep(10);

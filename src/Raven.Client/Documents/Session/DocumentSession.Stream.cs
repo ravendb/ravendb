@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
@@ -97,7 +98,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Transformed document must have a $values property");
 
             var metadata = json.GetMetadata();
-            var etag = metadata.GetEtag();
+            var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
             var id = metadata.GetId();
 
             foreach (var value in TransformerHelper.ParseResultsForStreamOperation<T>(this, values))
@@ -105,7 +106,7 @@ namespace Raven.Client.Documents.Session
                 yield return new StreamResult<T>
                 {
                     Id = id,
-                    Etag = etag,
+                    ChangeVector = changeVector,
                     Document = value,
                     Metadata = new MetadataAsDictionary(metadata)
                 };
@@ -115,7 +116,7 @@ namespace Raven.Client.Documents.Session
         private StreamResult<T> CreateStreamResult<T>(BlittableJsonReaderObject json, string[] projectionFields)
         {
             var metadata = json.GetMetadata();
-            var etag = metadata.GetEtag();
+            var changeVector = BlittableJsonExtensions.GetChangeVector(metadata);
             var id = metadata.GetId();
 
             //TODO - Investigate why ConvertToEntity fails if we don't call ReadObject before
@@ -124,7 +125,7 @@ namespace Raven.Client.Documents.Session
 
             var streamResult = new StreamResult<T>
             {
-                Etag = etag,
+                ChangeVector = changeVector,
                 Id = id,
                 Document = entity,
                 Metadata = new MetadataAsDictionary(metadata)
@@ -132,11 +133,9 @@ namespace Raven.Client.Documents.Session
             return streamResult;
         }
 
-        public IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, int start = 0, int pageSize = Int32.MaxValue,
-             string transformer = null,
-            Dictionary<string, object> transformerParameters = null)
+        public IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, int start = 0, int pageSize = int.MaxValue, string transformer = null, Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: fromEtag, startsWith: null, matches: null, start: start, pageSize: pageSize,
+            return Stream<T>(fromChangeVector, startsWith: null, matches: null, start: start, pageSize: pageSize,
                 startAfter: null, transformer: transformer, transformerParameters: transformerParameters);
         }
 
@@ -144,15 +143,15 @@ namespace Raven.Client.Documents.Session
              string startAfter = null, string transformer = null,
             Dictionary<string, object> transformerParameters = null)
         {
-            return Stream<T>(fromEtag: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize,
+            return Stream<T>(fromChangeVector: null, startsWith: startsWith, matches: matches, start: start, pageSize: pageSize,
                 startAfter: startAfter, transformer: transformer, transformerParameters: transformerParameters);
         }
 
-        private IEnumerator<StreamResult<T>> Stream<T>(long? fromEtag, string startsWith, string matches, int start, int pageSize,
-            string startAfter, string transformer, Dictionary<string, object> transformerParameters)
+        private IEnumerator<StreamResult<T>> Stream<T>(string fromChangeVector, string startsWith, string matches, int start, int pageSize, string startAfter, string transformer, Dictionary<string, object> transformerParameters)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(fromEtag, startsWith, matches, start, pageSize, null, startAfter, transformer,
+
+            var command = streamOperation.CreateRequest(fromChangeVector, startsWith, matches, start, pageSize, null, startAfter, transformer,
                 transformerParameters);
             RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))

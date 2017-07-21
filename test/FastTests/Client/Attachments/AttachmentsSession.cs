@@ -1,10 +1,12 @@
 ﻿using System;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -13,7 +15,7 @@ namespace FastTests.Client.Attachments
     public class AttachmentsSession : RavenTestBase
     {
         [Fact]
-        public void PutAttachments()
+        public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
             {
@@ -72,6 +74,9 @@ namespace FastTests.Client.Attachments
 
                     AttachmentsCrud.AssertAttachmentCount(store, 3, 3);
 
+                    var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                    await SetDatabaseId(store, dbId1);
+                    
                     var readBuffer = new byte[8];
                     for (var i = 0; i < names.Length; i++)
                     {
@@ -80,7 +85,7 @@ namespace FastTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment(user, name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            Assert.Equal(2 + i, attachment.Details.Etag);
+                            Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 + i, dbId1), attachment.Details.ChangeVector);
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)
@@ -137,7 +142,7 @@ namespace FastTests.Client.Attachments
                     using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                         session.Advanced.StoreAttachment(user, names[1], backgroundStream, "ImGgE/jPeG");
                     using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
-                        session.Advanced.StoreAttachment(user, names[2], fileStream, null);
+                        session.Advanced.StoreAttachment(user, names[2], fileStream);
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
                     Assert.Equal("Cannot put an attachment with a not readable stream. Make sure that the specified stream is readable and was not disposed.", exception.Message);
@@ -157,7 +162,7 @@ namespace FastTests.Client.Attachments
                     session.Store(user, "users/1");
 
                     session.Advanced.StoreAttachment(user, "profile", stream, "image/png");
-                    session.Advanced.StoreAttachment(user, "other", stream, null);
+                    session.Advanced.StoreAttachment(user, "other", stream);
 
                     var exception = Assert.Throws<InvalidOperationException>(() => session.SaveChanges());
                     Assert.Equal("It is forbidden to re-use the same stream for more than one attachment. Use a unique stream per put attachment command.", exception.Message);
@@ -232,7 +237,7 @@ namespace FastTests.Client.Attachments
         }
 
         [Fact]
-        public void DeleteAttachments()
+        public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
             {
@@ -281,16 +286,20 @@ namespace FastTests.Client.Attachments
                     Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachments[1].GetString(nameof(AttachmentName.Hash)));
                 }
 
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store, dbId1);
+
                 using (var session = store.OpenSession())
                 {
                     var user = session.Load<User>("users/1");
-
+                    
+                    
                     var readBuffer = new byte[16];
                     using (var attachmentStream = new MemoryStream(readBuffer))
                     using (var attachment = session.Advanced.GetAttachment("users/1", "file1"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("file1", attachment.Details.Name);
                         Assert.Equal("EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", attachment.Details.Hash);
                         Assert.Equal(3, attachmentStream.Position);
@@ -304,7 +313,7 @@ namespace FastTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "file3"))
                     {
                         attachment.Stream.CopyTo(attachmentStream);
-                        Assert.Equal(4, attachment.Details.Etag);
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 4, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("file3", attachment.Details.Name);
                         Assert.Equal("NRQuixiqj+xvEokF6MdQq1u+uH1dk/gk2PLChJQ58Vo=", attachment.Details.Hash);
                         Assert.Equal(9, attachmentStream.Position);

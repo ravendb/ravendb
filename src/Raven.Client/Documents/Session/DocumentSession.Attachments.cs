@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Session
             return DocumentStore.Operations.Send(operation, sessionId: _clientSessionId);
         }
 
-        public AttachmentResult GetRevisionAttachment(string documentId, string name, ChangeVectorEntry[] changeVector)
+        public AttachmentResult GetRevisionAttachment(string documentId, string name, string changeVector)
         {
             var operation = new GetAttachmentOperation(documentId, name, AttachmentType.Revision, changeVector);
             return DocumentStore.Operations.Send(operation, sessionId: _clientSessionId);

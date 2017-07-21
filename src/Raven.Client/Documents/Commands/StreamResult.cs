@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using System.Net.Http;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 
 namespace Raven.Client.Documents.Commands
@@ -18,9 +19,9 @@ namespace Raven.Client.Documents.Commands
         public string Id { get; set; }
 
         /// <summary>
-        /// Document etag.
+        /// Document change vector.
         /// </summary>
-        public long Etag { get; set; }
+        public string ChangeVector { get; set; }
 
         /// <summary>
         /// Document metadata.

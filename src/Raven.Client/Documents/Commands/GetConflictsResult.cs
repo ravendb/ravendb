@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Commands
 
         public class Conflict
         {
-            public ChangeVectorEntry[] ChangeVector { get; set; }
+            public string ChangeVector { get; set; }
 
             public BlittableJsonReaderObject Doc { get; set; }
         }

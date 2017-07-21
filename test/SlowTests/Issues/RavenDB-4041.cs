@@ -30,7 +30,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    var enumerator = session.Advanced.Stream<Customer>("customers/");
+                    var enumerator = session.Advanced.Stream<Customer>(startsWith:"customers/");
 
                     while (enumerator.MoveNext())
                     {
@@ -39,7 +39,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
                         Assert.NotNull(enumerator.Current.Id);
-                        Assert.NotNull(enumerator.Current.Etag);
+                        Assert.NotNull(enumerator.Current.ChangeVector);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var enumerator = await session.Advanced.StreamAsync<Customer>("customers/");
+                    var enumerator = await session.Advanced.StreamAsync<Customer>(startsWith:"customers/");
 
                     while (await enumerator.MoveNextAsync())
                     {
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
                         Assert.NotNull(enumerator.Current.Id);
-                        Assert.NotNull(enumerator.Current.Etag);
+                        Assert.NotNull(enumerator.Current.ChangeVector);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.LastModified]);
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
                         Assert.NotNull(enumerator.Current.Id);
-                        Assert.NotNull(enumerator.Current.Etag);
+                        Assert.NotNull(enumerator.Current.ChangeVector);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
 
                         Assert.NotNull(enumerator.Current.Id);
-                        Assert.NotNull(enumerator.Current.Etag);
+                        Assert.NotNull(enumerator.Current.ChangeVector);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.RavenClrType]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.Collection]);
                         Assert.NotNull(enumerator.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
@@ -325,7 +325,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(metadata.GetEtag());
+                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -368,7 +368,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(metadata.GetEtag());
+                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -516,7 +516,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(metadata.GetEtag());
+                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;
@@ -558,7 +558,7 @@ namespace SlowTests.Issues
                     Assert.Equal(customerDynamic.Name.ToString(), "John");
                     Assert.Equal(customerDynamic.Address.ToString(), "Tel Aviv");
 
-                    Assert.NotNull(metadata.GetEtag());
+                    Assert.NotNull(BlittableJsonExtensions.GetChangeVector(metadata));
                     Assert.NotNull(metadata.GetLastModified());
 
                     object _;

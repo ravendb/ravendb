@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Server;
+using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide.Context;
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents.Replication
 
                             if (ConflictSolver?.ResolveToLatest == true)
                             {
-                                resolvedConflicts.Add((ResolveToLatest(conflicts), maxConflictEtag));
+                                resolvedConflicts.Add((ResolveToLatest(context, conflicts), maxConflictEtag));
 
                                 //stats.AddResolvedBy("ResolveToLatest", conflictList.Count);
                             }
@@ -217,7 +218,7 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var documentConflict in conflicts)
             {
-                foreach (var changeVectorEntry in documentConflict.ChangeVector)
+                foreach (var changeVectorEntry in documentConflict.ChangeVector.ToString().ToChangeVector())
                 {
                     if (changeVectorEntry.DbId.Equals(resolverDbId))
                     {
@@ -240,7 +241,7 @@ namespace Raven.Server.Documents.Replication
             if (resolved == null || duplicateResolverEtagAt == maxEtag)
                 return false;
 
-            resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            resolved.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
             return true;
         }
 
@@ -355,33 +356,34 @@ namespace Raven.Server.Documents.Replication
 
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
-            updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            updatedConflict.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
 
             resolvedConflict = updatedConflict;
 
             return true;
         }
 
-        public unsafe DocumentConflict ResolveToLatest(List<DocumentConflict> conflicts)
+        public unsafe DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it
-            conflicts.Sort((x, y) =>
-            {
-                if (x.ChangeVector.Length != y.ChangeVector.Length)
-                {
-                    return x.ChangeVector.Length.CompareTo(y.ChangeVector.Length);
-                }
-                
-                fixed (ChangeVectorEntry* px = x.ChangeVector)
-                fixed (ChangeVectorEntry* py = y.ChangeVector)
-                {
-                    var hashX = Hashing.XXHash64.Calculate((byte*)px, (ulong)(sizeof(ChangeVectorEntry) * x.ChangeVector.Length));
-                    var hashy = Hashing.XXHash64.Calculate((byte*)py, (ulong)(sizeof(ChangeVectorEntry) * y.ChangeVector.Length));
-
-                    return hashX.CompareTo(hashy);
-                }
-            });
+            //TODO: figure out the sort, now when we use strings.
+//            conflicts.Sort((x, y) =>
+//            {
+//                if (x.ChangeVector.Length != y.ChangeVector.Length)
+//                {
+//                    return x.ChangeVector.Length.CompareTo(y.ChangeVector.Length);
+//                }
+//                
+//                fixed (ChangeVectorEntry* px = x.ChangeVector)
+//                fixed (ChangeVectorEntry* py = y.ChangeVector)
+//                {
+//                    var hashX = Hashing.XXHash64.Calculate((byte*)px, (ulong)(sizeof(ChangeVectorEntry) * x.ChangeVector.Length));
+//                    var hashy = Hashing.XXHash64.Calculate((byte*)py, (ulong)(sizeof(ChangeVectorEntry) * y.ChangeVector.Length));
+//
+//                    return hashX.CompareTo(hashy);
+//                }
+//            });
             
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;
@@ -395,7 +397,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
+            latestDoc.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
 
             return latestDoc;
         }

@@ -88,7 +88,7 @@ namespace SlowTests.Core.Commands
                     Assert.True(metadata.TryGet("SomeMetadataKey", out someMetadataValue));
                     Assert.Equal("SomeMetadataValue", someMetadataValue);
 
-                    await commands.DeleteAsync("companies/1", putResult.ETag);
+                    await commands.DeleteAsync("companies/1", putResult.ChangeVector);
                     Assert.Null(await commands.GetAsync("companies/1"));
 
                     await commands.DeleteAsync("users/2", null);

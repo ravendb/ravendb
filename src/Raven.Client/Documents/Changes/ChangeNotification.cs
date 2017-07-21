@@ -39,6 +39,11 @@ namespace Raven.Client.Documents.Changes
         /// </summary>
         public long? Etag { get; set; }
 
+        /// <summary>
+        /// Document change vector
+        /// </summary>
+        public string ChangeVector { get; set; }
+
         internal bool TriggeredByReplicationThread;
 
         public override string ToString()

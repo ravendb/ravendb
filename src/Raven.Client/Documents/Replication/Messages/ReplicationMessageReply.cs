@@ -1,5 +1,7 @@
 ﻿using System;
-using Sparrow.Json.Parsing;
+using System.Text;
+using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Replication.Messages
 {
@@ -13,56 +15,46 @@ namespace Raven.Client.Documents.Replication.Messages
         }
 
         public ReplyType Type { get; set; }
-
         public long LastEtagAccepted { get; set; }
-        
         public string Exception { get; set; }
-
         public string Message { get; set; }
-
         public string MessageType { get; set; }
-
-        public ChangeVectorEntry[] ChangeVector { get; set; }
-
+        public string DatabaseChangeVector { get; set; }
         public string DatabaseId { get; set; }
-        
         public long CurrentEtag { get; set; }
     }
-
-    public static class ChangeVectorExtensions
-    {
-        public static DynamicJsonArray ToJson(this ChangeVectorEntry[] self)
-        {
-            var results = new DynamicJsonArray();
-            foreach (var entry in self)
-                results.Add(entry.ToJson());
-            return results;
-        }
-    }
-
-    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>, IDynamicJson
+    public struct ChangeVectorEntry : IComparable<ChangeVectorEntry>
     {
         public Guid DbId;
         public long Etag;
-
+        public int NodeTag;
+        public void Append(StringBuilder sb)
+        {
+            ChangeVectorExtensions.ToBase26(sb, NodeTag);
+            sb.Append(":");
+            sb.Append(Etag);
+            sb.Append("-");
+            //TODO: Fix this allocation mess
+            sb.Append(Convert.ToBase64String(DbId.ToByteArray()));
+        }
+        
         public override string ToString()
         {
-            return DbId.ToString().Substring(0, 4) + "... " + Etag;
+            var sb = new StringBuilder();
+            Append(sb);
+            return sb.ToString();
         }
-
         public bool Equals(ChangeVectorEntry other)
         {
             return DbId.Equals(other.DbId) && Etag == other.Etag;
         }
-
         public override int GetHashCode()
         {
             unchecked
             {
-                return (DbId.GetHashCode()*397) ^ Etag.GetHashCode();
+                return (DbId.GetHashCode() * 397) ^ Etag.GetHashCode();
             }
         }
-
         // we use it to sort change vectors by the ID.
         public int CompareTo(ChangeVectorEntry other)
         {
@@ -70,15 +62,6 @@ namespace Raven.Client.Documents.Replication.Messages
             if (rc != 0)
                 return rc;
             return Etag.CompareTo(other.Etag);
-        }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(DbId)] = DbId.ToString(),
-                [nameof(Etag)] = Etag
-            };
         }
     }
 }

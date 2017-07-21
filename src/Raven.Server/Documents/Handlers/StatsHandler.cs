@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -38,15 +38,9 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context).ToDictionary(x => x.DbId, x => x);
-
-                statsDatabaseChangeVector[Database.DbId] = new ChangeVectorEntry()
-                {
-                    DbId = Database.DbId,
-                    Etag = stats.LastDocEtag.Value
-                };
-
-                stats.DatabaseChangeVector = statsDatabaseChangeVector.Values.ToArray();
+                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
+                
+                stats.DatabaseChangeVector = statsDatabaseChangeVector;
                 stats.DatabaseId = Database.DocumentsStorage.Environment.DbId;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();

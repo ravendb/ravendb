@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
@@ -7,6 +6,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.Collections;
+using Sparrow.Global;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json
@@ -401,6 +401,23 @@ namespace Sparrow.Json
             return TryGet(new StringSegment(name), out str);
         }
 
+        public bool TryGetWithNull(string name, out string str)
+        {
+            object result;
+            if (TryGetMember(name, out result) == false)
+            {
+                str = null;
+                return false;
+            }
+            if (result == null)
+            {
+                // we manage to get the value, which is null.
+                str = null;
+                return true;
+            }
+            return ChangeTypeToString(result, out str);
+        }
+
         public bool TryGet(StringSegment name, out string str)
         {
             object result;
@@ -408,6 +425,13 @@ namespace Sparrow.Json
             {
                 str = null;
                 return false;
+            }
+            //TODO: bah!
+            if (result == null && name.Equals("@change-vector"))
+            {
+                // we manage to get the value, which is null.
+                str = null;
+                return true;
             }
             return ChangeTypeToString(result, out str);
         }

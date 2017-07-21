@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Client.Extensions
@@ -28,13 +29,12 @@ namespace Raven.Client.Extensions
             return metadata.TryGet(Constants.Documents.Metadata.Id, out id) && id != null;
         }
 
-        public static long GetEtag(this BlittableJsonReaderObject metadata)
+        public static string GetChangeVector(BlittableJsonReaderObject metadata)
         {
-            long etag;
-            if (metadata.TryGet(Constants.Documents.Metadata.Etag, out etag) == false)
-                InvalidMissingEtag();
+            if (metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false)
+                InvalidMissingChangeVector();
 
-            return etag;
+            return changeVector;
         }
 
         public static DateTime GetLastModified(this BlittableJsonReaderObject metadata)
@@ -46,27 +46,22 @@ namespace Raven.Client.Extensions
             return lastModified;
         }
 
-        public static bool TryGetEtag(this BlittableJsonReaderObject metadata, out long etag)
+        public static bool TryGetChangeVector(this BlittableJsonReaderObject metadata, out string changeVector)
         {
-            object etagAsObject;
-            if (metadata.TryGetMember(Constants.Documents.Metadata.Etag, out etagAsObject) == false)
+            object changeVectorAsObject;
+            if (metadata.TryGetMember(Constants.Documents.Metadata.ChangeVector, out changeVectorAsObject) == false)
             {
-                etag = 0;
+                changeVector = null;
                 return false;
             }
 
-            if (etagAsObject is long)
-            {
-                etag = (long)etagAsObject;
-                return true;
-            }
-
-            return long.TryParse(etagAsObject.ToString(), out etag);
+            changeVector = changeVectorAsObject as string;
+            return true;
         }
 
-        private static void InvalidMissingEtag()
+        private static void InvalidMissingChangeVector()
         {
-            throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.Etag}' field.");
+            throw new InvalidOperationException($"Metadata does not contain '{Constants.Documents.Metadata.ChangeVector}' field.");
         }
 
         private static void InvalidMissingLastModified()

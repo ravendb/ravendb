@@ -7,6 +7,7 @@
 using System;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Session
 {
@@ -46,12 +47,6 @@ namespace Raven.Client.Documents.Session
         Task SaveChangesAsync(CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
-        ///     forces concurrency check with given Etag
-        /// </summary>
-        Task StoreAsync(object entity, long? etag, CancellationToken token = default (CancellationToken));
-
-        /// <summary>
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.
         ///     <para>Forces concurrency check if the Id is not available during extraction.</para>
         /// </summary>
@@ -60,9 +55,9 @@ namespace Raven.Client.Documents.Session
         Task StoreAsync(object entity, CancellationToken token = default (CancellationToken));
 
         /// <summary>
-        ///     Stores entity in session with given id and forces concurrency check with given Etag.
+        ///     Stores entity in session with given id and forces concurrency check with given change vector.
         /// </summary>
-        Task StoreAsync(object entity, long? etag, string id, CancellationToken token = default (CancellationToken));
+        Task StoreAsync(object entity, string changeVector, string id, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Stores the specified dynamic entity, under the specified id.

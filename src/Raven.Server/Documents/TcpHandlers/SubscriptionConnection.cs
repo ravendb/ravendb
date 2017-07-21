@@ -21,6 +21,7 @@ using Sparrow.Utils;
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Extensions;
 using Voron;
 
 namespace Raven.Server.Documents.TcpHandlers
@@ -329,7 +330,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] { },
+                    ChangeVector = null,
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -337,7 +338,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 return new SubscriptionConnectionClientMessage
                 {
-                    ChangeVector = new ChangeVectorEntry[] { },
+                    ChangeVector = null,
                     Type = SubscriptionConnectionClientMessage.MessageType.DisposedNotification
                 };
             }
@@ -359,7 +360,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var replyFromClientTask = GetReplyFromClientAsync();
                 var startEtag = GetStartEtagForSubscription(docsContext, subscription);
 
-                ChangeVectorEntry[] lastChangeVector = null;
+                LazyStringValue lastChangeVector = null;
 
                 var patch = SetupFilterScript(subscription.Criteria);
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
@@ -381,7 +382,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
+                                lastChangeVector = subscription.ChangeVector == null ? 
+                                    result.Doc.ChangeVector : 
+                                    context.GetLazyString(ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, context.GetLazyString(subscription.ChangeVector)));
                                 
                                 if (result.Doc.Data == null)
                                 {

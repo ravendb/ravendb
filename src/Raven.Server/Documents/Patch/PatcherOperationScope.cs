@@ -86,8 +86,8 @@ namespace Raven.Server.Documents.Patch
 
             var metadata = metadataValue.AsObject();
 
-            if (etag > 0)
-                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
+//            if (etag > 0)
+//                metadata.FastAddProperty(Constants.Documents.Metadata.Etag, etag, true, true, true);
 
             if (lastModified.HasValue && lastModified != default(DateTime))
                 metadata.FastAddProperty(Constants.Documents.Metadata.LastModified, lastModified.Value.GetDefaultRavenFormat(), true, true, true);
@@ -235,7 +235,6 @@ namespace Raven.Server.Documents.Patch
             return property == Constants.Documents.Indexing.Fields.ReduceKeyFieldName ||
                    property == Constants.Documents.Indexing.Fields.DocumentIdFieldName ||
                    property == Constants.Documents.Metadata.Id ||
-                   property == Constants.Documents.Metadata.Etag ||
                    property == Constants.Documents.Metadata.LastModified ||
                    property == Constants.Documents.Metadata.IndexScore ||
                    property == Constants.Documents.Metadata.ChangeVector ||
@@ -561,7 +560,7 @@ namespace Raven.Server.Documents.Patch
             throw new InvalidOperationException("Documents operation context is not set");
         }
 
-        public virtual string PutDocument(string id, JsValue document, JsValue metadata, JsValue etagJs, Engine engine)
+        public virtual string PutDocument(string id, JsValue document, JsValue metadata, string changeVector, Engine engine)
         {
             if (_context == null)
                 ThrowDocumentsOperationContextIsNotSet();
@@ -571,35 +570,21 @@ namespace Raven.Server.Documents.Patch
                 throw new InvalidOperationException(
                     $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
             }
-
-            long? etag = null;
-            if (etagJs != null)
-            {
-                if (etagJs.IsNumber())
-                {
-                    etag = (long)etagJs.AsNumber();
-                }
-                else if (etagJs.IsNull() == false && etagJs.IsUndefined() == false && etagJs.ToString() != "None")
-                {
-                    throw new InvalidOperationException($"Invalid ETag value for document '{id}'");
-                }
-            }
-
+            
             var data = ToBlittable(document.AsObject());
             if (metadata != null && metadata.IsObject())
             {
                 data["@metadata"] = ToBlittable(metadata.AsObject());
             }
-
             var dataReader = _context.ReadObject(data, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            var put = _database.DocumentsStorage.Put(_context, id, etag, dataReader);
+            var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), dataReader);
 
             if (DebugMode)
             {
                 DebugActions.PutDocument.Add(new DynamicJsonValue
                 {
                     ["Id"] = id,
-                    ["Etag"] = etag,
+                    ["ChangeVector"] = changeVector,
                     ["Data"] = dataReader
                 });
             }

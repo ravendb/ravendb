@@ -3,6 +3,7 @@ using System.IO;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Util;
@@ -16,20 +17,20 @@ namespace Raven.Client.Documents.Operations
         private readonly string _name;
         private readonly Stream _stream;
         private readonly string _contentType;
-        private readonly long? _etag;
+        private readonly string _changeVector;
 
-        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, long? etag = null)
+        public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, string changeVector = null)
         {
             _documentId = documentId;
             _name = name;
             _stream = stream;
             _contentType = contentType;
-            _etag = etag;
+            _changeVector = changeVector;
         }
 
         public RavenCommand<AttachmentDetails> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _etag);
+            return new PutAttachmentCommand(_documentId, _name, _stream, _contentType, _changeVector);
         }
 
         private class PutAttachmentCommand : RavenCommand<AttachmentDetails>
@@ -38,9 +39,9 @@ namespace Raven.Client.Documents.Operations
             private readonly string _name;
             private readonly Stream _stream;
             private readonly string _contentType;
-            private readonly long? _etag;
+            private readonly string _changeVector;
 
-            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, long? etag)
+            public PutAttachmentCommand(string documentId, string name, Stream stream, string contentType, string changeVector)
             {
                 if (string.IsNullOrWhiteSpace(documentId))
                     throw new ArgumentNullException(nameof(documentId));
@@ -51,7 +52,7 @@ namespace Raven.Client.Documents.Operations
                 _name = name;
                 _stream = stream;
                 _contentType = contentType;
-                _etag = etag;
+                _changeVector = changeVector;
 
                 PutAttachmentCommandHelper.ValidateStream(stream);
             }
@@ -69,7 +70,7 @@ namespace Raven.Client.Documents.Operations
                     Content = new AttachmentStreamContent(_stream, CancellationToken)
                 };
 
-                AddEtagIfNotNull(_etag, request);
+                AddChangeVectorIfNotNull(_changeVector, request);
 
                 return request;
             }

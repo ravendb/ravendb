@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,7 +9,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class PutAttachmentCommandData : ICommandData
     {
-        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, long? etag)
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -19,7 +20,7 @@ namespace Raven.Client.Documents.Commands.Batches
             Name = name;
             Stream = stream;
             ContentType = contentType;
-            Etag = etag;
+            ChangeVector = changeVector;
 
             PutAttachmentCommandHelper.ValidateStream(stream);
         }
@@ -27,8 +28,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Id { get; }
         public string Name { get; }
         public Stream Stream { get; }
+        public string ChangeVector {get; }
         public string ContentType { get; }
-        public long? Etag { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
@@ -38,7 +39,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
                 [nameof(ContentType)] = ContentType,
-                [nameof(Etag)] = Etag,
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
             };
         }

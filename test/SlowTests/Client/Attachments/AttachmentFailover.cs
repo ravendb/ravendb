@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Server.Documents;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -75,7 +76,6 @@ namespace SlowTests.Client.Attachments
 
                         await task;
                         var attachment = command.Result;
-                        Assert.Equal(2, attachment.Etag);
                         Assert.Equal("File", attachment.Name);
                         Assert.Equal(size, stream.Position);
                         Assert.Equal(size, attachment.Size);
@@ -89,7 +89,6 @@ namespace SlowTests.Client.Attachments
                 using (var attachment = session.Advanced.GetAttachment("users/1", "File"))
                 {
                     attachment.Stream.CopyTo(dummyStream);
-                    Assert.Equal(2, attachment.Details.Etag);
                     Assert.Equal("File", attachment.Details.Name);
                     Assert.Equal(size, dummyStream.Position);
                     Assert.Equal(size, attachment.Details.Size);

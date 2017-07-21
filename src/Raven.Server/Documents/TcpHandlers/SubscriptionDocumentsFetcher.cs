@@ -4,9 +4,10 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Server.Documents.Revisions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -163,11 +164,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             transformResult = null;
             exception = null;
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
-                remote: doc.ChangeVector,
-                local: subscriptionState.ChangeVector);
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                remoteAsString: doc.ChangeVector,
+                localAsString: subscriptionState.ChangeVector);
 
-            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
+            if (conflictStatus == ConflictStatus.AlreadyMerged)
                 return false;
 
             if (patch == null)
@@ -196,11 +197,11 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             exception = null;
             transformResult = null;
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
-                remote: item.ChangeVector,
-                local: subscriptionState.ChangeVector);
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                remoteAsString: item.ChangeVector,
+                localAsString: subscriptionState.ChangeVector);
 
-            if (conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged)
+            if (conflictStatus == ConflictStatus.AlreadyMerged)
                 return false;
 
             if (patch == null)

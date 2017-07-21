@@ -16,6 +16,9 @@ using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Voron;
 
 namespace Raven.Server.Web
 {
@@ -151,6 +154,20 @@ namespace Raven.Server.Web
             return false;
         }
 
+        protected string GetStringFromHeaders(string name)
+        {
+            var headers = HttpContext.Request.Headers[name];
+            if (headers.Count == 0)
+                return null;
+
+            string raw = headers[0][0] == '\"'
+                ? headers[0].Substring(1, headers[0].Length - 2)
+                : headers[0];
+
+            return raw;
+        }
+
+        //TODO: remove this
         protected long? GetLongFromHeaders(string name)
         {
             var headers = HttpContext.Request.Headers[name];

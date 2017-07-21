@@ -14,13 +14,13 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class HeadAttachmentCommand : RavenCommand<long?>
+    public class HeadAttachmentCommand : RavenCommand<string>
     {
         private readonly string _documentId;
         private readonly string _name;
-        private readonly long? _etag;
+        private readonly string _changeVector;
 
-        public HeadAttachmentCommand(string documentId, string name, long? etag)
+        public HeadAttachmentCommand(string documentId, string name, string changeVector)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Operations
 
             _documentId = documentId;
             _name = name;
-            _etag = etag;
+            _changeVector = changeVector;
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
@@ -41,8 +41,8 @@ namespace Raven.Client.Documents.Operations
                 Method = HttpMethods.Head,
             };
 
-            if (_etag.HasValue)
-                request.Headers.TryAddWithoutValidation("If-None-Match", _etag.Value.ToString());
+            if (_changeVector != null)
+                request.Headers.TryAddWithoutValidation("If-None-Match", _changeVector);
 
             return request;
         }
@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Operations
         {
             if (response.StatusCode == HttpStatusCode.NotModified)
             {
-                Result = _etag;
+                Result = _changeVector;
                 return Task.FromResult(ResponseDisposeHandling.Automatic);
             }
 

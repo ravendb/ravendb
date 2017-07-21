@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations
         public class PatchDetails : IBulkOperationDetails
         {
             public string Id { get; set; }
-            public long? Etag { get; set; }
+            public string ChangeVector { get; set; }
             public PatchStatus Status { get; set; }
 
             public DynamicJsonValue ToJson()
@@ -46,7 +46,7 @@ namespace Raven.Client.Documents.Operations
                 return new DynamicJsonValue(GetType())
                 {
                     [nameof(Id)] = Id,
-                    [nameof(Etag)] = Etag,
+                    [nameof(ChangeVector)] = ChangeVector,
                     [nameof(Status)] = Status
                 };
             }

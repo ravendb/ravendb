@@ -79,27 +79,27 @@ namespace SlowTests.Tests.Faceted
             {
                 Setup(store, _stronglyTypedFacets);
 
-                long? firstEtag;
+                string firstChangeVector;
 
                 const string queryUrl = "/queries/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
 
                 var url = string.Format(queryUrl, "canon");
 
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, null, out firstEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, null, out firstChangeVector));
 
                 //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstEtag, out firstEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, firstChangeVector, out firstChangeVector));
 
                 //change index etag by inserting new doc
                 InsertCameraData(store, GetCameras(1));
 
-                long? secondEtag;
+                string secondChangeVector;
 
                 //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, firstEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformGet(store, url, firstChangeVector, out secondChangeVector));
 
                 //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, secondEtag, out secondEtag));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformGet(store, url, secondChangeVector, out secondChangeVector));
             }
         }
 

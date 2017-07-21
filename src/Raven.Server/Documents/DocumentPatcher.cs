@@ -39,7 +39,8 @@ namespace Raven.Server.Documents
 
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
-            engine.SetValue(PutDocument, (Func<string, JsValue, JsValue, JsValue, string>)((id, data, metadata, etag) => scope.PutDocument(id, data, metadata, etag, engine)));
+            //TODO: change etag to change vector?
+            engine.SetValue(PutDocument, (Func<string, JsValue, JsValue, string, string>)((id, data, metadata, changeVector) => scope.PutDocument(id, data, metadata, changeVector, engine)));
             engine.SetValue(DeleteDocument, (Action<string>)scope.DeleteDocument);
         }
 
@@ -64,14 +65,8 @@ namespace Raven.Server.Documents
         }
 
         public PatchDocumentCommand GetPatchDocumentCommand(
-            JsonOperationContext context,
-            string id,
-            long? etag,
-            PatchRequest patch,
-            PatchRequest patchIfMissing,
-            bool skipPatchIfEtagMismatch,
-            bool debugMode,
-            bool isTest = false)
+            JsonOperationContext context, string id, LazyStringValue changeVector, 
+            PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool debugMode, bool isTest = false)
         {
             if (id == null)
                 throw new ArgumentNullException(nameof(id));
@@ -86,7 +81,7 @@ namespace Raven.Server.Documents
 
             var run = CreateScriptRun(patch, scope, id); 
 
-            var command = new PatchDocumentCommand(context, id, etag, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
+            var command = new PatchDocumentCommand(context, id, changeVector, skipPatchIfEtagMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
 
             if (patchIfMissing != null)
             {

@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 new CompareKey(Constants.Documents.Metadata.HasValue, 0),
                 new CompareKey(Constants.Documents.Metadata.Key, 0),
                 new CompareKey(Constants.Documents.Metadata.Id, 1),
-                new CompareKey(Constants.Documents.Metadata.Etag, 1),
+                new CompareKey(Constants.Documents.Metadata.ChangeVector, 1),
                 new CompareKey(Constants.Documents.Metadata.LastModified, 1),
                 new CompareKey("Count", 2)
             };

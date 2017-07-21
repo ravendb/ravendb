@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Replication;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -109,19 +110,17 @@ namespace SlowTests.Issues
                 // here we make sure that we do not enter an infinite loop of indexing (like we did back at 3 era)
                 using (var session = slave.OpenSession())
                 {
-                    long? lastPersonEtag;
-
                     var person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(14))).First();
-                    lastPersonEtag = session.Advanced.GetEtagFor(person);
+                    var changeVectorFor = session.Advanced.GetChangeVectorFor(person);
 
-                    Assert.NotNull(lastPersonEtag);
+                    Assert.NotNull(changeVectorFor);
 
                     for (var i = 0; i < 5; i++)
                     {
                         person = session.Query<Person, PersonAndAddressIndex>().Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(16))).First();
                         Thread.Sleep(50);
 
-                        Assert.Equal(lastPersonEtag, session.Advanced.GetEtagFor(person));
+                        Assert.Equal(changeVectorFor, session.Advanced.GetChangeVectorFor(person));
                     }
                 }
 

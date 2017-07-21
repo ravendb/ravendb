@@ -1,4 +1,5 @@
 ﻿using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -10,7 +11,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         string Name { get; }
 
-        long? Etag { get; }
+        string ChangeVector { get; }
 
         CommandType Type { get; }
 

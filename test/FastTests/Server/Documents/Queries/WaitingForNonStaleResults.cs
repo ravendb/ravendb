@@ -3,8 +3,8 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
-using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -31,7 +31,7 @@ namespace FastTests.Server.Documents.Queries
 
                     await session.SaveChangesAsync();
 
-                    lastEtagOfUser = session.Advanced.GetEtagFor(entity).Value;
+                    lastEtagOfUser = session.Advanced.GetChangeVectorFor(entity).ToChangeVector()[0].Etag;
                 }
 
                 using (var session = store.OpenSession())

@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -7,15 +8,15 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class DeleteCommandData : ICommandData
     {
-        public DeleteCommandData(string id, long? etag)
+        public DeleteCommandData(string id, string changeVector)
         {
             Id = id ?? throw new ArgumentNullException(nameof(id));
-            Etag = etag;
+            ChangeVector = changeVector;
         }
 
         public string Id { get; }
         public string Name { get; } = null;
-        public long? Etag { get; }
+        public string ChangeVector { get; }
         public CommandType Type { get; } = CommandType.DELETE;
 
         public virtual DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
@@ -23,7 +24,7 @@ namespace Raven.Client.Documents.Commands.Batches
             return new DynamicJsonValue
             {
                 [nameof(Id)] = Id,
-                [nameof(Etag)] = Etag,
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString()
             };
         }

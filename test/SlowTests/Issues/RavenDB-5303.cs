@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
 using Xunit;
 
@@ -88,7 +89,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer.Output>(0, transformer: transformer.TransformerName))
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer.Output>(fromChangeVector:null, transformer: transformer.TransformerName))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())
@@ -112,7 +113,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer2.Output>(0, transformer: transformer2.TransformerName))
+                    using (var enumerator = session.Advanced.Stream<TestDocumentTransformer2.Output>(fromChangeVector:null, transformer: transformer2.TransformerName))
                     {
                         var count = 0;
                         while (enumerator.MoveNext())

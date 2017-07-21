@@ -39,11 +39,11 @@ namespace Raven.Client.Documents.Commands.MultiGet
             foreach (var command in _commands)
             {
                 var cacheKey = GetCacheKey(command, out string _);
-                using (_cache.Get(_context, cacheKey, out long cachedEtag, out BlittableJsonReaderObject _))
+                using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out BlittableJsonReaderObject _))
                 {
                     var headers = new DynamicJsonValue();
-                    if (cachedEtag != 0)
-                        headers["If-None-Match"] = $"\"{cachedEtag}\"";
+                    if (cachedChangeVector != null)
+                        headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
 
                     foreach (var header in command.Headers)
                         headers[header.Key] = header.Value;
@@ -218,7 +218,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 return;
 
             var cacheKey = GetCacheKey(command, out string _);
-            using (_cache.Get(_context, cacheKey, out long _, out BlittableJsonReaderObject cachedResponse))
+            using (_cache.Get(_context, cacheKey, out string _, out BlittableJsonReaderObject cachedResponse))
             {
                 getResponse.Result = cachedResponse;
             }
@@ -235,11 +235,11 @@ namespace Raven.Client.Documents.Commands.MultiGet
             if (result == null)
                 return;
 
-            var etag = getResponse.Headers.GetEtagHeader();
-            if (etag.HasValue == false)
+            var changeVector = getResponse.Headers.GetEtagHeader();
+            if (changeVector == null)
                 return;
 
-            _cache.Set(cacheKey, etag.Value, result);
+            _cache.Set(cacheKey, changeVector, result);
         }
 
         public override bool IsReadRequest => false;

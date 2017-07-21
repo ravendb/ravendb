@@ -22,7 +22,7 @@ namespace SlowTests.Issues
                     var result1 = commands.Put("key/1", null, new { });
                     var result2 = commands.Put("key/1", null, new { });
 
-                    var e = Assert.Throws<ConcurrencyException>(() => commands.Delete("key/1", result1.ETag));
+                    var e = Assert.Throws<ConcurrencyException>(() => commands.Delete("key/1", result1.ChangeVector));
                     Assert.Equal("Document key/1 has etag 2, but Delete was called with etag 1. Optimistic concurrency violation, transaction will be aborted.", e.Message);
                 }
             }

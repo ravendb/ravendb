@@ -13,13 +13,13 @@ namespace SlowTests.Issues
             {
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new User { Name = "name1" }, (long?)null, "users/1");
+                    s.Store(new User { Name = "name1" }, null, "users/1");
                     s.SaveChanges();
 
                 }
                 using (var s = store.OpenSession())
                 {
-                    s.Store(new User { Name = "name2" }, (long?)null, "users/1");
+                    s.Store(new User { Name = "name2" }, null, "users/1");
                     s.SaveChanges();
                 }
             }

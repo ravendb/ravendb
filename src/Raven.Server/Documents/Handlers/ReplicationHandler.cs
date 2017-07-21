@@ -12,6 +12,7 @@ using System.Net.WebSockets;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -114,7 +115,7 @@ namespace Raven.Server.Documents.Handlers
 
                     array.Add(new DynamicJsonValue
                     {
-                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector.ToJson(),
+                        [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector,
                         [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
                     });
                 }

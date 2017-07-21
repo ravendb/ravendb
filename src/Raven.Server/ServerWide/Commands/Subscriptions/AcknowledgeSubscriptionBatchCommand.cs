@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -11,7 +12,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
     public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand, IDatabaseTask
     {
-        public ChangeVectorEntry[] ChangeVector;
+        public string ChangeVector;
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
@@ -48,7 +49,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(ChangeVector)] = ChangeVector?.ToJson();
+            json[nameof(ChangeVector)] = ChangeVector;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;

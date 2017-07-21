@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -12,8 +13,8 @@ namespace Raven.Client.Documents.Operations
 {
     public class PatchOperation<TEntity> : PatchOperation
     {
-        public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false) 
-            : base(id, etag, patch, patchIfMissing, skipPatchIfEtagMismatch)
+        public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false) 
+            : base(id, changeVector, patch, patchIfMissing, skipPatchIfEtagMismatch)
         {
         }
     }
@@ -28,12 +29,12 @@ namespace Raven.Client.Documents.Operations
         }
 
         private readonly string _id;
-        private readonly long? _etag;
+        private readonly string _changeVector;
         private readonly PatchRequest _patch;
         private readonly PatchRequest _patchIfMissing;
         private readonly bool _skipPatchIfEtagMismatch;
 
-        public PatchOperation(string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false)
+        public PatchOperation(string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing = null, bool skipPatchIfEtagMismatch = false)
         {
             if (patch == null)
                 throw new ArgumentNullException(nameof(patch));
@@ -43,7 +44,7 @@ namespace Raven.Client.Documents.Operations
                 throw new ArgumentNullException(nameof(patchIfMissing.Script));
 
             _id = id ?? throw new ArgumentNullException(nameof(id));
-            _etag = etag;
+            _changeVector = changeVector;
             _patch = patch;
             _patchIfMissing = patchIfMissing;
             _skipPatchIfEtagMismatch = skipPatchIfEtagMismatch;
@@ -51,20 +52,20 @@ namespace Raven.Client.Documents.Operations
 
         public RavenCommand<PatchResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new PatchCommand(conventions, context, _id, _etag, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false, test: false);
+            return new PatchCommand(conventions, context, _id, _changeVector, _patch, _patchIfMissing, _skipPatchIfEtagMismatch, returnDebugInformation: false, test: false);
         }
 
         public class PatchCommand : RavenCommand<PatchResult>
         {
             private readonly JsonOperationContext _context;
             private readonly string _id;
-            private readonly long? _etag;
+            private readonly string _changeVector;
             private readonly BlittableJsonReaderObject _patch;
             private readonly bool _skipPatchIfEtagMismatch;
             private readonly bool _returnDebugInformation;
             private readonly bool _test;
 
-            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, long? etag, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation, bool test)
+            public PatchCommand(DocumentConventions conventions, JsonOperationContext context, string id, string changeVector, PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfEtagMismatch, bool returnDebugInformation, bool test)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -77,7 +78,7 @@ namespace Raven.Client.Documents.Operations
 
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
-                _etag = etag;
+                _changeVector = changeVector;
                 _patch = EntityToBlittable.ConvertEntityToBlittable(new
                 {
                     Patch = patch,
@@ -108,7 +109,7 @@ namespace Raven.Client.Documents.Operations
                         _context.Write(stream, _patch);
                     })
                 };
-                AddEtagIfNotNull(_etag, request);
+                AddChangeVectorIfNotNull(_changeVector, request);
                 return request;
             }
 

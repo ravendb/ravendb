@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Replication
             string collection,
             long lastModifiedTicks,
             BlittableJsonReaderObject doc,
-            ChangeVectorEntry[] changeVector,
-            ChangeVectorEntry[] conflictedChangeVector,
+            LazyStringValue changeVector,
+            LazyStringValue conflictedChangeVector,
             DocumentFlags flags)
         {
             if (id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Replication
                 if (local != null)
                     conflicts.Add(local);
 
-                var resolved = _conflictResolver.ResolveToLatest(conflicts);
+                var resolved = _conflictResolver.ResolveToLatest(documentsContext, conflicts);
                 _conflictResolver.PutResolvedDocument(documentsContext, resolved);
 
                 return;
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Replication
         private bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,
             string id,
-            ChangeVectorEntry[] incomingChangeVector,
+            LazyStringValue incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
             var collection = CollectionName.GetCollectionName(id, doc);
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             string id,
             string collection,
-            ChangeVectorEntry[] incomingChangeVector,
+            LazyStringValue incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
             if (_conflictResolver.ConflictSolver?.DatabaseResolverId == null)
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, ChangeVectorEntry[] changeVector)
+        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, LazyStringValue changeVector)
         {
             long highestMax;
             if (!doc.TryGet("Max", out highestMax))
@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Replication
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
 
             var resolvedHiLoDoc = doc;
-            ChangeVectorEntry[] mergedChangeVector;
+            LazyStringValue mergedChangeVector;
             if (conflicts.Count == 0)
             {
                 //conflict with another existing document
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                 double max;
                 if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
                     resolvedHiLoDoc = localHiloDoc.Data;
-                mergedChangeVector = ChangeVectorUtils.MergeVectors(changeVector,localHiloDoc.ChangeVector);
+                mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(changeVector,localHiloDoc.ChangeVector));
             }
             else
             {
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
                 var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-                mergedChangeVector = ChangeVectorUtils.MergeVectors(merged, changeVector);
+                mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(merged, changeVector));
             }
             _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc,changeVector: mergedChangeVector);
         }
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string id,
             BlittableJsonReaderObject incomingDoc,
             long lastModifiedTicks,
-            ChangeVectorEntry[] incomingChangeVector)
+            LazyStringValue incomingChangeVector)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
             var existingDoc = existing.Document;
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
 
                 // no real conflict here, both documents have identical content
-                var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
+                var mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector));
                 var nonPersistentFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Replication
             if (existingTombstone != null && incomingDoc == null)
             {
                 // Conflict between two tombstones resolves to the local tombstone
-                existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
+                existingTombstone.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector));
                 using (Slice.External(context.Allocator, existingTombstone.LowerId, out Slice lowerId))
                 {
                     _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, lowerId, null, existingTombstone.ChangeVector);

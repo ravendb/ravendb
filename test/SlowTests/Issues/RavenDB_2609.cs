@@ -50,14 +50,14 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var companyEtag = commands.Head("entities/1").Value;
+                    var companyEtag = commands.Head("entities/1");
 
                     store.Operations.Send(new PatchOperation("companies/1", null, new PatchRequest
                     {
                         Script = @"this.Name = 'Abc';"
                     }));
 
-                    var afterPatchEtag = commands.Head("entities/1").Value;
+                    var afterPatchEtag = commands.Head("entities/1");
 
                     Assert.Equal(companyEtag, afterPatchEtag);
                 }
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var companyEtag = commands.Head("entities/1").Value;
+                    var companyEtag = commands.Head("entities/1");
 
                     store.Operations.Send(new PatchOperation("entities/1", null, new PatchRequest
                     {
@@ -98,7 +98,7 @@ this.SomeNullableLong = null;
 SomeArray=null;"
                     }));
 
-                    var afterPatchEtag = commands.Head("entities/1").Value;
+                    var afterPatchEtag = commands.Head("entities/1");
 
                     Assert.Equal(companyEtag, afterPatchEtag);
                 }

@@ -1,113 +1,148 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Context;
-using Sparrow;
-using Sparrow.Binary;
-using Voron;
-using Voron.Data.BTrees;
+using Sparrow.Json;
 
 namespace Raven.Server.Utils
 {
-    public class ChangeVectorUtils
+    public enum ConflictStatus
     {
-        public static unsafe void WriteChangeVectorTo(DocumentsOperationContext context, Dictionary<Guid, long> changeVector, Tree tree)
+        Update,
+        Conflict,
+        AlreadyMerged
+    }
+
+    public static class ChangeVectorUtils
+    {
+        public static Dictionary<Guid, long> ParseChangeVectorToDictionary(this string changeVector)
         {
-            Guid dbId;
-            long etagBigEndian;
-            Slice keySlice;
-            Slice valSlice;
-            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            var dic = new Dictionary<Guid,long>();
+            foreach (var entry in changeVector.ToChangeVector())
             {
-                foreach (var kvp in changeVector)
+                if (dic.ContainsKey(entry.DbId))
                 {
-                    dbId = kvp.Key;
-                    etagBigEndian = Bits.SwapBytes(kvp.Value);
-                    tree.Add(keySlice, valSlice);
+                    throw new InvalidDataException("Duplicated entry!");
                 }
+                dic.Add(entry.DbId,entry.Etag);
             }
+            return dic;
         }
 
-        public static unsafe void WriteChangeVectorTo(DocumentsOperationContext context, ChangeVectorEntry[] changeVector, Tree tree)
+        public static string FormatToChangeVector(string nodeTag, long etag, Guid dbId)
         {
-            Guid dbId;
-            long etagBigEndian;
-            Slice keySlice;
-            Slice valSlice;
-            using (Slice.External(context.Allocator, (byte*)&dbId, sizeof(Guid), out keySlice))
-            using (Slice.External(context.Allocator, (byte*)&etagBigEndian, sizeof(long), out valSlice))
+            return $"{nodeTag}:{etag}-{Convert.ToBase64String(dbId.ToByteArray())}";
+        }
+
+        public static LazyStringValue NewChangeVector(DocumentsOperationContext ctx, string nodeTag, long etag, Guid dbId)
+        {
+            return ctx.GetLazyString($"{nodeTag}:{etag}-{Convert.ToBase64String(dbId.ToByteArray())}");
+        }
+
+        public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString)
+        {
+            if (localAsString == null)
+                return ConflictStatus.Update;
+
+            var local = localAsString.ToChangeVector();
+            var remote = remoteAsString.ToChangeVector();
+            //any missing entries from a change vector are assumed to have zero value
+            var remoteHasLargerEntries = local.Length < remote.Length;
+            var localHasLargerEntries = remote.Length < local.Length;
+            
+            Array.Sort(remote); // todo: check if we need this
+            Array.Sort(local); // todo: check if we need this
+            
+            var localIndex = 0;
+            var remoteIndex = 0;
+            
+            while (localIndex < local.Length && remoteIndex < remote.Length)
             {
-                foreach (var changeVectorEntry in changeVector)
+                var compareResult = remote[remoteIndex].DbId.CompareTo(local[localIndex].DbId);
+                if (compareResult == 0)
                 {
-                    dbId = changeVectorEntry.DbId;
-                    etagBigEndian = Bits.SwapBytes(changeVectorEntry.Etag);
-                    tree.Add(keySlice, valSlice);
+                    remoteHasLargerEntries |= remote[remoteIndex].Etag > local[localIndex].Etag;
+                    localHasLargerEntries |= local[localIndex].Etag > remote[remoteIndex].Etag;
+                    remoteIndex++;
+                    localIndex++;
                 }
-            }
-        }
-
-        public static unsafe ChangeVectorEntry[] ReadChangeVectorFrom(Tree tree)
-        {
-            var changeVector = new ChangeVectorEntry[tree.State.NumberOfEntries];
-            using (var iter = tree.Iterate(false))
-            {
-                if (iter.Seek(Slices.BeforeAllKeys) == false)
-                    return changeVector;
-                var buffer = new byte[sizeof(Guid)];
-                int index = 0;
-                do
+                else if (compareResult > 0)
                 {
-                    var read = iter.CurrentKey.CreateReader().Read(buffer, 0, sizeof(Guid));
-                    if (read != sizeof(Guid))
-                        throw new InvalidDataException($"Expected guid, but got {read} bytes back for change vector");
-
-                    changeVector[index].DbId = new Guid(buffer);
-                    changeVector[index].Etag = iter.CreateReaderForCurrent().ReadBigEndianInt64();
-                    index++;
-                } while (iter.MoveNext());
-            }
-            return changeVector;
-        }
-
-        public static ChangeVectorEntry[] GetChangeVectorForWrite(ChangeVectorEntry[] existingChangeVector, Guid dbid, long etag)
-        {
-            if (existingChangeVector == null || existingChangeVector.Length == 0)
-            {
-                return new[]
-                {
-                    new ChangeVectorEntry
-                    {
-                        DbId = dbid,
-                        Etag = etag
-                    }
-                };
-            }
-
-            return UpdateChangeVectorWithNewEtag(dbid, etag, existingChangeVector);
-        }
-
-        public static ChangeVectorEntry[] UpdateChangeVectorWithNewEtag(Guid dbId, long newEtag, ChangeVectorEntry[] changeVector)
-        {
-            var length = changeVector.Length;
-            for (int i = 0; i < length; i++)
-            {
-                if (changeVector[i].DbId == dbId)
-                {
-                    changeVector[i].Etag = newEtag;
-                    return changeVector;
+                    localIndex++;
+                    localHasLargerEntries = true;
                 }
+                else
+                {
+                    remoteIndex++;
+                    remoteHasLargerEntries = true;
+                }
+            
+                if (localHasLargerEntries && remoteHasLargerEntries)
+                    break;
             }
-            Array.Resize(ref changeVector, length + 1);
-            changeVector[length].DbId = dbId;
-            changeVector[length].Etag = newEtag;
-            return changeVector;
+            
+            if (remoteIndex < remote.Length)
+            {
+                remoteHasLargerEntries = true;
+            }
+            
+            if (localIndex < local.Length)
+            {
+                localHasLargerEntries = true;
+            }
+            
+            if (remoteHasLargerEntries && localHasLargerEntries)
+                return ConflictStatus.Conflict;
+            
+            if (remoteHasLargerEntries == false && localHasLargerEntries == false)
+                return ConflictStatus.AlreadyMerged; // change vectors identical
+            
+            return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
-        public static ChangeVectorEntry[] MergeVectors(ChangeVectorEntry[] vectorA, ChangeVectorEntry[] vectorB)
+        public static bool TryUpdateChangeVector(Guid dbId, long etag, ref string changeVector)
         {
+            Debug.Assert(changeVector != null);
+            var cv = changeVector.ToChangeVector();
+            var length = cv.Length;
+            for (var i = 0; i < length; i++)
+            {
+                if (dbId != cv[i].DbId)
+                    continue;
+            
+                if (cv[i].Etag >= etag)
+                    return false;
+
+                cv[i].Etag = etag;
+                changeVector = cv.ToJson();
+                return true;
+            }
+            
+            Array.Resize(ref cv, length + 1);
+            cv[length] = new ChangeVectorEntry
+            {
+                DbId = dbId,
+                Etag = etag
+            };
+            changeVector = cv.ToJson();
+            return true;
+        }
+
+        public static string MergeVectors(string vectorAstring, string vectorBstring)
+        {
+            if (vectorAstring == null)
+                return vectorBstring;
+            if (vectorBstring == null)
+                return vectorAstring;
+
+            var vectorA = vectorAstring.ToChangeVector();
+            var vectorB = vectorBstring.ToChangeVector();
+
             Array.Sort(vectorA);
             Array.Sort(vectorB);
             int ia = 0, ib = 0;
@@ -144,16 +179,16 @@ namespace Raven.Server.Utils
             {
                 merged.Add(vectorB[ib]);
             }
-            return merged.ToArray();
+            return merged.ToArray().ToJson();
         }
 
-        public static ChangeVectorEntry[] MergeVectors(IReadOnlyList<ChangeVectorEntry[]> changeVectors)
+        public static string MergeVectors(List<LazyStringValue> changeVectors)
         {
             var mergedVector = new Dictionary<Guid, long>();
-
+            
             foreach (var changeVector in changeVectors)
             {
-                foreach (var changeVectorEntry in changeVector)
+                foreach (var changeVectorEntry in changeVector.ToString().ToChangeVector())
                 {
                     if (!mergedVector.ContainsKey(changeVectorEntry.DbId))
                     {
@@ -166,12 +201,14 @@ namespace Raven.Server.Utils
                     }
                 }
             }
-
-            return mergedVector.Select(kvp => new ChangeVectorEntry
+            
+            var merged = mergedVector.Select(kvp => new ChangeVectorEntry
             {
                 DbId = kvp.Key,
                 Etag = kvp.Value
             }).ToArray();
+
+            return merged.ToJson();
         }
     }
 }

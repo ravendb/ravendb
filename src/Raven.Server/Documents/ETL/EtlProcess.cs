@@ -6,9 +6,11 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.ETL;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -22,6 +24,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.ETL
 {
@@ -383,13 +386,12 @@ namespace Raven.Server.Documents.ETL
                     var didWork = false;
 
                     var state = GetProcessState();
-
+                    
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
                         var statsAggregator = _lastStats = new EtlStatsAggregator(Interlocked.Increment(ref _statsId), _lastStats);
-
                         AddPerformanceStats(statsAggregator);
 
                         using (var stats = statsAggregator.CreateScope())
@@ -489,11 +491,11 @@ namespace Raven.Server.Documents.ETL
 
         private bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
-            var conflictStatus = ConflictsStorage.GetConflictStatus(
-                remote: item.ChangeVector,
-                local: state.ChangeVector);
+            var conflictStatus = ChangeVectorUtils.GetConflictStatus(
+                remoteAsString: item.ChangeVector,
+                localAsString: state.ChangeVector);
 
-            return conflictStatus == ConflictsStorage.ConflictStatus.AlreadyMerged;
+            return conflictStatus == ConflictStatus.AlreadyMerged;
         }
 
         protected void EnsureThreadAllocationStats()

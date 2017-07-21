@@ -10,7 +10,7 @@ namespace SlowTests.Tests.Faceted
 {
     public static class ConditionalGetHelper
     {
-        public static HttpStatusCode PerformGet(DocumentStore store, string url, long? requestEtag, out long? responseEtag)
+        public static HttpStatusCode PerformGet(DocumentStore store, string url, string requestEtag, out string responseEtag)
         {
             var requestExecuter = store.GetRequestExecutor();
 
@@ -26,7 +26,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        public static HttpStatusCode PerformPost(DocumentStore store, string url, string payload, long? requestEtag, out long? responseEtag)
+        public static HttpStatusCode PerformPost(DocumentStore store, string url, string payload, string requestEtag, out string responseEtag)
         {
             var requestExecuter = store.GetRequestExecutor();
 
@@ -48,15 +48,15 @@ namespace SlowTests.Tests.Faceted
             {
                 public HttpStatusCode StatusCode { get; set; }
 
-                public long? Etag { get; set; }
+                public string Etag { get; set; }
             }
 
             private readonly string _url;
             private readonly HttpMethod _method;
             private readonly string _payload;
-            private readonly long? _requestEtag;
+            private readonly string _requestEtag;
 
-            public Command(string url, HttpMethod method, string payload, long? requestEtag)
+            public Command(string url, HttpMethod method, string payload, string requestEtag)
             {
                 _url = url;
                 _method = method;
@@ -75,8 +75,8 @@ namespace SlowTests.Tests.Faceted
                     Method = _method
                 };
 
-                if (_requestEtag.HasValue)
-                    request.Headers.TryAddWithoutValidation("If-None-Match", _requestEtag.ToString());
+                if (_requestEtag != null)
+                    request.Headers.TryAddWithoutValidation("If-None-Match", _requestEtag);
 
                 if (_method == HttpMethod.Post)
                     request.Content = new StringContent(_payload);

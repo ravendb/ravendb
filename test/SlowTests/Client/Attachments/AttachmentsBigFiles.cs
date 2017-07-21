@@ -1,6 +1,9 @@
-﻿using FastTests;
+﻿using System;
+using System.Threading.Tasks;
+using FastTests;
 using FastTests.Client.Attachments;
 using Raven.Client.Documents.Operations;
+using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -10,10 +13,13 @@ namespace SlowTests.Client.Attachments
     {
         [Theory]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public void BatchRequestWithLongMultiPartSections(long size, string hash)
+        public async Task BatchRequestWithLongMultiPartSections(long size, string hash)
         {
             using (var store = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store, dbId1);
+
                 using (var session = store.OpenSession())
                 using (var stream = new BigDummyStream(size))
                 {
@@ -33,7 +39,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "big-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("big-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);
@@ -46,10 +52,13 @@ namespace SlowTests.Client.Attachments
 
         [Theory]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=")]
-        public void SupportHugeAttachment(long size, string hash)
+        public async Task SupportHugeAttachment(long size, string hash)
         {
             using (var store = GetDocumentStore())
             {
+                var dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
+                await SetDatabaseId(store, dbId1);
+
                 using (var session = store.OpenSession())
                 {
                     session.Store(new User {Name = "Fitzchak"}, "users/1");
@@ -59,7 +68,7 @@ namespace SlowTests.Client.Attachments
                 using (var bigStream = new BigDummyStream(size))
                 {
                     var result = store.Operations.Send(new PutAttachmentOperation("users/1", "huge-file", bigStream));
-                    Assert.Equal(2, result.Etag);
+                    Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), result.ChangeVector);
                     Assert.Equal("huge-file", result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -76,7 +85,7 @@ namespace SlowTests.Client.Attachments
                     using (var attachment = session.Advanced.GetAttachment(user, "huge-file"))
                     {
                         attachment.Stream.CopyTo(bigStream);
-                        Assert.Equal(2, attachment.Details.Etag);
+                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2, dbId1), attachment.Details.ChangeVector);
                         Assert.Equal("huge-file", attachment.Details.Name);
                         Assert.Equal(hash, attachment.Details.Hash);
                         Assert.Equal(size, bigStream.Position);

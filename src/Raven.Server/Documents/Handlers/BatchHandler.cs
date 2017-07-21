@@ -10,7 +10,9 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
+using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents.Handlers
                 if (waitForIndexesTimeout != null)
                 {
                     await
-                        WaitForIndexesAsync(waitForIndexesTimeout.Value, command.LastEtag,
+                        WaitForIndexesAsync(waitForIndexesTimeout.Value, command.LastChangeVector,
                             command.ModifiedCollections);
                 }
 
@@ -138,17 +140,17 @@ namespace Raven.Server.Documents.Handlers
             var waitForReplicationAsync = Database.ReplicationLoader.WaitForReplicationAsync(
                 numberOfReplicasToWaitFor,
                 waitForReplicasTimeout,
-                mergedCmd.LastEtag);
+                mergedCmd.LastChangeVector);
 
             var replicatedPast = await waitForReplicationAsync;
             if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
             {
                 throw new TimeoutException(
-                    $"Could not verify that etag {mergedCmd.LastEtag} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
+                    $"Could not verify that etag {mergedCmd.LastChangeVector} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
             }
         }
 
-        private async Task WaitForIndexesAsync(TimeSpan timeout, long lastEtag, HashSet<string> modifiedCollections)
+        private async Task WaitForIndexesAsync(TimeSpan timeout, LazyStringValue lastChangeVector, HashSet<string> modifiedCollections)
         {
             // waitForIndexesTimeout=timespan & waitForIndexThrow=false (default true)
             // waitForSpecificIndex=specific index1 & waitForSpecificIndex=specific index 2
@@ -193,7 +195,7 @@ namespace Raven.Server.Documents.Handlers
                     {
                         foreach (var waitForIndexItem in indexesToWait)
                         {
-                            if (waitForIndexItem.Index.IsStale(context, lastEtag) == false)
+                            if (waitForIndexItem.Index.IsStale(context, ChangeVectorParser.GetEtagByNode(lastChangeVector,ServerStore.NodeTag)) == false)
                                 continue;
 
                             hadStaleIndexes = true;
@@ -204,7 +206,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 throw new TimeoutException(
                                     $"After waiting for {sp.Elapsed}, could not verify that {indexesToCheck.Count} " +
-                                    $"indexes has caught up with the changes as of etag: {lastEtag}");
+                                    $"indexes has caught up with the changes as of etag: {lastChangeVector}");
                             }
                         }
                     }
@@ -251,7 +253,7 @@ namespace Raven.Server.Documents.Handlers
             public Queue<AttachmentStream> AttachmentStreams;
             public StreamsTempFile AttachmentStreamsTempFile;
             public DocumentDatabase Database;
-            public long LastEtag;
+            public LazyStringValue LastChangeVector;
             private HashSet<string> _documentsToUpdateAfterAttachmentChange;
             public HashSet<string> ModifiedCollections;
 
@@ -283,26 +285,18 @@ namespace Raven.Server.Documents.Handlers
                     {
                         case CommandType.PUT:
                         {
-                            var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.Etag, cmd.Document);
+                            var putResult = Database.DocumentsStorage.Put(context, cmd.Id, cmd.ChangeVector, cmd.Document);
                             context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, cmd.Document.Size);
-                            LastEtag = putResult.Etag;
+                            LastChangeVector = context.GetLazyString(putResult.ChangeVector);
                             ModifiedCollections?.Add(putResult.Collection.Name);
-
-                            var changeVector = new DynamicJsonArray();
-                            if (putResult.ChangeVector != null)
-                            {
-                                foreach (var entry in putResult.ChangeVector)
-                                    changeVector.Add(entry.ToJson());
-                            }
 
                             // Make sure all the metadata fields are always been add
                             var putReply = new DynamicJsonValue
                             {
                                 ["Type"] = CommandType.PUT.ToString(),
                                 [Constants.Documents.Metadata.Id] = putResult.Id,
-                                [Constants.Documents.Metadata.Etag] = putResult.Etag,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
-                                [Constants.Documents.Metadata.ChangeVector] = changeVector,
+                                [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector,
                                 [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
                             };
 
@@ -319,8 +313,8 @@ namespace Raven.Server.Documents.Handlers
                             if (patchResult.ModifiedDocument != null)
                                 context.DocumentDatabase.HugeDocuments.AddIfDocIsHuge(cmd.Id, patchResult.ModifiedDocument.Size);
 
-                            if (patchResult.Etag != null)
-                                LastEtag = patchResult.Etag.Value;
+                            if (patchResult.ChangeVector != null)
+                                LastChangeVector = context.GetLazyString(patchResult.ChangeVector);
 
                             if (patchResult.Collection != null)
                                 ModifiedCollections?.Add(patchResult.Collection);
@@ -328,7 +322,7 @@ namespace Raven.Server.Documents.Handlers
                             Reply.Add(new DynamicJsonValue
                             {
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
-                                [nameof(BatchRequestParser.CommandData.Etag)] = patchResult.Etag,
+                                [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
                                 [nameof(BatchRequestParser.CommandData.Type)] = CommandType.PATCH.ToString(),
                                 ["PatchStatus"] = patchResult.Status.ToString(),
                             });
@@ -336,11 +330,11 @@ namespace Raven.Server.Documents.Handlers
                         case CommandType.DELETE:
                             if (cmd.IdPrefixed == false)
                             {
-                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.Etag);
+                                var deleted = Database.DocumentsStorage.Delete(context, cmd.Id, cmd.ChangeVector);
 
                                 if (deleted != null)
                                 {
-                                    LastEtag = deleted.Value.Etag;
+                                    LastChangeVector = context.GetLazyString(deleted.Value.ChangeVector);
                                     ModifiedCollections?.Add(deleted.Value.Collection.Name);
                                 }
 
@@ -357,7 +351,7 @@ namespace Raven.Server.Documents.Handlers
 
                                 for (var j = 0; j < deleteResults.Count; j++)
                                 {
-                                    LastEtag = deleteResults[j].Etag;
+                                    LastChangeVector = context.GetLazyString(deleteResults[j].ChangeVector);
                                     ModifiedCollections?.Add(deleteResults[j].Collection.Name);
                                 }
 
@@ -374,8 +368,8 @@ namespace Raven.Server.Documents.Handlers
                             using (var stream = attachmentStream.Stream)
                             {
                                 var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, cmd.Id, cmd.Name,
-                                    cmd.ContentType, attachmentStream.Hash, cmd.Etag, stream, updateDocument: false);
-                                LastEtag = attachmentPutResult.Etag;
+                                    cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false);
+                                LastChangeVector = context.GetLazyString(attachmentPutResult.ChangeVector);
 
                                 if (_documentsToUpdateAfterAttachmentChange == null)
                                     _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -386,7 +380,7 @@ namespace Raven.Server.Documents.Handlers
                                     [nameof(BatchRequestParser.CommandData.Id)] = attachmentPutResult.DocumentId,
                                     [nameof(BatchRequestParser.CommandData.Type)] = CommandType.AttachmentPUT.ToString(),
                                     [nameof(BatchRequestParser.CommandData.Name)] = attachmentPutResult.Name,
-                                    [nameof(BatchRequestParser.CommandData.Etag)] = attachmentPutResult.Etag,
+                                    [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentPutResult.ChangeVector,
                                     [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
                                     [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
                                     [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size,
@@ -395,7 +389,7 @@ namespace Raven.Server.Documents.Handlers
 
                             break;
                         case CommandType.AttachmentDELETE:
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.Etag, updateDocument: false);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, updateDocument: false);
 
                             if (_documentsToUpdateAfterAttachmentChange == null)
                                 _documentsToUpdateAfterAttachmentChange = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -416,9 +410,9 @@ namespace Raven.Server.Documents.Handlers
                 {
                     foreach (var documentId in _documentsToUpdateAfterAttachmentChange)
                     {
-                        var etag = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
-                        if (etag.HasValue)
-                            LastEtag = etag.Value;
+                        var changeVector = Database.DocumentsStorage.AttachmentsStorage.UpdateDocumentAfterAttachmentChange(context, documentId);
+                        if (changeVector != null)
+                            LastChangeVector = context.GetLazyString(changeVector);
                     }
                 }
 

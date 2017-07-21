@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionState : IDatabaseTask
     {
         public SubscriptionCriteria Criteria { get; set; }
-        public ChangeVectorEntry[] ChangeVector { get; set; }
+        public string ChangeVector { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Subscriptions
                     [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
                     [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
                 },
-                [nameof(ChangeVector)] = ChangeVector?.ToJson(),
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
                 [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity,

@@ -116,8 +116,6 @@ namespace Raven.Client
 
                 public const string IdProperty = "Id";
 
-                public const string Etag = "@etag";
-
                 public const string Flags = "@flags";
 
                 public const string Attachments = "@attachments";

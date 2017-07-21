@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using Raven.Client.Documents.Replication.Messages;
 
 namespace Raven.Client.Documents.Session
 {
@@ -44,8 +45,8 @@ namespace Raven.Client.Documents.Session
         ///     <para>WARNING: This method will not call beforeDelete listener!</para>
         /// </summary>
         /// <param name="id">entity Id</param>
-        /// <param name="expectedEtag">Expected etag of a document to delete.</param>
-        void Delete(string id, long? expectedEtag);
+        /// <param name="expectedChangeVector">Expected change vector of a document to delete.</param>
+        void Delete(string id, string expectedChangeVector);
 
         /// <summary>
         ///     Saves all the pending changes to the server.
@@ -53,15 +54,9 @@ namespace Raven.Client.Documents.Session
         void SaveChanges();
 
         /// <summary>
-        ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available and
-        ///     forces concurrency check with given Etag
-        /// </summary>
-        void Store(object entity, long? etag);
-
-        /// <summary>
         ///     Stores entity in session with given id and forces concurrency check with given Etag.
         /// </summary>
-        void Store(object entity, long? etag, string id);
+        void Store(object entity, string changeVector, string id);
 
         /// <summary>
         ///     Stores entity in session, extracts Id from entity using Conventions or generates new one if it is not available.

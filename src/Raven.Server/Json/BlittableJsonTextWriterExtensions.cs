@@ -25,31 +25,6 @@ namespace Raven.Server.Json
 {
     internal static class BlittableJsonTextWriterExtensions
     {
-        public static void WriteChangeVector(this BlittableJsonTextWriter writer, ChangeVectorEntry[] changeVector)
-        {
-            if (changeVector == null)
-            {
-                writer.WriteStartArray();
-                writer.WriteEndArray();
-                return;
-            }
-
-            writer.WriteStartArray();
-            var first = true;
-
-            for (var i = 0; i < changeVector.Length; i++)
-            {
-                if (first == false)
-                    writer.WriteComma();
-
-                first = false;
-
-                var entry = changeVector[i];
-                writer.WriteChangeVectorEntry(entry);
-            }
-            writer.WriteEndArray();
-        }
-
         public static void WritePerformanceStats(this BlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<IndexPerformanceStats> stats)
         {
             writer.WriteStartObject();
@@ -728,7 +703,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
-            writer.WriteChangeVector(statistics.DatabaseChangeVector);
+            writer.WriteString(statistics.DatabaseChangeVector);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
@@ -751,10 +726,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName((nameof(statistics.DatabaseChangeVector)));
-            if (statistics.DatabaseChangeVector != null)
-                context.Write(writer, statistics.DatabaseChangeVector.ToJson());
-            else
-                writer.WriteNull();
+            writer.WriteString(statistics.DatabaseChangeVector);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.LastIndexingTime));
@@ -1210,19 +1182,13 @@ namespace Raven.Server.Json
                 writer.WriteComma();
             }
             writer.WritePropertyName(Constants.Documents.Metadata.ChangeVector);
-            writer.WriteChangeVector(document.ChangeVector);
+            writer.WriteString(document.ChangeVector);
 
             if (document.Flags != DocumentFlags.None)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(Constants.Documents.Metadata.Flags);
                 writer.WriteString(document.Flags.ToString());
-            }
-            if (document.Etag != 0)
-            {
-                writer.WriteComma();
-                writer.WritePropertyName(Constants.Documents.Metadata.Etag);
-                writer.WriteInteger(document.Etag);
             }
             if (document.Id != null)
             {

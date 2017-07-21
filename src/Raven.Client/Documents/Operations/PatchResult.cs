@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         public BlittableJsonReaderObject Debug { get; set; }
 
-        public long? Etag;
+        public string ChangeVector;
 
         public string Collection;
     }

@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Server.ServerWide.Context;
@@ -14,7 +15,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
     public class PutSubscriptionCommand : UpdateValueForDatabaseCommand
     {
         public SubscriptionCriteria Criteria;
-        public ChangeVectorEntry[] InitialChangeVector;
+        public string InitialChangeVector;
         public long? SubscriptionId; 
         public string SubscriptionName;
         public bool Disabled;
@@ -75,7 +76,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
                 [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
             };
-            json[nameof(InitialChangeVector)] = InitialChangeVector?.ToJson();
+            json[nameof(InitialChangeVector)] = InitialChangeVector;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(Disabled)] = Disabled;

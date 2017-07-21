@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Extensions;
 using SlowTests.Server.Documents.Notifications;
 using Xunit;
 

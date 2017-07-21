@@ -1,3 +1,5 @@
+using Sparrow.Json;
+
 namespace Voron.Exceptions
 {
     using System;
@@ -12,11 +14,11 @@ namespace Voron.Exceptions
         /// <summary>
         /// Expected Etag.
         /// </summary>
-        public long ExpectedETag { get; set; }
+        public string ExcpectedChangeVector { get; set; }
 
         /// <summary>
         /// Actual Etag.
         /// </summary>
-        public long ActualETag { get; set; }
+        public string ActualChangeVector { get; set; }
     }
 }

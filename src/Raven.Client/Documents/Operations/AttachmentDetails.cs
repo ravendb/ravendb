@@ -2,7 +2,7 @@
 {
     public class AttachmentDetails : AttachmentName
     {
-        public long Etag;
+        public string ChangeVector;
         public string DocumentId;
     }
 

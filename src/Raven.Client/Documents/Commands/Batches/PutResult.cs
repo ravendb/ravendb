@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Raven.Client.Documents.Replication.Messages;
+
 namespace Raven.Client.Documents.Commands.Batches
 {
     /// <summary>
@@ -17,8 +19,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public string Id { get; set; }
 
         /// <summary>
-        /// long? of the document after PUT operation.
+        /// Change Vector of the document after PUT operation.
         /// </summary>
-        public long? ETag { get; set; }
+        public string ChangeVector { get; set; }
     }
 }

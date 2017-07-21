@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -57,7 +58,7 @@ namespace Raven.Client.Documents.Session.Operations
                 if (_session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo documentInfo) == false)
                     continue;
 
-                if (batchResult.TryGet(Constants.Documents.Metadata.Etag, out long? etag) == false || etag == null)
+                if (batchResult.TryGet(Constants.Documents.Metadata.ChangeVector, out string changeVector) == false || changeVector == null)
                     throw new InvalidOperationException("PUT response is invalid. @etag is missing.");
 
                 if (batchResult.TryGet(Constants.Documents.Metadata.Id, out string id) == false || id == null)
@@ -75,7 +76,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
 
                 documentInfo.Id = id;
-                documentInfo.ETag = etag;
+                documentInfo.ChangeVector = changeVector;
                 documentInfo.Metadata = _session.Context.ReadObject(documentInfo.Metadata, id);
                 documentInfo.Document.Modifications = null;
                 documentInfo.Document.Modifications = new DynamicJsonValue(documentInfo.Document)
