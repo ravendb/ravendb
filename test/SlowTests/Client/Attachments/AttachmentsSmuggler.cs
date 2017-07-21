@@ -226,7 +226,7 @@ namespace SlowTests.Client.Attachments
                     using (var emptyStream = new MemoryStream(new byte[0]))
                     {
                         var result = store1.Operations.Send(new PutAttachmentOperation("users/1", "empty-file", emptyStream, "image/png"));
-                        Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 3, dbId), result.ChangeVector);
+                        Assert.Equal("A:3", result.ChangeVector.Substring(0,3));
                         Assert.Equal("empty-file", result.Name);
                         Assert.Equal("users/1", result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);

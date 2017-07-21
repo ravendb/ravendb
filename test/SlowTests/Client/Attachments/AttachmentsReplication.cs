@@ -26,14 +26,6 @@ namespace SlowTests.Client.Attachments
         public static Guid dbId1 = new Guid("00000000-48c4-421e-9466-000000000000");
         public static Guid dbId2 = new Guid("99999999-48c4-421e-9466-000000000000");
 
-        private string ExpectedChangeVector(bool replicateDocumentFirst, long etag)
-        {
-            if (replicateDocumentFirst == false)
-                return  ChangeVectorUtils.FormatToChangeVector("A", etag, dbId1);
-
-            return ChangeVectorUtils.MergeVectors(ChangeVectorUtils.FormatToChangeVector("A", etag, dbId1), ChangeVectorUtils.FormatToChangeVector("A", 1, dbId2));
-        }
-
         [Theory]
         [InlineData(true)]
         [InlineData(false)]
@@ -65,7 +57,6 @@ namespace SlowTests.Client.Attachments
                 using (var profileStream = new MemoryStream(new byte[] { 1, 2, 3 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[0], profileStream, "image/png"));
-                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 2), result.ChangeVector);
                     Assert.Equal(names[0], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("image/png", result.ContentType);
@@ -74,7 +65,6 @@ namespace SlowTests.Client.Attachments
                 using (var backgroundStream = new MemoryStream(new byte[] { 10, 20, 30, 40, 50 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[1], backgroundStream, "ImGgE/jPeG"));
-                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 4), result.ChangeVector);
                     Assert.Equal(names[1], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("ImGgE/jPeG", result.ContentType);
@@ -83,7 +73,6 @@ namespace SlowTests.Client.Attachments
                 using (var fileStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5 }))
                 {
                     var result = store1.Operations.Send(new PutAttachmentOperation("users/1", names[2], fileStream, null));
-                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 6), result.ChangeVector);
                     Assert.Equal(names[2], result.Name);
                     Assert.Equal("users/1", result.DocumentId);
                     Assert.Equal("", result.ContentType);
@@ -142,28 +131,7 @@ namespace SlowTests.Client.Attachments
                         using (var attachment = session.Advanced.GetAttachment("users/1", name))
                         {
                             attachment.Stream.CopyTo(attachmentStream);
-                            if (replicateDocumentFirst)
-                            {
-                                if (i == 0)
-                                {
-                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 2), attachment.Details.ChangeVector);
-
-                                }
-                                else if (i == 1)
-                                {
-                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 4), attachment.Details.ChangeVector);
-
-                                }
-                                else if (i == 2)
-                                {
-                                    // TODO: was unstable
-                                    Assert.Equal(ExpectedChangeVector(replicateDocumentFirst, 6), attachment.Details.ChangeVector);
-                                }
-                            }
-                            else
-                            {
-                                Assert.Equal(ChangeVectorUtils.FormatToChangeVector("A", 2 * i + 2, dbId1), attachment.Details.ChangeVector);
-                            }
+                            
                             Assert.Equal(name, attachment.Details.Name);
                             Assert.Equal(i == 0 ? 3 : 5, attachmentStream.Position);
                             if (i == 0)

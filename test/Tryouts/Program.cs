@@ -14,11 +14,11 @@ namespace Tryouts
             for (int i = 0; i < 100; i++)
             {   
                 Console.WriteLine(i);
-                using (var test = new RavenDB_5617())   
+                using (var test = new SlowTests.Server.Replication.ReplicationOfConflicts())   
                 {
                     try
                     {
-                        test.CanAutomaticallyWaitForIndexes_ForSpecificIndex();
+                        test.ReplicateTombstoneConflict().Wait();
                     }
                     catch (Exception e)
                     {

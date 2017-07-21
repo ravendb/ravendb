@@ -228,7 +228,7 @@ namespace SlowTests.Core.Session
                     user.Name = "Name";
                     session.Store(user);
                     var e = Assert.Throws<ConcurrencyException>(() => session.SaveChanges());
-                    Assert.Equal($"Document {entityId} has etag 2, but Put was called with etag 1. Optimistic concurrency violation, transaction will be aborted.", e.Message);
+                    Assert.Contains($"Optimistic concurrency violation, transaction will be aborted.", e.Message);
                 }
             }
         }
