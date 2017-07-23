@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -195,7 +195,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -252,7 +252,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -330,7 +330,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -400,7 +400,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
                 
                 var etagForBackups = store.Admin.Server.Send(operation).Status.LastEtag;
                 using (var session = store.OpenAsyncSession())
@@ -493,7 +493,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     var getPeriodicBackupResult = store.Admin.Server.Send(operation);
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
-                }, TimeSpan.FromSeconds(10));
+                }, TimeSpan.FromMinutes(2));
 
                 restoreConfiguration.BackupLocation = _backupPath;
                 restoreConfiguration.DataDirectory = _backupPath;

@@ -8,16 +8,31 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
+using Raven.Client.Server.PeriodicBackup;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
     public abstract class RavenStorageClient : IDisposable
     {
         private readonly List<HttpClient> _clients = new List<HttpClient>();
+        protected readonly CancellationToken CancellationToken;
+        protected readonly UploadProgress UploadProgress;
+
+        protected RavenStorageClient(UploadProgress uploadProgress, CancellationToken? cancellationToken)
+        {
+            UploadProgress = uploadProgress;
+            CancellationToken = cancellationToken ?? CancellationToken.None;
+        }
 
         protected HttpClient GetClient(TimeSpan? timeout = null)
         {
-            var client = new HttpClient
+            var handler = new HttpClientHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.None
+            };
+
+            var client = new HttpClient(handler)
             {
                 Timeout = timeout ?? TimeSpan.FromSeconds(120)
             };

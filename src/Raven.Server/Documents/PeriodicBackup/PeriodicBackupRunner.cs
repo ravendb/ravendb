@@ -134,18 +134,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var isFullBackup = IsFullBackup(backupStatus, configuration, nextFullBackup, nextIncrementalBackup);
             var nextBackupDateTime = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup);
-            TimeSpan nextBackupTimeSpan;
-            if (isFullBackup && backupStatus.LastFullBackup == null)
-            {
-                // it's a full backup and there was no previous backup
-                nextBackupTimeSpan = TimeSpan.Zero;
-            }
-            else
-            {
-                // we already have an existing backup
-                nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ?
-                    TimeSpan.Zero : nextBackupDateTime - now;
-            }
+            var nextBackupTimeSpan = (nextBackupDateTime - now).Ticks <= 0 ?
+                TimeSpan.Zero : nextBackupDateTime - now;
 
             return new NextBackup
             {
@@ -201,6 +191,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     PathSetting backupDirectory;
 
+                    string folderName;
                     // check if we need to do a new full backup
                     if (isFullBackup ||
                         status.LastFullBackup == null || // no full backup was previously performed
@@ -212,7 +203,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         isFullBackup = true;
 
-                        backupDirectory = backupToLocalFolder ? GetLocalFolderPath(configuration, now) : _tempBackupPath;
+                        folderName = $"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}";
+                        
+                        backupDirectory = backupToLocalFolder ?
+                            new PathSetting(configuration.LocalSettings.FolderPath).Combine(folderName) : 
+                            _tempBackupPath;
 
                         if (Directory.Exists(backupDirectory.FullPath) == false)
                             Directory.CreateDirectory(backupDirectory.FullPath);
@@ -223,6 +218,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     else
                     {
                         backupDirectory = backupToLocalFolder ? new PathSetting(status.LocalBackup.BackupDirectory) : _tempBackupPath;
+                        folderName = status.FolderName;
                     }
 
                     if (_logger.IsInfoEnabled)
@@ -255,7 +251,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     try
                     {
-                        await UploadToServer(configuration, status, backupFilePath, fileName, isFullBackup);
+                        await UploadToServer(configuration, status, backupFilePath, folderName, fileName, isFullBackup);
                     }
                     finally
                     {
@@ -267,6 +263,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     }
 
                     status.LastEtag = lastEtag;
+                    status.FolderName = folderName;
                 }
 
                 totalSw.Stop();
@@ -316,13 +313,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 // save the backup status
                 await WriteStatus(status);
             }
-        }
-
-        private PathSetting GetLocalFolderPath(PeriodicBackupConfiguration configuration, string now)
-        {
-            var localFolderPath = new PathSetting(configuration.LocalSettings.FolderPath);
-            return localFolderPath
-                .Combine($"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}");
         }
 
         private static string GetFileName(
@@ -496,30 +486,32 @@ namespace Raven.Server.Documents.PeriodicBackup
         private async Task UploadToServer(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus,
-            string backupPath, string fileName, bool isFullBackup)
+            string backupPath, string folderName,
+            string fileName, bool isFullBackup)
         {
             if (_cancellationToken.IsCancellationRequested)
                 return;
 
             var tasks = new List<Task>();
 
-            CreateUploadTaskIfNeeded(configuration.S3Settings, tasks, isFullBackup,
-                async settings =>
+            CreateUploadTaskIfNeeded(configuration.S3Settings, tasks, backupPath, isFullBackup,
+                async (settings, stream, uploadProgress) =>
                 {
                     var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
-                    await UploadToS3(settings, backupPath, fileName, archiveDescription);
+                    await UploadToS3(settings, stream, folderName, fileName, uploadProgress, archiveDescription);
                 },
                 ref backupStatus.UploadToS3);
 
-            CreateUploadTaskIfNeeded(configuration.GlacierSettings, tasks, isFullBackup,
-                async settings => await UploadToGlacier(settings, backupPath, fileName),
+            CreateUploadTaskIfNeeded(configuration.GlacierSettings, tasks, backupPath, isFullBackup,
+                async (settings, stream, uploadProgress) => 
+                await UploadToGlacier(settings, stream, folderName, fileName, uploadProgress),
                 ref backupStatus.UploadToGlacier);
 
-            CreateUploadTaskIfNeeded(configuration.AzureSettings, tasks, isFullBackup,
-                async settings =>
+            CreateUploadTaskIfNeeded(configuration.AzureSettings, tasks, backupPath, isFullBackup,
+                async (settings, stream, uploadProgress) =>
                 {
                     var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
-                    await UploadToAzure(settings, backupPath, fileName, archiveDescription);
+                    await UploadToAzure(settings, stream, folderName, fileName, uploadProgress, archiveDescription);
                 },
                 ref backupStatus.UploadToAzure);
 
@@ -529,11 +521,12 @@ namespace Raven.Server.Documents.PeriodicBackup
         private static void CreateUploadTaskIfNeeded<S, T>(
             S settings,
             List<Task> tasks,
+            string backupPath,
             bool isFullBackup,
-            Func<S, Task> uploadToServer,
+            Func<S, FileStream, UploadProgress, Task> uploadToServer,
             ref T uploadStatus)
             where S : BackupSettings
-            where T: BackupStatus
+            where T: CloudUploadStatus
         {
             if (CanBackupUsing(settings) == false)
                 return;
@@ -547,10 +540,19 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var exception = new Reference<Exception>();
                 using (localUploadStatus.UpdateStats(isFullBackup, exception))
+                using (var fileStream = File.OpenRead(backupPath))
                 {
+                    var uploadProgress = localUploadStatus.UploadProgress;
+                    uploadProgress.ChangeState(UploadState.PendingUpload);
+                    uploadProgress.SetTotal(fileStream.Length);
+
                     try
                     {
-                        await uploadToServer(settings);
+                        await uploadToServer(settings, fileStream, uploadProgress);
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // shutting down
                     }
                     catch (Exception e)
                     {
@@ -568,16 +570,21 @@ namespace Raven.Server.Documents.PeriodicBackup
                    settings.HasSettings();
         }
 
-        private async Task UploadToS3(S3Settings settings, string backupPath, string fileName, string archiveDescription)
+        private async Task UploadToS3(
+            S3Settings settings,
+            Stream stream,
+            string folderName,
+            string fileName,
+            UploadProgress uploadProgress,
+            string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName ?? RavenAwsClient.DefaultRegion))
-            using (var fileStream = File.OpenRead(backupPath))
+            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName, uploadProgress, _cancellationToken.Token))
             {
-                var key = CombinePathAndKey(settings.RemoteFolderName, fileName);
-                await client.PutObject(settings.BucketName, key, fileStream, new Dictionary<string, string>
+                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+                await client.PutObject(settings.BucketName, key, stream, new Dictionary<string, string>
                 {
                     {"Description", archiveDescription}
-                }, 60 * 60);
+                });
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, " +
@@ -585,40 +592,48 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private async Task UploadToGlacier(GlacierSettings settings, string backupPath, string fileName)
+        private async Task UploadToGlacier(
+            GlacierSettings settings, 
+            Stream stream,
+            string folderName,
+            string fileName,
+            UploadProgress uploadProgress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName ?? RavenAwsClient.DefaultRegion))
-            using (var fileStream = File.OpenRead(backupPath))
+            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName, uploadProgress, _cancellationToken.Token))
             {
-                var archiveId = await client.UploadArchive(settings.VaultName, fileStream, fileName, 60 * 60);
+                var archiveId = await client.UploadArchive(settings.VaultName, stream, fileName);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup {fileName} to Glacier, archive ID: {archiveId}");
             }
         }
 
-        private async Task UploadToAzure(AzureSettings settings, string backupPath, string fileName, string archiveDecription)
+        private async Task UploadToAzure(
+            AzureSettings settings,
+            Stream stream,
+            string folderName,
+            string fileName,
+            UploadProgress uploadProgress,
+            string archiveDecription)
         {
-            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey, settings.StorageContainer))
+            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey, 
+                settings.StorageContainer, uploadProgress, _cancellationToken.Token))
             {
-                await client.PutContainer();
-                using (var fileStream = File.OpenRead(backupPath))
+                var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+                await client.PutBlob(key, stream, new Dictionary<string, string>
                 {
-                    var key = CombinePathAndKey(settings.RemoteFolderName, fileName);
-                    await client.PutBlob(key, fileStream, new Dictionary<string, string>
-                    {
-                        {"Description", archiveDecription}
-                    });
+                    {"Description", archiveDecription}
+                });
 
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Successfully uploaded backup {fileName} " +
-                                     $"to Azure container {settings.StorageContainer}, with key {key}");
-                }
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Successfully uploaded backup {fileName} " +
+                                 $"to Azure container {settings.StorageContainer}, with key {key}");
             }
         }
 
-        private static string CombinePathAndKey(string path, string fileName)
+        private static string CombinePathAndKey(string path, string folderName, string fileName)
         {
-            return string.IsNullOrEmpty(path) == false ? path + "/" + fileName : fileName;
+            var prefix = string.IsNullOrWhiteSpace(path) == false ? (path + "/") : string.Empty;
+            return $"{prefix}{folderName}/{fileName}";
         }
 
         private string GetArchiveDescription(bool isFullBackup, BackupType backupType)
