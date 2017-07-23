@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Stats
             _stats.LastTransformedEtag = etag;
         }
 
-        public void RecordChangeVector(LazyStringValue changeVector)
+        public void RecordChangeVector(string changeVector)
         {
             _stats.ChangeVector = ChangeVectorUtils.MergeVectors(_stats.ChangeVector, changeVector);
         }

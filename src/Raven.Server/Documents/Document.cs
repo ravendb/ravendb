@@ -23,7 +23,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public BlittableJsonReaderObject Data;
         public float? IndexScore;
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
         public DateTime LastModified;
         public DocumentFlags Flags;
         public NonPersistentDocumentFlags NonPersistentFlags;

@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Replication
             string collection,
             long lastModifiedTicks,
             BlittableJsonReaderObject doc,
-            LazyStringValue changeVector,
-            LazyStringValue conflictedChangeVector,
+            string changeVector,
+            string conflictedChangeVector,
             DocumentFlags flags)
         {
             if (id.StartsWith("Raven/Hilo/", StringComparison.OrdinalIgnoreCase))
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Replication
         private bool TryResolveConflictByScript(
             DocumentsOperationContext documentsContext,
             string id,
-            LazyStringValue incomingChangeVector,
+            string incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
             var collection = CollectionName.GetCollectionName(id, doc);
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             string id,
             string collection,
-            LazyStringValue incomingChangeVector,
+            string incomingChangeVector,
             BlittableJsonReaderObject doc)
         {
             if (_conflictResolver.ConflictSolver?.DatabaseResolverId == null)
@@ -198,7 +198,7 @@ namespace Raven.Server.Documents.Replication
             return false;
         }
 
-        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, LazyStringValue changeVector)
+        private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, string changeVector)
         {
             long highestMax;
             if (!doc.TryGet("Max", out highestMax))
@@ -243,7 +243,7 @@ namespace Raven.Server.Documents.Replication
         public bool TryResolveIdenticalDocument(DocumentsOperationContext context, string id,
             BlittableJsonReaderObject incomingDoc,
             long lastModifiedTicks,
-            LazyStringValue incomingChangeVector)
+            string incomingChangeVector)
         {
             var existing = _database.DocumentsStorage.GetDocumentOrTombstone(context, id, throwOnConflict: false);
             var existingDoc = existing.Document;

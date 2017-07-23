@@ -173,13 +173,13 @@ namespace Raven.Server.Utils
             return merged.SerializeVector();
         }
 
-        public static string MergeVectors(List<LazyStringValue> changeVectors)
+        public static string MergeVectors(List<string> changeVectors)
         {
             var mergedVector = new Dictionary<Guid, long>();
             
             foreach (var changeVector in changeVectors)
             {
-                foreach (var changeVectorEntry in changeVector.ToString().ToChangeVector())
+                foreach (var changeVectorEntry in changeVector.ToChangeVector())
                 {
                     if (!mergedVector.ContainsKey(changeVectorEntry.DbId))
                     {

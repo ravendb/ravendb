@@ -13,7 +13,7 @@ namespace Raven.Server.ServerWide.Context
     {
         private readonly DocumentDatabase _documentDatabase;
 
-        internal LazyStringValue LastDatabaseChangeVector;
+        internal string LastDatabaseChangeVector;
         internal Dictionary<string, long> LastReplicationEtagFrom;
 
         protected override void Reset(bool forceResetLongLivedAllocator = false)

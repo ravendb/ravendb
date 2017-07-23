@@ -309,10 +309,10 @@ namespace Raven.Server.Documents
             return context.GetLazyString(str);
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, LazyStringValue changeVector)
+        public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTree);
-            using (Slice.External(context.Allocator,changeVector,out var slice))
+            using (Slice.From(context.Allocator, changeVector, out var slice))
             {
                 tree.Add(GlobalChangeVector, slice);
             }
@@ -550,7 +550,7 @@ namespace Raven.Server.Documents
 
 
         //TODO: delete this?
-        public IEnumerable<(LazyStringValue, long)> GetChangeVectorsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
+        public IEnumerable<(string, long)> GetChangeVectorsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
         {
             var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
             if (collectionName == null)
@@ -624,7 +624,7 @@ namespace Raven.Server.Documents
             {
                 var doc = Get(context, lowerId);
                 if (doc != null)
-                    return new DocumentOrTombstone {Document = doc};
+                    return new DocumentOrTombstone { Document = doc };
             }
             catch (DocumentConflictException)
             {
@@ -893,16 +893,17 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, LazyStringValue excpectedChangeVector)
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, string excpectedChangeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (var cv = context.GetLazyString(excpectedChangeVector))
             {
-                return Delete(context, lowerId, id, excpectedChangeVector);
+                return Delete(context, lowerId, id, cv);
             }
         }
 
-        public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id, 
-            LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, LazyStringValue changeVector = null, 
+        public DeleteOperationResult? Delete(DocumentsOperationContext context, Slice lowerId, string id,
+            LazyStringValue expectedChangeVector, long? lastModifiedTicks = null, string changeVector = null,
             CollectionName collectionName = null, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             if (ConflictsStorage.ConflictsCount != 0)
@@ -923,7 +924,7 @@ namespace Raven.Server.Documents
 
                 collectionName = ExtractCollectionName(context, local.Tombstone.Collection);
 
-                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, 
+                var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                     collectionName.GetTableName(CollectionTableType.Tombstones));
                 tombstoneTable.Delete(local.Tombstone.StorageId);
 
@@ -1115,14 +1116,14 @@ namespace Raven.Server.Documents
                 etagTree.Add(LastEtagSlice, etagSlice);
         }
 
-        public (long Etag, LazyStringValue ChangeVector) CreateTombstone(
+        public (long Etag, string ChangeVector) CreateTombstone(
             DocumentsOperationContext context,
             Slice lowerId,
             long documentEtag,
             CollectionName collectionName,
-            LazyStringValue docChangeVector,
+            string docChangeVector,
             long lastModifiedTicks,
-            LazyStringValue changeVector,
+            string changeVector,
             DocumentFlags flags)
         {
             var newEtag = GenerateNextEtag();
@@ -1144,6 +1145,7 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema,
                 collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
+            using (Slice.From(context.Allocator, changeVector, out var cv))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(lowerId);
@@ -1153,7 +1155,7 @@ namespace Raven.Server.Documents
                 tvb.Add((byte)DocumentTombstone.TombstoneType.Document);
                 tvb.Add(collectionSlice);
                 tvb.Add((int)flags);
-                tvb.Add(changeVector.Buffer, changeVector.Size);
+                tvb.Add(cv.Content.Ptr, cv.Size);
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
             }
@@ -1190,8 +1192,8 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public PutOperationResults Put(DocumentsOperationContext context, string id, 
-            LazyStringValue excpectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, LazyStringValue changeVector = null, 
+        public PutOperationResults Put(DocumentsOperationContext context, string id,
+            string excpectedChangeVector, BlittableJsonReaderObject document, long? lastModifiedTicks = null, string changeVector = null,
             DocumentFlags flags = DocumentFlags.None, NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
             return DocumentPut.PutDocument(context, id, excpectedChangeVector, document, lastModifiedTicks, changeVector, flags, nonPersistentFlags);
@@ -1253,8 +1255,8 @@ namespace Raven.Server.Documents
             var fst = context.Transaction.InnerTransaction.FixedTreeFor(fstIndex.Name, sizeof(long));
             return fst.NumberOfEntries;
         }
-        
-        
+
+
         public class CollectionStats
         {
             public string Name;
@@ -1310,7 +1312,7 @@ namespace Raven.Server.Documents
         {
             string tableName;
 
-            if (collection == AttachmentsStorage.AttachmentsTombstones || 
+            if (collection == AttachmentsStorage.AttachmentsTombstones ||
                 collection == RevisionsStorage.RevisionsTombstones)
             {
                 tableName = collection;
@@ -1496,10 +1498,10 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static LazyStringValue TableValueToChangeVector(JsonOperationContext context, int index, ref TableValueReader tvr)
+        public static string TableValueToChangeVector(JsonOperationContext context, int index, ref TableValueReader tvr)
         {
             var ptr = tvr.Read(index, out int size);
-            return context.GetLazyString(Encodings.Utf8.GetString(ptr,size));
+            return Encodings.Utf8.GetString(ptr, size);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

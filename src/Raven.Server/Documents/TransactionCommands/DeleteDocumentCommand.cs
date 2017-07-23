@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.TransactionCommands
     public class DeleteDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
     {
         private readonly string _id;
-        private readonly LazyStringValue _expectedChangeVector;
+        private readonly string _expectedChangeVector;
         private readonly DocumentDatabase _database;
         private readonly bool _catchConcurrencyErrors;
 
@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.TransactionCommands
 
         public DocumentsStorage.DeleteOperationResult? DeleteResult;
 
-        public DeleteDocumentCommand(string id, LazyStringValue changeVector, DocumentDatabase database, bool catchConcurrencyErrors = false)
+        public DeleteDocumentCommand(string id, string changeVector, DocumentDatabase database, bool catchConcurrencyErrors = false)
         {
             _id = id;
             _expectedChangeVector = changeVector;

@@ -905,7 +905,7 @@ namespace Raven.Server.Documents.Replication
                                     }
 
                                     var conflictStatus = ConflictsStorage.GetConflictStatusForDocument(context, item.Id, rcvdChangeVector,
-                                        out LazyStringValue conflictingVector);
+                                        out var conflictingVector);
                                     switch (conflictStatus)
                                     {
                                         case ConflictStatus.Update:

@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Replication
                         {
                             var etag = ParseEtag(changeVector, start, current - 1);
                             if (current + 23 > changeVector.Length)
-                                ThrowInvalidEndOfString("DbId");
+                                ThrowInvalidEndOfString("DbId", changeVector);
                             list.Add(new ChangeVectorEntry
                             {
                                 NodeTag = tag,
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Replication
                         break;
 
                     default:
-                        ThrowInvalidState(state);
+                        ThrowInvalidState(state, changeVector);
                         break;
                 }
             }
@@ -349,18 +349,18 @@ namespace Raven.Server.Documents.Replication
             if (state == State.Whitespace)
                 return list.ToArray();
 
-            ThrowInvalidEndOfString(state.ToString());
+            ThrowInvalidEndOfString(state.ToString(), changeVector);
             return default(ChangeVectorEntry[]); // never hit
         }
 
-        private static void ThrowInvalidEndOfString(string state)
+        private static void ThrowInvalidEndOfString(string state, string cv)
         {
-            throw new ArgumentException("Expected " + state + ", but got end of string");
+            throw new ArgumentException("Expected " + state + ", but got end of string in : " + cv);
         }
 
-        private static void ThrowInvalidState(State state)
+        private static void ThrowInvalidState(State state, string cv)
         {
-            throw new ArgumentOutOfRangeException(state.ToString());
+            throw new ArgumentOutOfRangeException(state.ToString() + " in " + cv);
         }
     }
 }

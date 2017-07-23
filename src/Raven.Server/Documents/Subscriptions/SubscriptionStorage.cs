@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionState;
         }
 
-        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, LazyStringValue changeVector)
+        public async Task AcknowledgeBatchProcessed(long id, string name, long lastEtag, string changeVector)
         {
             var command = new AcknowledgeSubscriptionBatchCommand(_db.Name)
             {

@@ -9,7 +9,7 @@ namespace Raven.Server.Documents
         public long StorageId;
         public LazyStringValue Key;
         public long Etag;
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
         public LazyStringValue Name;
         public LazyStringValue ContentType;
         public Slice Base64Hash;

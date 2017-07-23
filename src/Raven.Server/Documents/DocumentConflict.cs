@@ -11,7 +11,7 @@ namespace Raven.Server.Documents
         public LazyStringValue Id;
         public BlittableJsonReaderObject Doc;
         public long StorageId;
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
         public LazyStringValue Collection;
         public DateTime LastModified;
         public DocumentFlags Flags;

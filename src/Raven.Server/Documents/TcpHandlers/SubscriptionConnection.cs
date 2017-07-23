@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var replyFromClientTask = GetReplyFromClientAsync();
                 var startEtag = GetStartEtagForSubscription(docsContext, subscription);
 
-                LazyStringValue lastChangeVector = null;
+                string lastChangeVector = null;
 
                 var patch = SetupFilterScript(subscription.Criteria);
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);

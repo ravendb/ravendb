@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
 using Voron.Exceptions;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -34,7 +35,7 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, Slices.Empty);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -75,7 +76,9 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var type = AttachmentType.Document;
-                LazyStringValue changeVector = null;
+                string changeVector = null;
+                Slice cv;
+                ByteStringContext.InternalScope disposeCv = default(ByteStringContext.InternalScope);
                 if (isDocument == false)
                 {
                     var stream = TryGetRequestFormStream("ChangeVectorAndType") ?? RequestBodyStream();
@@ -85,13 +88,18 @@ namespace Raven.Server.Documents.Handlers
                         Enum.TryParse(typeString, out type) == false)
                         throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                    if (request.TryGet("ChangeVector", out string changeVectorString) == false)
+                    if (request.TryGet("ChangeVector", out changeVector) == false && changeVector != null)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
-
-                    changeVector = context.GetLazyString(changeVectorString);
+                    disposeCv = Slice.From(context.Allocator, changeVector, out cv);
+                }
+                else
+                {
+                    cv = Slices.Empty;
                 }
 
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, changeVector);
+                Attachment attachment;
+                using (disposeCv)
+                    attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, type, cv);
                 if (attachment == null)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
@@ -253,6 +261,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, 
                         ContentType, Hash, ExpectedChangeVector, Stream);
+                    Database.DocumentsStorage.Get(context, "users/1");
                 }
                 catch (ConcurrencyException e)
                 {

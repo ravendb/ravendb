@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var item in _orderedReplicaItems)
             {
                 var value = item.Value;
-                WriteItemToServer(value, stats);
+                WriteItemToServer(documentsContext,value, stats);
             }
 
             foreach (var item in _replicaAttachmentStreams)
@@ -372,64 +372,64 @@ namespace Raven.Server.Documents.Replication
             _parent.HandleServerResponse();
         }
 
-        private void WriteItemToServer(ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
+        private void WriteItemToServer(DocumentsOperationContext context,ReplicationBatchItem item, OutgoingReplicationStatsScope stats)
         {
             if (item.Type == ReplicationBatchItem.ReplicationItemType.Attachment)
             {
-                WriteAttachmentToServer(item);
+                WriteAttachmentToServer(context, item);
                 return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.AttachmentTombstone)
             {
-                WriteAttachmentTombstoneToServer(item);
+                WriteAttachmentTombstoneToServer(context, item);
                 stats.RecordAttachmentTombstoneOutput();
                 return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.RevisionTombstone)
             {
-                WriteRevisionTombstoneToServer(item);
+                WriteRevisionTombstoneToServer(context, item);
                 stats.RecordRevisionTombstoneOutput();
                 return;
             }
 
             if (item.Type == ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
             {
-                WriteDocumentToServer(item);
+                WriteDocumentToServer(context, item);
                 stats.RecordDocumentTombstoneOutput();
                 return;
             }
 
-            WriteDocumentToServer(item);
+            WriteDocumentToServer(context, item);
             stats.RecordDocumentOutput(item.Data?.Size ?? 0);
         }
 
-        private unsafe void WriteDocumentToServer(ReplicationBatchItem item)
+        private unsafe void WriteDocumentToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
-            var requiredSize = sizeof(byte) + // type
-                               sizeof(int) + //  size of change vector
-                               item.ChangeVector.Size +
-                               sizeof(short) + // transaction marker
-                               sizeof(long) + // Last modified ticks
-                               sizeof(DocumentFlags) +
-                               sizeof(int) + // size of document ID
-                               item.Id.Size +
-                               sizeof(int); // size of document
-
-            if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item);
-
+            using(Slice.From(context.Allocator, item.ChangeVector, out var cv))
             fixed (byte* pTemp = _tempBuffer)
             {
+                var requiredSize = sizeof(byte) + // type
+                              sizeof(int) + //  size of change vector
+                              cv.Size +
+                              sizeof(short) + // transaction marker
+                              sizeof(long) + // Last modified ticks
+                              sizeof(DocumentFlags) +
+                              sizeof(int) + // size of document ID
+                              item.Id.Size +
+                              sizeof(int); // size of document
+
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
                 int tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Size;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
 
-                Memory.Copy(pTemp + tempBufferPos, item.ChangeVector.Buffer, item.ChangeVector.Size);
-                tempBufferPos += item.ChangeVector.Size;
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -491,34 +491,34 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteAttachmentToServer(ReplicationBatchItem item)
+        private unsafe void WriteAttachmentToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
-            var requiredSize = sizeof(byte) + // type
-                               sizeof(int) + // # of change vectors
-                               item.ChangeVector.Size +
-                               sizeof(short) + // transaction marker
-                               sizeof(int) + // size of ID
-                               item.Id.Size +
-                               sizeof(int) + // size of name
-                               item.Name.Size +
-                               sizeof(int) + // size of ContentType
-                               item.ContentType.Size +
-                               sizeof(byte) + // size of Base64Hash
-                               item.Base64Hash.Size;
-
-            if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item);
-
+            using(Slice.From(context.Allocator, item.ChangeVector, out var cv))
             fixed (byte* pTemp = _tempBuffer)
             {
+                var requiredSize = sizeof(byte) + // type
+                              sizeof(int) + // # of change vectors
+                              cv.Size +
+                              sizeof(short) + // transaction marker
+                              sizeof(int) + // size of ID
+                              item.Id.Size +
+                              sizeof(int) + // size of name
+                              item.Name.Size +
+                              sizeof(int) + // size of ContentType
+                              item.ContentType.Size +
+                              sizeof(byte) + // size of Base64Hash
+                              item.Base64Hash.Size;
+
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Size;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
 
-                Memory.Copy(pTemp + tempBufferPos, item.ChangeVector.Buffer, item.ChangeVector.Size);
-                tempBufferPos += item.ChangeVector.Size;
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -546,28 +546,29 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteAttachmentTombstoneToServer(ReplicationBatchItem item)
+        private unsafe void WriteAttachmentTombstoneToServer(DocumentsOperationContext context, ReplicationBatchItem item)
         {
-            var requiredSize = sizeof(byte) + // type
-                               sizeof(int) + // # of change vectors
-                               item.ChangeVector.Size +
-                               sizeof(short) + // transaction marker
-                               sizeof(int) + // size of key
-                               item.Id.Size;
-
-            if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item);
-
+            using(Slice.From(context.Allocator, item.ChangeVector, out var cv))
             fixed (byte* pTemp = _tempBuffer)
             {
+                var requiredSize = sizeof(byte) + // type
+                             sizeof(int) + // # of change vectors
+                             cv.Size +
+                             sizeof(short) + // transaction marker
+                             sizeof(int) + // size of key
+                             item.Id.Size;
+
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
+
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Size;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
 
-                Memory.Copy(pTemp + tempBufferPos, item.ChangeVector.Buffer, item.ChangeVector.Size);
-                tempBufferPos += item.ChangeVector.Size;
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);
@@ -582,30 +583,31 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
-        private unsafe void WriteRevisionTombstoneToServer(ReplicationBatchItem item)
+        private unsafe void WriteRevisionTombstoneToServer(DocumentsOperationContext context,ReplicationBatchItem item)
         {
-            var requiredSize = sizeof(byte) + // type
+            using(Slice.From(context.Allocator, item.ChangeVector, out var cv))
+            fixed (byte* pTemp = _tempBuffer)
+            {
+                var requiredSize = sizeof(byte) + // type
                                sizeof(int) + // # of change vectors
-                               item.ChangeVector.Size +
+                               cv.Size +
                                sizeof(short) + // transaction marker
                                sizeof(int) + // size of key
                                item.Id.Size +
                                sizeof(int) + // size of collection
                                item.Collection.Size;
 
-            if (requiredSize > _tempBuffer.Length)
-                ThrowTooManyChangeVectorEntries(item);
+                if (requiredSize > _tempBuffer.Length)
+                    ThrowTooManyChangeVectorEntries(item);
 
-            fixed (byte* pTemp = _tempBuffer)
-            {
                 var tempBufferPos = 0;
                 pTemp[tempBufferPos++] = (byte)item.Type;
 
-                *(int*)(pTemp + tempBufferPos) = item.ChangeVector.Size;
+                *(int*)(pTemp + tempBufferPos) = cv.Size;
                 tempBufferPos += sizeof(int);
 
-                Memory.Copy(pTemp + tempBufferPos, item.ChangeVector.Buffer, item.ChangeVector.Size);
-                tempBufferPos += item.ChangeVector.Size;
+                Memory.Copy(pTemp + tempBufferPos, cv.Content.Ptr, cv.Size);
+                tempBufferPos += cv.Size;
 
                 *(short*)(pTemp + tempBufferPos) = item.TransactionMarker;
                 tempBufferPos += sizeof(short);

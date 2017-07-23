@@ -30,10 +30,10 @@ namespace Raven.Server.Documents
         }
 
         public DocumentsStorage.PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
-            LazyStringValue excpectedChangeVector,
+            string excpectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
-            LazyStringValue changeVector = null,
+            string changeVector = null,
             DocumentFlags flags = DocumentFlags.None,
             NonPersistentDocumentFlags nonPersistentFlags = NonPersistentDocumentFlags.None)
         {
@@ -141,13 +141,14 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                using(Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
                     tvb.Add(Bits.SwapBytes(newEtag));
                     tvb.Add(idPtr);
                     tvb.Add(document.BasePointer, document.Size);
-                    tvb.Add(changeVector.Buffer, changeVector.Size);
+                    tvb.Add(cv.Content.Ptr, cv.Size);
                     tvb.Add(modifiedTicks);
                     tvb.Add((int)flags);
                     tvb.Add(context.GetTransactionMarker());
@@ -205,9 +206,9 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private (LazyStringValue ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
+        private (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
             DocumentsOperationContext context, string id, Slice lowerId, long newEtag, 
-            BlittableJsonReaderObject document, LazyStringValue changeVector, LazyStringValue excpectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
+            BlittableJsonReaderObject document, string changeVector, string excpectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             var fromReplication = (flags & DocumentFlags.FromReplication) == DocumentFlags.FromReplication;
@@ -234,7 +235,7 @@ namespace Raven.Server.Documents
             if (changeVector != null)
                return (changeVector, nonPersistentFlags);
 
-            LazyStringValue oldChangeVector;
+            string oldChangeVector;
             if (fromReplication == false)
             {
                 if(context.LastDatabaseChangeVector == null)
@@ -371,7 +372,7 @@ namespace Raven.Server.Documents
             throw new ArgumentException("Context must be set with a valid transaction before calling " + caller, "context");
         }
 
-        private static void ThrowConcurrentExceptionOnMissingDoc(string id, LazyStringValue excpectedChangeVector)
+        private static void ThrowConcurrentExceptionOnMissingDoc(string id, string excpectedChangeVector)
         {
             throw new ConcurrencyException(
                 $"Document {id} does not exist, but Put was called with change vector {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
@@ -387,7 +388,7 @@ namespace Raven.Server.Documents
                 $"Delete it and recreate the document {id}.");
         }
 
-        private static void ThrowConcurrentException(string id, LazyStringValue expectedChangeVector, LazyStringValue oldChangeVector)
+        private static void ThrowConcurrentException(string id, string expectedChangeVector, string oldChangeVector)
         {
             throw new ConcurrencyException(
                 $"Document {id} has change vector {oldChangeVector}, but Put was called with {(expectedChangeVector.Length == 0 ? "expecting new document" : "change vector " + expectedChangeVector)}. Optimistic concurrency violation, transaction will be aborted.")
@@ -406,13 +407,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private LazyStringValue SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, LazyStringValue oldChangeVector, long newEtag)
+        private string SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, string oldChangeVector, long newEtag)
         {
             if (oldChangeVector != null)
             {
-                var oldChangeVectorStr = oldChangeVector.ToString();
-                ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref oldChangeVectorStr);
-                return context.GetLazyString(oldChangeVectorStr);
+                ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref oldChangeVector);
+                return oldChangeVector;
             }
 
             return _documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, newEtag);

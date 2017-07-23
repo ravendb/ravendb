@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Replication
 
         #region Document
 
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
         public BlittableJsonReaderObject Data;
         public LazyStringValue Collection;
         public DocumentFlags Flags;

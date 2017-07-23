@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.ETL
 
         public long Etag { get; protected set; }
 
-        public LazyStringValue ChangeVector;
+        public string ChangeVector;
 
         public bool IsDelete { get; protected set; }
 

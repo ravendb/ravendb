@@ -148,7 +148,7 @@ namespace Raven.Server.Documents
 
             var list = new List<DocumentConflict>();
             LazyStringValue lastId = null;
-            
+
             foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], Slices.Empty, 0, false))
             {
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents
             return maxEtag;
         }
 
-        public bool HasHigherChangeVector(DocumentsOperationContext context, Slice prefixSlice, LazyStringValue expectedChangeVector)
+        public bool HasHigherChangeVector(DocumentsOperationContext context, Slice prefixSlice, string expectedChangeVector)
         {
             if (ConflictsCount == 0)
                 return false;
@@ -264,14 +264,14 @@ namespace Raven.Server.Documents
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
             foreach (var tvr in conflictsTable.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, 0, true))
             {
-                var chanageVector = DocumentsStorage.TableValueToChangeVector(context,(int)ConflictsTable.ChangeVector, ref tvr.Result.Reader);
-                if (ChangeVectorUtils.GetConflictStatus(chanageVector,expectedChangeVector) == ConflictStatus.AlreadyMerged)
+                var chanageVector = DocumentsStorage.TableValueToChangeVector(context, (int)ConflictsTable.ChangeVector, ref tvr.Result.Reader);
+                if (ChangeVectorUtils.GetConflictStatus(chanageVector, expectedChangeVector) == ConflictStatus.AlreadyMerged)
                     return true;
             }
             return false;
         }
 
-        public (IReadOnlyList<LazyStringValue> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
+        public (IReadOnlyList<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
             DocumentsOperationContext context, string id, BlittableJsonReaderObject document)
         {
             if (ConflictsCount == 0)
@@ -281,13 +281,13 @@ namespace Raven.Server.Documents
                 return DeleteConflictsFor(context, lowerId, document);
         }
 
-        public (List<LazyStringValue> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
+        public (List<string> ChangeVectors, NonPersistentDocumentFlags NonPersistentFlags) DeleteConflictsFor(
             DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document)
         {
             if (ConflictsCount == 0)
                 return (null, NonPersistentDocumentFlags.None);
 
-            var changeVectors = new List<LazyStringValue>();
+            var changeVectors = new List<string>();
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
             LazyStringValue deleteAttachmentChangeVector = null;
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
@@ -334,7 +334,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private NonPersistentDocumentFlags DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId, 
+        private NonPersistentDocumentFlags DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId,
             BlittableJsonReaderObject document, Table.TableValueHolder before, LazyStringValue changeVector)
         {
             var dataPtr = before.Reader.Read((int)ConflictsTable.Data, out int size);
@@ -350,14 +350,14 @@ namespace Raven.Server.Documents
             return NonPersistentDocumentFlags.ResolveAttachmentsConflict;
         }
 
-        public void DeleteConflictsFor(DocumentsOperationContext context, LazyStringValue changeVector)
+        public void DeleteConflictsFor(DocumentsOperationContext context, string changeVector)
         {
             if (ConflictsCount == 0)
                 return;
 
             var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
 
-            using (Slice.External(context.Allocator, changeVector, out Slice changeVectorSlice))
+            using (Slice.From(context.Allocator, changeVector, out Slice changeVectorSlice))
             {
                 if (conflictsTable.DeleteByKey(changeVectorSlice) == false)
                     return;
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents
             return items;
         }
 
-        public LazyStringValue GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, LazyStringValue existingChangeVector = null)
+        public LazyStringValue GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
             if (ConflictsCount == 0)
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
@@ -441,7 +441,7 @@ namespace Raven.Server.Documents
             return context.GetLazyString(ChangeVectorUtils.MergeVectors(conflictChangeVectors));
         }
 
-        private LazyStringValue MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, LazyStringValue existing)
+        private LazyStringValue MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
         {
             if (existing != null)
             {
@@ -476,8 +476,8 @@ namespace Raven.Server.Documents
                 "Get conflict information and try resolving again.");
         }
 
-        public (LazyStringValue ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(
-            LazyStringValue documentChangeVector, DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
+        public (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) MergeConflictChangeVectorIfNeededAndDeleteConflicts(
+            string documentChangeVector, DocumentsOperationContext context, string id, long newEtag, BlittableJsonReaderObject document)
         {
             var result = DeleteConflictsFor(context, id, document);
             if (result.ChangeVectors == null ||
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents
                 return (documentChangeVector, result.NonPersistentFlags);
             }
 
-            LazyStringValue mergedChangeVectorEntries = null;
+            string mergedChangeVectorEntries = null;
             var firstTime = true;
             foreach (var changeVector in result.ChangeVectors)
             {
@@ -496,25 +496,24 @@ namespace Raven.Server.Documents
                     firstTime = false;
                     continue;
                 }
-                mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, changeVector));
+                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, changeVector);
             }
             if (documentChangeVector != null)
                 mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector));
-             var newChangeVector = context.GetLazyString(
-                 ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId)
-                 );
-             mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector));
+            var newChangeVector =
+                ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
+            mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector);
 
             return (mergedChangeVectorEntries, result.NonPersistentFlags);
         }
 
         public void AddConflict(
-            DocumentsOperationContext context, 
-            string id, 
-            long lastModifiedTicks, 
-            BlittableJsonReaderObject incomingDoc, 
-            LazyStringValue incomingChangeVector, 
-            string incomingTombstoneCollection, 
+            DocumentsOperationContext context,
+            string id,
+            long lastModifiedTicks,
+            BlittableJsonReaderObject incomingDoc,
+            string incomingChangeVector,
+            string incomingTombstoneCollection,
             DocumentFlags flags)
         {
             if (_logger.IsInfoEnabled)
@@ -536,11 +535,12 @@ namespace Raven.Server.Documents
 
                     lazyCollectionName = CollectionName.GetLazyCollectionNameFrom(context, existingDoc.Data);
 
+                    using (Slice.From(context.Allocator, existingDoc.ChangeVector, out var cv))
                     using (conflictsTable.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(lowerId);
                         tvb.Add(SpecialChars.RecordSeparator);
-                        tvb.Add(existingDoc.ChangeVector.Buffer, existingDoc.ChangeVector.Size);
+                        tvb.Add(cv.Content.Ptr, cv.Size);
                         tvb.Add(idPtr);
                         tvb.Add(existingDoc.Data.BasePointer, existingDoc.Data.Size);
                         tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
@@ -563,11 +563,12 @@ namespace Raven.Server.Documents
                 else if (existing.Tombstone != null)
                 {
                     var existingTombstone = existing.Tombstone;
+                    using (Slice.From(context.Allocator, existingTombstone.ChangeVector, out var cv))
                     using (conflictsTable.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(lowerId);
                         tvb.Add(SpecialChars.RecordSeparator);
-                        tvb.Add(existingTombstone.ChangeVector.Buffer, existingTombstone.ChangeVector.Size);
+                        tvb.Add(cv.Content.Ptr, cv.Size);
                         tvb.Add(idPtr);
                         tvb.Add(null, 0);
                         tvb.Add(Bits.SwapBytes(_documentsStorage.GenerateNextEtag()));
@@ -631,11 +632,12 @@ namespace Raven.Server.Documents
                 }
 
                 using (lazyCollectionName)
+                using (Slice.From(context.Allocator, incomingChangeVector, out var cv))
                 using (conflictsTable.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
                     tvb.Add(SpecialChars.RecordSeparator);
-                    tvb.Add(incomingChangeVector.Buffer, incomingChangeVector.Size);
+                    tvb.Add(cv.Content.Ptr, cv.Size);
                     tvb.Add(idPtr);
                     tvb.Add(doc, docSize);
                     tvb.Add(Bits.SwapBytes(etag));
@@ -657,8 +659,8 @@ namespace Raven.Server.Documents
             }
         }
 
-        public DocumentsStorage.DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context, Slice lowerId, 
-            LazyStringValue expectedChangeVector, LazyStringValue changeVector)
+        public DocumentsStorage.DeleteOperationResult? DeleteConflicts(DocumentsOperationContext context, Slice lowerId,
+            string expectedChangeVector, string changeVector)
         {
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
@@ -670,7 +672,7 @@ namespace Raven.Server.Documents
                     // This way we avoid another replication back to the source
 
                     ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
-                   
+
                     long etag;
                     var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
                     return new DocumentsStorage.DeleteOperationResult
@@ -684,7 +686,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public void ThrowConcurrencyExceptionOnConflictIfNeeded(DocumentsOperationContext context, Slice lowerId, LazyStringValue expectedChangeVector)
+        public void ThrowConcurrencyExceptionOnConflictIfNeeded(DocumentsOperationContext context, Slice lowerId, string expectedChangeVector)
         {
             if (expectedChangeVector == null)
                 return;
@@ -695,7 +697,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, LazyStringValue changeVector, 
+        private CollectionName ResolveConflictAndAddTombstone(DocumentsOperationContext context, string changeVector,
             IReadOnlyList<DocumentConflict> conflicts, out long etag)
         {
             var indexOfLargestEtag = FindIndexOfLargestEtagAndMergeChangeVectors(conflicts, out string mergedChangeVector);
@@ -746,7 +748,7 @@ namespace Raven.Server.Documents
             return indexOfLargestEtag;
         }
 
-        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, out LazyStringValue conflictingVector)
+        public static ConflictStatus GetConflictStatusForDocument(DocumentsOperationContext context, string id, LazyStringValue remote, out string conflictingVector)
         {
             //tombstones also can be a conflict entry
             conflictingVector = null;
@@ -766,7 +768,7 @@ namespace Raven.Server.Documents
             }
 
             var result = context.DocumentDatabase.DocumentsStorage.GetDocumentOrTombstone(context, id);
-            LazyStringValue local;
+            string local;
 
             if (result.Document != null)
                 local = result.Document.ChangeVector;
@@ -784,7 +786,7 @@ namespace Raven.Server.Documents
 
             return status;
         }
-        
+
         public long GetCountOfDocumentsConflicts(DocumentsOperationContext context)
         {
             if (ConflictsCount == 0)
