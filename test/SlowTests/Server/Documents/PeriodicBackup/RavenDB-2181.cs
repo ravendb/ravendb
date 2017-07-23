@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task PutBlob()
         {
             var containerName = Guid.NewGuid().ToString();
@@ -61,7 +61,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task PutBlobIntoFolder()
         {
             var containerName = Guid.NewGuid().ToString();

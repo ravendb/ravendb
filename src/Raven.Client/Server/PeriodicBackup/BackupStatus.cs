@@ -99,9 +99,9 @@ namespace Raven.Client.Server.PeriodicBackup
             UploadType = UploadType.Regular;
         }
 
-        public long Uploaded { get; set; }
+        public long UploadedInBytes { get; set; }
 
-        public long Total { get; set; }
+        public long TotalInBytes { get; set; }
 
         public UploadState UploadState { get; private set; }
 
@@ -114,12 +114,12 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public void SetTotal(long totalLength)
         {
-            Total = totalLength;
+            TotalInBytes = totalLength;
         }
 
         public void UpdateUploaded(long length)
         {
-            Uploaded += length;
+            UploadedInBytes += length;
         }
 
         public void ChangeType(UploadType newType)

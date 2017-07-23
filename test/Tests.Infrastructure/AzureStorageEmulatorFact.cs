@@ -7,9 +7,9 @@ using Xunit;
 namespace Tests.Infrastructure
 {
     [CLSCompliant(false)]
-    public class AzureStorageEmulatorRunning : FactAttribute
+    public class AzureStorageEmulatorFact : FactAttribute
     {
-        public AzureStorageEmulatorRunning([CallerMemberName] string memberName = "")
+        public AzureStorageEmulatorFact([CallerMemberName] string memberName = "")
         {
             var process = Process.GetProcessesByName("AzureStorageEmulator").FirstOrDefault();
             if (process != null)

@@ -23,79 +23,79 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         private const string AzureAccountName = "devstoreaccount1";
         private const string AzureAccountKey = "Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==";
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_64MB()
         {
             await PutBlob(64, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_70MB()
         {
             await PutBlob(70, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_100MB()
         {
             await PutBlob(100, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_256MB()
         {
             await PutBlob(256, false, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_500MB()
         {
             await PutBlob(500, false, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_765MB()
         {
             await PutBlob(765, false, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_64MB()
         {
             await PutBlob(64, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_70MB()
         {
             await PutBlob(70, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_100MB()
         {
             await PutBlob(100, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_256MB()
         {
             await PutBlob(256, true, UploadType.Regular);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_500MB()
         {
             await PutBlob(500, true, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task put_blob_into_folder_765MB()
         {
             await PutBlob(765, true, UploadType.Chunked);
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task can_get_and_delete_container()
         {
             var containerName = Guid.NewGuid().ToString();
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [AzureStorageEmulatorRunning]
+        [AzureStorageEmulatorFact]
         public async Task can_get_container_not_found()
         {
             var containerName = Guid.NewGuid().ToString();
@@ -187,8 +187,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     Assert.Equal(UploadState.Done, uploadProgress.UploadState);
                     Assert.Equal(uploadType, uploadProgress.UploadType);
-                    Assert.Equal(streamLength, uploadProgress.Total);
-                    Assert.Equal(streamLength, uploadProgress.Uploaded);
+                    Assert.Equal(streamLength, uploadProgress.TotalInBytes);
+                    Assert.Equal(streamLength, uploadProgress.UploadedInBytes);
                 }
                 finally
                 {
