@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         
-                        await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false);
+                        await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
                         NoContentStatus();
                         return;
                     }
