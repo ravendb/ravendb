@@ -31,9 +31,9 @@ namespace Raven.Server.Documents.Transformers
                 Debug.Assert(CurrentTransformationScope.Current != null);
         }
 
-        public bool HasLoadedAnyDocument => LoadedDocumentEtags != null && LoadedDocumentEtags.Count > 0;
+        public bool HasLoadedAnyDocument => LoadedDocumentChangeVectors != null && LoadedDocumentChangeVectors.Count > 0;
 
-        public List<long> LoadedDocumentEtags => CurrentTransformationScope.Current.LoadedDocumentEtags;
+        public List<string> LoadedDocumentChangeVectors => CurrentTransformationScope.Current.LoadedDocumentChangeVectors;
 
         public void Dispose()
         {

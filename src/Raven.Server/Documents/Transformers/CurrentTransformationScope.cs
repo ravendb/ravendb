@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Transformers
         private readonly TransformerStore _transformerStore;
         private readonly DocumentsOperationContext _documentsContext;
 
-        public List<long> LoadedDocumentEtags;
+        public List<string> LoadedDocumentChangeVectors;
 
         [ThreadStatic]
         public static CurrentTransformationScope Current;
@@ -87,10 +87,10 @@ namespace Raven.Server.Documents.Transformers
             if (document == null)
                 return DynamicNullObject.Null;
 
-            if (LoadedDocumentEtags == null)
-                LoadedDocumentEtags = new List<long>();
+            if (LoadedDocumentChangeVectors == null)
+                LoadedDocumentChangeVectors = new List<string>();
 
-            LoadedDocumentEtags.Add(document.Etag);
+            LoadedDocumentChangeVectors.Add(document.ChangeVector);
 
             document.EnsureMetadata();
 

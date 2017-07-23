@@ -218,7 +218,7 @@ namespace Raven.Server.Documents.Replication
 
             foreach (var documentConflict in conflicts)
             {
-                foreach (var changeVectorEntry in documentConflict.ChangeVector.ToString().ToChangeVector())
+                foreach (var changeVectorEntry in documentConflict.ChangeVector.ToChangeVector())
                 {
                     if (changeVectorEntry.DbId.Equals(resolverDbId))
                     {
@@ -363,7 +363,7 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        public unsafe DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
+        public DocumentConflict ResolveToLatest(DocumentsOperationContext context, List<DocumentConflict> conflicts)
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it

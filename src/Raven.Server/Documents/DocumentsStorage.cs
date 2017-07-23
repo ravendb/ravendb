@@ -286,7 +286,7 @@ namespace Raven.Server.Documents
                 throw new InvalidOperationException("No active transaction found in the context, and at least read transaction is needed");
         }
 
-        public LazyStringValue GetDatabaseChangeVector(DocumentsOperationContext context)
+        public static string GetDatabaseChangeVector(DocumentsOperationContext context)
         {
             AssertTransaction(context);
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTree);
@@ -389,14 +389,6 @@ namespace Raven.Server.Documents
                 lastEtag = lastAttachmentEtag;
 
             return lastEtag;
-        }
-
-        public static long ComputeEtag(long etag, long numberOfDocuments)
-        {
-            var buffer = stackalloc long[2];
-            buffer[0] = etag;
-            buffer[1] = numberOfDocuments;
-            return (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 2);
         }
 
         public IEnumerable<Document> GetDocumentsStartingWith(DocumentsOperationContext context, string idPrefix, string matches, string exclude, string startAfterId,
@@ -767,23 +759,41 @@ namespace Raven.Server.Documents
 
         public long GetLastDocumentEtag(DocumentsOperationContext context, string collection)
         {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                return 0;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents)
-                );
-
-            // ReSharper disable once UseNullPropagation
-            if (table == null)
-                return 0;
-
-            var result = table.ReadLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]);
-            if (result == null)
+            Table.TableValueHolder result = null;
+            if (LastDocument(context, collection, ref result) == false)
                 return 0;
 
             return TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
+        }
+
+        public string GetLastDocumentChangeVector(DocumentsOperationContext context, string collection)
+        {
+            Table.TableValueHolder result = null;
+            if (LastDocument(context, collection, ref result) == false)
+                return null;
+
+            return TableValueToChangeVector(context,(int)DocumentsTable.ChangeVector, ref result.Reader);
+        }
+
+        private bool LastDocument(DocumentsOperationContext context, string collection, ref Table.TableValueHolder result)
+        {
+            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
+            if (collectionName == null)
+                return false;
+
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
+                collectionName.GetTableName(CollectionTableType.Documents)
+            );
+
+            // ReSharper disable once UseNullPropagation
+            if (table == null)
+                return false;
+
+            result = table.ReadLast(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice]);
+            if (result == null)
+                return false;
+
+            return true;
         }
 
         public long GetLastTombstoneEtag(DocumentsOperationContext context, string collection)

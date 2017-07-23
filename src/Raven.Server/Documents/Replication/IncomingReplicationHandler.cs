@@ -478,7 +478,7 @@ namespace Raven.Server.Documents.Replication
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
-            LazyStringValue databaseChangeVector;
+            string databaseChangeVector;
             long currentLastEtagMatchingChangeVector;
 
             using (documentsContext.OpenReadTransaction())
@@ -487,7 +487,7 @@ namespace Raven.Server.Documents.Replication
                 // is the same or higher then ours, and if so, we'll update the change vector on the sibling to reflect
                 // our own latest etag. This allows us to have effective syncronzation points, since each change will
                 // be able to tell (roughly) where it is at on the entire cluster. 
-                databaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(documentsContext);
+                databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
                 currentLastEtagMatchingChangeVector = DocumentsStorage.ReadLastEtag(documentsContext.Transaction.InnerTransaction);
             }
             if (_log.IsInfoEnabled)
@@ -804,7 +804,7 @@ namespace Raven.Server.Documents.Replication
                     var database = _incoming._database;
 
                     var currentDatabaseChangeVector = context.LastDatabaseChangeVector ??
-                               (context.LastDatabaseChangeVector = database.DocumentsStorage.GetDatabaseChangeVector(context));
+                               (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
 
                     var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector.ToString();
 

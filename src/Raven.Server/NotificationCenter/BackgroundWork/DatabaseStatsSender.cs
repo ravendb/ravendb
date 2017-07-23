@@ -67,8 +67,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     CountOfStaleIndexes = staleIndexes,
                     CountOfIndexingErrors = countOfIndexingErrors,
                     LastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction),
+                    GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context)
                 };
-
                 current.Collections = _database.DocumentsStorage.GetCollections(context)
                     .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
             }
@@ -79,7 +79,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
             _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
-                current.CountOfStaleIndexes, current.LastEtag, current.CountOfIndexingErrors, lastIndexingErrorTime, modifiedCollections));
+                current.CountOfStaleIndexes, current.GlobalChangeVector, current.LastEtag, current.CountOfIndexingErrors, lastIndexingErrorTime, modifiedCollections));
 
             _latest = current;
         }
@@ -127,6 +127,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             public long CountOfIndexingErrors;
 
+            public string GlobalChangeVector;
+
             public Dictionary<string, DatabaseStatsChanged.ModifiedCollection> Collections;
 
             public bool Equals(Stats other)
@@ -138,6 +140,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                        CountOfIndexingErrors == other.CountOfIndexingErrors &&
                        LastEtag == other.LastEtag &&
                        CountOfStaleIndexes == other.CountOfStaleIndexes &&
+                       GlobalChangeVector == other.GlobalChangeVector &&
                        DictionaryExtensions.ContentEquals(Collections, other.Collections);
             }
 
@@ -162,6 +165,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     hashCode = (hashCode * 397) ^ LastEtag.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfIndexingErrors.GetHashCode();
                     hashCode = (hashCode * 397) ^ CountOfStaleIndexes.GetHashCode();
+                    hashCode = (hashCode * 397) ^ GlobalChangeVector.GetHashCode();
                     hashCode = (hashCode * 397) ^ (Collections != null ? Collections.GetHashCode() : 0);
                     return hashCode;
                 }

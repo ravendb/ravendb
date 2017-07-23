@@ -144,7 +144,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         report.LastEtag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
                         report.LastTombstoneEtag = DocumentsStorage.ReadLastTombstoneEtag(tx.InnerTransaction);
                         report.NumberOfConflicts = documentsStorage.ConflictsStorage.ConflictsCount;
-                        report.LastChangeVector = documentsStorage.GetDatabaseChangeVector(context);
+                        report.LastChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
                         if (indexStorage != null)
                         {

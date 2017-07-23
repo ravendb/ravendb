@@ -239,7 +239,7 @@ namespace Raven.Server.Documents
             if (fromReplication == false)
             {
                 if(context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = _documentsStorage.GetDatabaseChangeVector(context);
+                    context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 oldChangeVector = context.LastDatabaseChangeVector;
             }
             else

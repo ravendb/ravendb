@@ -11,8 +11,10 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
+using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
+using Org.BouncyCastle.Utilities.Encoders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Exceptions.Transformers;
@@ -27,6 +29,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Base64 = Sparrow.Utils.Base64;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
@@ -38,7 +41,7 @@ namespace Raven.Server.Documents.Handlers
         public Task Head()
         {
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
-            var etag = GetLongFromHeaders("If-None-Match");
+            var changeVector = GetStringFromHeaders("If-None-Match");
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -48,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                 else
                 {
-                    if (etag == document.Etag)
+                    if (changeVector == document.ChangeVector)
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     else
                         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + document.ChangeVector + "\"";
@@ -113,16 +116,14 @@ namespace Raven.Server.Documents.Handlers
             var sw = Stopwatch.StartNew();
 
             // everything here operates on all docs
-            var actualEtag = DocumentsStorage.ComputeEtag(
-                DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction), Database.DocumentsStorage.GetNumberOfDocuments(context)
-            );
-
-            if (GetLongFromHeaders("If-None-Match") == actualEtag)
+            var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+            
+            if (GetStringFromHeaders("If-None-Match") == databaseChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                 return;
             }
-            HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
+            HttpContext.Response.Headers["ETag"] = "\"" + databaseChangeVector + "\"";
 
             var etag = GetLongQueryString("etag", false);
             var start = GetStart();
@@ -182,7 +183,7 @@ namespace Raven.Server.Documents.Handlers
 
             var includePaths = GetStringValuesQueryString("include", required: false);
             var documents = new List<Document>(ids.Count);
-            List<long> etags = null;
+            List<string> changeVectors = null;
             var includes = new List<Document>(includePaths.Count * ids.Count);
             var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includePaths);
             foreach (var id in ids)
@@ -206,19 +207,22 @@ namespace Raven.Server.Documents.Handlers
                 using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
                 {
                     documentsToWrite = scope.Transform(documents).ToList();
-                    etags = scope.LoadedDocumentEtags;
+                    changeVectors = scope.LoadedDocumentChangeVectors;
                 }
             }
             else
                 documentsToWrite = documents;
 
             includeDocs.Fill(includes);
-            // TODO: fix this
-            var actualEtag = ComputeEtagsFor(documents, includes, etags);
             if (transformer != null)
-                actualEtag ^= transformer.Hash;
+            {
+                if(changeVectors == null)
+                    changeVectors = new List<string>();
+                changeVectors.Add(transformer.Definition.TransformResults);
+            }
+            var actualEtag = ComputeEtagFor(documents, includes, changeVectors);
 
-            var etag = GetLongFromHeaders("If-None-Match");
+            var etag = GetStringFromHeaders("If-None-Match");
             if (etag == actualEtag)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -309,52 +313,94 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private static unsafe long ComputeEtagsFor(List<Document> documents, List<Document> includes, List<long> additionalEtags)
+        private static unsafe string ComputeEtagFor(List<Document> documents, List<Document> includes, List<string> additionalChangeVectors)
         {
             // This method is efficient because we aren't materializing any values
             // except the etag, which we need
-            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalEtags == null || additionalEtags.Count == 0))
-                return documents[0]?.Etag ?? -1;
+            if (documents.Count == 1 && (includes == null || includes.Count == 0) && (additionalChangeVectors == null || additionalChangeVectors.Count == 0))
+                return documents[0]?.ChangeVector ?? "";
 
-            var documentsCount = documents.Count;
-            var includesCount = includes?.Count ?? 0;
-            var additionalEtagsCount = additionalEtags?.Count ?? 0;
-            var count = documentsCount + includesCount + additionalEtagsCount;
+            var size = Sodium.crypto_generichash_bytes();
+            Debug.Assert((int)size == 32);
+            var cryptoGenerichashStatebytes = Sodium.crypto_generichash_statebytes();
+            byte* state = stackalloc byte[cryptoGenerichashStatebytes];
+            if (Sodium.crypto_generichash_init(state, null, UIntPtr.Zero, size) != 0)
+                ThrowFailToInitHash();
 
-            // we do this in a loop to avoid either large long array allocation on the heap
-            // or busting the stack if we used stackalloc long[ids.Count]
-            var ctx = Hashing.Streamed.XXHash64.BeginProcess();
-            long* buffer = stackalloc long[4];//32 bytes
-            Memory.Set((byte*)buffer, 0, sizeof(long) * 4);// not sure is stackalloc force init
-            for (int i = 0; i < count; i += 4)
+            for (int i = 0; i < documents.Count; i++)
             {
-                for (int j = 0; j < 4; j++)
-                {
-                    var index = i + j;
-                    if (index >= count)
-                        break;
-
-                    if (index < documentsCount)
-                    {
-                        var document = documents[index];
-                        buffer[j] = document?.Etag ?? -1;
-                        continue;
-                    }
-
-                    if (includesCount > 0 && index >= documentsCount && index < documentsCount + includesCount)
-                    {
-                        var document = includes[index - documentsCount];
-                        buffer[j] = document?.Etag ?? -1;
-                        continue;
-                    }
-
-                    buffer[j] = additionalEtags[i + j - documentsCount - includesCount];
-                }
-                // we don't care if we didn't get to the end and have values from previous iteration
-                // it will still be consistent, and that is what we care here.
-                ctx = Hashing.Streamed.XXHash64.Process(ctx, (byte*)buffer, sizeof(long) * 4);
+                var doc = documents[i];
+                HashDocumentByChangeVector(state, doc);
             }
-            return (long)Hashing.Streamed.XXHash64.EndProcess(ctx);
+
+            if (includes != null)
+            {
+                for (int i = 0; i < includes.Count; i++)
+                {
+                    var doc = includes[i];
+                    HashDocumentByChangeVector(state, doc);
+                }
+            }
+
+            if (additionalChangeVectors != null)
+            {
+                for (int i = 0; i < additionalChangeVectors.Count; i++)
+                {
+                    HashChangeVector(state, additionalChangeVectors[i]);
+                }
+            }
+           
+            byte* final = stackalloc byte[(int)size];
+            if (Sodium.crypto_generichash_final(state, final, size) != 0)
+                ThrowFailedToFinalizeHash();
+
+            var str = new string(' ', 49);
+            fixed (char* p = str)
+            {
+                p[0] = 'H';
+                p[1] = 'a';
+                p[2] = 's';
+                p[3] = 'h';
+                p[4] = '-';
+                var len = Base64.ConvertToBase64Array(p + 5, final, 0, 32);
+                Debug.Assert(len == 44);
+            }
+
+            return str;
+        }
+
+        private static unsafe void HashDocumentByChangeVector(byte* state, Document document)
+        {
+            if (document == null)
+            {
+                if (Sodium.crypto_generichash_update(state, null, 0) != 0)
+                    ThrowFailedToUpdateHash();
+            }
+            else HashChangeVector(state, document.ChangeVector);
+        }
+
+        private static unsafe void HashChangeVector(byte* state, string changeVector)
+        {
+            fixed (char* pCV = changeVector)
+            {
+                if (Sodium.crypto_generichash_update(state, (byte*)pCV, (ulong)(sizeof(char) * changeVector.Length)) != 0)
+                    ThrowFailedToUpdateHash();
+            }
+        }
+
+        private static void ThrowFailedToFinalizeHash()
+        {
+            throw new InvalidOperationException("Failed to finalize generic hash");
+        }
+
+        private static void ThrowFailToInitHash()
+        {
+            throw new InvalidOperationException("Failed to initiate generic hash");
+        }
+
+        private static void ThrowFailedToUpdateHash()
+        {
+            throw new InvalidOperationException("Failed to udpate generic hash");
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser)]

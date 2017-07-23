@@ -47,33 +47,21 @@ namespace Raven.Server.Web.Studio
             {
                 Document[] documents;
                 HashSet<LazyStringValue> availableColumns;
-                long totalResults;
-                long etag;
                 HashSet<string> propertiesPreviewToSend;
                 HashSet<string> fullPropertiesToSend = new HashSet<string>(fullBindings);
 
-                // compute etag only - maybe we can respond with NotModified?
-                if (string.IsNullOrEmpty(collection))
-                {
-                    totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                    var lastEtag = DocumentsStorage.ReadLastEtag(context.Transaction.InnerTransaction);
-                    etag = DocumentsStorage.ComputeEtag(lastEtag, totalResults);
-                }
-                else
-                {
-                    totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
-                    var lastCollectionEtag = Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
-                    etag = DocumentsStorage.ComputeEtag(lastCollectionEtag, totalResults);
-                }
+                var changeVector = string.IsNullOrEmpty(collection) ? 
+                    DocumentsStorage.GetDatabaseChangeVector(context) : 
+                    Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
 
-                if (GetLongFromHeaders("If-None-Match") == etag)
+                if (GetStringFromHeaders("If-None-Match") == changeVector)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
-                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
+                HttpContext.Response.Headers["ETag"] = "\"" + changeVector + "\"";
 
-
+                var totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
                 if (string.IsNullOrEmpty(collection))
                 {

@@ -24,7 +24,7 @@ namespace Raven.Server.NotificationCenter.Notifications
 
         public DateTime? LastIndexingErrorTime { get; private set; }
 
-        public string GlobalDocumentsEtag { get; private set; }
+        public string GlobalChangeVector { get; private set; }
 
         public long LastEtag { get; private set; }
 
@@ -38,7 +38,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             json[nameof(CountOfIndexes)] = CountOfIndexes;
             json[nameof(CountOfStaleIndexes)] = CountOfStaleIndexes;
             json[nameof(LastEtag)] = LastEtag;
-            json[nameof(GlobalDocumentsEtag)] = GlobalDocumentsEtag;
+            json[nameof(GlobalChangeVector)] = GlobalChangeVector;
             json[nameof(CountOfIndexingErrors)] = CountOfIndexingErrors;
             json[nameof(LastIndexingErrorTime)] = LastIndexingErrorTime;
             json[nameof(ModifiedCollections)] = new DynamicJsonArray(ModifiedCollections.Select(x => x.ToJson()));
@@ -46,7 +46,7 @@ namespace Raven.Server.NotificationCenter.Notifications
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, 
+        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, string globalChangeVector,
             long lastEtag, long countOfIndexingErrors, DateTime? lastIndexingErrorTime, 
             List<ModifiedCollection> modifiedCollections)
         {
@@ -58,7 +58,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Severity = NotificationSeverity.Info,
                 CountOfDocuments = countOfDocs,
                 LastEtag = lastEtag,
-                GlobalDocumentsEtag = DocumentsStorage.ComputeEtag(lastEtag, countOfDocs).ToString(), // use string here as javascript may round longs
+                GlobalChangeVector = globalChangeVector,
                 CountOfIndexingErrors = countOfIndexingErrors,
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
@@ -75,14 +75,11 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             public readonly long LastDocumentEtag;
 
-            public readonly string CollectionEtag; // use string as javascript can round longs
-
             public ModifiedCollection(string name, long count, long lastDocumentEtag)
             {
                 Name = name;
                 Count = count;
                 LastDocumentEtag = lastDocumentEtag;
-                CollectionEtag = DocumentsStorage.ComputeEtag(lastDocumentEtag, count).ToString();
             }
 
             public bool Equals(ModifiedCollection other)
@@ -102,7 +99,6 @@ namespace Raven.Server.NotificationCenter.Notifications
                     [nameof(Name)] = Name,
                     [nameof(Count)] = Count,
                     [nameof(LastDocumentEtag)] = LastDocumentEtag,
-                    [nameof(CollectionEtag)] = CollectionEtag
                 };
             }
 

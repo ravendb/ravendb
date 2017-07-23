@@ -661,16 +661,16 @@ namespace Raven.Server.Documents.Revisions
         }
 
         public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag,
-            out Slice revisionsBinEntryKey, out long latestEtag)
+            out Slice revisionsBinEntryKey, out string latestChangeVector)
         {
             var dispose = GetRevisionsBinEntryKey(context, startEtag, out revisionsBinEntryKey);
             foreach (var entry in GetRevisionsBinEntries(context, revisionsBinEntryKey, 1))
             {
-                latestEtag = entry.Etag;
+                latestChangeVector = entry.ChangeVector;
                 return dispose;
             }
 
-            latestEtag = -1;
+            latestChangeVector = null;
             return dispose;
         }
 
