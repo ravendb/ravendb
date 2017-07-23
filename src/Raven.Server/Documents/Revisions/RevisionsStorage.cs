@@ -785,13 +785,11 @@ namespace Raven.Server.Documents.Revisions
                 LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out int size),
+                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr),
             };
 
             var ptr = tvr.Read((int)Columns.Document, out size);
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
-
-            ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            result.ChangeVector = context.GetLazyString(Encodings.Utf8.GetString(ptr, size));
 
             return result;
         }

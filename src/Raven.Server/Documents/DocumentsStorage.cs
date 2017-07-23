@@ -34,9 +34,8 @@ namespace Raven.Server.Documents
         private static readonly Slice LastReplicatedEtagsSlice;
         private static readonly Slice EtagsSlice;
         private static readonly Slice LastEtagSlice;
-
-        private static readonly Slice GlobalTree;
-        private static readonly Slice GlobalChangeVector;
+        private static readonly Slice GlobalTreeSlice;
+        private static readonly Slice GlobalChangeVectorSlice;
 
         private static readonly Slice AllTombstonesEtagsSlice;
         private static readonly Slice TombstonesPrefix;
@@ -88,8 +87,8 @@ namespace Raven.Server.Documents
             Slice.From(StorageEnvironment.LabelsContext, CollectionName.GetTablePrefix(CollectionTableType.Tombstones), ByteStringType.Immutable, out TombstonesPrefix);
             Slice.From(StorageEnvironment.LabelsContext, "DeletedEtags", ByteStringType.Immutable, out DeletedEtagsSlice);
             Slice.From(StorageEnvironment.LabelsContext, "LastReplicatedEtags", ByteStringType.Immutable, out LastReplicatedEtagsSlice);
-            Slice.From(StorageEnvironment.LabelsContext, "GlobalTree", ByteStringType.Immutable, out GlobalTree);
-            Slice.From(StorageEnvironment.LabelsContext, "gChangeVector", ByteStringType.Immutable, out GlobalChangeVector);
+            Slice.From(StorageEnvironment.LabelsContext, "GlobalTree", ByteStringType.Immutable, out GlobalTreeSlice);
+            Slice.From(StorageEnvironment.LabelsContext, "GlobalChangeVector", ByteStringType.Immutable, out GlobalChangeVectorSlice);
             /*
             Collection schema is:
             full name
@@ -148,7 +147,6 @@ namespace Raven.Server.Documents
                 Name = DeletedEtagsSlice
             });
         }
-
 
         private readonly Logger _logger;
         private readonly string _name;
@@ -253,7 +251,7 @@ namespace Raven.Server.Documents
 
                     tx.CreateTree(DocsSlice);
                     tx.CreateTree(LastReplicatedEtagsSlice);
-                    tx.CreateTree(GlobalTree);
+                    tx.CreateTree(GlobalTreeSlice);
 
                     CollectionsSchema.Create(tx, CollectionsSlice, 32);
 
@@ -289,8 +287,8 @@ namespace Raven.Server.Documents
         public LazyStringValue GetDatabaseChangeVector(DocumentsOperationContext context)
         {
             AssertTransaction(context);
-            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTree);
-            var val = tree.Read(GlobalChangeVector);
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
+            var val = tree.Read(GlobalChangeVectorSlice);
             if (val == null)
             {
                 return context.GetLazyString(string.Empty);
@@ -311,10 +309,10 @@ namespace Raven.Server.Documents
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
-            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTree);
+            var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))
             {
-                tree.Add(GlobalChangeVector, slice);
+                tree.Add(GlobalChangeVectorSlice, slice);
             }
         }
 
@@ -545,33 +543,6 @@ namespace Raven.Server.Documents
                 if (take-- <= 0)
                     yield break;
                 yield return TableValueToDocument(context, ref result.Reader);
-            }
-        }
-
-
-        //TODO: delete this?
-        public IEnumerable<(string, long)> GetChangeVectorsFrom(DocumentsOperationContext context, string collection, long etag, int start, int take)
-        {
-            var collectionName = GetCollection(collection, throwIfDoesNotExist: false);
-            if (collectionName == null)
-                yield break;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema,
-                collectionName.GetTableName(CollectionTableType.Documents));
-
-            if (table == null)
-                yield break;
-
-            // ReSharper disable once LoopCanBeConvertedToQuery
-            foreach (var result in table.SeekForwardFrom(DocsSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
-            {
-                if (take-- <= 0)
-                    yield break;
-
-                var curEtag = TableValueToEtag((int)DocumentsTable.Etag, ref result.Reader);
-                var curChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Reader);
-
-                yield return (curChangeVector, curEtag);
             }
         }
 

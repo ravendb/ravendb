@@ -716,7 +716,7 @@ namespace Raven.Server.Documents
                 using (DocumentIdWorker.GetSliceFromId(context, name, out Slice lowerName))
                 using (GetAttachmentPartialKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, AttachmentType.Document, Slices.Empty, out Slice partialKeySlice))
                 {
-                    DeleteAttachmentDirect(context, partialKeySlice, (bool)true, name, expectedChangeVector, changeVector);
+                    DeleteAttachmentDirect(context, partialKeySlice, true, name, expectedChangeVector, changeVector);
                 }
 
                 if (updateDocument)
@@ -788,8 +788,9 @@ namespace Raven.Server.Documents
                 DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector);
             }
         }
-        //TODO: maybe redundant changeVector & currentChangeVector?
-        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, LazyStringValue expectedChangeVector, LazyStringValue changeVector)
+
+        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, 
+            LazyStringValue expectedChangeVector, LazyStringValue changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 

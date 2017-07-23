@@ -15,6 +15,7 @@ using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
 using Raven.Client.Server.Revisions;
+using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents
 {
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
         }
 
-        public DocumentsStorage.PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
+        public PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
             string expectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents
             if (context.Transaction == null)
             {
                 ThrowRequiresTransaction();
-                return default(DocumentsStorage.PutOperationResults); // never hit
+                return default(PutOperationResults); // never hit
             }
 
 #if DEBUG
@@ -55,7 +56,7 @@ namespace Raven.Server.Documents
 
             var modifiedTicks = lastModifiedTicks ?? _documentDatabase.Time.GetUtcNow().Ticks;
 
-            var table = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
+            var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
             id = BuildDocumentId(context, id, table, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
@@ -79,17 +80,17 @@ namespace Raven.Server.Documents
                 {
                     if (expectedChangeVector != null)
                     {
-                        var oldChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)DocumentsStorage.DocumentsTable.ChangeVector, ref oldValue);
+                        var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
                             ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
 
-                    oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsStorage.DocumentsTable.Data, out int oldSize), oldSize, context);
+                    oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsTable.Data, out int oldSize), oldSize, context);
                     var oldCollectionName = _documentsStorage.ExtractCollectionName(context, id, oldDoc);
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
-                    var oldFlags = DocumentsStorage.TableValueToFlags((int)DocumentsStorage.DocumentsTable.Flags, ref oldValue);
+                    var oldFlags = TableValueToFlags((int)DocumentsTable.Flags, ref oldValue);
 
                     if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
@@ -191,7 +192,7 @@ namespace Raven.Server.Documents
                 AttachmentsStorage.AssertAttachments(document, flags);
 #endif
 
-                return new DocumentsStorage.PutOperationResults
+                return new PutOperationResults
                 {
                     Etag = newEtag,
                     Id = id,
@@ -242,7 +243,7 @@ namespace Raven.Server.Documents
             }
             else
             {
-                oldChangeVector = oldValue.Pointer != null ? DocumentsStorage.TableValueToChangeVector(context, (int)DocumentsStorage.DocumentsTable.ChangeVector, ref oldValue) : null;
+                oldChangeVector = oldValue.Pointer != null ? TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue) : null;
             }
             changeVector = SetDocumentChangeVectorForLocalChange(context, lowerId, oldChangeVector, newEtag);
             return (changeVector, nonPersistentFlags);
@@ -398,7 +399,7 @@ namespace Raven.Server.Documents
 
         private static void DeleteTombstoneIfNeeded(DocumentsOperationContext context, CollectionName collectionName, byte* lowerId, int lowerSize)
         {
-            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(DocumentsStorage.TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+            var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
                 tombstoneTable.DeleteByKey(id);

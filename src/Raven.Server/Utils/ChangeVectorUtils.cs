@@ -21,20 +21,6 @@ namespace Raven.Server.Utils
 
     public static class ChangeVectorUtils
     {
-        public static Dictionary<Guid, long> ParseChangeVectorToDictionary(this string changeVector)
-        {
-            var dic = new Dictionary<Guid,long>();
-            foreach (var entry in changeVector.ToChangeVector())
-            {
-                if (dic.ContainsKey(entry.DbId))
-                {
-                    throw new InvalidDataException("Duplicated entry!");
-                }
-                dic.Add(entry.DbId,entry.Etag);
-            }
-            return dic;
-        }
-
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString)
         {
             if (localAsString == null || remoteAsString == null)
