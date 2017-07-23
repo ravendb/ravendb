@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var str = context.LastDatabaseChangeVector.ToString();
+                var str = context.LastDatabaseChangeVector;
                 var res = ChangeVectorUtils.TryUpdateChangeVector(_dbId, _replicationBatchReply.CurrentEtag, ref str);
                 context.LastDatabaseChangeVector = context.GetLazyString(str);
                 return res ? 1 : 0;

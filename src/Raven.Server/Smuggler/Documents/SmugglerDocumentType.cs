@@ -24,10 +24,10 @@ namespace Raven.Server.Smuggler.Documents
         public struct AttachmentStream : IDisposable
         {
             public Slice Base64Hash;
-            public ByteStringContext<ByteStringMemoryCache>.ExternalScope Base64HashDispose;
+            public ByteStringContext.ExternalScope Base64HashDispose;
 
             public Slice Tag;
-            public ByteStringContext<ByteStringMemoryCache>.ExternalScope TagDispose;
+            public ByteStringContext.ExternalScope TagDispose;
 
             public Stream Stream;
 

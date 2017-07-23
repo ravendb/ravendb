@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             if (it.Seek(Slices.BeforeAllKeys) == false)
                 yield break;
 
-            ByteStringContext<ByteStringMemoryCache>.InternalScope? scope = null;
+            ByteStringContext.InternalScope? scope = null;
             try
             {
                 if (string.IsNullOrEmpty(prefix) == false)
@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         }
 
         private static bool SetupPrefix(IIterator it, string prefix, TransactionOperationContext context,
-            out ByteStringContext<ByteStringMemoryCache>.InternalScope? scope)
+            out ByteStringContext.InternalScope? scope)
         {
             Slice prefixSlice;
             scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);

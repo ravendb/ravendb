@@ -297,7 +297,7 @@ namespace Voron.Data.BTrees
                         var leftPageNumber = implicitLeftNode->PageNumber;
 
                         Slice implicitLeftKeyToInsert;
-                        ByteStringContext<ByteStringMemoryCache>.ExternalScope? externalScope;
+                        ByteStringContext.ExternalScope? externalScope;
 
                         if (implicitLeftNode == actualKeyNode)
                         {

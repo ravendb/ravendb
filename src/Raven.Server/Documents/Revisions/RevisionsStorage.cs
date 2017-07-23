@@ -462,13 +462,13 @@ namespace Raven.Server.Documents.Revisions
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+            if (table.VerifyKeyExists(keySlice))
+                return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
+
             using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             using (Slice.From(context.Allocator, changeVector, out var cv))
             {
-                if (table.VerifyKeyExists(keySlice))
-                    return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
-
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(Bits.SwapBytes(newEtag));
                 tvb.Add(Bits.SwapBytes(revisionEtag));
@@ -663,7 +663,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag,
+        public ByteStringContext.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag,
             out Slice revisionsBinEntryKey, out string latestChangeVector)
         {
             var dispose = GetRevisionsBinEntryKey(context, startEtag, out revisionsBinEntryKey);
@@ -716,7 +716,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
+        private ByteStringContext.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 
@@ -785,13 +785,11 @@ namespace Raven.Server.Documents.Revisions
                 LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out int size),
+                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr),
             };
 
             var ptr = tvr.Read((int)Columns.Document, out size);
             result.Data = new BlittableJsonReaderObject(ptr, size, context);
-
-            ptr = tvr.Read((int)Columns.ChangeVector, out size);
-            result.ChangeVector = context.GetLazyString(Encodings.Utf8.GetString(ptr, size));
 
             return result;
         }

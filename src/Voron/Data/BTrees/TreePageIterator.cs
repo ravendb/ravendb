@@ -15,7 +15,7 @@ namespace Voron.Data.BTrees
         private Slice _currentKey = default(Slice);
         private Slice _currentInternalKey = default(Slice);
 
-        private ByteStringContext.ExternalScope _prevScopeDispose = default(ByteStringContext<ByteStringMemoryCache>.ExternalScope);
+        private ByteStringContext.ExternalScope _prevScopeDispose = default(ByteStringContext.ExternalScope);
 
         private bool _disposed;
 
