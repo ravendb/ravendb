@@ -112,15 +112,15 @@ namespace Raven.Server.Documents.Handlers
                 var pageSize = GetPageSize();
                 var revisions = revisionsStorage.GetRevisions(context, id, start, pageSize);
 
-                var actualEtag = revisions.Revisions.Length == 0 ? -1 : revisions.Revisions[0].Etag;
+                var actualChangeVector = revisions.Revisions.Length == 0 ? "" : revisions.Revisions[0].ChangeVector;
 
-                if (GetLongFromHeaders("If-None-Match") == actualEtag)
+                if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
 
-                HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
+                HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
 
                 int count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -155,15 +155,18 @@ namespace Raven.Server.Documents.Handlers
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out long actualEtag))
+            using (revisionsStorage.GetLatestRevisionsBinEntryEtag(context, etag, out Slice revisionsBinEntryKey, out var actualChangeVector))
             {
-                if (GetLongFromHeaders("If-None-Match") == actualEtag)
+                if (actualChangeVector != null)
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return Task.CompletedTask;
-                }
+                    if (GetStringFromHeaders("If-None-Match") == actualChangeVector)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                        return Task.CompletedTask;
+                    }
 
-                HttpContext.Response.Headers["ETag"] = "\"" + actualEtag + "\"";
+                    HttpContext.Response.Headers["ETag"] = "\"" + actualChangeVector + "\"";
+                }
 
                 int count;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

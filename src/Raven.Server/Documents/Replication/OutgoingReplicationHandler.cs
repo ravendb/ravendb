@@ -429,7 +429,7 @@ namespace Raven.Server.Documents.Replication
             public override int Execute(DocumentsOperationContext context)
             {
                 if (context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = _database.DocumentsStorage.GetDatabaseChangeVector(context);
+                    context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
                     context.LastDatabaseChangeVector);

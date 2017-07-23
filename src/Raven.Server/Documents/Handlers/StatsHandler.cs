@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
                 stats.CountOfTransformers = transformersCount;
-                var statsDatabaseChangeVector = Database.DocumentsStorage.GetDatabaseChangeVector(context);
+                var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;
                 stats.DatabaseId = ChangeVectorEntry.GuidToTruncatedBase64(Database.DocumentsStorage.Environment.DbId);
