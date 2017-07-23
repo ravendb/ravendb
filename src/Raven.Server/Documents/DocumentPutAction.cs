@@ -30,7 +30,7 @@ namespace Raven.Server.Documents
         }
 
         public DocumentsStorage.PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
-            string excpectedChangeVector,
+            string expectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
             string changeVector = null,
@@ -72,18 +72,16 @@ namespace Raven.Server.Documents
                 BlittableJsonReaderObject oldDoc = null;
                 if (oldValue.Pointer == null)
                 {
-                    if (excpectedChangeVector != null && excpectedChangeVector.Length > 0)
-                    {
-                        ThrowConcurrentExceptionOnMissingDoc(id, excpectedChangeVector);
-                    }
+                    if (string.IsNullOrEmpty(expectedChangeVector) == false)
+                        ThrowConcurrentExceptionOnMissingDoc(id, expectedChangeVector);
                 }
                 else
                 {
-                    if (excpectedChangeVector != null)
+                    if (expectedChangeVector != null)
                     {
-                        var oldChangeVector = DocumentsStorage.TableValueToChangeVector(context, 4, ref oldValue);
-                        if (excpectedChangeVector.CompareTo(oldChangeVector) != 0)
-                            ThrowConcurrentException(id, excpectedChangeVector, oldChangeVector);
+                        var oldChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)DocumentsStorage.DocumentsTable.ChangeVector, ref oldValue);
+                        if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
+                            ThrowConcurrentException(id, expectedChangeVector, oldChangeVector);
                     }
 
                     oldDoc = new BlittableJsonReaderObject(oldValue.Read((int)DocumentsStorage.DocumentsTable.Data, out int oldSize), oldSize, context);
@@ -91,7 +89,7 @@ namespace Raven.Server.Documents
                     if (oldCollectionName != collectionName)
                         ThrowInvalidCollectionNameChange(id, oldCollectionName, collectionName);
 
-                    var oldFlags = *(DocumentFlags*)oldValue.Read((int)DocumentsStorage.DocumentsTable.Flags, out int size);
+                    var oldFlags = DocumentsStorage.TableValueToFlags((int)DocumentsStorage.DocumentsTable.Flags, ref oldValue);
 
                     if ((nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
                         (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
@@ -103,7 +101,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, excpectedChangeVector, flags, oldValue);
+                var result = BuildChangeVectorAndResolveConflicts(context, id, lowerId, newEtag, document, changeVector, expectedChangeVector, flags, oldValue);
                 changeVector = result.ChangeVector;
                 nonPersistentFlags |= result.NonPersistentFlags;
 

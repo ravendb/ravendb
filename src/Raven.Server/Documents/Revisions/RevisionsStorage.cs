@@ -462,6 +462,9 @@ namespace Raven.Server.Documents.Revisions
             var newEtag = _documentsStorage.GenerateNextEtag();
 
             var table = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, RevisionsTombstonesSlice);
+            if (table.VerifyKeyExists(keySlice))
+                return; // revisions (and revisions tombstones) are immutable, we can safely ignore this 
+
             using (Slice.From(context.Allocator, collectionName.Name, out Slice collectionSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             using (Slice.From(context.Allocator, changeVector, out var cv))
@@ -660,7 +663,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag,
+        public ByteStringContext.InternalScope GetLatestRevisionsBinEntryEtag(DocumentsOperationContext context, long startEtag,
             out Slice revisionsBinEntryKey, out long latestEtag)
         {
             var dispose = GetRevisionsBinEntryKey(context, startEtag, out revisionsBinEntryKey);
@@ -713,7 +716,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
+        private ByteStringContext.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 

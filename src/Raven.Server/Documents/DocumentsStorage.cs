@@ -1514,7 +1514,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext<ByteStringMemoryCache>.ExternalScope TableValueToSlice(
+        public static ByteStringContext.ExternalScope TableValueToSlice(
             DocumentsOperationContext context, int index, ref TableValueReader tvr, out Slice slice)
         {
             var ptr = tvr.Read(index, out int size);

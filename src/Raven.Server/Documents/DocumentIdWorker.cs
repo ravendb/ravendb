@@ -14,7 +14,7 @@ namespace Raven.Server.Documents
         [ThreadStatic]
         private static JsonParserState _jsonParserState;
 
-        public static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromId<TTransaction>(
+        public static ByteStringContext.ExternalScope GetSliceFromId<TTransaction>(
             TransactionOperationContext<TTransaction> context, string id, out Slice idSlice)
             where TTransaction : RavenTransaction
         {
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
             return GetSliceFromUnicodeKey(context, id, out idSlice, buffer.Address, byteCount);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
+        private static ByteStringContext.ExternalScope GetSliceFromUnicodeKey<TTransaction>(
             TransactionOperationContext<TTransaction> context,
             string key,
             out Slice keySlice,
@@ -73,11 +73,11 @@ namespace Raven.Server.Documents
         private static readonly UTF8Encoding Encoding = new UTF8Encoding();
 
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(ByteStringContext byteStringContext, LazyStringValue str, out Slice loweredKey)
+        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext, LazyStringValue str, out Slice loweredKey)
         {
             return GetLower(byteStringContext, str.Buffer, str.Size, out loweredKey);
         }
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
+        public static ByteStringContext.InternalScope GetLower(ByteStringContext byteStringContext,  byte* str, int size, out Slice loweredKey)
         {
             var release = byteStringContext.Allocate(size, out var ptr);
             for (int i = 0; i < size; i++)
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents
             return UnlikelyGetLowerUnicode(byteStringContext, str, size, out loweredKey);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope UnlikelyGetLowerUnicode(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
+        private static ByteStringContext.InternalScope UnlikelyGetLowerUnicode(ByteStringContext byteStringContext, byte* str, int size, out Slice loweredKey)
         {
             var maxCharCount = Encoding.GetMaxCharCount(size);
             var bufferSize = maxCharCount* sizeof(char);
@@ -125,7 +125,7 @@ namespace Raven.Server.Documents
         }
 
 
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
+        public static ByteStringContext.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
         {

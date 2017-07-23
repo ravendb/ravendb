@@ -17,8 +17,8 @@ namespace Voron.Data.BTrees
             public readonly Slice FirstKey;
             public readonly Slice LastKey;
             public readonly long[] CursorPath;
-            private ByteStringContext<ByteStringMemoryCache>.Scope _firstScope;
-            private ByteStringContext<ByteStringMemoryCache>.Scope _lastScope;
+            private ByteStringContext.Scope _firstScope;
+            private ByteStringContext.Scope _lastScope;
 
             public TreePage Page;
 

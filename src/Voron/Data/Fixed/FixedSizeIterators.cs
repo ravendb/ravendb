@@ -41,7 +41,7 @@ namespace Voron.Data.Fixed
 
             public long CurrentKey { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
             public Slice Value { get { throw new InvalidOperationException("Invalid position, cannot read past end of tree"); } }
-            ByteStringContext<ByteStringMemoryCache>.Scope IFixedSizeIterator.Value(out Slice slice)
+            ByteStringContext.Scope IFixedSizeIterator.Value(out Slice slice)
             {
                 slice = new Slice();
                 return new ByteStringContext<ByteStringMemoryCache>.Scope();

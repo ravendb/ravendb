@@ -114,7 +114,8 @@ namespace Raven.Server.Documents
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
         }
 
-        public AttachmentDetails PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType, string hash, LazyStringValue expectedChangeVector, Stream stream, bool updateDocument = true)
+        public AttachmentDetails PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
+            string hash, LazyStringValue expectedChangeVector, Stream stream, bool updateDocument = true)
         {
             if (context.Transaction == null)
             {
@@ -124,7 +125,6 @@ namespace Raven.Server.Documents
 
             // Attachment etag should be generated before updating the document
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
-            LazyStringValue changeVector;
 
             using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerDocumentId))
             {
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents
 
                     DeleteTombstoneIfNeeded(context, keySlice);
 
-                    changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
+                    var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
                     Debug.Assert(changeVector != null);
                     context.LastDatabaseChangeVector = changeVector;
 
@@ -230,18 +230,18 @@ namespace Raven.Server.Documents
 
                     if (updateDocument)
                         UpdateDocumentAfterAttachmentChange(context, lowerDocumentId, documentId, tvr, changeVector);
+
+                    return new AttachmentDetails
+                    {
+                        ChangeVector = changeVector,
+                        ContentType = contentType,
+                        Name = name,
+                        DocumentId = documentId,
+                        Hash = hash,
+                        Size = stream.Length
+                    };
                 }
             }
-
-            return new AttachmentDetails
-            {
-                ChangeVector = changeVector,
-                ContentType = contentType,
-                Name = name,
-                DocumentId = documentId,
-                Hash = hash,
-                Size = stream.Length
-            };
         }
 
         /// <summary>
@@ -375,27 +375,27 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector, (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector, 
+            (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
+
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.name, out Slice lowerName, out Slice namePtr))
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.contentType, out Slice lowerContentType, out Slice contentTypePtr))
             using (GetAttachmentKey(context, lowerId, lowerIdSize, lowerName.Content.Ptr, lowerName.Size, attachment.base64Hash,
                 lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Revision, changeVector, out Slice keySlice))
+            using (table.Allocate(out TableValueBuilder tvb))
             {
-                var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                using (table.Allocate(out TableValueBuilder tvb))
-                {
-                    tvb.Add(keySlice.Content.Ptr, keySlice.Size);
-                    tvb.Add(Bits.SwapBytes(attachmentEtag));
-                    tvb.Add(namePtr);
-                    tvb.Add(contentTypePtr);
-                    tvb.Add(attachment.base64Hash);
-                    tvb.Add(context.GetTransactionMarker());
-                    tvb.Add(changeVector.Content.Ptr, changeVector.Size);
-                    table.Set(tvb);
-                }
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(Bits.SwapBytes(attachmentEtag));
+                tvb.Add(namePtr);
+                tvb.Add(contentTypePtr);
+                tvb.Add(attachment.base64Hash);
+                tvb.Add(context.GetTransactionMarker());
+                tvb.Add(changeVector.Content.Ptr, changeVector.Size);
+                table.Set(tvb);
             }
         }
 
@@ -543,7 +543,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetAttachmentKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, AttachmentType type, Slice changeVector, out Slice keySlice)
+        public ByteStringContext.InternalScope GetAttachmentKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, AttachmentType type, Slice changeVector, out Slice keySlice)
         {
             return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, base64Hash, lowerContentTypePtr, lowerContentTypeSize, KeyType.Key, type, changeVector, out keySlice);
         }
@@ -551,26 +551,26 @@ namespace Raven.Server.Documents
         // NOTE: GetAttachmentPartialKey should be called only when the document's that hold the attachment does not have a conflict.
         // In this specific case it is ensured that we have a unique partial keys.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, AttachmentType type, Slice changeVector, out Slice partialKeySlice)
+        public ByteStringContext.InternalScope GetAttachmentPartialKey(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize, AttachmentType type, Slice changeVector, out Slice partialKeySlice)
         {
             return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, lowerName, lowerNameSize, default(Slice), null, 0, KeyType.PartialKey, type, changeVector, out partialKeySlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext<ByteStringMemoryCache>.ExternalScope GetAttachmentPartialKey(DocumentsOperationContext context, Slice key,
+        public ByteStringContext.ExternalScope GetAttachmentPartialKey(DocumentsOperationContext context, Slice key,
             int base64HashSize, int lowerContentTypeSize, out Slice partialKeySlice)
         {
             return Slice.External(context.Allocator, key.Content, 0, key.Size - base64HashSize - 1 - lowerContentTypeSize, out partialKeySlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, AttachmentType type, Slice changeVector, out Slice prefixSlice)
+        public ByteStringContext.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, AttachmentType type, Slice changeVector, out Slice prefixSlice)
         {
             return GetAttachmentKeyInternal(context, lowerId, lowerIdSize, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector, out prefixSlice);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ByteStringContext<ByteStringMemoryCache>.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, Slice lowerId, AttachmentType type, Slice changeVector, out Slice prefixSlice)
+        public ByteStringContext.InternalScope GetAttachmentPrefix(DocumentsOperationContext context, Slice lowerId, AttachmentType type, Slice changeVector, out Slice prefixSlice)
         {
             return GetAttachmentKeyInternal(context, lowerId.Content.Ptr, lowerId.Size, null, 0, default(Slice), null, 0, KeyType.Prefix, type, changeVector, out prefixSlice);
         }
@@ -586,7 +586,7 @@ namespace Raven.Server.Documents
         // Revision prefix: {lowerDocumentId|r|changeVector|}
         */
 
-        private ByteStringContext<ByteStringMemoryCache>.InternalScope GetAttachmentKeyInternal(
+        private ByteStringContext.InternalScope GetAttachmentKeyInternal(
             DocumentsOperationContext context, byte* lowerId, int lowerIdSize, byte* lowerName, int lowerNameSize,
             Slice base64Hash, byte* lowerContentTypePtr, int lowerContentTypeSize, KeyType keyType, AttachmentType type,
             Slice changeVector, out Slice keySlice)
@@ -809,7 +809,7 @@ namespace Raven.Server.Documents
             var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
-            using (isPartialKey ? TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) : default(ByteStringContext<ByteStringMemoryCache>.ExternalScope))
+            using (isPartialKey ? TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) : default(ByteStringContext.ExternalScope))
             using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
             {
                 if (expectedChangeVector != null && currentChangeVector != expectedChangeVector)
