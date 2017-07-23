@@ -382,21 +382,27 @@ namespace Raven.Server.Web.System
                 {
                     case PeriodicBackupTestConnectionType.S3:
                         var s3Settings = JsonDeserializationClient.S3Settings(connectionInfo);
-                        using (var awsClient = new RavenAwsS3Client(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsRegionName))
+                        using (var awsClient = new RavenAwsS3Client(
+                            s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, 
+                            s3Settings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
                         {
                             await awsClient.GetObject(s3Settings.BucketName, s3Settings.RemoteFolderName);
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Glacier:
                         var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                        using (var galcierClient = new RavenAwsGlacierClient(glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, glacierSettings.AwsRegionName))
+                        using (var galcierClient = new RavenAwsGlacierClient(
+                            glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, 
+                            glacierSettings.AwsRegionName, cancellationToken: ServerStore.ServerShutdown))
                         {
                             await galcierClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Azure:
                         var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
-                        using (var azureClient = new RavenAzureClient(azureSettings.AccountName, azureSettings.AccountKey, azureSettings.StorageContainer))
+                        using (var azureClient = new RavenAzureClient(
+                            azureSettings.AccountName, azureSettings.AccountKey, 
+                            azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
                         {
                             await azureClient.TestConnection();
                         }

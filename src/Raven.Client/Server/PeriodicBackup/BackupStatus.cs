@@ -67,18 +67,78 @@ namespace Raven.Client.Server.PeriodicBackup
         }
     }
 
-    public class UploadToS3 : BackupStatus
+    public abstract class CloudUploadStatus : BackupStatus
+    {
+        protected CloudUploadStatus()
+        {
+            UploadProgress = new UploadProgress();
+        }
+
+        public UploadProgress UploadProgress { get; set; }
+    }
+
+    public class UploadToS3 : CloudUploadStatus
     {
         
     }
 
-    public class UploadToGlacier : BackupStatus
+    public class UploadToGlacier : CloudUploadStatus
     {
 
     }
 
-    public class UploadToAzure : BackupStatus
+    public class UploadToAzure : CloudUploadStatus
     {
 
+    }
+
+    public class UploadProgress
+    {
+        public UploadProgress()
+        {
+            UploadType = UploadType.Regular;
+        }
+
+        public long Uploaded { get; set; }
+
+        public long Total { get; set; }
+
+        public UploadState UploadState { get; private set; }
+
+        public UploadType UploadType { get; set; }
+
+        public void ChangeState(UploadState newState)
+        {
+            UploadState = newState;
+        }
+
+        public void SetTotal(long totalLength)
+        {
+            Total = totalLength;
+        }
+
+        public void UpdateUploaded(long length)
+        {
+            Uploaded += length;
+        }
+
+        public void ChangeType(UploadType newType)
+        {
+            UploadType = newType;
+        }
+    }
+
+    public enum UploadState
+    {
+        PendingUpload,
+        Uploading,
+        PendingResponse,
+        Done
+    }
+
+    public enum UploadType
+    {
+        Regular,
+        Chunked
     }
 }

@@ -25,6 +25,8 @@ namespace Raven.Client.Server.PeriodicBackup
 
         public long? LastEtag { get; set; }
 
+        public string FolderName { get; set; }
+
         public long? DurationInMs { get; set; }
 
         public long Version { get; set; }
@@ -48,6 +50,7 @@ namespace Raven.Client.Server.PeriodicBackup
             json[nameof(UploadToGlacier)] = UploadToGlacier?.ToJson();
             json[nameof(UploadToAzure)] = UploadToAzure?.ToJson();
             json[nameof(LastEtag)] = LastEtag;
+            json[nameof(FolderName)] = FolderName;
             json[nameof(DurationInMs)] = DurationInMs;
             json[nameof(Version)] = Version;
         }

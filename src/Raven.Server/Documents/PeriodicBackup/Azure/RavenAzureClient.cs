@@ -5,7 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -18,10 +17,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
+using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
@@ -29,14 +29,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
     {
         private readonly string _accountName;
         private readonly byte[] _accountKey;
+        private readonly string _containerName;
         private readonly string _serverUrlForContainer;
-        private readonly string _baseServerUrl;
-        private const string AzureStorageVersion = "2016-05-31";
-        private const int MaxUploadPutBlobInBytes = 256*1024*1024; //256MB
-        private const int OnePutBlockSizeLimitInBytes = 100*1024*1024; //100MB
-        private const long TotalBlocksSizeLimitInBytes = 475L*1024*1024*1024*1024L/100; //4.75TB
+        private readonly bool _isTest;
+        private const string AzureStorageVersion = "2017-04-17";
+        private const int MaxUploadPutBlobInBytes = 256 * 1024 * 1024; // 256MB
+        private const int OnePutBlockSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
+        private const long TotalBlocksSizeLimitInBytes = 475L * 1024 * 1024 * 1024 * 1024L / 100; // 4.75TB
 
-        public RavenAzureClient(string accountName, string accountKey, string containerName, bool isTest = false)
+        public RavenAzureClient(string accountName, string accountKey, string containerName,
+            UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null, bool isTest = false)
+            : base(uploadProgress, cancellationToken)
         {
             _accountName = accountName;
 
@@ -49,8 +52,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 throw new ArgumentException("Wrong format for account key", e);
             }
 
+            _containerName = containerName;
+
             _serverUrlForContainer = GetUrlForContainer(containerName.ToLower(), isTest);
-            _baseServerUrl = GetUrlForContainer(string.Empty, isTest);
+            _isTest = isTest;
         }
 
         private string GetUrlForContainer(string containerName, bool isTest = false)
@@ -59,31 +64,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return string.Format(template, _accountName, containerName);
         }
 
-        public async Task PutContainer()
+        private string GetBaseServerUrl()
         {
-            var url = _serverUrlForContainer + "?restype=container";
-
-            var now = SystemTime.UtcNow;
-            var content = new EmptyContent
-            {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion},
-                }
-            };
-
-            var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
-
-            var response = await client.PutAsync(url, content);
-            if (response.IsSuccessStatusCode)
-                return;
-
-            if (response.StatusCode == HttpStatusCode.Conflict)
-                return;
-
-            throw StorageException.FromResponseMessage(response);
+            var template = _isTest == false ? "https://{0}.blob.core.windows.net" : "http://localhost:10000/{0}";
+            return string.Format(template, _accountName);
         }
 
         public async Task PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
@@ -97,8 +81,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             var url = _serverUrlForContainer + "/" + key;
 
+            UploadProgress?.SetTotal(stream.Length);
+
             var now = SystemTime.UtcNow;
-            var content = new StreamContent(stream)
+            // stream is disposed by the HttpClient
+            var content = new ProgressableStreamContent(stream, UploadProgress)
             {
                 Headers =
                 {
@@ -112,10 +99,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var client = GetClient(TimeSpan.FromHours(1));
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
+            var client = GetClient(TimeSpan.FromHours(3));
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
-            var response = await client.PutAsync(url, content);
+            var response = await client.PutAsync(url, content, CancellationToken);
+            UploadProgress?.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
 
@@ -124,213 +112,98 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         private async Task PutBlockApi(string key, Stream stream, Dictionary<string, string> metadata)
         {
-            if (stream.Length > TotalBlocksSizeLimitInBytes)
-                throw new InvalidOperationException($"Can't upload more than 4.75TB to Azure, current upload size: {new Size(stream.Length).HumaneSize}");
+            var streamLength = stream.Length;
+            if (streamLength > TotalBlocksSizeLimitInBytes)
+                throw new InvalidOperationException(@"Can't upload more than 4.75TB to Azure, " +
+                                                    $"current upload size: {new Size(stream.Length).HumaneSize}");
 
-            var threads = ProcessorInfo.ProcessorCount/2 + 1;
-            //max size of in memory queue is: 500MB
-            var queue = new BlockingCollection<ByteArrayWithBlockId>(Math.Min(5, threads*2));
-            //List of block ids; the blocks will be committed in the order in this list
+            var blockNumber = 0;
             var blockIds = new List<string>();
+            var baseUrl = _serverUrlForContainer + "/" + key;
+            var client = GetClient(TimeSpan.FromDays(7));
 
-            using (var cts = new CancellationTokenSource())
-            {
-                var tasks = new Task[threads];
-                var fillQueueTask = CreateFillQueueTask(stream, blockIds, queue, cts);
-                tasks[0] = fillQueueTask;
+            UploadProgress?.SetTotal(streamLength);
+            UploadProgress?.ChangeType(UploadType.Chunked);
 
-                var baseUrl = _serverUrlForContainer + "/" + key;
-                for (var i = 1; i < threads; i++)
-                {
-                    var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
-                    var task = CreateUploadTask(queue, baseUrlForUpload, cts);
-                    tasks[i] = task;
-                }
-
-                try
-                {
-                    //wait for all tasks to complete
-                    await Task.WhenAll(tasks);
-                }
-                catch (Exception)
-                {
-                    GetExceptionsFromTasks(tasks);
-                }
-
-                //put block list
-                await PutBlockList(baseUrl, blockIds, metadata);
-            }
-        }
-
-        private static void GetExceptionsFromTasks(Task[] tasks)
-        {
-            var exceptions = new List<Exception>();
-
-            foreach (var task in tasks)
-            {
-                if (task.IsCanceled == false && task.IsFaulted == false)
-                    continue;
-
-                exceptions.Add(task.Exception);
-            }
-
-            if (exceptions.Count > 0)
-                throw new AggregateException(exceptions);
-        }
-
-        private static Task CreateFillQueueTask(Stream inputStream, List<string> blockIds,
-            BlockingCollection<ByteArrayWithBlockId> queue, CancellationTokenSource cts)
-        {
-            var fillQueueTask = Task.Run(() =>
-            {
-                // Put Block is limited to 100MB per block
-                var buffer = new byte[OnePutBlockSizeLimitInBytes];
-
-                try
-                {
-                    var blockNumber = 0;
-                    while (true)
-                    {
-                        if (cts.IsCancellationRequested)
-                            return;
-
-                        var read = inputStream.Read(buffer, 0, buffer.Length);
-                        if (read <= 0)
-                            break;
-
-                        while (read < buffer.Length)
-                        {
-                            var lastRead = inputStream.Read(buffer, read, buffer.Length - read);
-                            if (lastRead <= 0)
-                                break;
-                            read += lastRead;
-                        }
-
-                        var destination = new byte[read];
-                        Buffer.BlockCopy(buffer, 0, destination, 0, read);
-                        var blockNumberInBytes = BitConverter.GetBytes(blockNumber++);
-                        var blockIdString = Convert.ToBase64String(blockNumberInBytes);
-
-                        blockIds.Add(blockIdString);
-                        var byteArrayWithBlockId = new ByteArrayWithBlockId
-                        {
-                            StreamAsByteArray = destination,
-                            BlockId = blockIdString
-                        };
-
-                        while (queue.TryAdd(byteArrayWithBlockId, millisecondsTimeout: 200) == false)
-                        {
-                            if (cts.IsCancellationRequested)
-                                return;
-                        }
-                    }
-                }
-                catch (Exception)
-                {
-                    //if we can't read from the input stream,
-                    //we need to cancel the upload tasks
-                    cts.Cancel();
-                    throw;
-                }
-                finally
-                {
-                    queue.CompleteAdding();
-                    //we don't need the stream anymore
-                    inputStream.Dispose();
-                }
-            });
-            return fillQueueTask;
-        }
-
-        private Task CreateUploadTask(BlockingCollection<ByteArrayWithBlockId> queue,
-            string baseUrl, CancellationTokenSource cts)
-        {
-            //open http client for each task
-            //we have different authorization header for each request
-            var client = GetClient(TimeSpan.FromHours(1));
-            return Task.Run(async () =>
-            {
-                while (true)
-                {
-                    if (cts.IsCancellationRequested)
-                        return;
-
-                    ByteArrayWithBlockId byteArrayWithBlockId;
-                    while (queue.TryTake(out byteArrayWithBlockId, millisecondsTimeout: 200) == false)
-                    {
-                        if (queue.IsAddingCompleted || cts.IsCancellationRequested)
-                        {
-                            //no more streams to upload
-                            return;
-                        }
-                    }
-
-                    // upload the stream with block id
-                    var url = baseUrl + WebUtility.UrlEncode(byteArrayWithBlockId.BlockId);
-                    try
-                    {
-                        await PutBlock(byteArrayWithBlockId.StreamAsByteArray,
-                            client, url, cts, retryRequest: true);
-                    }
-                    catch (Exception)
-                    {
-                        //we failed to upload this block
-                        //there is nothing to do here and we need to cancel all of the running tasks
-                        cts.Cancel();
-                        throw;
-                    }
-                }
-            });
-        }
-
-        private class ByteArrayWithBlockId
-        {
-            public byte[] StreamAsByteArray { get; set; }
-            public string BlockId { get; set; }
-        }
-
-        private async Task PutBlock(byte[] streamAsByteArray, HttpClient client,
-            string url, CancellationTokenSource cts, bool retryRequest)
-        {
-            var now = SystemTime.UtcNow;
-            //stream is disposed by the HttpClient
-            var stream = new MemoryStream(streamAsByteArray);
-            var content = new StreamContent(stream)
-            {
-                Headers =
-                {
-                    {"x-ms-date", now.ToString("R")},
-                    {"x-ms-version", AzureStorageVersion},
-                    {"Content-Length", stream.Length.ToString(CultureInfo.InvariantCulture)}
-                }
-            };
-
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
-
-            HttpResponseMessage response = null;
             try
             {
-                response = await client.PutAsync(url, content, cts.Token);
-                if (response.IsSuccessStatusCode)
-                    return;
+                while (stream.Position < streamLength)
+                {
+                    var blockNumberInBytes = BitConverter.GetBytes(blockNumber++);
+                    var blockIdString = Convert.ToBase64String(blockNumberInBytes);
+                    blockIds.Add(blockIdString);
+
+                    var length = Math.Min(OnePutBlockSizeLimitInBytes, stream.Length - stream.Position);
+                    var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
+                    var url = baseUrlForUpload + WebUtility.UrlEncode(blockIdString);
+
+                    await PutBlock(stream, client, url, length, retryCount: 0);
+                }
+
+                // put block list
+                await PutBlockList(baseUrl, blockIds, metadata);
             }
-            catch (Exception)
+            finally
             {
-                if (cts.IsCancellationRequested)
-                    return;
-
-                if (retryRequest == false)
-                    throw;
+                UploadProgress?.ChangeState(UploadState.Done);
             }
+        }
 
-            if (retryRequest == false ||
-                (response != null && response.StatusCode == HttpStatusCode.RequestEntityTooLarge))
-                throw StorageException.FromResponseMessage(response);
+        private async Task PutBlock(Stream baseStream, HttpClient client, string url, long length, int retryCount)
+        {
+            // saving the position if we need to retry
+            var position = baseStream.Position;
+            using (var subStream = new SubStream(baseStream, offset: 0, length: length))
+            {
+                var now = SystemTime.UtcNow;
+                // stream is disposed by the HttpClient
+                var content = new ProgressableStreamContent(subStream, UploadProgress)
+                {
+                    Headers =
+                    {
+                        {"x-ms-date", now.ToString("R")},
+                        {"x-ms-version", AzureStorageVersion},
+                        {"Content-Length", subStream.Length.ToString(CultureInfo.InvariantCulture)}
+                    }
+                };
+
+                client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+
+                try
+                {
+                    var response = await client.PutAsync(url, content, CancellationToken);
+                    if (response.IsSuccessStatusCode)
+                        return;
+
+                    if (response.StatusCode == HttpStatusCode.RequestEntityTooLarge ||
+                        response.StatusCode == HttpStatusCode.Conflict ||
+                        response.StatusCode == HttpStatusCode.BadRequest)
+                        throw StorageException.FromResponseMessage(response);
+
+                    if (retryCount == 3)
+                        throw StorageException.FromResponseMessage(response);
+                    
+                }
+                catch (Exception)
+                {
+                    if (retryCount == 3)
+                        throw;
+                }
+
+                // revert the uploaded count before retry
+                UploadProgress?.UpdateUploaded(-content.Uploaded);
+            }
 
             // wait for one second before trying again to send the request
             // maybe there was a network issue?
             await Task.Delay(1000);
-            await PutBlock(streamAsByteArray, client, url, cts, retryRequest: false);
+
+            if (CancellationToken.IsCancellationRequested)
+                return;
+
+            // restore the stream position before retrying
+            baseStream.Position = position;
+            await PutBlock(baseStream, client, url, length, ++retryCount);
         }
 
         private async Task PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
@@ -354,11 +227,42 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
             var client = GetClient(TimeSpan.FromHours(1));
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put.Method, url, content.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
-            var response = await client.PutAsync(url, content);
+            var response = await client.PutAsync(url, content, CancellationToken);
             if (response.IsSuccessStatusCode)
                 return;
+
+            throw StorageException.FromResponseMessage(response);
+        }
+
+        public async Task TestConnection()
+        {
+            await GetContainer();
+        }
+
+        private async Task GetContainer()
+        {
+            var url = _serverUrlForContainer + "?restype=container";
+            var now = SystemTime.UtcNow;
+            var requestMessage = new HttpRequestMessage(HttpMethods.Get, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
+
+            var response = await client.SendAsync(requestMessage, CancellationToken);
+            if (response.IsSuccessStatusCode)
+                return;
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
 
             throw StorageException.FromResponseMessage(response);
         }
@@ -382,6 +286,33 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return doc;
         }
 
+        public async Task PutContainer()
+        {
+            var url = _serverUrlForContainer + "?restype=container";
+
+            var now = SystemTime.UtcNow;
+            var content = new EmptyContent
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
+
+            var response = await client.PutAsync(url, content, CancellationToken);
+            if (response.IsSuccessStatusCode)
+                return;
+
+            if (response.StatusCode == HttpStatusCode.Conflict)
+                return;
+
+            throw StorageException.FromResponseMessage(response);
+        }
+
         public async Task<Blob> GetBlob(string key)
         {
             var url = _serverUrlForContainer + "/" + key;
@@ -398,9 +329,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get.Method, url, requestMessage.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
 
-            var response = await client.SendAsync(requestMessage);
+            var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return null;
 
@@ -413,9 +344,36 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             return new Blob(data, headers);
         }
 
-        public async Task TestConnection()
+        public async Task DeleteContainer()
         {
-            var url = _baseServerUrl + "?comp=list&maxresults=1";
+            var url = _serverUrlForContainer + "?restype=container";
+
+            var now = SystemTime.UtcNow;
+            var requestMessage = new HttpRequestMessage(HttpMethods.Delete, url)
+            {
+                Headers =
+                {
+                    {"x-ms-date", now.ToString("R")},
+                    {"x-ms-version", AzureStorageVersion}
+                }
+            };
+
+            var client = GetClient();
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Delete, url, requestMessage.Headers);
+
+            var response = await client.SendAsync(requestMessage, CancellationToken);
+            if (response.IsSuccessStatusCode)
+                return;
+
+            if (response.StatusCode == HttpStatusCode.NotFound)
+                return;
+
+            throw StorageException.FromResponseMessage(response);
+        }
+
+        public async Task<List<string>> GetContainerNames(int maxResults)
+        {
+            var url = GetBaseServerUrl() + $"?comp=list&maxresults={maxResults}";
 
             var now = SystemTime.UtcNow;
 
@@ -429,15 +387,34 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             };
 
             var client = GetClient();
-            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get.Method, url, requestMessage.Headers);
+            client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Get, url, requestMessage.Headers);
 
-            var response = await client.SendAsync(requestMessage).ConfigureAwait(false);
-
+            var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.IsSuccessStatusCode == false)
                 throw StorageException.FromResponseMessage(response);
+
+            var containersList = new List<string>();
+
+            using (var stream = await response.Content.ReadAsStreamAsync())
+            using (var reader = new StreamReader(stream))
+            {
+                var xDocument = XDocument.Load(reader);
+
+                foreach (var node in xDocument.Descendants("Containers"))
+                {
+                    foreach (var containerNode in node.Descendants("Container"))
+                    {
+                        var nodeName = containerNode.Element("Name").Value;
+                        containersList.Add(nodeName);
+                    }
+                }
+            }
+
+            return containersList;
         }
 
-        private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(string httpMethod, string url, HttpHeaders httpHeaders)
+        private AuthenticationHeaderValue CalculateAuthorizationHeaderValue(
+            HttpMethod httpMethod, string url, HttpHeaders httpHeaders)
         {
             var stringToHash = ComputeCanonicalizedHeaders(httpMethod, httpHeaders);
             stringToHash += ComputeCanonicalizedResource(url);
@@ -454,15 +431,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             }
         }
 
-        private static string ComputeCanonicalizedHeaders(string httpMethod, HttpHeaders httpHeaders)
+        private static string ComputeCanonicalizedHeaders(HttpMethod httpMethod, HttpHeaders httpHeaders)
         {
             var headers = httpHeaders
                 .Where(x => x.Key.StartsWith("x-ms-"))
                 .OrderBy(x => x.Key);
 
-            var httpMethodToUpper = httpMethod.ToUpper();
-
-            var contentLength = httpMethodToUpper == "GET" ? string.Empty : "0";
+            var contentLength = string.Empty;
             IEnumerable<string> values;
             if (httpHeaders.TryGetValues("Content-Length", out values))
                 contentLength = values.First();
@@ -471,7 +446,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             if (httpHeaders.TryGetValues("Content-Type", out values))
                 contentType = values.First();
 
-            var stringToHash = $"{httpMethodToUpper}\n\n\n{contentLength}\n\n{contentType}\n\n\n\n\n\n\n";
+            var stringToHash = $"{httpMethod.Method}\n\n\n{contentLength}\n\n{contentType}\n\n\n\n\n\n\n";
 
             return headers.Aggregate(stringToHash, (current, header) => current + $"{header.Key.ToLower()}:{header.Value.First()}\n");
         }

@@ -11,7 +11,9 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using Microsoft.AspNetCore.WebUtilities;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
@@ -20,15 +22,20 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
     {
         public abstract string ServiceName { get; }
 
-        public const string DefaultRegion = "us-east-1";
+        protected const string DefaultRegion = "us-east-1";
 
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
 
         protected string AwsRegion { get; }
 
-        protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName)
+        protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
+            UploadProgress uploadProgress, CancellationToken? cancellationToken = null)
+            : base(uploadProgress, cancellationToken)
         {
+            if (string.IsNullOrWhiteSpace(awsRegionName))
+                awsRegionName = DefaultRegion;
+
             awsRegionName = awsRegionName.ToLower();
 
             _awsAccessKey = awsAccessKey;

@@ -10,7 +10,9 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
 
@@ -18,20 +20,23 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public class RavenAwsS3Client : RavenAwsClient
     {
-        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName)
-            : base(awsAccessKey, awsSecretKey, awsRegionName)
+        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName, 
+            UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
+            : base(awsAccessKey, awsSecretKey, awsRegionName, uploadProgress, cancellationToken)
         {
         }
 
-        public async Task PutObject(string bucketName, string key, Stream stream, Dictionary<string, string> metadata, int timeoutInSeconds)
+        public async Task PutObject(string bucketName, string key, Stream stream, Dictionary<string, string> metadata)
         {
             var url = GetUrl(bucketName) + "/" + key;
 
             var now = SystemTime.UtcNow;
 
             var payloadHash = RavenAwsHelper.CalculatePayloadHash(stream);
+            UploadProgress?.SetTotal(stream.Length);
 
-            var content = new StreamContent(stream)
+            // stream is disposed by the HttpClient
+            var content = new ProgressableStreamContent(stream, UploadProgress)
             {
                 Headers =
                 {
@@ -45,11 +50,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             var headers = ConvertToHeaders(content.Headers, bucketName);
 
-            var client = GetClient(TimeSpan.FromSeconds(timeoutInSeconds));
+            var client = GetClient(TimeSpan.FromHours(24));
             var authorizationHeaderValue = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, now, headers);
             client.DefaultRequestHeaders.Authorization = authorizationHeaderValue;
 
             var response = await client.PutAsync(url, content);
+            UploadProgress?.ChangeState(UploadState.Done);
             if (response.IsSuccessStatusCode)
                 return;
 

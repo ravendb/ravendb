@@ -58,8 +58,6 @@
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\Notifications" />
     <Folder Include="Server\Documents\Patching" />
-    <Folder Include="Server\Documents\PeriodicBackup" />
-    <Folder Include="Server\Documents\PeriodicBackup" />
     <Folder Include="Server\Documents\Revisions" />
   </ItemGroup>
 </Project>

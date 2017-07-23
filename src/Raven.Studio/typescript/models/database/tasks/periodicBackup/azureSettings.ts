@@ -70,13 +70,14 @@ class azureSettings extends backupSettings {
         this.validationGroup = ko.validatedObservable({
             storageContainer: this.storageContainer,
             remoteFolderName: this.remoteFolderName,
-            AccountName: this.accountName,
-            AccountKey: this.accountKey
+            accountName: this.accountName,
+            accountKey: this.accountKey
         });
 
         this.credentialsValidationGroup = ko.validatedObservable({
-            AccountName: this.accountName,
-            AccountKey: this.accountKey
+            storageContainer: this.storageContainer,
+            accountName: this.accountName,
+            accountKey: this.accountKey
         });
     }
 
