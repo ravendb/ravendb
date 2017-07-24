@@ -65,7 +65,7 @@ class collectionsTracker {
             this.onCollectionRemoved(toRemove);
         });
 
-        this.events.globalEtag.forEach(handler => handler(notification.GlobalDocumentsEtag));
+        //TODO this.events.globalEtag.forEach(handler => handler(notification.GlobalDocumentsEtag));
 
         changedCollections.forEach(c => {
             const existingCollection = this.collections().find(x => x.name.toLowerCase() === c.Name.toLocaleLowerCase());
@@ -143,7 +143,7 @@ class collectionsTracker {
     private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection) {
         item.documentCount(incomingData.Count);
 
-        this.events.changed.forEach(handler => handler(item, incomingData.CollectionEtag));
+        //TODO this.events.changed.forEach(handler => handler(item, incomingData.CollectionEtag));
     }
     
 }
