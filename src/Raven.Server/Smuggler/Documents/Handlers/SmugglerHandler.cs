@@ -312,6 +312,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId");
+                var fromClient = GetBoolValueQueryString("fromClient", false)?? false;
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
@@ -344,7 +345,19 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                         if (key != "importOptions")
                                             continue;
 
-                                        var blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
+                                        BlittableJsonReaderObject blittableJson;
+                                        if (fromClient)
+                                        {
+                                            using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
+                                            {
+                                                blittableJson = await context.ReadForMemoryAsync(gzipStream, "importOptions");
+                                            }
+                                        }
+                                        else
+                                        {
+                                            blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
+                                        }
+
                                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                                         continue;
                                     }

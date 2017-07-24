@@ -148,8 +148,8 @@ namespace FastTests.Smuggler
                         await session.SaveChangesAsync();
                     }
 
-                    var exportResult = await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
-                    var importResult = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    var exportOperation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    var exportResult = (SmugglerResult)exportOperation.WaitForCompletion();
 
                     var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
                     var progress = (SmugglerResult.SmugglerProgress)exportResult.Progress;
@@ -157,6 +157,9 @@ namespace FastTests.Smuggler
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
                     Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
+
+                    var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+                    var importResult = (SmugglerResult)importOperation.WaitForCompletion();
 
                     stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     progress = (SmugglerResult.SmugglerProgress)importResult.Progress;
