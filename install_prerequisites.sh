@@ -3,9 +3,9 @@
 CURL_CMD=$(which curl)
 GIT_CMD=$(which git)
 NODE_CMD=$(which node)
-DOTNET_CMD=$(which dotnet)
 POWERSHELL_CMD=$(which powershell)
 MONO_CMD=$(which mono)
+DOTNET_VERSION_CMD=`dotnet --version 2> /dev/null`
 UBUNTU_CODENAME=$(lsb_release -c | cut -d ":" -f2 | sed 's/\t//g')
 UBUNTU_VERSION=$(lsb_release -r | cut -d ":" -f2 | sed 's/\t//g')
 
@@ -21,14 +21,16 @@ if [[ $UID != 0 ]]; then
     exit 1
 fi
 
-if [ -z "$DOTNET_CMD" ] ; then
-    echo ".NETcore not found. Installing.."
+eval 
+
+if [[ ! "$DOTNET_VERSION_CMD" =~ ^1\.0\.[4-9]$ ]] ; then
+    echo ".NETcore 1.0.4 not found. Installing.."
     sudo echo "deb [arch=amd64] https://apt-mo.trafficmanager.net/repos/dotnet-release/ $UBUNTU_CODENAME main" > /etc/apt/sources.list.d/dotnetdev.list
     sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys 417A0893
     sudo apt-get update
     sudo apt-get install -y dotnet-dev-1.0.4
 else
-    echo ".NETcore is installed."
+    echo ".NETcore 1.0.4 is installed."
 fi
 
 if [ -z "$POWERSHELL_CMD" ] ; then
