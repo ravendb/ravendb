@@ -3,10 +3,9 @@ param(
     $BindTcpPort = 38888,
     $ConfigPath = "",
     $DataDir = "",
-    $DataVolumeName = "ravendb",
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
-    [switch]$AllowAnonymousUserToAccessTheServer,
+    [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun)
 
@@ -50,24 +49,15 @@ if ([string]::IsNullOrEmpty($ConfigPath) -eq $False) {
     write-host "NOTE: due to Docker Windows containers limitations entire directory holding that file is going to be visible to the container."
 }
 
-if ([string]::IsNullOrEmpty($DataDir)) {
-
-    if ([string]::IsNullOrEmpty($(docker volume ls | select-string $DataVolumeName))) {
-        docker volume create $DataVolumeName
-        write-host "Created docker volume $DataVolumeName."
-    }
-
-    $dockerArgs += "-v"
-    $dockerArgs += "$($DataVolumeName):c:/databases"
-} else {
+if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     write-host "Mounting $DataDir as RavenDB data dir."
     $dockerArgs += "-v"
     $dockerArgs += "$($DataDir):c:/databases"
 }
 
-if ($AllowAnonymousUserToAccessTheServer) {
+if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "AllowAnonymousUserToAccessTheServer=true"
+    $dockerArgs += "SecurityAuthenticationEnabled=false"
 }
 
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
