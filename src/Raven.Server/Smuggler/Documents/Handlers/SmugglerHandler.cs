@@ -85,7 +85,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             DocumentsOperationContext context;
             using (ContextPool.AllocateOperationContext(out context))
             {
-                var operationId = GetLongQueryString("operationId", required: false);
+                var operationId = GetLongQueryString("operationId", true);
 
                 var stream = TryGetRequestFormStream("DownloadOptions") ?? RequestBodyStream();
 
@@ -103,30 +103,18 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(fileName) + ".ravendbdump";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
-                if (operationId.HasValue)
+                try
                 {
-                    try
-                    {
-                        await
-                            Database.Operations.AddOperation(
-                                Database,
-                                "Export database: " + Database.Name,
-                                Operations.OperationType.DatabaseExport,
-                                onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
-                    }
-                    catch (Exception)
-                    {
-                        HttpContext.Abort();
-                    }
-
+                    await
+                        Database.Operations.AddOperation(
+                            Database,
+                            "Export database: " + Database.Name,
+                            Operations.OperationType.DatabaseExport,
+                            onProgress => Task.Run(() => ExportDatabaseInternal(options, onProgress, context, token), token.Token), operationId.Value, token);
                 }
-                else
+                catch (Exception)
                 {
-                    var result = (SmugglerResult)ExportDatabaseInternal(options, null, context, token);
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        context.Write(writer, result.ToJson());
-                    }
+                    HttpContext.Abort();
                 }
             }
         }
