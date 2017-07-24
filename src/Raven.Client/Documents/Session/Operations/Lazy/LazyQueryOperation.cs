@@ -26,8 +26,9 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                Url = $"/queries?query-hash={_queryOperation.IndexQuery.GetQueryHash(ctx)}",
+                Url = "/queries",
                 Method = HttpMethod.Post,
+                Query = $"?query-hash={_queryOperation.IndexQuery.GetQueryHash(ctx)}",
                 Content = new IndexQueryContent(_conventions, _queryOperation.IndexQuery)
             };
         }
