@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     new IndexField
                     {
                         Name = field.Name,
-                        Storage = FieldStorage.Yes,
+                        Storage = FieldStorage.No,
                         Aggregation = field.AggregationOperation,
                         Sort = SortDescriptors.FirstOrDefault(x => field.Name.Equals(x.Name))?.FieldType,
                     }).ToArray(),
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     new IndexField
                     {
                         Name = field,
-                        Storage = FieldStorage.Yes,
+                        Storage = FieldStorage.No,
                         Sort = SortDescriptors.FirstOrDefault(x => field.Equals(x.Name))?.FieldType,
                     }).ToArray());
         }

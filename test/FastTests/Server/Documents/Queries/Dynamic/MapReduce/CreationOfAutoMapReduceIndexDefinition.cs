@@ -29,38 +29,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
             }, null));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
-            {
-                new IndexField
-                {
-                    Name = "test",
-                    Storage = FieldStorage.Yes
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "location",
-                    Storage = FieldStorage.No
-                }
-            }));
-
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
-            {
-                new IndexField
-                {
-                    Name = "test",
-                    Storage = FieldStorage.No
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "location",
-                    Storage = FieldStorage.Yes
-                }
-            }));
-
             new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField

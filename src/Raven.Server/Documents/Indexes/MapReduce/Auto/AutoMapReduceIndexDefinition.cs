@@ -15,18 +15,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
             : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
         {
-            foreach (var field in mapFields)
-            {
-                if (field.Storage != FieldStorage.Yes)
-                    throw new ArgumentException($"Map-reduce field has to be stored. Field name: {field.Name}");
-            }
-
-            foreach (var field in groupByFields)
-            {
-                if (field.Storage != FieldStorage.Yes)
-                    throw new ArgumentException($"GroupBy field has to be stored. Field name: {field.Name}");
-            }
-
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
         }
 
