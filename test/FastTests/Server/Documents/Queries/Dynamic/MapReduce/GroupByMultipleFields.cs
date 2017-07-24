@@ -251,47 +251,85 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]
-        public void Select_does_not_allow_to_specify_composite_group_by_directly()
+        public void Select_composite_group_by_key()
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var ex = Assert.Throws<NotSupportedException>(() =>
-                        session.Query<Order>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .GroupBy(x => new
-                            {
-                                x.Employee,
-                                x.Company
-                            })
-                            .Select(x => new
-                            {
-                                x.Key, // not allowed, need to specify x.Key.Employee and x.Key.Company
-                                Count = x.Count()
-                            })
-                            .OrderBy(x => x.Count)
-                            .ToList());
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
 
-                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+                    session.Store(new Order
+                    {
+                        Employee = "employees/1",
+                        Company = "companies/2"
+                    });
 
-                    ex = Assert.Throws<NotSupportedException>(() =>
-                        session.Query<Order>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .GroupBy(x => new GroupByEmployeeAndCompany
-                            {
-                                Employee = x.Employee,
-                                Company = x.Company
-                            })
-                            .Select(x => new OrderByCompositeKeyReduceResult
-                            {
-                                GroupByEmployeeAndCompany = x.Key, // not allowed
-                                Count = x.Count()
-                            })
-                            .OrderBy(x => x.Count)
-                            .ToList());
+                    session.Store(new Order
+                    {
+                        Employee = "employees/2",
+                        Company = "companies/2"
+                    });
 
-                    Assert.Equal("Cannot specify composite key of GroupBy directly in Select statement. Specify each field of the key separately.", ex.InnerException.Message);
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var orders = session.Query<Order>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => new
+                        {
+                            x.Employee,
+                            x.Company
+                        })
+                        .Select(x => new
+                        {
+                            x.Key,
+                            Count = x.Count()
+                        })
+                        .OrderBy(x => x.Count)
+                        .ToList();
+
+                    Assert.Equal(2, orders.Count);
+
+                    Assert.Equal(1, orders[0].Count);
+                    Assert.Equal("employees/2", orders[0].Key.Employee);
+                    Assert.Equal("companies/2", orders[0].Key.Company);
+
+                    Assert.Equal(2, orders[1].Count);
+                    Assert.Equal("employees/1", orders[1].Key.Employee);
+                    Assert.Equal("companies/2", orders[1].Key.Company);
+
+
+                    var orders2 = session.Query<Order>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .GroupBy(x => new GroupByEmployeeAndCompany
+                        {
+                            Employee = x.Employee,
+                            Company = x.Company
+                        })
+                        .Select(x => new OrderByCompositeKeyReduceResult
+                        {
+                            GroupByEmployeeAndCompany = x.Key, // not allowed
+                            Count = x.Count()
+                        })
+                        .OrderBy(x => x.Count)
+                        .ToList();
+
+                    Assert.Equal(2, orders2.Count);
+
+                    Assert.Equal(1, orders2[0].Count);
+                    Assert.Equal("employees/2", orders2[0].GroupByEmployeeAndCompany.Employee);
+                    Assert.Equal("companies/2", orders2[0].GroupByEmployeeAndCompany.Company);
+
+                    Assert.Equal(2, orders2[1].Count);
+                    Assert.Equal("employees/1", orders2[1].GroupByEmployeeAndCompany.Employee);
+                    Assert.Equal("companies/2", orders2[1].GroupByEmployeeAndCompany.Company);
                 }
             }
         }

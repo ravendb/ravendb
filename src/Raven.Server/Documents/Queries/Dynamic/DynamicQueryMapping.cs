@@ -177,42 +177,54 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IsMapReduce = true;
 
-                foreach (var selectField in query.Metadata.SelectFields)
+                foreach (var field in query.Metadata.SelectFields)
                 {
-                    if (mapFields.TryGetValue(selectField.Name, out var existingField) == false)
+                    if (field.IsGroupByKey == false)
                     {
-                        switch (selectField.AggregationOperation)
+                        var fieldName = field.Name;
+
+                        if (mapFields.TryGetValue(fieldName, out var existingField) == false)
                         {
-                            case AggregationOperation.None:
-                                break;
-                            case AggregationOperation.Count:
-                            case AggregationOperation.Sum:
-                                mapFields[selectField.Name] = new DynamicQueryMappingItem(selectField.Name, selectField.AggregationOperation);
-                                if (sorting.TryGetValue(selectField.Name, out var _) == false)
-                                {
-                                    sorting[selectField.Name] = new DynamicSortInfo()
+                            switch (field.AggregationOperation)
+                            {
+                                case AggregationOperation.None:
+                                    break;
+                                case AggregationOperation.Count:
+                                case AggregationOperation.Sum:
+                                    mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
+                                    if (sorting.TryGetValue(fieldName, out var _) == false)
                                     {
-                                        FieldType = SortOptions.Numeric,
-                                        Name = selectField.Name
-                                    };
-                                }
-                                break;
-                            default:
-                                ThrowUnknownAggregationOperation(selectField.AggregationOperation);
-                                break;
+                                        sorting[fieldName] = new DynamicSortInfo()
+                                        {
+                                            FieldType = SortOptions.Numeric,
+                                            Name = fieldName
+                                        };
+                                    }
+                                    break;
+                                default:
+                                    ThrowUnknownAggregationOperation(field.AggregationOperation);
+                                    break;
+                            }
                         }
-                    }
-                    else if (selectField.AggregationOperation != AggregationOperation.None)
-                    {
-                        existingField.AggregationOperation = selectField.AggregationOperation;
+                        else if (field.AggregationOperation != AggregationOperation.None)
+                        {
+                            existingField.AggregationOperation = field.AggregationOperation;
+                        }
+                        else
+                        {
+                            Debug.Assert(query.Metadata.GroupBy.Contains(fieldName));
+                            // the field was specified in GROUP BY and WHERE
+                            // let's remove it since GROUP BY fields are passed separately
+
+                            mapFields.Remove(fieldName);
+                        }
                     }
                     else
                     {
-                        Debug.Assert(query.Metadata.GroupBy.Contains(selectField.Name));
-                        // the field was specified in GROUP BY and WHERE
-                        // let's remove it since GROUP BY fields are passed separately
-
-                        mapFields.Remove(selectField.Name);
+                        foreach (var groupBy in field.GroupByKeys)
+                        {
+                            mapFields.Remove(groupBy);
+                        }
                     }
                 }
 

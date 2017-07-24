@@ -10,7 +10,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class QueryMetadata
     {
-        private const string GroupByKeyFieldMarker = "__groupByKey";
         private const string CountFieldName = "Count";
 
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
@@ -70,14 +69,6 @@ namespace Raven.Server.Documents.Queries
 
         private void Build(BlittableJsonReaderObject parameters)
         {
-            if (Query.Select != null)
-                FillSelectFields();
-            else
-            {
-                if (IsGroupBy)
-                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()");
-            }
-            
             if (Query.GroupBy != null)
             {
                 GroupBy = new string[Query.GroupBy.Count];
@@ -86,8 +77,13 @@ namespace Raven.Server.Documents.Queries
                     GroupBy[i] = QueryExpression.Extract(Query.QueryText, Query.GroupBy[i]);
             }
 
-            if (IsGroupBy)
-                AdjustGroupByFieldNames();
+            if (Query.Select != null)
+                FillSelectFields();
+            else
+            {
+                if (IsGroupBy)
+                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()");
+            }
 
             if (Query.Where != null)
                 new FillWhereFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
@@ -121,38 +117,35 @@ namespace Raven.Server.Documents.Queries
                 {
                     case OperatorType.Field:
                         var name = QueryExpression.Extract(Query.QueryText, expression.Field);
-                        fields.Add(new SelectField(name, alias));
+                        fields.Add(SelectField.Create(name, alias));
                         break;
                     case OperatorType.Method:
                         if (IsGroupBy)
                         {
                             var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
-                            string fieldName = null;
 
                             if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
                             {
                                 switch (methodName)
                                 {
                                     case "key":
-                                        fieldName = GroupByKeyFieldMarker;
-
-                                        if (alias == null)
-                                            throw new NotSupportedException("TODO arek - an alias after key() is mandatory at the moment e.g. 'SELECT key() as City ...'");
-
+                                        fields.Add(SelectField.CreateGroupByKeyField(alias, GroupBy));
                                         break;
                                     default:
-                                        throw new NotSupportedException($"Unknown aggregation method: '{methodName}'");
+                                        ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName);
+                                        break;
                                 }
                             }
                             else
                             {
+                                string fieldName = null;
+
                                 switch (aggregation)
                                 {
                                     case AggregationOperation.Count:
                                         fieldName = CountFieldName;
                                         break;
                                     case AggregationOperation.Sum:
-
                                         if (expression.Arguments == null)
                                             throw new InvalidOperationException("TODO arek");
                                         if (expression.Arguments.Count != 1)
@@ -162,13 +155,12 @@ namespace Raven.Server.Documents.Queries
 
                                         fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
                                         break;
-
                                 }
+
+                                Debug.Assert(fieldName != null);
+
+                                fields.Add(SelectField.CreateGroupByAggregation(fieldName, alias, aggregation));
                             }
-
-                            Debug.Assert(fieldName != null);
-
-                            fields.Add(new SelectField(fieldName, alias, aggregation));
 
                             break;
                         }
@@ -188,7 +180,15 @@ namespace Raven.Server.Documents.Queries
                 SelectFields[i] = field;
 
                 if (field.Alias != null)
-                    _aliasToName[field.Alias] = field.Name;
+                {
+                    if (field.IsGroupByKey == false)
+                        _aliasToName[field.Alias] = field.Name;
+                    else
+                    {
+                        if (field.GroupByKeys.Length == 1)
+                            _aliasToName[field.Alias] = field.GroupByKeys[0];
+                    }
+                }
             }
         }
 
@@ -198,27 +198,6 @@ namespace Raven.Server.Documents.Queries
                 return indexFieldName;
 
             return fieldNameOrAlias;
-        }
-
-        private void AdjustGroupByFieldNames()
-        {
-            for (int i = 0; i < SelectFields.Length; i++)
-            {
-                var selectField = SelectFields[i];
-
-                if (selectField.Name.Equals(GroupByKeyFieldMarker) == false)
-                    continue;
-
-                if (GroupBy.Length == 1)
-                {
-                    var realFieldName = GroupBy[0];
-
-                    SelectFields[i] = new SelectField(realFieldName, selectField.Alias, selectField.AggregationOperation);
-                    _aliasToName[selectField.Alias] = realFieldName;
-                }
-                else
-                    throw new NotImplementedException("TODO arek");
-            }
         }
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)
@@ -235,6 +214,11 @@ namespace Raven.Server.Documents.Queries
             //TODO arek
             //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
             //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
+        }
+
+        private static void ThrowUnknownAggregationMethodInSelectOfGroupByQuery(string methodName)
+        {
+            throw new NotSupportedException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'");
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor

@@ -407,7 +407,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             var fieldsToFetch = string.IsNullOrWhiteSpace(query.DocumentId)
-                ? _searcher.Doc(baseDocId, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().Select(x => new SelectField(x)).ToArray()
+                ? _searcher.Doc(baseDocId, _state).GetFields().Cast<AbstractField>().Select(x => x.Name).Distinct().Select(x => SelectField.Create(x, null)).ToArray()
                 : null;
 
             var retriever = createRetriever(fieldsToFetch);

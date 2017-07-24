@@ -64,16 +64,30 @@ namespace Raven.Server.Documents.Queries
             {
                 var selectField = selectFields[i];
 
-                if (string.IsNullOrWhiteSpace(selectField.Name))
-                    continue;
+                var selectFieldName = selectField.Name;
+
+                if (string.IsNullOrWhiteSpace(selectFieldName))
+                {
+                    if (selectField.IsGroupByKey == false)
+                        continue;
+
+                    if (selectField.GroupByKeys.Length == 1)
+                        selectFieldName = selectField.GroupByKeys[0];
+                    else
+                    {
+                        var projectedName = selectField.Alias ?? "Key";
+                        result[projectedName] = new FieldToFetch(projectedName, selectField.GroupByKeys);
+                        continue;
+                    }
+                }
 
                 if (indexDefinition == null)
                 {
-                    result[selectField.Name] = new FieldToFetch(selectField.Name, selectField.Alias, false);
+                    result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, false);
                     continue;
                 }
 
-                if (selectField.Name[0] == '_' && selectField.Name == Constants.Documents.Indexing.Fields.AllStoredFields)
+                if (selectFieldName[0] == '_' && selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
                 {
                     if (result.Count > 0)
                         result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
@@ -94,11 +108,11 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 IndexField value;
-                var extract = indexDefinition.TryGetField(selectField.Name, out value) && value.Storage == FieldStorage.Yes;
+                var extract = indexDefinition.TryGetField(selectFieldName, out value) && value.Storage == FieldStorage.Yes;
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[selectField.Name] = new FieldToFetch(selectField.Name, selectField.Alias, extract | indexDefinition.HasDynamicFields);
+                result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, extract | indexDefinition.HasDynamicFields);
             }
 
             if (indexDefinition != null)
@@ -121,11 +135,23 @@ namespace Raven.Server.Documents.Queries
                 CanExtractFromIndex = canExtractFromIndex;
             }
 
+            public FieldToFetch(string projectedName, string[] components)
+            {
+                ProjectedName = projectedName;
+                Components = components;
+                IsCompositeField = true;
+                CanExtractFromIndex = false;
+            }
+
             public readonly StringSegment Name;
 
             public readonly string ProjectedName;
 
             public readonly bool CanExtractFromIndex;
+
+            public readonly bool IsCompositeField;
+
+            public readonly string[] Components;
         }
     }
 }
