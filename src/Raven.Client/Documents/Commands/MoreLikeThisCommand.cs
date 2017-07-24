@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Commands
                 )
             };
 
-            url = $"{node.Url}/databases/{node.Database}/queries?op=morelikethis";
+            url = $"{node.Url}/databases/{node.Database}/queries?op=morelikethis&query-hash={_query.GetQueryHash(_context)}";
             return request;
         }
 

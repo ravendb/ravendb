@@ -6,7 +6,10 @@
 
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices.ComTypes;
 using Raven.Client.Extensions;
+using Sparrow;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -20,40 +23,33 @@ namespace Raven.Client.Documents.Queries
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }
 
-        public uint GetQueryHash()
+        public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            unchecked
+            using (var hasher = new QueryHashCalculator(ctx))
             {
-                var hashCode = Query?.GetHashCode() ?? 0;
-                if (Transformer != null)
-                    hashCode = (hashCode * 397) ^ Transformer.GetHashCode();
-
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResults.GetHashCode();
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
-                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (CutoffEtag?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
-                hashCode = (hashCode * 397) ^ AllowMultipleIndexEntriesForSameDocumentToResultTransformer.GetHashCode();
-                hashCode = (hashCode * 397) ^ SkipDuplicateChecking.GetHashCode();
-                hashCode = (hashCode * 397) ^ ExplainScores.GetHashCode();
-                hashCode = (hashCode * 397) ^ ShowTimings.GetHashCode();
-
-                hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ PageSize;
-
-                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(Includes);
-
-                if (HighlighterKeyName != null)
-                    hashCode = (hashCode * 397) ^ HighlighterKeyName.GetHashCode();
-
-                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(HighlightedFields);
-                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(HighlighterPreTags);
-                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(HighlighterPostTags);
-
-                if (QueryParameters != null)
-                    hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(QueryParameters);
-
-                return (uint)hashCode;
+                hasher.Write(Query);
+                hasher.Write (WaitForNonStaleResults);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
+                hasher.Write(DisableCaching);
+                hasher.Write(SkipDuplicateChecking);
+                hasher.Write(ShowTimings);
+                hasher.Write(ExplainScores);
+                hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
+                hasher.Write(CutoffEtag);
+                hasher.Write(Start);
+                hasher.Write(PageSize);
+                hasher.Write(Includes);
+                hasher.Write(HighlighterKeyName);
+                hasher.Write(HighlighterPreTags);
+                hasher.Write(HighlighterPostTags);
+                hasher.Write(HighlightedFields);
+                hasher.Write(QueryParameters);
+                hasher.Write(TransformerParameters);
+                hasher.Write(Transformer);
+                
+                return hasher.GetHash();
             }
         }
     }

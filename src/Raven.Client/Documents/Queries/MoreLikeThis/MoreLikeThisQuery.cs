@@ -1,10 +1,40 @@
 using System;
 using System.Collections.Generic;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
     public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
     {
+        public ulong GetQueryHash(JsonOperationContext ctx)
+        {
+            using (var hasher = new QueryHashCalculator(ctx))
+            {
+                hasher.Write(Query);
+                hasher.Write(DocumentId);
+                hasher.Write(Fields);
+                hasher.Write(MaximumDocumentFrequency);
+                hasher.Write(MaximumDocumentFrequencyPercentage);
+                hasher.Write(MaximumNumberOfTokensParsed);
+                hasher.Write(MaximumQueryTerms);
+                hasher.Write(MaximumWordLength);
+                hasher.Write(MinimumDocumentFrequency);
+                hasher.Write(MinimumTermFrequency);
+                hasher.Write(MinimumWordLength);
+                hasher.Write(PageSize);
+                hasher.Write(Includes);
+                hasher.Write(StopWordsDocumentId);
+                hasher.Write(Transformer);
+                hasher.Write(TransformerParameters);
+                hasher.Write(Boost);
+                hasher.Write(BoostFactor);
+                hasher.Write(MapGroupFields);
+                hasher.Write(BoostFactor);
+                hasher.Write(BoostFactor);
+                hasher.Write(BoostFactor);
+                return hasher.GetHash();
+            }
+        }
     }
 
     public abstract class MoreLikeThisQuery<T> : IIndexQuery

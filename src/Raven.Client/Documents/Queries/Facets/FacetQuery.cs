@@ -6,6 +6,7 @@
 
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
@@ -32,28 +33,22 @@ namespace Raven.Client.Documents.Queries.Facets
             return result;
         }
 
-        public uint GetQueryHash()
+        public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            unchecked
+            using (var hasher = new QueryHashCalculator(ctx))
             {
-                var hashCode = Query?.GetHashCode() ?? 0;
-                if (FacetSetupDoc != null)
-                    hashCode = (hashCode * 397) ^ FacetSetupDoc.GetHashCode();
-
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResults.GetHashCode();
-                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
-                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (CutoffEtag?.GetHashCode() ?? 0);
-
-                hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ PageSize;
-
-                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(Facets);
-
-                if (QueryParameters != null)
-                    hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(QueryParameters);
-
-                return (uint)hashCode;
+                hasher.Write(Query);
+                hasher.Write (WaitForNonStaleResults);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
+                hasher.Write(CutoffEtag);
+                hasher.Write(Start);
+                hasher.Write(PageSize);
+                hasher.Write(QueryParameters);
+                hasher.Write(FacetSetupDoc);
+                hasher.Write(Facets);
+                return hasher.GetHash();
             }
         }
     }

@@ -35,8 +35,8 @@ namespace Raven.Client.Documents.Commands
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
-                .Append("/queries?op=facets&hash=")
-                .Append(_query.GetQueryHash());
+                .Append("/queries?op=facets&query-hash=")
+                .Append(_query.GetQueryHash(_context));
 
             var request = new HttpRequestMessage
             {
