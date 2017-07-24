@@ -37,6 +37,7 @@ import eventsCollector = require("common/eventsCollector");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import footer = require("common/shell/footer");
 import feedback = require("viewmodels/shell/feedback");
+import continueTest = require("common/shell/continueTest");
 
 import protractedCommandsDetector = require("common/notifications/protractedCommandsDetector");
 import requestExecution = require("common/notifications/requestExecution");
@@ -49,12 +50,11 @@ class shell extends viewModelBase {
     private router = router;
     static studioConfigDocumentId = "Raven/StudioConfig";
 
-    showContinueTestButton = ko.pureComputed(() => viewModelBase.hasContinueTestOption()); //TODO:
-    
     notificationCenter = notificationCenter.instance;
     collectionsTracker = collectionsTracker.default;
     footer = footer.default;
     clusterManager = clusterTopologyManager.default;
+    continueTest = continueTest.default;
 
     static serverBuildVersion = ko.observable<serverBuildVersionDto>();
     static serverMainVersion = ko.observable<number>(4);

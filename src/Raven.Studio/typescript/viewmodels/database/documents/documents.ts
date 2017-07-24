@@ -26,6 +26,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
+import continueTest = require("common/shell/continueTest");
 
 class documents extends viewModelBase {
 
@@ -104,6 +105,9 @@ class documents extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
+
+        continueTest.default.init(args);
+
         this.updateHelpLink("G8CDCP");
 
         this.collectionToSelectName = args ? args.collection : null;
