@@ -14,12 +14,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
-        public QueryOperator DefaultOperator { get; set; }
-
-        public string DefaultField { get; set; }
-
-        public bool IsDistinct { get; set; }
-
         [JsonIgnore]
         public QueryMetadata Metadata { get; private set; }
 
@@ -41,7 +35,7 @@ namespace Raven.Server.Documents.Queries
 
         public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
         {
-             var result = JsonDeserializationServer.IndexQuery(json);
+            var result = JsonDeserializationServer.IndexQuery(json);
 
             if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
                 result.PageSize = int.MaxValue;
@@ -88,21 +82,11 @@ namespace Raven.Server.Documents.Queries
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
                             break;
-                        case "operator":
-                            result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?
-                                                            QueryOperator.And : QueryOperator.Or;
-                            break;
-                        case "defaultField":
-                            result.DefaultField = item.Value;
-                            break;
                         case "include":
                             if (includes == null)
                                 includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                             includes.Add(item.Value[0]);
-                            break;
-                        case "distinct":
-                            result.IsDistinct = bool.Parse(item.Value[0]);
                             break;
                         case "transformer":
                             result.Transformer = item.Value[0];

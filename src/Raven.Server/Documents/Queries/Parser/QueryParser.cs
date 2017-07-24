@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = {">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "("};
-        private static readonly string[] BinaryOperators = {"OR", "AND"};
-        private static readonly string[] StaticValues = {"true", "false", "null"};
-        private static readonly string[] OrderByOptions = {"ASC", "DESC", "ASCENDING", "DESCENDING"};
+        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "(" };
+        private static readonly string[] BinaryOperators = { "OR", "AND" };
+        private static readonly string[] StaticValues = { "true", "false", "null" };
+        private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
         private static readonly string[] OrderByAsOptions = { "string", "long", "double", "alphaNumeric" };
 
 
@@ -32,11 +32,12 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 QueryText = Scanner.Input
             };
+
             if (Scanner.TryScan("SELECT"))
-                q.Select = SelectOrWithClause("SELECT");
+                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
 
             if (Scanner.TryScan("WITH"))
-                q.With= SelectOrWithClause("WITH");
+                q.With = SelectOrWithClause("WITH", out _);
 
             q.From = FromClause();
 
@@ -116,9 +117,11 @@ namespace Raven.Server.Documents.Queries.Parser
             return orderBy;
         }
 
-        private List<(QueryExpression, FieldToken)> SelectOrWithClause(string clause)
+        private List<(QueryExpression, FieldToken)> SelectOrWithClause(string clause, out bool isDistinct)
         {
             var select = new List<(QueryExpression Expr, FieldToken Id)>();
+
+            isDistinct = Scanner.TryScan("DISTINCT");
 
             do
             {
@@ -198,7 +201,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 if (!Scanner.FromIdentifier() && !Scanner.String())
                     ThrowParseException("Expected FROM source");
-                
+
                 field = new FieldToken
                 {
                     TokenLength = Scanner.TokenLength,
@@ -325,7 +328,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             op = right;
                             return true;
                     }
-                    
+
                     break;
             }
             op = new QueryExpression

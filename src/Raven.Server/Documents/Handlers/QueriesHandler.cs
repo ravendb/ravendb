@@ -102,7 +102,7 @@ namespace Raven.Server.Documents.Handlers
 
         private async Task FacetedQuery(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
         {
-            var query = GetFacetQuery(context, method);
+            var query = await GetFacetQuery(context, method);
             if (query.FacetQuery.FacetSetupDoc == null && (query.FacetQuery.Facets == null || query.FacetQuery.Facets.Count == 0))
                 throw new InvalidOperationException("One of the required parameters (facetDoc or facets) was not specified.");
 
@@ -191,12 +191,11 @@ namespace Raven.Server.Documents.Handlers
             return MoreLikeThisQueryServerSide.Create(json);
         }
 
-        private (FacetQueryServerSide FacetQuery, long? FacetsEtag) GetFacetQuery(JsonOperationContext context, HttpMethod method)
+        private async Task<(FacetQueryServerSide FacetQuery, long? FacetsEtag)> GetFacetQuery(JsonOperationContext context, HttpMethod method)
         {
             if (method == HttpMethod.Get)
             {
-                //FacetQueryServerSide.Parse(HttpContext, GetStart(), GetPageSize(), context);
-                throw new NotImplementedException();
+                return await FacetQueryServerSide.Create(HttpContext, GetStart(), GetPageSize(), context);
             }
 
             var json = context.ReadForMemory(RequestBodyStream(), "facet/query");

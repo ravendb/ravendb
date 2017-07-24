@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Queries
             Query = qp.Parse();
 
             IsDynamic = Query.From.Index == false;
+            IsDistinct = Query.IsDistinct;
+            IsGroupBy = Query.GroupBy != null;
 
             var fromToken = Query.From.From;
 
@@ -29,10 +31,10 @@ namespace Raven.Server.Documents.Queries
             else
                 IndexName = QueryExpression.Extract(Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
 
-            IsGroupBy = Query.GroupBy != null;
-
             Build(parameters);
         }
+
+        public readonly bool IsDistinct;
 
         public readonly bool IsDynamic;
 
@@ -90,7 +92,7 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.OrderBy != null)
             {
-                OrderBy = new (string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
+                OrderBy = new(string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
 
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
@@ -296,7 +298,7 @@ namespace Raven.Server.Documents.Queries
                 var firstArgumentAsExpression = firstArgument as QueryExpression;
                 if (firstArgumentAsExpression != null)
                 {
-                    VisitMethodTokens(firstArgumentAsExpression, parameters);
+                    Visit(firstArgumentAsExpression, parameters);
                     return;
                 }
 

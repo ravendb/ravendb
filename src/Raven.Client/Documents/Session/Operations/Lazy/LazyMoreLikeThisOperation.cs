@@ -36,7 +36,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                Url = "/queries?op=facets",
+                Url = "/queries",
+                Query = "?op=morelikethis",
                 Method = HttpMethod.Post,
                 Content = new MoreLikeThisQueryContent(_conventions, _query)
             };

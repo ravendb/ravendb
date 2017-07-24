@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 CutoffEtag = query.CutoffEtag,
                 Query = query.Query,
+                QueryParameters = query.QueryParameters,
                 WaitForNonStaleResults = query.WaitForNonStaleResults,
                 WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResultsTimeout = query.WaitForNonStaleResultsTimeout,
@@ -34,14 +35,6 @@ namespace Raven.Client.Documents.Queries.Facets
 
     public abstract class FacetQuery<T> : IndexQueryBase<T>
     {
-        public string[] FieldsToFetch { get; set; }
-
-        public QueryOperator DefaultOperator { get; set; }
-
-        public string DefaultField { get; set; }
-
-        public bool IsDistinct { get; set; }
-
         /// <summary>
         /// Id of a facet setup document that can be found in database containing facets (mutually exclusive with Facets).
         /// </summary>

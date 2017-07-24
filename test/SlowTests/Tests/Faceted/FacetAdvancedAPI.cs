@@ -139,7 +139,7 @@ namespace SlowTests.Tests.Faceted
             var facet = TriggerConversion(edgeCaseFacet);
             Assert.Equal(2, facet.Ranges.Count);
             Assert.False(string.IsNullOrWhiteSpace(facet.Ranges[0]));
-            Assert.Equal(@"[2001\-12\-05T00\:00\:00.0000000 TO 2010\-12\-05T00\:00\:00.0000000]", facet.Ranges[1]);
+            Assert.Equal(@"[2001-12-05T00:00:00.0000000 TO 2010-12-05T00:00:00.0000000]", facet.Ranges[1]);
         }
 
         private bool AreFacetsEqual(Facet left, Facet right)

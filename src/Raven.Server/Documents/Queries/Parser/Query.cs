@@ -6,6 +6,7 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class Query
     {
+        public bool IsDistinct;
         public QueryExpression Where;
         public (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) From;
         public List<(QueryExpression Expression, FieldToken Alias)> Select;
@@ -13,17 +14,17 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<(FieldToken Field, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
         public string QueryText;
-        
+
         public override string ToString()
         {
             var writer = new StringWriter();
-            if(Select != null)
+            if (Select != null)
             {
-                WriteSelectOrWith("SELECT", writer, Select);
+                WriteSelectOrWith("SELECT", writer, Select, IsDistinct);
             }
-            if(With != null)
+            if (With != null)
             {
-                WriteSelectOrWith("WITH", writer, With);
+                WriteSelectOrWith("WITH", writer, With, isDistinct: false);
             }
             writer.Write("FROM ");
             if (From.Index)
@@ -49,7 +50,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 writer.Write(" AS ");
                 writer.Write(QueryExpression.Extract(QueryText, From.Alias.TokenStart, From.Alias.TokenLength, From.Alias.EscapeChars));
             }
-            
+
             writer.WriteLine();
             if (GroupBy != null)
             {
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 writer.WriteLine();
             }
-            if(Where != null)
+            if (Where != null)
             {
                 writer.Write("WHERE ");
                 Where.ToString(QueryText, writer);
@@ -78,7 +79,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         writer.Write(", ");
                     var f = OrderBy[index];
                     writer.Write(QueryExpression.Extract(QueryText, f.Field.TokenStart, f.Field.TokenLength, f.Field.EscapeChars));
-                    if(f.Ascending == false)
+                    if (f.Ascending == false)
                         writer.Write(" DESC");
                 }
                 writer.WriteLine();
@@ -86,10 +87,13 @@ namespace Raven.Server.Documents.Queries.Parser
             return writer.GetStringBuilder().ToString();
         }
 
-        private void WriteSelectOrWith(string clause,StringWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems)
+        private void WriteSelectOrWith(string clause, StringWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems, bool isDistinct)
         {
             writer.Write(clause);
             writer.Write(" ");
+            if (isDistinct)
+                writer.Write("DISTINCT ");
+
             for (var index = 0; index < clauseItems.Count; index++)
             {
                 if (index != 0)
@@ -124,7 +128,7 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WritePropertyName("Source");
             QueryExpression.WriteValue(QueryText, writer, From.From.TokenStart, From.From.TokenLength,
                       From.From.EscapeChars);
-            if(From.Filter != null)
+            if (From.Filter != null)
             {
                 writer.WritePropertyName("Filter");
                 From.Filter.ToJsonAst(QueryText, writer);
@@ -147,7 +151,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
                 writer.WriteEndArray();
             }
-            
+
             if (Where != null)
             {
                 writer.WritePropertyName("Where");

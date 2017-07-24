@@ -45,9 +45,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             return new GetRequest
             {
                 Url = "/docs",
-                Query = "?" +
-                    string.Format(
-                        "startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&startAfter={5}",
+                Query = string.Format(
+                        "?startsWith={0}&matches={3}&exclude={4}&start={1}&pageSize={2}&startAfter={5}",
                         Uri.EscapeDataString(_idPrefix),
                         _start,
                         _pageSize,

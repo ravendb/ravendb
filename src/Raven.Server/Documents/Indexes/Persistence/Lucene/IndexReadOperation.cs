@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int intersectMatches, skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
-            var firstSubDocumentQuery = GetLuceneQuery(subQueries[0], query.DefaultOperator, query.DefaultField, _analyzer);
+            var firstSubDocumentQuery = GetLuceneQuery(null /* TODO [ppekrol] subQueries[0] */, query.QueryParameters, _analyzer);
             var sort = GetSort(query);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     for (var i = 1; i < subQueries.Length; i++)
                     {
-                        var luceneSubQuery = GetLuceneQuery(subQueries[i], query.DefaultOperator, query.DefaultField, _analyzer);
+                        var luceneSubQuery = GetLuceneQuery(null /* TODO [ppekrol] subQueries[i]*/, query.QueryParameters, _analyzer);
                         _searcher.Search(luceneSubQuery, null, intersectionCollector, _state);
                     }
 
@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
+            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer);
             var sort = GetSort(query);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);

@@ -25,7 +25,8 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         {
             return new GetRequest
             {
-                Url = "/queries?op=facets",
+                Url = "/queries",
+                Query = "?op=facets",
                 Method = HttpMethod.Post,
                 Content = new FacetQueryContent(_conventions, _query)
             };

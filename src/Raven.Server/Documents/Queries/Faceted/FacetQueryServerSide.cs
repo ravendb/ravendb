@@ -12,7 +12,10 @@ namespace Raven.Server.Documents.Queries.Faceted
 {
     public class FacetQueryServerSide : FacetQuery<BlittableJsonReaderObject>
     {
-        public static async Task<(FacetQueryServerSide FacetQuery, long? FacetsEtag)> Parse(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
+        [JsonIgnore]
+        public QueryMetadata Metadata { get; private set; }
+
+        public static async Task<(FacetQueryServerSide FacetQuery, long? FacetsEtag)> Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
             var result = new FacetQueryServerSide
             {
@@ -44,6 +47,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 facetsEtag = facets.FacetsEtag;
             }
 
+            result.Metadata = new QueryMetadata(result.Query, null);
             return (result, facetsEtag);
         }
 
@@ -62,6 +66,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             if (json.TryGet(nameof(Facets), out BlittableJsonReaderArray facetsArray) && facetsArray != null)
                 facetsEtag = Hashing.XXHash32.Calculate(facetsArray.Parent.BasePointer, facetsArray.Parent.Size);
 
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters);
             return (result, facetsEtag);
         }
     }

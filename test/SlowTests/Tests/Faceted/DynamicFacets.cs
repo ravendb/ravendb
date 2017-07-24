@@ -40,7 +40,7 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets.Facets);
+                            .ToFacets(facets);
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -77,7 +77,7 @@ namespace SlowTests.Tests.Faceted
                     {
                         var facetResults = s.Query<Camera, CameraCostIndex>()
                             .Where(exp)
-                            .ToFacets(facets.Facets);
+                            .ToFacets(facets);
 
                         var filteredData = cameras.Where(exp.Compile()).ToList();
 
@@ -96,20 +96,20 @@ namespace SlowTests.Tests.Faceted
 
                 InsertCameraData(store, GetCameras(1));
 
-                var facets = GetFacets();
+                var query = new FacetQuery
+                {
+                    Facets = GetFacets(),
+                    Query = "FROM INDEX 'CameraCost' WHERE Manufacturer = 'canon'"
+                };
 
-                var jsonFacets = JsonConvert.SerializeObject(facets);
+                var queryAsJson = JsonConvert.SerializeObject(query);
 
                 string firstChangeVector;
 
-                const string queryUrl = "/queries/CameraCost?query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
-
-                var requestUrl = string.Format(queryUrl, "canon");
-
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, null, out firstChangeVector));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, null, out firstChangeVector));
 
                 //second request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstChangeVector, out firstChangeVector));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, firstChangeVector, out firstChangeVector));
 
                 //change index etag by inserting new doc
                 InsertCameraData(store, GetCameras(1));
@@ -117,10 +117,10 @@ namespace SlowTests.Tests.Faceted
                 string secondChangeVector;
 
                 //changing the index should give 200 OK
-                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, firstChangeVector, out secondChangeVector));
+                Assert.Equal(HttpStatusCode.OK, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, firstChangeVector, out secondChangeVector));
 
                 //next request should give 304 not modified
-                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, requestUrl, jsonFacets, secondChangeVector, out secondChangeVector));
+                Assert.Equal(HttpStatusCode.NotModified, ConditionalGetHelper.PerformPost(store, "/queries", queryAsJson, secondChangeVector, out secondChangeVector));
             }
         }
 
@@ -153,7 +153,7 @@ namespace SlowTests.Tests.Faceted
             CheckFacetCount(filteredData.Count(x => x.Megapixels >= 10.0m), megapixelsFacets.FirstOrDefault(x => x.Range == "[10 TO NULL]"));
         }
 
-        private void CheckFacetCount(int expectedCount, FacetValue facets)
+        private static void CheckFacetCount(int expectedCount, FacetValue facets)
         {
             if (expectedCount > 0)
             {

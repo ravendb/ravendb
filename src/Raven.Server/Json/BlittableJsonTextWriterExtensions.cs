@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
@@ -423,17 +422,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.DefaultField));
-            if (query.DefaultField != null)
-                writer.WriteString(query.DefaultField);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.DefaultOperator));
-            writer.WriteString(query.DefaultOperator.ToString());
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.DisableCaching));
             writer.WriteBool(query.DisableCaching);
             writer.WriteComma();
@@ -447,10 +435,6 @@ namespace Raven.Server.Json
                 writer.WriteString(query.HighlighterKeyName);
             else
                 writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.IsDistinct));
-            writer.WriteBool(query.IsDistinct);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(query.PageSize));

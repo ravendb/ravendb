@@ -107,12 +107,15 @@ namespace Raven.Server.Documents.Queries
                 query.Facets = facetSetup.Facets;
             }
 
-            return ExecuteFacetedQuery(null, query, facetsEtag.Value, existingResultEtag, token);
+            return ExecuteFacetedQuery(query, facetsEtag.Value, existingResultEtag, token);
         }
 
-        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        private async Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = GetIndex(indexName);
+            if (query.Metadata.IsDynamic)
+                throw new InvalidOperationException("Facet query must be executed against static index.");
+
+            var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag() ^ facetsEtag;
