@@ -1,11 +1,11 @@
 $NETCORE_ARM_VERSION = "1.2.0-beta-001291-00"
 
-function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $version ) {
+function CreateRavenPackage ( $projectDir, $releaseDir, $outDirs, $spec, $version, $buildOptions ) {
     write-host "Create package for $($spec.runtime)..."
     $packageDir = [io.path]::combine($outDirs.Main, "package")
     New-Item -ItemType Directory -Path $packageDir | Out-Null
 
-    CreatePackageLayout $packageDir $projectDir $outDirs $spec
+    CreatePackageLayout $packageDir $projectDir $outDirs $spec $buildOptions
 
     $releaseArchiveFile = GetRavenArchiveFileName $version $spec
     $releaseArchivePath = [io.path]::combine($releaseDir, $releaseArchiveFile)
@@ -19,16 +19,16 @@ function GetRavenArchiveFileName ( $version, $spec ) {
     "RavenDB-$version-$($spec.Name)"
 }
 
-function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec ) {
+function CreatePackageLayout ( $packageDir, $projectDir, $outDirs, $spec, $buildOptions ) {
     if ($spec.Name.Contains('raspberry-pi')) {
-        LayoutRaspberryPiPackage $packageDir $projectDir $outDirs $spec
+        LayoutRaspberryPiPackage $packageDir $projectDir $outDirs $spec $buildOptions
     } else {
-        LayoutRegularPackage $packageDir $projectDir $outDirs $spec
+        LayoutRegularPackage $packageDir $projectDir $outDirs $spec $buildOptions
     }
 }
 
-function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
-    CopyStudioPackage $outDirs
+function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec, $buildOptions ) {
+    CopyStudioPackage $outDirs $buildOptions
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyStartScript $spec $packageDir
@@ -36,8 +36,8 @@ function LayoutRegularPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
     CreatePackageServerLayout $projectDir $($outDirs.Server) $packageDir $spec
 }
 
-function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec ) {
-    CopyStudioPackage $outDirs
+function LayoutRaspberryPiPackage ( $packageDir, $projectDir, $outDirs, $spec, $buildOptions ) {
+    CopyStudioPackage $outDirs $buildOptions
     CopyLicenseFile $packageDir
     CopyAckFile $packageDir
     CopyRaspberryPiScripts $projectDir $packageDir
@@ -91,7 +91,12 @@ function IncludeDotnetForRaspberryPi( $packageDir, $outDirs, $projectDir ) {
     }
 }
 
-function CopyStudioPackage ( $outDirs ) {
+function CopyStudioPackage ( $outDirs, $buildOptions ) {
+    if ($buildOptions.DontBuildStudio) {
+        write-host "Skip copying Studio..."
+        return;
+    }
+
     $studioZipPath = [io.path]::combine($outDirs.Studio, "Raven.Studio.zip")
     $dst = $outDirs.Server
     write-host "Copying Studio $studioZipPath -> $dst"

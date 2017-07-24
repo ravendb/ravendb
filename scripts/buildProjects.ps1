@@ -78,7 +78,11 @@ function BuildStudio ( $srcDir, $version ) {
     }
 }
 
-function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio ) {
+function ShouldBuildStudio( $studioOutDir, $dontRebuildStudio, $dontBuildStudio ) {
+    if ($dontBuildStudio) {
+        return $false
+    }
+
     $studioZipPath = [io.path]::combine($studioOutDir, "Raven.Studio.zip")
     if (Test-Path $studioZipPath) {
         return ! $dontRebuildStudio
