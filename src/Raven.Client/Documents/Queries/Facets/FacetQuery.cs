@@ -31,6 +31,31 @@ namespace Raven.Client.Documents.Queries.Facets
 
             return result;
         }
+
+        public uint GetQueryHash()
+        {
+            unchecked
+            {
+                var hashCode = Query?.GetHashCode() ?? 0;
+                if (FacetSetupDoc != null)
+                    hashCode = (hashCode * 397) ^ FacetSetupDoc.GetHashCode();
+
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResults.GetHashCode();
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
+                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (CutoffEtag?.GetHashCode() ?? 0);
+
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ PageSize;
+
+                hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(Facets);
+
+                if (QueryParameters != null)
+                    hashCode = (hashCode * 397) ^ QueryHashHelper.HashCode(QueryParameters);
+
+                return (uint)hashCode;
+            }
+        }
     }
 
     public abstract class FacetQuery<T> : IndexQueryBase<T>

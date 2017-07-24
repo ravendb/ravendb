@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
@@ -31,6 +32,12 @@ namespace Raven.Client.Documents.Commands
             if (string.IsNullOrWhiteSpace(_query.FacetSetupDoc) == false && _query.Facets != null && _query.Facets.Count > 0)
                 throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
 
+            var path = new StringBuilder(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/queries?op=facets&hash=")
+                .Append(_query.GetQueryHash());
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -43,7 +50,7 @@ namespace Raven.Client.Documents.Commands
                 })
             };
 
-            url = $"{node.Url}/databases/{node.Database}/queries?op=facets";
+            url = path.ToString();
             return request;
         }
 
