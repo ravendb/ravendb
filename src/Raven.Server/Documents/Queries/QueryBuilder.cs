@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Queries
                     foreach (var item in UnwrapArray(array))
                     {
                         if (expectedValueType != item.Type)
-                            throw new InvalidOperationException();
+                            ThrowInvalidParameterType(expectedValueType, item);
 
                         yield return item;
                     }
@@ -376,12 +376,22 @@ namespace Raven.Server.Documents.Queries
 
                 var parameterValueType = GetValueTokenType(parameterValue);
                 if (expectedValueType != parameterValueType)
-                    throw new InvalidOperationException();
+                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType);
 
                 yield return (parameterValue.ToString(), parameterValueType);
             }
 
             yield return (valueOrParameterName, value.Type);
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType)
+        {
+            throw new InvalidOperationException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue);
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item)
+        {
+            throw new InvalidOperationException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value);
         }
 
         public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)

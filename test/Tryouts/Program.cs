@@ -36,11 +36,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())
+                using (var test = new SlowTests.Issues.RavenDB_3166())
                 {
                     try
                     {
-                        test.ServerSideWriteAssurance().Wait();
+                        test.QueryOnDictionaryWithDateTimeAsValueShouldWork();
                     }
                     catch (Exception e)
                     {
