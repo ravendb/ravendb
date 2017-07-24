@@ -19,10 +19,76 @@ namespace Raven.Client.Documents.Queries
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }
+
+        public uint GetQueryHash()
+        {
+            unchecked
+            {
+                var hashCode = Query?.GetHashCode() ?? 0;
+                if (Transformer != null)
+                    hashCode = (hashCode * 397) ^ Transformer.GetHashCode();
+
+
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResults.GetHashCode();
+                hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
+                hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ (CutoffEtag?.GetHashCode() ?? 0);
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                hashCode = (hashCode * 397) ^ AllowMultipleIndexEntriesForSameDocumentToResultTransformer.GetHashCode();
+                hashCode = (hashCode * 397) ^ SkipDuplicateChecking.GetHashCode();
+                hashCode = (hashCode * 397) ^ ExplainScores.GetHashCode();
+                hashCode = (hashCode * 397) ^ ShowTimings.GetHashCode();
+
+                hashCode = (hashCode * 397) ^ Start;
+                hashCode = (hashCode * 397) ^ PageSize;
+
+                hashCode = (hashCode * 397) ^ HashCode(Includes);
+
+                if (HighlighterKeyName != null)
+                    hashCode = (hashCode * 397) ^ HighlighterKeyName.GetHashCode();
+                
+                hashCode = (hashCode * 397) ^ HashCode(HighlightedFields);
+                hashCode = (hashCode * 397) ^ HashCode(HighlighterPreTags);
+                hashCode = (hashCode * 397) ^ HashCode(HighlighterPostTags);
+              
+                if(QueryParameters != null)
+                    hashCode = (hashCode * 397) ^ HashCode(QueryParameters);
+              
+                return (uint)hashCode;
+            }
+        }
+        private static int HashCode<TValue>(TValue[] x)
+            where TValue : class
+        {
+            if (x == null)
+                return 0;
+            
+            int result = 0;
+            for (var index = 0; index < x.Length; index++)
+            {
+                result = (result * 397) ^ (x[index]?.GetHashCode() ?? 0);
+            }
+            return result;
+        }
+        
+        private static int HashCode<TKey, TValue>(Dictionary<TKey, TValue> x)
+        {
+            if (x == null)
+                return 0;
+            
+            int result = 0;
+            foreach (var kvp in x)
+            {
+                result = (result * 397) ^ kvp.Key.GetHashCode();
+                result = (result * 397) ^ (kvp.Value?.GetHashCode() ?? 0);
+            }
+            return result;
+        }
     }
 
     public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
+        
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
@@ -91,6 +157,7 @@ namespace Raven.Client.Documents.Queries
         /// <returns></returns>
         protected virtual string GetCustomQueryStringVariables()
         {
+            //TODO: Can remove this 
             return string.Empty;
         }
 

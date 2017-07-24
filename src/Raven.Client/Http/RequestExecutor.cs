@@ -735,8 +735,6 @@ namespace Raven.Client.Http
         {
             if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
-                if (request.Method != HttpMethod.Get)
-                    url = request.Method + "-" + url;
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
 
