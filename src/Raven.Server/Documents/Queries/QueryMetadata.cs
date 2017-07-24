@@ -120,54 +120,53 @@ namespace Raven.Server.Documents.Queries
                         fields.Add(SelectField.Create(name, alias));
                         break;
                     case OperatorType.Method:
-                        if (IsGroupBy)
+                        var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
+
+                        if (IsGroupBy == false)
+                            ThrowMethodsAreNotSupportedInSelect(methodName);
+
+                        if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
                         {
-                            var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
-
-                            if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
+                            switch (methodName)
                             {
-                                switch (methodName)
-                                {
-                                    case "key":
-                                        fields.Add(SelectField.CreateGroupByKeyField(alias, GroupBy));
-                                        break;
-                                    default:
-                                        ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName);
-                                        break;
-                                }
+                                case "key":
+                                    fields.Add(SelectField.CreateGroupByKeyField(alias, GroupBy));
+                                    break;
+                                default:
+                                    ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName);
+                                    break;
                             }
-                            else
-                            {
-                                string fieldName = null;
-
-                                switch (aggregation)
-                                {
-                                    case AggregationOperation.Count:
-                                        fieldName = CountFieldName;
-                                        break;
-                                    case AggregationOperation.Sum:
-                                        if (expression.Arguments == null)
-                                            throw new InvalidOperationException("TODO arek");
-                                        if (expression.Arguments.Count != 1)
-                                            throw new InvalidOperationException("TODO arek");
-
-                                        var sumFieldToken = expression.Arguments[0] as FieldToken;
-
-                                        fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
-                                        break;
-                                }
-
-                                Debug.Assert(fieldName != null);
-
-                                fields.Add(SelectField.CreateGroupByAggregation(fieldName, alias, aggregation));
-                            }
-
-                            break;
                         }
                         else
-                            throw new NotImplementedException("TODO arek");
+                        {
+                            string fieldName = null;
+
+                            switch (aggregation)
+                            {
+                                case AggregationOperation.Count:
+                                    fieldName = CountFieldName;
+                                    break;
+                                case AggregationOperation.Sum:
+                                    if (expression.Arguments == null)
+                                        ThrowMissingFieldNameArgumentOfSumMethod();
+                                    if (expression.Arguments.Count != 1)
+                                        ThrowIncorrectNumberOfArgumentsOfSumMethod(expression.Arguments.Count);
+
+                                    var sumFieldToken = expression.Arguments[0] as FieldToken;
+
+                                    fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+                                    break;
+                            }
+
+                            Debug.Assert(fieldName != null);
+
+                            fields.Add(SelectField.CreateGroupByAggregation(fieldName, alias, aggregation));
+                        }
+
+                        break;
                     default:
-                        throw new NotImplementedException("TODO arek");
+                        ThrowUnhandledExpressionTypeInSelect(expression.Type);
+                        break;
                 }
             }
 
@@ -202,23 +201,39 @@ namespace Raven.Server.Documents.Queries
 
         private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)
         {
-            throw new InvalidOperationException("Incompatible types of variables in WHERE clause");
-            //TODO arek
-            //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
-            //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
+            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field. It got values of the following types: " +
+                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}");
         }
 
         private static void ThrowIncompatibleTypesOfParameters(string fieldName, params ValueToken[] valueTokens)
         {
-            throw new InvalidOperationException("Incompatible types of parameters in WHERE clause");
-            //TODO arek
-            //throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{ExtractFieldName(fieldName)}' field: " +
-            //                                    $"{string.Join(",", valueTokens.Select(x => $"{ExtractTokenValue(x)}({x.Type})"))}");
+            throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field. It got parameters of the following types:   " +
+                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}");
         }
 
         private static void ThrowUnknownAggregationMethodInSelectOfGroupByQuery(string methodName)
         {
             throw new NotSupportedException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'");
+        }
+
+        private static void ThrowMissingFieldNameArgumentOfSumMethod()
+        {
+            throw new InvalidOperationException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)");
+        }
+
+        private static void ThrowIncorrectNumberOfArgumentsOfSumMethod(int count)
+        {
+            throw new InvalidOperationException($"sum() method expects exactly one argument but got {count}");
+        }
+
+        private static void ThrowMethodsAreNotSupportedInSelect(string methodName)
+        {
+            throw new NotSupportedException($"Method calls are not supported in SELECT clause while you tried to use '{methodName}' method");
+        }
+
+        private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType)
+        {
+            throw new InvalidOperationException($"Unhandled expression of type {expressionType} in SELECT clause");
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
