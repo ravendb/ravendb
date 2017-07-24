@@ -21,30 +21,29 @@ $CUSTOM_SETTINGS_PATH = "c:\raven-config\$env:CustomConfigFilename"
 
 Push-Location $ServerDir
 
-$command = './Raven.Server.exe'
-$commandArgs = @()
+$command = './rvn.exe'
+$commandArgs = @( 'windows-service', 'register' )
 
-$commandArgs += "/ServerUrl=http://0.0.0.0:8080"
-$commandArgs += "/ServerUrl.Tcp=tcp://0.0.0.0:38888"
-$commandArgs += "/DataDir=$($env:DataDir)"
-$commandArgs += "--print-id"
-$commandArgs += "--register-service"
+$commandArgs += "--Security.Authentication.RequiredForPublicNetworks=false"
+$commandArgs += "--ServerUrl=http://0.0.0.0:8080"
+$commandArgs += "--ServerUrl.Tcp=tcp://0.0.0.0:38888"
+$commandArgs += "--DataDir=$($env:DataDir)"
 
 if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
     $commandArgs += "--config-path"
     $commandArgs += "`"$CUSTOM_SETTINGS_PATH`""
 }
 
-if ([string]::IsNullOrEmpty($env:AllowAnonymousUserToAccessTheServer) -eq $False) {
-    $commandArgs += "/AllowAnonymousUserToAccessTheServer=$($env:AllowAnonymousUserToAccessTheServer)"
+if ([string]::IsNullOrEmpty($env:SecurityAuthenticationEnabled) -eq $False) {
+    $commandArgs += "--Security.Authentication.Enabled=$($env:SecurityAuthenticationEnabled)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicServerUrl) -eq $False) {
-    $commandArgs += "/PublicServerUrl=$($env:PublicServerUrl)"
+    $commandArgs += "--PublicServerUrl=$($env:PublicServerUrl)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicTcpServerUrl) -eq $False) {
-    $commandArgs += "/PublicServerUrl.Tcp=$($env:PublicTcpServerUrl)"
+    $commandArgs += "--PublicServerUrl.Tcp=$($env:PublicTcpServerUrl)"
 }
 
 write-host "Registering Windows Service: $command $commandArgs"

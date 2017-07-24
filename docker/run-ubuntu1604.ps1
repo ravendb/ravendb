@@ -3,10 +3,9 @@ param(
     $BindTcpPort = 38888,
     $ConfigPath = "",
     $DataDir = "",
-    $DataVolumeName = "ravendb",
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
-    [switch]$AllowAnonymousUserToAccessTheServer,
+    [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
     [switch]$DontScanVmSubnet,
@@ -93,23 +92,12 @@ if ($RemoveOnExit) {
     $dockerArgs += '--rm'
 }
 
-if ($AllowAnonymousUserToAccessTheServer) {
+if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "AllowAnonymousUserToAccessTheServer=true"
+    $dockerArgs += "SecurityAuthenticationEnabled=false"
 }
 
-if ([string]::IsNullOrEmpty($DataDir)) {
-
-    if ([string]::IsNullOrEmpty($(docker volume ls | select-string $DataVolumeName))) {
-        docker volume create $DataVolumeName
-        CheckLastExitCode
-        write-host "Created docker volume $DataVolumeName."
-    }
-
-    $dockerArgs += "-v"
-    $dockerArgs += "$($DataVolumeName):/databases"
-
-} else {
+if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
     write-host "Mounting $DataDir as RavenDB data dir."
     $dockerArgs += "-v"
     $dockerArgs += "$($DataDir):/databases"

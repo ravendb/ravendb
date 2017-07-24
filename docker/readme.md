@@ -36,7 +36,7 @@ Above mentioned Powershell scripts are simplifying usage of our images allowing 
 
 - `-BindTcpPort [port]` - default `38888` - the port number on which RavenDB Server listens for TCP connections exposed on the container
 
-- `-AllowAnonymousUserToAccessTheServer` - HERE BE DRAGONS - allows everybody to access RavenDB server
+- `-AuthenticationDisabled` - HERE BE DRAGONS - disable authentication for RavenDB server
 
 - `-RemoveOnExit` - removes container when the main process exits
 
@@ -72,20 +72,18 @@ Docker bridge iface address: 10.0.75.1
 PS C:\work\ravendb-4\docker>
 ```
 
-Once run RavenDB server should be exposed on port 8080 by default on the container.
+Once run RavenDB server should be exposed on port 8080 (default).
 
 #### On Docker volumes usage
 
 Each of images above makes use of 2 volumes:
 
-- settings volume - holding RavenDB configuration, meant to be mounted from one of host's files
+- settings volume - holding RavenDB configuration,
 
     Ubuntu container: `/opt/raven-settings.json`
-
     Windows container: `C:\raven-config` directory
 
-- databases volume - used for persistence of RavenDB data (you can either mount host directory to it using `-DataDir` or use persistent docker volume)
+- databases volume - used for persistence of RavenDB data,
 
     Ubuntu container: `/databases`
-
     Windows container: `c:\databases`
