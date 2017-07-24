@@ -37,6 +37,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
         internal static string Extract(string q, FieldToken field)
         {
+            if(field.IsQuoted)
+                return Extract(q, field.TokenStart + 1, field.TokenLength - 2, field.EscapeChars);
             return Extract(q, field.TokenStart, field.TokenLength, field.EscapeChars);
         }
 

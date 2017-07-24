@@ -29,13 +29,25 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FromToken(indexName, collectionName);
         }
 
+        private static char[] _whiteSpaceChars = new[] { ' ', '\t', '\r', '\n', '\v' };
         public override void WriteTo(StringBuilder writer)
         {
             if (IsDynamic)
             {
                 writer
-                    .Append("FROM ")
-                    .Append(CollectionName);
+                    .Append("FROM ");
+                if(CollectionName.IndexOfAny(_whiteSpaceChars) != -1)
+                {
+                    if (CollectionName.IndexOf('"') != -1)
+                    {
+                        ThrowInvalidcollectionName();
+                    }
+                    writer.Append('"').Append(CollectionName).Append('"');
+                }
+                else
+                {
+                    writer.Append(CollectionName);
+                }
 
                 return;
             }
@@ -44,6 +56,11 @@ namespace Raven.Client.Documents.Session.Tokens
                 .Append("FROM INDEX '")
                 .Append(IndexName)
                 .Append("'");
+        }
+
+        private void ThrowInvalidcollectionName()
+        {
+            throw new ArgumentException("Collection name cannot contain a quote, but was: " + CollectionName);
         }
     }
 }

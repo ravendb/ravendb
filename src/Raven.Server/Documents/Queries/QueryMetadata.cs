@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Queries
             if (IsDynamic)
                 CollectionName = QueryExpression.Extract(Query.QueryText, fromToken);
             else
-                IndexName = QueryExpression.Extract(Query.QueryText, fromToken.TokenStart + 1, fromToken.TokenLength - 2, fromToken.EscapeChars);
+                IndexName = QueryExpression.Extract(Query.QueryText, fromToken);
 
             Build(parameters);
         }

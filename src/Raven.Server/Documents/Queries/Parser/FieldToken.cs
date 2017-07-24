@@ -5,5 +5,6 @@ namespace Raven.Server.Documents.Queries.Parser
         public int EscapeChars;
         public int TokenLength;
         public int TokenStart;
+        public bool IsQuoted;
     }
 }

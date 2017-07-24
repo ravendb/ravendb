@@ -162,16 +162,19 @@ namespace Raven.Server.Documents.Queries.Parser
             FieldToken field;
             QueryExpression filter = null;
             bool index = false;
+            bool isQuoted;
             if (Scanner.TryScan('(')) // FROM ( Collection, filter )
             {
-                if (!Scanner.FromIdentifier() && !Scanner.String())
+                isQuoted = false;
+                if (!Scanner.FromIdentifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected FROM source");
 
                 field = new FieldToken
                 {
                     TokenLength = Scanner.TokenLength,
                     TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars
+                    EscapeChars = Scanner.EscapeChars,
+                    IsQuoted = isQuoted
                 };
 
                 if (Scanner.TryScan(',') == false)
@@ -185,42 +188,48 @@ namespace Raven.Server.Documents.Queries.Parser
             }
             else if (Scanner.TryScan("INDEX"))
             {
-                if (!Scanner.Identifier() && !Scanner.String())
+                isQuoted = false;
+                if (!Scanner.FromIdentifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected FROM INDEX source");
 
                 field = new FieldToken
                 {
                     TokenLength = Scanner.TokenLength,
                     TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars
+                    EscapeChars = Scanner.EscapeChars,
+                    IsQuoted = isQuoted
                 };
 
                 index = true;
             }
             else
             {
-                if (!Scanner.FromIdentifier() && !Scanner.String())
+                isQuoted = false;
+                if (!Scanner.FromIdentifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected FROM source");
 
                 field = new FieldToken
                 {
                     TokenLength = Scanner.TokenLength,
                     TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars
+                    EscapeChars = Scanner.EscapeChars,
+                    IsQuoted = isQuoted
                 };
             }
 
             FieldToken alias = null;
             if (Scanner.TryScan("AS"))
             {
-                if (!Scanner.Identifier() && !Scanner.String())
+                isQuoted = false;
+                if (!Scanner.FromIdentifier() && !(isQuoted = Scanner.String()))
                     ThrowParseException("Expected ALIAS after AS in FROM");
 
                 alias = new FieldToken
                 {
                     TokenLength = Scanner.TokenLength,
                     TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars
+                    EscapeChars = Scanner.EscapeChars,
+                    IsQuoted = isQuoted
                 };
 
             }
@@ -537,6 +546,10 @@ namespace Raven.Server.Documents.Queries.Parser
             else
                 sb.Append(" to the end of the query");
 
+
+            sb.AppendLine();
+            sb.AppendLine("Query: ");
+            sb.Append(Scanner.Input);
 
             throw new ParseException(sb.ToString());
         }
