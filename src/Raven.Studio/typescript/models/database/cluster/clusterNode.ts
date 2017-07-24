@@ -61,8 +61,19 @@ class clusterNode {
     createStateObservable(topologyProvider: KnockoutObservable<clusterTopology>) {
         return ko.pureComputed(() => {
             const topology = topologyProvider();
+
             if (!topology.leader()) {
-                return this.type() === "Watcher" ? "Waiting" : "Voting";
+                if (this.type() === "Watcher") {
+                    return "Waiting";
+                } else if (this.tag() === "?") {
+                    return "Passive";
+                } else {
+                    return "Voting";
+                }
+            }
+
+            if (topology.nodeTag() !== topology.leader()) {
+                return "";
             }
 
             return this.connected() ? "Active" : "Error";
@@ -74,6 +85,10 @@ class clusterNode {
             const topology = topologyProvider();
             if (!topology.leader()) {
                 return this.type() === "Watcher" ? "state-default" : "state-info";
+            }
+
+            if (topology.nodeTag() !== topology.leader()) {
+                return "state-unknown";
             }
 
             return this.connected() ? "state-success" : "state-danger";

@@ -14,7 +14,7 @@ class addNodeToDatabaseGroupCommand extends commandBase {
         };
         const url = endpoints.global.adminDatabases.adminDatabasesNode + this.urlEncodeArgs(args);
 
-        return this.put<any>(url, null)
+        return this.put<Raven.Client.Server.Operations.DatabasePutResult>(url, null)
             .done(() => this.reportSuccess("Node " + this.nodeTagToAdd +" was added to database group " + this.databaseName))
             .fail((response: JQueryXHR) => this.reportError("Failed to add node to database group", response.responseText, response.statusText));
     }

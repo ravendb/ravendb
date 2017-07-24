@@ -327,3 +327,8 @@ interface subscriptionDataFromUI {
     IncludeRevisions: boolean;
 } 
 
+
+interface layoutable {
+    x: number;
+    y: number;
+}
