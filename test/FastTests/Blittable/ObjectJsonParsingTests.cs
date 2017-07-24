@@ -38,8 +38,6 @@ namespace FastTests.Blittable
         [Fact]
         public void CanCompressSmallStrings()
         {
-            var traverser = new BlittableJsonTraverser();
-
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
                 var input = new DynamicJsonValue
@@ -55,7 +53,7 @@ namespace FastTests.Blittable
                         [Constants.Documents.Indexing.Fields.DocumentIdFieldName] = "tracks/1",
                     };
 
-                    var value = traverser.Read(inputJson, "Title");
+                    var value = BlittableJsonTraverser.Default.Read(inputJson, "Title");
 
                     output["Title"] = value;
 

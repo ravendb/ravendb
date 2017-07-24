@@ -7,6 +7,7 @@ namespace Sparrow.Json
     public class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
+        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
 
         private const char PropertySeparator = '.';
         private const char CollectionSeparatorStart = '[';
@@ -23,7 +24,7 @@ namespace Sparrow.Json
             CollectionSeparatorStart
         };
 
-        public BlittableJsonTraverser(char[] nonDefaultSeparators = null)
+        private BlittableJsonTraverser(char[] nonDefaultSeparators = null)
         {
             if (nonDefaultSeparators != null)
                 _separators = nonDefaultSeparators;

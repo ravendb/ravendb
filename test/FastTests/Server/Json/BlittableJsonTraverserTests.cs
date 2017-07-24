@@ -10,7 +10,7 @@ namespace FastTests.Server.Json
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
-        private readonly BlittableJsonTraverser _sut = new BlittableJsonTraverser();
+        private readonly BlittableJsonTraverser _sut = BlittableJsonTraverser.Default;
 
         public BlittableJsonTraverserTests()
         {

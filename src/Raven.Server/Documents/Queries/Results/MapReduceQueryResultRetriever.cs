@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly JsonOperationContext _context;
 
         public MapReduceQueryResultRetriever(JsonOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(fieldsToFetch, context)
+            : base(fieldsToFetch, context, true)
         {
             _context = context;
         }
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
-            if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)
+            if (FieldsToFetch.IsProjection || FieldsToFetch.IsTransformation)
                 return GetProjection(input, score, null, state);
 
             return DirectGet(input, null, state);

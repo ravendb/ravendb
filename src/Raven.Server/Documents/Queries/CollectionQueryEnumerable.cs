@@ -63,6 +63,7 @@ namespace Raven.Server.Documents.Queries
             private int _innerCount;
             private readonly List<Slice> _ids;
             private readonly Sort _sort;
+            private readonly MapQueryResultRetriever _resultsRetriever;
 
             public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
@@ -82,6 +83,8 @@ namespace Raven.Server.Documents.Queries
                     throw new BooleanQuery.TooManyClauses();
 
                 _sort = ExtractSortFromQuery(query);
+
+                _resultsRetriever = new MapQueryResultRetriever(documents, context, fieldsToFetch);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
@@ -152,7 +155,7 @@ namespace Raven.Server.Documents.Queries
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
-                        ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
+                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -218,7 +221,7 @@ namespace Raven.Server.Documents.Queries
                         count++;
 
                         var doc = _fieldsToFetch.IsProjection
-                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
+                            ? _resultsRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
                             : _inner.Current;
 
                         if (doc.Data.Count <= 0)
