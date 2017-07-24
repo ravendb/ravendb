@@ -219,11 +219,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 result.GroupByFields = query.Metadata.GroupBy;
             }
 
-
-            // TODO arek - get rid of linq
-            result.MapFields = mapFields.Values
-                .OrderByDescending(x => x.Name.Length)
-                .ToArray();
+            result.MapFields = mapFields.Values.ToArray();
 
             result.SortDescriptors = sorting.Values.ToArray();
 
