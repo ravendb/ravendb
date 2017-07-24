@@ -36,10 +36,10 @@ namespace Raven.Client.Documents.Commands
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
-                .Append("/queries?hash=")
+                .Append("/queries?query-hash=")
                 // we need to add a query hash because we are using POST queries
                 // so we need to unique parameter per query so the query cache will
-                // work properyl
+                // work properly
                 .Append(_indexQuery.GetQueryHash(_context));
 
             if (_metadataOnly)

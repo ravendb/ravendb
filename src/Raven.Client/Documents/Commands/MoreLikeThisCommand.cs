@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session;
@@ -26,6 +27,12 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
+            var path = new StringBuilder(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/queries?op=morelikethis&query-hash=")
+                .Append(_query.GetQueryHash(_context));
+
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
@@ -39,7 +46,7 @@ namespace Raven.Client.Documents.Commands
                 )
             };
 
-            url = $"{node.Url}/databases/{node.Database}/queries?op=morelikethis&query-hash={_query.GetQueryHash(_context)}";
+            url = path.ToString();
             return request;
         }
 
