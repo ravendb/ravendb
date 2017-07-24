@@ -244,7 +244,7 @@ namespace Raven.Client.Documents.Linq
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
         {
-            return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, null, _indexName, _collectionName,
+            return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, _indexName, _collectionName,
                                                       new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
                                                       _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
         }
@@ -258,7 +258,7 @@ namespace Raven.Client.Documents.Linq
         ///</summary>
         public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, null, _indexName, _collectionName, new HashSet<string>(),
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, _indexName, _collectionName, new HashSet<string>(),
                 new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
 
             if (isAsync)

@@ -25,13 +25,6 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
 
-
-        /// <summary>
-        /// Callback to get the results of the stream
-        /// </summary>
-
-        void AfterStreamExecuted(Action<object> afterStreamExecuted);
-
         /// <summary>
         /// Customizes the query using the specified action
         /// </summary>

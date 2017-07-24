@@ -24,7 +24,6 @@ namespace Raven.Client.Documents.Linq
     internal class RavenQueryProvider<T> : IRavenQueryProvider
     {
         private Action<QueryResult> _afterQueryExecuted;
-        private Action<object> _afterStreamExecuted;
         private Action<IDocumentQueryCustomization> _customizeQuery;
         private readonly string _indexName;
         private string _collectionName;
@@ -207,13 +206,6 @@ namespace Raven.Client.Documents.Linq
             _afterQueryExecuted = afterQueryExecutedCallback;
         }
 
-        public void AfterStreamExecuted(Action<object> afterStreamExecutedCallback)
-        {
-            _afterStreamExecuted = afterStreamExecutedCallback;
-        }
-
-
-
         /// <summary>
         /// Customizes the query using the specified action
         /// </summary>
@@ -336,7 +328,7 @@ namespace Raven.Client.Documents.Linq
 
         protected virtual RavenQueryProviderProcessor<TS> GetQueryProviderProcessor<TS>()
         {
-            return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _afterStreamExecuted, _indexName, _collectionName,
+            return new RavenQueryProviderProcessor<TS>(_queryGenerator, _customizeQuery, _afterQueryExecuted, _indexName, _collectionName,
                 FieldsToFetch,
                 FieldsToRename,
                 _isMapReduce, ResultTransformer, _transformerParameters, OriginalQueryType);

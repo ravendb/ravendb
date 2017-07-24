@@ -32,7 +32,6 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         protected readonly IDocumentQueryGenerator QueryGenerator;
         private readonly Action<QueryResult> _afterQueryExecuted;
-        private readonly Action<object> _afterStreamExecuted;
         private bool _chainedWhere;
         private int _insideWhere;
         private IAbstractDocumentQuery<T> _documentQuery;
@@ -63,7 +62,6 @@ namespace Raven.Client.Documents.Linq
         /// <param name="queryGenerator">The document query generator.</param>
         /// <param name="customizeQuery">The customize query.</param>
         /// <param name="afterQueryExecuted">Executed after the query run, allow access to the query results</param>
-        /// <param name="afterStreamExecuted">Executed after the stream run, allow access to the stream results</param>
         /// <param name="indexName">The name of the index the query is executed against.</param>
         /// <param name="collectionName">The name of the collection the query is executed against.</param>
         /// <param name="fieldsToFetch">The fields to fetch in this query</param>
@@ -73,7 +71,7 @@ namespace Raven.Client.Documents.Linq
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             Action<object> afterStreamExecuted, string indexName, string collectionName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             string indexName, string collectionName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
              Dictionary<string, object> transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
@@ -84,7 +82,6 @@ namespace Raven.Client.Documents.Linq
             _collectionName = collectionName;
             _isMapReduce = isMapReduce;
             _afterQueryExecuted = afterQueryExecuted;
-            _afterStreamExecuted = afterStreamExecuted;
             _customizeQuery = customizeQuery;
             _resultsTransformer = resultsTransformer;
             _transformerParameters = transformerParameters;
