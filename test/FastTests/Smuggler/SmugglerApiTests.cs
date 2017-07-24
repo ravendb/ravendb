@@ -117,6 +117,62 @@ namespace FastTests.Smuggler
         }
 
         [Fact]
+        public async Task ShouldReturnCorrectSmugglerResult()
+        {
+            var file = Path.GetTempFileName();
+            try
+            {
+                using (var store1 = GetDocumentStore(dbSuffixIdentifier: "store1"))
+                using (var store2 = GetDocumentStore(dbSuffixIdentifier: "store2"))
+                {
+                    using (var session = store1.OpenSession())
+                    {
+                        // creating auto-indexes
+                        session.Query<User>()
+                            .Where(x => x.Age > 10)
+                            .ToList();
+
+                        session.Query<User>()
+                            .GroupBy(x => x.Name)
+                            .Select(x => new { Name = x.Key, Count = x.Count() })
+                            .ToList();
+                    }
+
+                    new Users_ByName().Execute(store1);
+                    new Users_Address().Execute(store1);
+
+                    using (var session = store1.OpenAsyncSession())
+                    {
+                        await session.StoreAsync(new User { Name = "Name1", LastName = "LastName1" });
+                        await session.StoreAsync(new User { Name = "Name2", LastName = "LastName2" });
+                        await session.SaveChangesAsync();
+                    }
+
+                    var exportResult = await store1.Smuggler.ExportAsync(new DatabaseSmugglerOptions(), file);
+                    var importResult = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
+
+                    var stats = await store1.Admin.SendAsync(new GetStatisticsOperation());
+                    var progress = (SmugglerResult.SmugglerProgress)exportResult.Progress;
+
+                    Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
+                    Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
+                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
+
+                    stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
+                    progress = (SmugglerResult.SmugglerProgress)importResult.Progress;
+
+                    Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
+                    Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
+                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
+                }
+            }
+            finally
+            {
+                File.Delete(file);
+            }
+        }
+
+        [Fact]
         public async Task SkipExpiredDocumentWhenExport()
         {
             var file = Path.GetTempFileName();

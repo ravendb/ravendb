@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Suggestion;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
@@ -145,6 +146,8 @@ namespace Raven.Client.Json.Converters
         internal static readonly Func<BlittableJsonReaderObject, RemoveConnectionStringResult> RemoveConnectionStringResult = GenerateJsonDeserializationRoutine<RemoveConnectionStringResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, GetConnectionStringsResult> GetConnectionStringsResult = GenerateJsonDeserializationRoutine<GetConnectionStringsResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, SmugglerResult> SmugglerResult = GenerateJsonDeserializationRoutine<SmugglerResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ClientConfiguration> ClientConfiguration = GenerateJsonDeserializationRoutine<ClientConfiguration>();
 

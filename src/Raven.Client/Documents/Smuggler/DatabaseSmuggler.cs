@@ -4,10 +4,12 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Smuggler
@@ -33,41 +35,48 @@ namespace Raven.Client.Documents.Smuggler
             return new DatabaseSmuggler(_store, databaseName);
         }
 
-        public async Task ExportAsync(DatabaseSmugglerOptions options, string toFile, CancellationToken token = default(CancellationToken))
+        public async Task<SmugglerResult> ExportAsync(DatabaseSmugglerOptions options, string toFile, CancellationToken token = default(CancellationToken))
         {
             using (var file = File.OpenWrite(toFile))
             {
-                await ExportAsync(options, async stream =>
+                var result = await ExportAsync(options, async stream =>
                 {
                     await stream.CopyToAsync(file, 8192, token).ConfigureAwait(false);
                 }, token).ConfigureAwait(false);
                 await file.FlushAsync(token).ConfigureAwait(false);
+                return result;
             }
         }
 
-        private async Task ExportAsync(DatabaseSmugglerOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default(CancellationToken))
+        private async Task<SmugglerResult> ExportAsync(DatabaseSmugglerOptions options, Func<Stream, Task> handleStreamResponse, CancellationToken token = default(CancellationToken))
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
 
             using (_requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse);
+                var getOperationIdCommand = new GetNextOperationIdCommand();
+                await _requestExecutor.ExecuteAsync(getOperationIdCommand, context, token).ConfigureAwait(false);
+                var operationId = getOperationIdCommand.Result;
+
+                var command = new ExportCommand(_requestExecutor.Conventions, context, options, handleStreamResponse, operationId, _requestExecutor);
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+                return command.Result;
             }
         }
 
-        public async Task ExportAsync(DatabaseSmugglerOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default(CancellationToken))
+        public async Task<SmugglerResult> ExportAsync(DatabaseSmugglerOptions options, DatabaseSmuggler toDatabase, CancellationToken token = default(CancellationToken))
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
             if (toDatabase == null)
                 throw new ArgumentNullException(nameof(toDatabase));
                 
-            await ExportAsync(options, async stream =>
+            var result = await ExportAsync(options, async stream =>
             {
                 await toDatabase.ImportAsync(options, stream, token).ConfigureAwait(false);
             }, token).ConfigureAwait(false);
+            return result;
         }
 
         public async Task ImportIncrementalAsync(DatabaseSmugglerOptions options, string fromDirectory, CancellationToken cancellationToken = default(CancellationToken))
@@ -101,20 +110,22 @@ namespace Raven.Client.Documents.Smuggler
             await ImportAsync(options, lastFilePath, cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task ImportAsync(DatabaseSmugglerOptions options, string fromFile, CancellationToken cancellationToken = default(CancellationToken))
+        public async Task<SmugglerResult> ImportAsync(DatabaseSmugglerOptions options, string fromFile, CancellationToken cancellationToken = default(CancellationToken))
         {
             var countOfFileParts = 0;
+            SmugglerResult result;
             do
             {
                 using (var fileStream = File.OpenRead(fromFile))
                 {
-                    await ImportAsync(options, fileStream, cancellationToken).ConfigureAwait(false);
+                    result = await ImportAsync(options, fileStream, cancellationToken).ConfigureAwait(false);
                 }
                 fromFile = $"{fromFile}.part{++countOfFileParts:D3}";
             } while (File.Exists(fromFile));
+            return result;
         }
 
-        public async Task ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken token = default(CancellationToken))
+        public async Task<SmugglerResult> ImportAsync(DatabaseSmugglerOptions options, Stream stream, CancellationToken token = default(CancellationToken))
         {
             if (options == null)
                 throw new ArgumentNullException(nameof(options));
@@ -127,17 +138,22 @@ namespace Raven.Client.Documents.Smuggler
                 var command = new ImportCommand(options, stream);
 
                 await _requestExecutor.ExecuteAsync(command, context, token).ConfigureAwait(false);
+
+                return command.Result;
             }
         }
 
-        private class ExportCommand : RavenCommand
+        private class ExportCommand : RavenCommand<SmugglerResult>
         {
             private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _options;
             private readonly Func<Stream, Task> _handleStreamResponse;
+            private readonly RequestExecutor _requestExecutor;
+            private readonly long _operationId;
+            public override bool IsReadRequest => false;
 
             public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerOptions options,
-                Func<Stream, Task> handleStreamResponse)
+                Func<Stream, Task> handleStreamResponse, long operationId, RequestExecutor requestExecutor)
             {
                 if (conventions == null)
                     throw new ArgumentNullException(nameof(conventions));
@@ -147,13 +163,14 @@ namespace Raven.Client.Documents.Smuggler
                 _context = context ?? throw new ArgumentNullException(nameof(context));
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
                 _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
+                _operationId = operationId;
+                _requestExecutor = requestExecutor;
 
-                ResponseType = RavenCommandResponseType.Empty;
             }
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/smuggler/export";
+                url = $"{node.Url}/databases/{node.Database}/smuggler/export?operationId={_operationId}";
 
                 return new HttpRequestMessage
                 {
@@ -171,14 +188,24 @@ namespace Raven.Client.Documents.Smuggler
                 {
                     await _handleStreamResponse(stream).ConfigureAwait(false);
                 }
+
+                var getOperationStateCommand = new GetOperationStateCommand(new DocumentConventions(), _operationId);
+
+                await _requestExecutor.ExecuteAsync(getOperationStateCommand, context).ConfigureAwait(false);
+
+                Result = (SmugglerResult)getOperationStateCommand.Result.Result;
+
                 return ResponseDisposeHandling.Automatic;
             }
+
+            
         }
 
-        private class ImportCommand : RavenCommand
+        private class ImportCommand : RavenCommand<SmugglerResult>
         {
             private readonly DatabaseSmugglerOptions _options;
             private readonly Stream _stream;
+            public override bool IsReadRequest => false;
 
             public ImportCommand(DatabaseSmugglerOptions options, Stream stream)
             {
@@ -195,6 +222,14 @@ namespace Raven.Client.Documents.Smuggler
                     Method = HttpMethod.Post,
                     Content = new StreamContent(_stream)
                 };
+            }
+
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    ThrowInvalidResponse();
+
+                Result = JsonDeserializationClient.SmugglerResult(response);
             }
         }
     }
