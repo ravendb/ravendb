@@ -20,11 +20,6 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        public static Lucene.Net.Search.Query BuildQuery(string query, Analyzer analyzer)
-        {
-            throw new NotSupportedException("TODO arek - remove me");
-        }
-
         public static Lucene.Net.Search.Query BuildQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
