@@ -22,11 +22,11 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _afterQueryExecuted = afterQueryExecuted;
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             return new GetRequest
             {
-                Url = "/queries",
+                Url = $"/queries?query-hash={_queryOperation.IndexQuery.GetQueryHash(ctx)}",
                 Method = HttpMethod.Post,
                 Content = new IndexQueryContent(_conventions, _queryOperation.IndexQuery)
             };

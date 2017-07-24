@@ -115,6 +115,8 @@ namespace Raven.Client.Documents.Queries
 
         public void Write(Dictionary<string, object> qp)
         {
+            if (qp == null)
+                return;
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);
@@ -148,6 +150,8 @@ namespace Raven.Client.Documents.Queries
         
         public void Write(Dictionary<string, string> qp)
         {
+            if (qp == null)
+                return;
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);

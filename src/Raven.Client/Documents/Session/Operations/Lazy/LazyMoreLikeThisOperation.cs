@@ -32,12 +32,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _operation = new MoreLikeThisOperation(session, query);
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             return new GetRequest
             {
                 Url = "/queries",
-                Query = "?op=morelikethis",
+                Query = $"?op=morelikethis&query-hash={_query.GetQueryHash(ctx)}",
                 Method = HttpMethod.Post,
                 Content = new MoreLikeThisQueryContent(_conventions, _query)
             };

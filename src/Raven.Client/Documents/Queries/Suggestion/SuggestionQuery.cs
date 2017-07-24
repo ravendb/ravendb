@@ -4,6 +4,8 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using Sparrow.Json;
+
 namespace Raven.Client.Documents.Queries.Suggestion
 {
     /// <summary>
@@ -60,5 +62,20 @@ namespace Raven.Client.Documents.Queries.Suggestion
         /// Whether to return the terms in order of popularity
         /// </summary>
         public bool Popularity { get; set; }
+
+        public ulong GetQueryHash(JsonOperationContext ctx)
+        {
+            using (var hasher = new QueryHashCalculator(ctx))
+            {
+                hasher.Write(Popularity);
+                hasher.Write(Accuracy);
+                hasher.Write((int?)Distance);
+                hasher.Write(MaxSuggestions);
+                hasher.Write(Field);
+                hasher.Write(Term);
+                hasher.Write(IndexName);
+                return hasher.GetHash();
+            }
+        }
     }
 }

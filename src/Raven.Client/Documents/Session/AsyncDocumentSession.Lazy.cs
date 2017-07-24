@@ -97,7 +97,7 @@ namespace Raven.Client.Documents.Session
 
         private async Task<bool> ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
-            var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+            var requests = PendingLazyOperations.Select(x => x.CreateRequest(Context)).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             await RequestExecutor.ExecuteAsync(multiGetCommand, Context, sessionId: _clientSessionId).ConfigureAwait(false);

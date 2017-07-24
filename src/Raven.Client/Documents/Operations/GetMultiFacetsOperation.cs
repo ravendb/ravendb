@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Operations
             {
                 var commands = new List<GetRequest>();
                 foreach (var q in queries)
-                    commands.Add(new LazyFacetsOperation(conventions, q).CreateRequest());
+                    commands.Add(new LazyFacetsOperation(conventions, q).CreateRequest(context));
 
                 _command = new MultiGetCommand(context, cache, commands);
                 ResponseType = RavenCommandResponseType.Raw;

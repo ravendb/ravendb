@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _startAfter = startAfter;
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             return new GetRequest
             {

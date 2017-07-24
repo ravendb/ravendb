@@ -21,12 +21,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             return new GetRequest
             {
                 Url = "/queries",
-                Query = "?op=facets",
+                Query = $"?op=facets&query-hash={_query.GetQueryHash(ctx)}",
                 Method = HttpMethod.Post,
                 Content = new FacetQueryContent(_conventions, _query)
             };

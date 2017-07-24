@@ -38,7 +38,7 @@ namespace Raven.Client.Documents.Commands
                 )
             };
 
-            url = $"{node.Url}/databases/{node.Database}/queries?op=suggest";
+            url = $"{node.Url}/databases/{node.Database}/queries?op=suggest&query-hash={_query.GetQueryHash(_context)}";
             return request;
         }
 

@@ -23,12 +23,12 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _operation = new SuggestionOperation(session, query);
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             return new GetRequest
             {
                 Url = "/queries",
-                Query = "?op=suggest",
+                Query = $"?op=suggest&query-hash={_query.GetQueryHash(ctx)}",
                 Method = HttpMethod.Post,
                 Content = new SuggestionQueryContent(_conventions, _query)
             };
