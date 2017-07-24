@@ -6,6 +6,7 @@ param(
     [switch]$Ubuntu16,
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
+    [switch]$DontBuildStudio,
     [switch]$JustNuget,
     [switch]$Help)
 
@@ -121,11 +122,11 @@ if ($JustNuget) {
     exit 0
 }
 
-if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio) {
+if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
     BuildStudio $STUDIO_SRC_DIR $version
 } else {
-    write-host "Not rebuilding studio..."
+    write-host "Not building studio..."
 }
 
 Foreach ($spec in $targets) {
@@ -144,7 +145,11 @@ Foreach ($spec in $targets) {
         "Sparrow" = $SPARROW_OUT_DIR;
     }
 
-    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version
+    $buildOptions = @{
+        "DontBuildStudio" = !!$DontBuildStudio;
+    }
+
+    CreateRavenPackage $PROJECT_DIR $RELEASE_DIR $specOutDirs $spec $version $buildOptions
 }
 
 write-host "Done creating packages."
