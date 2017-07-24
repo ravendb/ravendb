@@ -300,7 +300,9 @@ namespace Raven.Server.Documents.Queries
 
                     var id = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, value);
 
-                    AddId(id.Value);
+                    Debug.Assert(id.Type == ValueTokenType.String);
+
+                    AddId(id.Value.ToString());
                 }
 
                 public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
@@ -311,8 +313,11 @@ namespace Raven.Server.Documents.Queries
                     var first = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, firstValue);
                     var second = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, secondValue);
 
-                    AddId(first.Value);
-                    AddId(second.Value);
+                    Debug.Assert(first.Type == ValueTokenType.String);
+                    Debug.Assert(second.Type == ValueTokenType.String);
+
+                    AddId(first.Value.ToString());
+                    AddId(second.Value.ToString());
                 }
 
                 public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)

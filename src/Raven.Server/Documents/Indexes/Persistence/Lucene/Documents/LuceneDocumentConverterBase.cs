@@ -55,9 +55,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         internal const string ConvertToJsonSuffix = "_ConvertToJson";
 
-        private const string TrueString = "true";
+        internal const string TrueString = "true";
 
-        private const string FalseString = "false";       
+        internal const string FalseString = "false";
 
         private readonly Field _reduceValueField = new Field(Constants.Documents.Indexing.Fields.ReduceValueFieldName, new byte[0], 0, 0, Field.Store.YES);
 
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             Document.GetFields().Clear();
 
-            int numberOfFields = GetFields( new DefaultDocumentLuceneWrapper (Document), key, document, indexContext);
+            int numberOfFields = GetFields(new DefaultDocumentLuceneWrapper(Document), key, document, indexContext);
 
             shouldSkip = numberOfFields <= 1; // there is always a key field, but we want to filter-out empty documents
 
@@ -191,7 +191,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     {
                         instance.Add(numericField);
                         newFields++;
-                    }                        
+                    }
                 }
 
                 return newFields;
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     instance.Add(numericField);
                     newFields++;
                 }
-                
+
                 return newFields;
             }
 
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     instance.Add(complexObjectField);
                     newFields++;
-                }                    
+                }
 
                 return newFields;
             }
@@ -365,7 +365,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 {
                     instance.Add(jsonField);
                     newFields++;
-                }                    
+                }
 
                 return newFields;
             }
@@ -405,7 +405,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 instance.Add(numericField);
                 newFields++;
-            }                
+            }
 
             return newFields;
         }

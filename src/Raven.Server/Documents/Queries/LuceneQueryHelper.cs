@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Globalization;
 using System.IO;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
@@ -40,34 +38,94 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query Equal(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string value)
+        public static Query Equal(string fieldName, LuceneTermType termType, string value)
         {
-            return CreateRange(fieldName, fieldType, value, termType, true, value, termType, true);
+            return CreateRange(fieldName, value, termType, true, value, termType, true);
         }
 
-        public static Query LessThan(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string value)
+        public static Query Equal(string fieldName, LuceneTermType termType, long value)
         {
-            return CreateRange(fieldName, fieldType, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, false);
+            return CreateRange(fieldName, value, true, value, true);
         }
 
-        public static Query LessThanOrEqual(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string value)
+        public static Query Equal(string fieldName, LuceneTermType termType, double value)
         {
-            return CreateRange(fieldName, fieldType, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, true);
+            return CreateRange(fieldName, value, true, value, true);
         }
 
-        public static Query GreaterThan(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string value)
+        public static Query LessThan(string fieldName, LuceneTermType termType, string value)
         {
-            return CreateRange(fieldName, fieldType, value, termType, false, Null, LuceneTermType.Null, true);
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, false);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string value)
+        public static Query LessThan(string fieldName, LuceneTermType termType, long value)
         {
-            return CreateRange(fieldName, fieldType, value, termType, true, Null, LuceneTermType.Null, true);
+            return CreateRange(fieldName, long.MinValue, true, value, false);
         }
 
-        public static Query Between(string fieldName, LuceneFieldType fieldType, LuceneTermType termType, string fromValue, string toValue)
+        public static Query LessThan(string fieldName, LuceneTermType termType, double value)
         {
-            return CreateRange(fieldName, fieldType, fromValue, termType, true, toValue, termType, true);
+            return CreateRange(fieldName, double.MinValue, true, value, false);
+        }
+
+        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, string value)
+        {
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, true);
+        }
+
+        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, long value)
+        {
+            return CreateRange(fieldName, long.MinValue, true, value, true);
+        }
+
+        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, double value)
+        {
+            return CreateRange(fieldName, double.MinValue, true, value, true);
+        }
+
+        public static Query GreaterThan(string fieldName, LuceneTermType termType, string value)
+        {
+            return CreateRange(fieldName, value, termType, false, Null, LuceneTermType.Null, true);
+        }
+
+        public static Query GreaterThan(string fieldName, LuceneTermType termType, long value)
+        {
+            return CreateRange(fieldName, value, false, long.MaxValue, true);
+        }
+
+        public static Query GreaterThan(string fieldName, LuceneTermType termType, double value)
+        {
+            return CreateRange(fieldName, value, false, double.MaxValue, true);
+        }
+
+        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, string value)
+        {
+            return CreateRange(fieldName, value, termType, true, Null, LuceneTermType.Null, true);
+        }
+
+        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, long value)
+        {
+            return CreateRange(fieldName, value, true, long.MaxValue, true);
+        }
+
+        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, double value)
+        {
+            return CreateRange(fieldName, value, true, double.MaxValue, true);
+        }
+
+        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, string toValue)
+        {
+            return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true);
+        }
+
+        public static Query Between(string fieldName, LuceneTermType termType, long fromValue, long toValue)
+        {
+            return CreateRange(fieldName, fromValue, true, toValue, true);
+        }
+
+        public static Query Between(string fieldName, LuceneTermType termType, double fromValue, double toValue)
+        {
+            return CreateRange(fieldName, fromValue, true, toValue, true);
         }
 
         public static IEnumerable<string> GetAnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer)
@@ -286,100 +344,24 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return new WildcardQuery(GetWildcardTerm(fieldName, term, type, analyzer));
         }
 
-        private static Query CreateRange(string fieldName, LuceneFieldType fieldType, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax)
+        private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax)
         {
-            switch (fieldType)
-            {
-                case LuceneFieldType.String:
-                    var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
-                    var maxTermIsNullOrStar = maxValueType == LuceneTermType.Null || maxValue.Equals(Asterisk);
-                    if (minTermIsNullOrStar && maxTermIsNullOrStar)
-                        return new WildcardQuery(new Term(fieldName, Asterisk));
+            var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
+            var maxTermIsNullOrStar = maxValueType == LuceneTermType.Null || maxValue.Equals(Asterisk);
+            if (minTermIsNullOrStar && maxTermIsNullOrStar)
+                return new WildcardQuery(new Term(fieldName, Asterisk));
 
-                    return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : minValue, maxTermIsNullOrStar ? null : maxValue, inclusiveMin, inclusiveMax);
-                case LuceneFieldType.Long:
-                    var (lOverrideMin, lOverrideMax) = OverrideInclusiveForKnownNumericRange(minValue, minValueType, maxValue, maxValueType);
-
-                    long longMin;
-                    if (lOverrideMin)
-                    {
-                        longMin = long.MinValue;
-                        inclusiveMin = true;
-                    }
-                    else
-                    {
-                        longMin = ParseTermToLong(minValue, minValueType);
-                    }
-
-                    long longMax;
-                    if (lOverrideMax)
-                    {
-                        longMax = long.MaxValue;
-                        inclusiveMax = true;
-                    }
-                    else
-                    {
-                        longMax = ParseTermToLong(maxValue, maxValueType);
-                    }
-
-                    return NumericRangeQuery.NewLongRange(fieldName, 4, longMin, longMax, inclusiveMin, inclusiveMax);
-                case LuceneFieldType.Double:
-                    var (dOverrideMin, dOverrideMax) = OverrideInclusiveForKnownNumericRange(minValue, minValueType, maxValue, maxValueType);
-
-                    double doubleMin;
-                    if (dOverrideMin)
-                    {
-                        doubleMin = double.MinValue;
-                        inclusiveMin = true;
-                    }
-                    else
-                    {
-                        doubleMin = double.Parse(minValue);
-                    }
-
-                    double doubleMax;
-                    if (dOverrideMax)
-                    {
-                        doubleMax = double.MaxValue;
-                        inclusiveMax = true;
-                    }
-                    else
-                    {
-                        doubleMax = double.Parse(maxValue);
-                    }
-
-                    return NumericRangeQuery.NewDoubleRange(fieldName, 4, doubleMin, doubleMax, inclusiveMin, inclusiveMax);
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : minValue, maxTermIsNullOrStar ? null : maxValue, inclusiveMin, inclusiveMax);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static long ParseTermToLong(string term, LuceneTermType type)
+        private static Query CreateRange(string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)
         {
-            return type == LuceneTermType.Hex // TODO [ppekrol] is this needed?
-                ? long.Parse(term.Substring(2), NumberStyles.HexNumber)
-                : long.Parse(term);
+            return NumericRangeQuery.NewLongRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
         }
 
-        /// <summary>
-        /// For numeric values { NUll TO <number/> } should be [ <min-value/> TO <number/>} but not for string values.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static (bool OverrideMin, bool OverrideMax) OverrideInclusiveForKnownNumericRange(string minTerm, LuceneTermType minType, string maxTerm, LuceneTermType maxType)
+        private static Query CreateRange(string fieldName, double minValue, bool inclusiveMin, double maxValue, bool inclusiveMax)
         {
-            bool overrideMax = false, overrideMin = false;
-            if (maxType == LuceneTermType.Null || maxTerm == Asterisk)
-            {
-                overrideMax = true;
-            }
-
-            if (minType == LuceneTermType.Null || minTerm == Asterisk)
-            {
-                overrideMin = true;
-            }
-
-            return (overrideMin, overrideMax);
+            return NumericRangeQuery.NewDoubleRange(fieldName, 4, minValue, maxValue, inclusiveMin, inclusiveMax);
         }
 
         private static Occur PrefixToOccurrence(LucenePrefixOperator prefix, Occur defaultOccurrence)

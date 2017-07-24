@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
+using Raven.Client;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
-using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Raven.Server.Documents.Queries.Parser.Lucene;
 using Sparrow.Json;
@@ -68,21 +71,64 @@ namespace Raven.Server.Documents.Queries
 
                         if (expression.Type == OperatorType.Equal && fieldType == LuceneFieldType.String)
                         {
-                            return CreateTermNode(luceneFieldName, value, valueType, analyzer);
+                            return CreateTermNode(luceneFieldName, value as string, valueType, analyzer);
                         }
 
-                        switch (expression.Type)
+                        switch (fieldType)
                         {
-                            case OperatorType.Equal:
-                                return LuceneQueryHelper.Equal(luceneFieldName, fieldType, termType, value);
-                            case OperatorType.LessThan:
-                                return LuceneQueryHelper.LessThan(luceneFieldName, fieldType, termType, value);
-                            case OperatorType.GreaterThan:
-                                return LuceneQueryHelper.GreaterThan(luceneFieldName, fieldType, termType, value);
-                            case OperatorType.LessThanEqual:
-                                return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, fieldType, termType, value);
-                            case OperatorType.GreaterThanEqual:
-                                return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, fieldType, termType, value);
+                            case LuceneFieldType.String:
+                                var valueAsString = value as string;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return CreateTermNode(luceneFieldName, valueAsString, valueType, analyzer);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString);
+                                }
+                                break;
+                            case LuceneFieldType.Long:
+                                var valueAsLong = (long)value;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                }
+                                break;
+                            case LuceneFieldType.Double:
+                                var valueAsDouble = (double)value;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
                         }
 
                         throw new NotSupportedException("Should not happen!");
@@ -95,7 +141,23 @@ namespace Raven.Server.Documents.Queries
 
                         var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
 
-                        return LuceneQueryHelper.Between(luceneFieldName, fieldType, termType, valueFirst, valueSecond);
+                        switch (fieldType)
+                        {
+                            case LuceneFieldType.String:
+                                var valueFirstAsString = valueFirst as string;
+                                var valueSecondAsString = valueSecond as string;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, valueSecondAsString);
+                            case LuceneFieldType.Long:
+                                var valueFirstAsLong = (long)valueFirst;
+                                var valueSecondAsLong = (long)valueSecond;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsLong, valueSecondAsLong);
+                            case LuceneFieldType.Double:
+                                var valueFirstAsDouble = (double)valueFirst;
+                                var valueSecondAsDouble = (double)valueSecond;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsDouble, valueSecondAsDouble);
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                     }
                 case OperatorType.In:
                     {
@@ -201,7 +263,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException();
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
-            return parser.Parse(value);
+            return parser.Parse(value as string);
         }
 
         private static Lucene.Net.Search.Query HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
@@ -212,12 +274,13 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 throw new InvalidOperationException();
 
-            if (string.IsNullOrEmpty(value))
-                value = LuceneQueryHelper.Asterisk;
+            var valueAsString = value as string;
+            if (string.IsNullOrEmpty(valueAsString))
+                valueAsString = LuceneQueryHelper.Asterisk;
             else
-                value += LuceneQueryHelper.Asterisk;
+                valueAsString += LuceneQueryHelper.Asterisk;
 
-            return LuceneQueryHelper.Term(fieldName, value, LuceneTermType.PrefixTerm, analyzer);
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.PrefixTerm, analyzer);
         }
 
         private static Lucene.Net.Search.Query HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
@@ -228,11 +291,12 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 throw new InvalidOperationException();
 
-            value = string.IsNullOrEmpty(value)
+            var valueAsString = value as string;
+            valueAsString = string.IsNullOrEmpty(valueAsString)
                 ? LuceneQueryHelper.Asterisk
-                : value.Insert(0, LuceneQueryHelper.Asterisk);
+                : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
 
-            return LuceneQueryHelper.Term(fieldName, value, LuceneTermType.WildCardTerm, analyzer);
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCardTerm, analyzer);
         }
 
         private static Lucene.Net.Search.Query HandleBoost(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
@@ -254,7 +318,8 @@ namespace Raven.Server.Documents.Queries
             if (valueType != ValueTokenType.String)
                 throw new InvalidOperationException();
 
-            var values = value.Split(' ');
+            var valueAsString = (string)value;
+            var values = valueAsString.Split(' ');
 
             if (values.Length == 1)
             {
@@ -324,7 +389,7 @@ namespace Raven.Server.Documents.Queries
             yield return (valueOrParameterName, value.Type);
         }
 
-        public static (string Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             if (value.Type == ValueTokenType.Parameter)
             {
@@ -343,22 +408,29 @@ namespace Raven.Server.Documents.Queries
                 if (expectedValueType != parameterValueType)
                     throw new InvalidOperationException();
 
-                return (parameterValue.ToString(), parameterValueType); // TODO [ppekrol] avoid ToString()
+                return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
             }
-
-            string queryValue;
 
             switch (value.Type)
             {
                 case ValueTokenType.String:
-                    queryValue = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
-                    break;
+                    var valueAsString = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    return (valueAsString, ValueTokenType.String);
+                case ValueTokenType.Long:
+                    var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
+                    return (valueAsLong, ValueTokenType.Long);
+                case ValueTokenType.Double:
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value));
+                    return (valueAsDouble, ValueTokenType.Double);
+                case ValueTokenType.True:
+                    return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);
+                case ValueTokenType.False:
+                    return (LuceneDocumentConverterBase.FalseString, ValueTokenType.String);
+                case ValueTokenType.Null:
+                    return (Constants.Documents.Indexing.Fields.NullValue, ValueTokenType.String);
                 default:
-                    queryValue = QueryExpression.Extract(query.QueryText, value);
-                    break;
+                    throw new ArgumentOutOfRangeException();
             }
-
-            return (queryValue, value.Type);
         }
 
         private static (string LuceneFieldName, LuceneFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetLuceneField(string fieldName, ValueTokenType valueType)
@@ -368,9 +440,9 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.String:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.Quoted);
                 case ValueTokenType.Double:
-                    return (fieldName + Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double); // TODO arek - avoid +
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double); // TODO arek - avoid +
                 case ValueTokenType.Long:
-                    return (fieldName + Client.Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long); // TODO arek - avoid +
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long); // TODO arek - avoid +
                 default:
                     ThrowUnhandledValueTokenType(valueType);
                     break;
@@ -379,6 +451,40 @@ namespace Raven.Server.Documents.Queries
             Debug.Assert(false);
 
             return (null, LuceneFieldType.String, LuceneTermType.Quoted);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static object UnwrapParameter(object parameterValue, ValueTokenType parameterType)
+        {
+            switch (parameterType)
+            {
+                case ValueTokenType.Long:
+                    return parameterValue;
+                case ValueTokenType.Double:
+                    var dlnv = (LazyNumberValue)parameterValue;
+                    return dlnv.ToDouble(CultureInfo.InvariantCulture);
+                case ValueTokenType.String:
+                    if (parameterValue == null)
+                        return null;
+
+                    var lsv = parameterValue as LazyStringValue;
+                    if (lsv != null)
+                        return lsv.ToString();
+
+                    var lcsv = parameterValue as LazyCompressedStringValue;
+                    if (lcsv != null)
+                        return lcsv.ToString();
+
+                    return parameterValue.ToString();
+                case ValueTokenType.True:
+                    return LuceneDocumentConverterBase.TrueString;
+                case ValueTokenType.False:
+                    return LuceneDocumentConverterBase.FalseString;
+                case ValueTokenType.Null:
+                    return Constants.Documents.Indexing.Fields.NullValue;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(parameterType), parameterType, null);
+            }
         }
 
         private static IEnumerable<(string Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
