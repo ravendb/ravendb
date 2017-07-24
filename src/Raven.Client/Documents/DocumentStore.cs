@@ -132,6 +132,7 @@ namespace Raven.Client.Documents
 
         public override IDocumentSession OpenSession(SessionOptions options)
         {
+            AssertInitialized();
             EnsureNotClosed();
 
             var sessionId = Guid.NewGuid();

@@ -151,6 +151,7 @@ namespace Raven.Client.Documents
         }
 
         protected bool Initialized;
+        private X509Certificate2 _certificate;
 
         public abstract BulkInsertOperation BulkInsert(string database = null);
 
@@ -193,7 +194,16 @@ namespace Raven.Client.Documents
         /// <summary>
         /// The client certificate to use for authentication
         /// </summary>
-        public X509Certificate2 Certificate { get; set; }
+        public X509Certificate2 Certificate
+        {
+            get => _certificate;
+            set
+            {
+                if(Initialized)
+                    throw new InvalidOperationException("You cannot change the certificate after the document store was initialized");
+                _certificate = value;
+            }
+        }
 
         public abstract RequestExecutor GetRequestExecutor(string databaseName = null);
 

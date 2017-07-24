@@ -23,13 +23,27 @@ namespace RachisTests.DatabaseCluster
         public async Task EnsureDocumentsReplication(bool useSsl)
         {
             var clusterSize = 5;
-            var databaseName = "ReplicationTestDB";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, useSsl: useSsl);
+
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
+            if (useSsl)
+            {
+
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
+                {
+                    [databaseName] = DatabaseAccess.Admin
+                }, defaultServer: leader);
+            }
+
             CreateDatabaseResult databaseResult;
             using (var store = new DocumentStore()
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
+                Certificate = adminCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -53,6 +67,7 @@ namespace RachisTests.DatabaseCluster
             {
                 Urls = new[] { databaseResult.NodesAddedTo[0] },
                 Database = databaseName,
+                Certificate = clientCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -69,7 +84,8 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
+                    TimeSpan.FromSeconds(clusterSize + 5),
+                    certificate: clientCertificate));
 
             }
         }
@@ -80,14 +96,22 @@ namespace RachisTests.DatabaseCluster
         public async Task EnsureReplicationToWatchers(bool useSsl)
         {
             var clusterSize = 3;
-            var databaseName = "ReplicationTestDB";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
             var watchers = new List<ExternalReplication>();
+
+            X509Certificate2 adminCertificate = null;
+            if (useSsl)
+            {
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+            }
+
 
             using (var store = new DocumentStore()
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
+                Certificate = adminCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -115,7 +139,8 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
+                    TimeSpan.FromSeconds(clusterSize + 5),
+                    adminCertificate));
 
                 for (var i = 0; i < 5; i++)
                 {
@@ -143,6 +168,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     Urls = new[] { watcher.Url },
                     Database = watcher.Database,
+                    Certificate = adminCertificate,
                     Conventions =
                     {
                         DisableTopologyUpdates = true
@@ -302,12 +328,21 @@ namespace RachisTests.DatabaseCluster
         public async Task DoNotReplicateBack(bool useSsl)
         {
             var clusterSize = 5;
-            var databaseName = "ReplicationTestDB";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
+
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
+            if (useSsl)
+            {
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+            }
+
             using (var store = new DocumentStore()
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
+                Certificate = adminCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -335,7 +370,8 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
+                    TimeSpan.FromSeconds(clusterSize + 5),
+                    certificate: adminCertificate));
 
                 topology.RemoveFromTopology(leader.ServerStore.NodeTag);
                 await Task.Delay(200); // twice the heartbeat
@@ -356,13 +392,27 @@ namespace RachisTests.DatabaseCluster
         public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
         {
             var clusterSize = 3;
-            var databaseName = "ReplicationTestDB";
+            var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0, useSsl: useSsl);
+
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
+            if (useSsl)
+            {
+
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
+                {
+                    [databaseName] = DatabaseAccess.Admin
+                }, defaultServer: leader);
+            }
+
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             using (var store = new DocumentStore()
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,
+                Certificate = adminCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -390,13 +440,15 @@ namespace RachisTests.DatabaseCluster
                     databaseName,
                     "users/1",
                     u => u.Name.Equals("Karmel"),
-                    TimeSpan.FromSeconds(clusterSize + 5)));
+                    TimeSpan.FromSeconds(clusterSize + 5),
+                    certificate: adminCertificate));
             }
 
             using (var store = new DocumentStore()
             {
                 Urls = Servers[1].WebUrls,
                 Database = databaseName,
+                Certificate = clientCertificate,
                 Conventions =
                 {
                     DisableTopologyUpdates = true
@@ -421,19 +473,20 @@ namespace RachisTests.DatabaseCluster
         public async Task ReplicateToWatcherWithAuth()
         {
             var serverCertPath = SetupServerAuthentication();
-            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-            var clientCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin:true);
-            var clientCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                ["ReplicateToWatcherWithAuth"] = DatabaseAccess.ReadWrite
+                [dbName] = DatabaseAccess.Admin
+            });
+            var userCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Admin
             });
 
-            using (var store1 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithAuth"))
-            using (var store2 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithAuth", createDatabase: false))
+            using (var store1 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert1, modifyName: s => dbName))
+            using (var store2 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert2, modifyName: s => dbName, createDatabase: false))
             {
-                store1.Certificate = clientCert1;
-                store2.Certificate = clientCert2;
-
                 var watcher2 = new ExternalReplication
                 {
                     Database = store2.Database,
@@ -456,19 +509,21 @@ namespace RachisTests.DatabaseCluster
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
             var serverCertPath = SetupServerAuthentication();
-            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-            var clientCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
-            var clientCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                ["OtherDB"] = DatabaseAccess.ReadWrite
+                [dbName] = DatabaseAccess.Admin
             });
-
-            using (var store1 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithInvalidAuth"))
-            using (var store2 = GetDocumentStore(certificate: serverCertificate, modifyName: s => "ReplicateToWatcherWithInvalidAuth", createDatabase: false))
+            var userCert2 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                store1.Certificate = clientCert1;
-                store2.Certificate = clientCert2;
-
+                [dbName + "otherstuff"] = DatabaseAccess.Admin
+            });
+            
+            using (var store1 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert1, modifyName: s => dbName))
+            using (var store2 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert2, modifyName: s => dbName,
+                createDatabase: false))
+            {
                 var watcher2 = new ExternalReplication
                 {
                     Database = store2.Database,
@@ -476,13 +531,14 @@ namespace RachisTests.DatabaseCluster
                 };
 
                 await AddWatcherToReplicationTopology(store1, watcher2);
-
+                
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
-                    await Assert.ThrowsAsync<AuthorizationException>(async () => await session.SaveChangesAsync());
+                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.SaveChangesAsync();
                 }
-                
+
+                Assert.Throws<AuthorizationException>(() => WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
             }
         }
     }

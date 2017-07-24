@@ -27,20 +27,18 @@ namespace SlowTests.Server.Replication
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, new Dictionary<string, DatabaseAccess>
+                var serverCertPath = SetupServerAuthentication();
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
-                    [dbName1] = DatabaseAccess.ReadWrite,
-                    [dbName2] = DatabaseAccess.ReadWrite
+                    [dbName1] = DatabaseAccess.Admin,
+                    [dbName2] = DatabaseAccess.Admin
                 });
             }
 
-            
-            using (var store1 = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName1))
-            using (var store2 = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName2))
+            using (var store1 = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName1))
+            using (var store2 = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName2))
             {
-                store1.Certificate = clientCertificate; // temporary workaround
-                store2.Certificate = clientCertificate;
-
                 await SetupReplicationAsync(store1, store2);
                 await SetupReplicationAsync(store2, store1);
                 using (var session = store1.OpenSession())
