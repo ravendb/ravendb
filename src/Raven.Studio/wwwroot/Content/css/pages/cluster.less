@@ -1,0 +1,158 @@
+@cluster-member-color: #6ebf3a;
+@cluster-promotable-color: #6ebf3a;
+@cluster-watcher-color: darken(#6ebf3a, 20%);
+
+@cluster-voting-color: #266cb3;
+@cluster-voting-text-color: #74b4f7;
+
+@cluster-waiting-color: #63728a;
+@cluster-waiting-text-color: #98a7b7;
+
+@cluster-disconnected-color: #f93e3a;
+
+#clusterGraphContainer {
+
+    &.graphHidden > svg {
+        display: none;
+    }
+
+    .nodes {
+        .node {
+
+            .state {
+                text-anchor: middle;
+                font-size: 9px;
+            }
+
+            .node-tag {
+                font-size: 24px;
+                text-anchor: middle;
+                fill: black;
+            }
+
+            .leader-stroke {
+                fill: none;
+                stroke: #266cb3;
+                stroke-width: 3px;
+                stroke-dasharray: 20,3;
+                opacity: 0;
+            }
+
+            .node-icon {
+                text-anchor: middle;
+                font-size: 34px;
+                fill: white;
+            }
+
+            .node-bg {
+                transition: .2s fill ease-in-out;
+            }
+
+            .leader-stroke {
+                transition: .2s opacity ease-in-out;
+            }
+
+            &.leader {
+                .leader-stroke {
+                    opacity: 1;
+                }
+
+                .node-icon {
+                    fill: @brand-warning;
+                }
+            }
+
+            &.Member {
+                .node-bg {
+                    fill: @cluster-member-color;
+                }
+            }
+
+            &.Promotable {
+                .node-bg {
+                    fill: @cluster-promotable-color;
+                }
+            }
+
+            &.Watcher {
+                .node-bg {
+                    fill: @cluster-watcher-color;
+                }
+            }
+
+            &.disconnected {
+                .node-bg {
+                    fill: @cluster-disconnected-color;
+                }
+            }
+        }
+
+        &.voting {
+            .node-icon {
+                display: none;
+            }
+
+            .Member, .Promotable {
+                .node-bg {
+                    fill: @cluster-voting-color;
+                }
+
+                .state {
+                    fill: @cluster-voting-text-color;
+                }
+            }
+
+            .Watcher {
+                .node-bg {
+                    fill: @cluster-waiting-color;
+                }
+
+                .state {
+                    fill: @cluster-waiting-text-color;
+                }
+
+                .node-icon {
+                    display: block;
+                    fill: @cluster-waiting-text-color;
+                    font-size: 22px;
+                    transform: translate(0,-13px);
+                }
+            }
+
+            .node {
+                .node-tag {
+                    fill: white;
+                }
+            }
+        }
+    }
+
+    .edges {
+
+        .edge-line {
+            stroke-opacity: 0;
+            stroke: #63728a;
+            stroke-width: 1;
+
+            &.with-leader {
+                stroke-opacity: 1;
+                stroke: #6ebf3a;
+                stroke-width: 2;
+
+                &.with-watcher {
+                    stroke: @cluster-watcher-color;
+                }
+
+                &.with-error {
+                    stroke: @cluster-disconnected-color;
+                }
+            }
+        }
+
+        &.voting {
+            .edge-line {
+                stroke-opacity: 1;
+            }
+        }
+    }
+}

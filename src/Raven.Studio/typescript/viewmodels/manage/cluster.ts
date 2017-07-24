@@ -4,18 +4,25 @@ import leaderStepDownCommand = require("commands/database/cluster/leaderStepDown
 import promoteClusterNodeCommand = require("commands/database/cluster/promoteClusterNodeCommand");
 import demoteClusterNodeCommand = require("commands/database/cluster/demoteClusterNodeCommand");
 import forceLeaderTimeoutCommand = require("commands/database/cluster/forceLeaderTimeoutCommand");
+import changesContext = require("common/changesContext");
 
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
 import router = require("plugins/router");
+import clusterGraph = require("models/database/cluster/clusterGraph");
 
 class cluster extends viewModelBase {
+
+    private graph = new clusterGraph();
 
     topology = clusterTopologyManager.default.topology;
 
     canDeleteNodes: KnockoutComputed<boolean>;
     canAddNodes: KnockoutComputed<boolean>;
+    showConnectivity: KnockoutComputed<boolean>;
+
+    leaderUrl: KnockoutComputed<string>;
 
     spinners = {
         stepdown: ko.observable<boolean>(false),
@@ -32,9 +39,39 @@ class cluster extends viewModelBase {
         this.initObservables();
     }
 
+    compositionComplete() {
+        super.compositionComplete();
+
+        this.graph.init($("#clusterGraphContainer"));
+
+        this.graph.draw(this.topology().nodes(), this.topology().leader());
+
+        const serverWideClient = changesContext.default.serverNotifications();
+
+        this.addNotification(serverWideClient.watchClusterTopologyChanges(() => this.refresh()));
+        this.addNotification(serverWideClient.watchReconnect(() => this.refresh()));
+    }
+
     private initObservables() {
         this.canDeleteNodes = ko.pureComputed(() => this.topology().leader() && this.topology().nodes().length > 1);
-        this.canAddNodes = ko.pureComputed(() => !!this.topology().leader());
+        this.canAddNodes = ko.pureComputed(() => !!this.topology().leader() || this.topology().nodeTag() === "?");
+
+        this.leaderUrl = ko.pureComputed(() => {
+            const topology = this.topology();
+
+            if (!topology.leader()) {
+                return "";
+            }
+
+            const serverUrl = topology.nodes().find(x => x.tag() === topology.leader()).serverUrl();
+            const localPart = appUrl.forCluster();
+
+            return appUrl.toExternalUrl(serverUrl, localPart);
+        });
+
+        this.showConnectivity = ko.pureComputed(() => {
+            return !this.topology().leader() || this.topology().leader() === this.topology().nodeTag();
+        });
     }
 
     activate(args: any) {
@@ -105,6 +142,10 @@ class cluster extends viewModelBase {
                         .always(() => this.spinners.forceTimeout(false));
                 }
             });
+    }
+
+    private refresh() {
+        this.graph.draw(this.topology().nodes(), this.topology().leader());
     }
 }
 

@@ -208,6 +208,100 @@ class graphHelper {
             ctx.stroke();
         }
     }
+
+    static circleLayout(nodes: Array<layoutable>, radius: number) {
+
+        if (nodes.length === 1) {
+            nodes[0].x = 0;
+            nodes[0].y = 0;
+        } else {
+            nodes.forEach((node: layoutable, idx: number) => {
+                node.x = radius * Math.sin(idx * 2 * Math.PI / nodes.length);
+                node.y = radius * Math.cos(Math.PI - idx * 2 * Math.PI / nodes.length);
+            });
+        }
+    }
+
+    static pairIterator<T>(elements: Array<T>, callback: (left: T, right: T) => void) {
+        if (elements.length < 2) {
+            return;
+        }
+        for (let i = 0; i < elements.length; i++) {
+            for (let j = 0; j < elements.length; j++) {
+                if (i !== j) {
+                    callback(elements[j], elements[i]);
+                }
+            }
+        }
+    }
+
+    static shortenLineFromObject(line: { source: { x: number; y: number }; target: { x: number; y: number }}, radius: number) {
+        return graphHelper.shortenLine(line.source.x, line.source.y, line.target.x, line.target.y, radius);
+    }
+
+    static shortenLine(x1: number, y1: number, x2: number, y2: number, radius: number) {
+        let dx = x2 - x1;
+        let dy = y2 - y1;
+
+        const length = Math.sqrt(dx * dx + dy * dy);
+        if (length > 0) {
+            dx /= length;
+            dy /= length;
+        }
+
+        if (radius * 2 > length) {
+            throw new Error("Line is too short!");
+        }
+
+        dx *= length - radius;
+        dy *= length - radius;
+
+        return {
+            x1: x1 + dx,
+            x2: x2 - dx,
+            y1: y1 + dy,
+            y2: y2 - dy
+        };
+    } 
+
+    static createArrow(container: d3.Selection<void>, type: "start" | "end", fill: string, id: string) {
+        if (type === "start") {
+            container.append("marker")
+                .attr({
+                    id: id,
+                    markerWidth: 15,
+                    markerHeight: 17,
+                    refX: 6,
+                    refY: 8.5,
+                    orient: "auto",
+                    markerUnits: "userSpaceOnUse",
+                    viewBox: "0 0 15 17"
+                })
+                .append("path")
+                .attr({
+                    d: "M13,2 L13,15 L2,8.5 z",
+                    fill: fill
+            });
+        } else {
+            container.append("marker")
+                .attr({
+                    id: id,
+                    markerWidth: 15,
+                    markerHeight: 17,
+                    refX: 9,
+                    refY: 8.5,
+                    orient: "auto",
+                    markerUnits: "userSpaceOnUse",
+                    viewBox: "0 0 15 17"
+                })
+                .append("path")
+                .attr({
+                    d: "M2,2 L2,15 L13,8.5 z",
+                    fill: fill
+                });
+        }
+        
+    }
 }
 
 export = graphHelper;

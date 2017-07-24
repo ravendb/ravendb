@@ -17,7 +17,7 @@
                                     <div class="flex-horizontal">
                                         <div>
                                             <h3>
-                                                <a class="destination-name" data-bind="attr: { href: serverUrl }, css: { 'btn-spinner' : !$root.topology().leader() }" target="_blank">
+                                                <a class="destination-name" data-bind="attr: { href: serverUrl }, css: { 'btn-spinner' : !$root.topology().leader() && tag() !== '?' }" target="_blank">
                                                     <i data-bind="attr : { class: $root.topology().nodeTag() === tag() ? 'icon-home' : 'icon-cluster-node' }"></i>
                                                     <span data-bind="text: 'Node ' + tag()"></span>
                                                 </a>
@@ -73,7 +73,7 @@
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-horizontal flex-header">
-                <div></div><h3>Cluster topology<i class="icon-info text-info"></i></h3>
+                <div></div><h3>Cluster topology</h3>
                 <div class="flex-separator"></div>
                 <div class="btn-group dropdown-right">
                     <button class="btn btn-default dropdown-toggle btn-upcoming" disabled="disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -85,15 +85,9 @@
                     </ul>
                 </div>
             </div>
-            <div class="panel flex-grow">
-                <div class="row">
-                    <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                        <br /><br /><br />
-                        <i class="icon-xl icon-hammer-driver text-warning"></i>
-                        <h2 class="text-center text-warning">
-                            Graph is under development
-                        </h2>
-                    </div>
+            <div class="panel flex-grow" id="clusterGraphContainer" data-bind="css: { graphHidden: !$root.showConnectivity() }">
+                <div class="absolute-center" data-bind="visible: !$root.showConnectivity()">
+                    Go to <a target="_blank" href="#" data-bind="attr: { href: $root.leaderUrl }">Leader</a> node to see connectivity status.
                 </div>
             </div>
             <div class="legend">
@@ -102,8 +96,7 @@
                         <h5>Node type</h5>
                         <div class="row">
                             <div class="col-xs-6">
-                                <div><i class="icon-circle-filled text-info"></i> <span>CLUSTER NODE</span></div>
-                                <div><i class="icon-circle-filled text-warning"></i> <span>CLUSTER LEADER</span></div>
+                                <div><i class="icon-crown"></i> <span>Leader</span></div>
                             </div>
                             <div class="col-xs-6">
                                 <div><i class="icon-cluster-member"></i> <span>Member</span></div>
@@ -115,7 +108,6 @@
                     <div class="col-sm-4">
                         <h5>Connection status</h5>
                         <div><i class="icon-arrow text-success"></i> <span>ACTIVE CONNECTION</span></div>
-                        <div><i class="icon-arrow-dashed text-warning"></i> <span>DISABLED CONNECTION</span></div>
                         <div><i class="icon-arrow-dashed text-danger"></i> <span>BROKEN CONNECTION</span></div>
                     </div>
                 </div>
