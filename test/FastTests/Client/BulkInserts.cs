@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -18,18 +19,21 @@ namespace FastTests.Client
         [InlineData(false)]
         public async Task Simple_Bulk_Insert(bool useSsl)
         {
-            string dbName = null;
+            string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
+                var serverCertPath = SetupServerAuthentication();
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName] = DatabaseAccess.ReadWrite
+                });
             }
 
-            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
             {
-                store.Certificate = clientCertificate; // temporary workaround
-                             
                 using (var bulkInsert = store.BulkInsert())
                 {
                     for (int i = 0; i < 1000; i++)
@@ -37,7 +41,6 @@ namespace FastTests.Client
                         await bulkInsert.StoreAsync(new FooBar() {Name = "foobar/" + i}, "FooBars/" + i);
                     }
                 }
-
                 
                 using (var session = store.OpenSession())
                 {

@@ -6,12 +6,21 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
+using Raven.Client.Server;
+using Raven.Client.Server.ETL;
+using Raven.Client.Server.Operations;
 using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -28,7 +37,7 @@ namespace FastTests.Server.Authentication
 
             var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);
 
-            using (var store = GetDocumentStore(certificate: serverCertificate))
+            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate: serverCertificate))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -46,16 +55,15 @@ namespace FastTests.Server.Authentication
         public void CanGetDocWithValidPermission()
         {
             var serverCertPath = SetupServerAuthentication();
-            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-
-            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                ["CanGetDocWithValidPermission"] = DatabaseAccess.ReadWrite
+                [dbName] = DatabaseAccess.ReadWrite
             });
-            using (var store = GetDocumentStore(certificate: serverCertificate, modifyName:(s => "CanGetDocWithValidPermission")))
-            {
-                store.Certificate = clientCert; // W.A.
 
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName: s => dbName))
+            {
                 StoreSampleDoc(store, "test/1");
 
                 dynamic test1Doc;
@@ -67,91 +75,180 @@ namespace FastTests.Server.Authentication
         }
 
         [Fact]
-        public void CannotGetDocWithoutCertificate()
+        public void CanReachServerAdminEndpointWithServerAdminPermission()
         {
             var serverCertPath = SetupServerAuthentication();
-            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName:(s => dbName)))
             {
-                ["CannotGetDocWithoutCertificate"] = DatabaseAccess.ReadWrite
-            });
-            Assert.Throws<AuthorizationException>(() =>
+                var doc = MultiDatabase.CreateDatabaseDocument("WhateverDB");
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation
+            }
+        }
+
+        [Fact]
+        public void CannotReachServerAdminEndpointWithoutServerAdminPermission()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                using (var store = GetDocumentStore(certificate: null, modifyName: (s => "CannotGetDocWithoutCertificate")))
-                {
-                    StoreSampleDoc(store, "test/1");
-                    using (var session = store.OpenSession())
-                        session.Load<dynamic>("test/1");
-                }
+                [dbName] = DatabaseAccess.ReadWrite
             });
 
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument("WhateverDB");
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation
+                });
+            }
+        }
+        
+        [Fact]
+        public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Admin
+            });
+
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            {
+                var ravenConnectionStr = new RavenConnectionString()
+                {
+                    Name = $"RavenConnectionString",
+                    Url = $"http://127.0.0.1:8080",
+                    Database = dbName,
+                };
+
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                var result = store.Admin.Server.Send(new GetConnectionStringsOperation(store.Database));
+                Assert.NotNull(result.RavenConnectionStrings);
+            }
+        }
+
+        [Fact]
+        public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.ReadWrite
+            });
+
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            {
+                var ravenConnectionStr = new RavenConnectionString()
+                {
+                    Name = $"RavenConnectionString",
+                    Url = $"http://127.0.0.1:8080",
+                    Database = dbName,
+                };
+
+                Assert.Throws<AuthorizationException>(() =>
+                {
+                    store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionStr, store.Database)); // DatabaseAdmin operation
+                });
+            }
+        }
+
+        [Fact]
+        public void CanOnlyGetRelevantDbsAccordingToPermissions()
+        {
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
+            var dbName1 = GetDatabaseName();
+            var dbName2 = GetDatabaseName();
+
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            {
+                [dbName] = DatabaseAccess.Admin,
+                [dbName1] = DatabaseAccess.ReadWrite
+            });
+
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
+            using (GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName1))) // The databases are created inside GetDocumentStore
+            using (GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName2)))
+            {
+                var names = store.Admin.Server.Send(new GetDatabaseNamesOperation(0, 25));
+                Assert.True(names.Length == 2);
+                Assert.True(names.Contains(dbName));
+                Assert.True(names.Contains(dbName1));
+                Assert.False(names.Contains(dbName2));
+            }
+        }
+        
+        [Fact]
+        public void CannotGetDocWithoutCertificate()
+        {
+            SetupServerAuthentication();
+            
+            Assert.Throws<AuthorizationException>(() =>
+            {
+                // No certificate provided
+                GetDocumentStore();
+            });
         }
 
         [Fact]
         public void CannotGetDocWithInvalidPermission()
         {
             var serverCertPath = SetupServerAuthentication();
-            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-            var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var otherDbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                ["OtherDB"] = DatabaseAccess.ReadWrite
+                [otherDbName] = DatabaseAccess.ReadWrite
             });
-
-            Assert.Throws<AuthorizationException>(() =>
+            
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
             {
-                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: (s => "CannotGetDocWithInvalidPermission")))
+                Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Certificate = clientCert; // W.A.
-
                     StoreSampleDoc(store, "test/1");
                     using (var session = store.OpenSession())
                         session.Load<dynamic>("test/1");
-                }
-            });
-
+                });
+            }
         }
 
         [Fact]
-        public void CannotGetDocWhenNotUsingHttps()
+        public void CannotContactServerWhenNotUsingHttps()
         {
+            var serverCertPath = SetupServerAuthentication(serverUrl: "http://" + Environment.MachineName + ":8080");
             Assert.Throws<System.InvalidOperationException>(() =>
             {
-                var serverCertPath = SetupServerAuthentication(serverUrl: "http://" + Environment.MachineName + ":8080");
-                var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-
-                var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-                {
-                    ["CannotGetDocWhenNotUsingHttps"] = DatabaseAccess.ReadWrite
-                });
-                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWhenNotUsingHttps"))
-                {
-                    store.Certificate = clientCert; // W.A.
-                    StoreSampleDoc(store, "test/1");
-                    using (var session = store.OpenSession())
-                        session.Load<dynamic>("test/1");
-                }
+                AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
             });
         }
 
         [Fact]
-        public void CannotGetDocWithInvalidDbNamePermission()
+        public void CannotGetCertificateWithInvalidDbNamePermission()
         {
+            
+            var serverCertPath = SetupServerAuthentication();
+            var dbName = GetDatabaseName();
             var e = Assert.Throws<RavenException>(() =>
             {
-                var serverCertPath = SetupServerAuthentication();
-                var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-                var clientCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
-                    ["CannotGetDocWithIr*&^%$#W$mePermission"] = DatabaseAccess.ReadWrite
+                    [dbName + "&*NOT__ALLOWED_NA$ %ME"] = DatabaseAccess.ReadWrite
                 });
-                
-                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWithInvalidDbNamePermission"))
-                {
-                    store.Certificate = clientCert; // W.A.
-                    StoreSampleDoc(store, "test/1");
-                    using (var session = store.OpenSession())
-                        session.Load<dynamic>("test/1");
-                }
             });
+            
             Assert.IsType<InvalidOperationException>(e.InnerException);
         }
 
@@ -159,23 +256,20 @@ namespace FastTests.Server.Authentication
         public void CannotGetDocWithExpiredCertificate()
         {
             var serverCertPath = SetupServerAuthentication();
-            var serverCertificate = new X509Certificate2(serverCertPath); // W.A. need to fix GetDocumentStore()
-
-            var clientCert = CreateAndPutExpiredClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+            var dbName = GetDatabaseName();
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var userCert = CreateAndPutExpiredClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
-                ["CannotGetDocWithExpiredCertificate"] = DatabaseAccess.ReadWrite
+                [dbName] = DatabaseAccess.ReadWrite
             });
-
-            Assert.Throws<AuthorizationException>(() =>
+            
+            using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: s => dbName))
             {
-                using (var store = GetDocumentStore(certificate: serverCertificate, modifyName: s => "CannotGetDocWithExpiredCertificate"))
+                Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Certificate = clientCert; // W.A.
                     StoreSampleDoc(store, "test/1");
-                    using (var session = store.OpenSession())
-                        session.Load<dynamic>("test/1");
-                }
-            });
+                });
+            }
         }
 
         [Fact]

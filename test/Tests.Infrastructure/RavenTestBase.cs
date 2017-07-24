@@ -96,7 +96,8 @@ namespace FastTests
             bool waitForDatabasesToBeCreated = false,
             bool deleteDatabaseWhenDisposed = true,
             bool createDatabase = true,
-            X509Certificate2 certificate = null)
+            X509Certificate2 adminCertificate = null,
+            X509Certificate2 userCertificate = null)
         {
             try
             {
@@ -138,11 +139,12 @@ namespace FastTests
                         int.MaxValue.ToString();
                     modifyDatabaseRecord?.Invoke(doc);
 
+                    
                     var store = new DocumentStore
                     {
                         Urls = UseFiddler(defaultServer.WebUrls),
                         Database = name,
-                        Certificate = certificate
+                        Certificate = userCertificate
                     };
                     ModifyStore(store);
                     store.Initialize();
@@ -159,7 +161,25 @@ namespace FastTests
                             }
                         }
 
-                        var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                        CreateDatabaseResult result;
+
+                        if (userCertificate != null)
+                        {
+                            using (var adminStore = new DocumentStore
+                            {
+                                Urls = UseFiddler(defaultServer.WebUrls),
+                                Database = name,
+                                Certificate = adminCertificate
+                            }.Initialize())
+                            {
+                                result = adminStore.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                            }
+                        }
+                        else
+                        {
+                            result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                        }
+
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
                         store.Urls = result.NodesAddedTo;
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
@@ -192,14 +212,29 @@ namespace FastTests
                                 continue;
                             }
 
-                            server.Configuration.Security.AuthenticationEnabled = certificate != null;
-
                             if (deleteDatabaseWhenDisposed)
                             {
                                 DeleteDatabaseResult result;
                                 try
                                 {
-                                    result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+
+                                    if (userCertificate != null)
+                                    {
+                                        using (var adminStore = new DocumentStore
+                                        {
+                                            Urls = UseFiddler(defaultServer.WebUrls),
+                                            Database = name,
+                                            Certificate = adminCertificate
+                                        }.Initialize())
+                                        {
+                                            result = adminStore.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                        }
+                                    }
+                                    else
+                                    {
+                                        result = store.Admin.Server.Send(new DeleteDatabaseOperation(name, hardDelete));
+                                    }
+
                                 }
                                 catch (DatabaseDoesNotExistException)
                                 {
@@ -215,6 +250,7 @@ namespace FastTests
                         }
                     };
                     CreatedStores.Add(store);
+
                     return store;
                 }
             }
@@ -447,7 +483,7 @@ namespace FastTests
         {
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
             var serverCertificate = new X509Certificate2(serverCertPath);
-            using (var store = GetDocumentStore(certificate: serverCertificate, defaultServer: defaultServer))
+            using (var store = GetDocumentStore(adminCertificate: serverCertificate, defaultServer: defaultServer))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -461,12 +497,12 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
+        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, RavenServer defaultServer = null)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             X509Certificate2 clientCertificate;
 
-            using (var store = GetDocumentStore(certificate: serverCertificate))
+            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate:serverCertificate, defaultServer: defaultServer))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -501,30 +537,9 @@ namespace FastTests
             return serverCertPath;
         }
 
-        protected void SetupAuthenticationInTest(out X509Certificate2 clientCertificate, out X509Certificate2 serverCertificate, out string dbName, DatabaseAccess access,
-            [CallerMemberName]string caller = null)
+        protected string GetDatabaseName([CallerMemberName]string name = null)
         {
-            dbName = caller + "_" + Interlocked.Increment(ref _counter);
-            SetupAuthenticationInTest(out clientCertificate, out serverCertificate, new Dictionary<string, DatabaseAccess>
-            {
-                [dbName]= access
-            });
-        }
-
-        protected void SetupAuthenticationInTest(
-            out X509Certificate2 clientCertificate,
-            out X509Certificate2 serverCertificate,
-            Dictionary<string, DatabaseAccess> permissions, 
-            IDictionary<string, string> customSettings = null, 
-            bool serverAdmin = false, 
-            string serverUrl = null, 
-            bool doNotReuseServer = true, 
-            RavenServer defaultServer = null)
-        {
-            var serverCertPath = SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer);
-            var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
-            clientCertificate = CreateAndPutClientCertificate(serverCertPath, serverCertificateHolder, permissions, serverAdmin, defaultServer);
-            serverCertificate = new X509Certificate2(serverCertPath);
+            return name + "_" + Interlocked.Increment(ref _counter);
         }
     }
 }

@@ -15,6 +15,7 @@ using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
+using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -183,14 +184,14 @@ namespace Tests.Infrastructure
             throw new Exception($"Not all node in the group have the expected value of {expected}. {otherValues}");
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DocumentSession session, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
         {
             var nodes = session.RequestExecutor.TopologyNodes;
-            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
+            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true, certificate: certificate);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
-        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout)
+        protected async Task<bool> WaitForDocumentInClusterAsync<T>(DatabaseTopology topology, string db, string docId, Func<T, bool> predicate, TimeSpan timeout, X509Certificate2 certificate = null)
         {
             var allNodes = topology.AllNodes;
             var serversTopology = Servers.Where(s => allNodes.Contains(s.ServerStore.NodeTag));
@@ -199,7 +200,7 @@ namespace Tests.Infrastructure
                 Url = x.WebUrls[0],
                 Database = db
             });
-            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true);
+            var stores = GetDocumentStores(nodes, disableTopologyUpdates: true, certificate: certificate);
             return await WaitForDocumentInClusterAsyncInternal(docId, predicate, timeout, stores);
         }
 
@@ -221,7 +222,7 @@ namespace Tests.Infrastructure
             return tasks.All(x => x.Result);
         }
 
-        private List<DocumentStore> GetDocumentStores(IEnumerable<ServerNode> nodes, bool disableTopologyUpdates)
+        private List<DocumentStore> GetDocumentStores(IEnumerable<ServerNode> nodes, bool disableTopologyUpdates, X509Certificate2 certificate = null)
         {
             var stores = new List<DocumentStore>();
             foreach (var node in nodes)
@@ -230,12 +231,13 @@ namespace Tests.Infrastructure
                 {
                     Urls = new[] { node.Url },
                     Database = node.Database,
+                    Certificate = certificate,
                     Conventions =
                     {
                         DisableTopologyUpdates = disableTopologyUpdates
                     }
                 };
-
+                store.Initialize();
                 stores.Add(store);
                 _toDispose.Add(store);
             }
@@ -374,18 +376,19 @@ namespace Tests.Infrastructure
             var serversToPorts = new Dictionary<RavenServer, string>();
             for (var i = 0; i < numberOfNodes; i++)
             {
-                var serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
+                var customSettings = new Dictionary<string, string>();
+                string serverUrl;
 
-                var customSettings = new Dictionary<string, string>
+                if (useSsl)
                 {
-                    { RavenConfiguration.GetKey(x => x.Core.ServerUrl), serverUrl }
-                };
-
-                // TODO iftah
-                /*if (useSsl)
+                    serverUrl = UseFiddler($"https://127.0.0.1:{GetPort()}");
+                    SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
+                }
+                else
                 {
-                    
-                }*/
+                    serverUrl = UseFiddler($"http://127.0.0.1:{GetPort()}");
+                    customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
+                }
 
                 var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
                 Servers.Add(server);

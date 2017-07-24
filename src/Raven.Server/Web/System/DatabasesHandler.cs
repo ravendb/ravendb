@@ -59,7 +59,7 @@ namespace Raven.Server.Web.System
 
                     if (allowedDbs != null)
                     {
-                        items = items.Where(item => allowedDbs.ContainsKey(item.Item1));
+                        items = items.Where(item => allowedDbs.ContainsKey(item.Item1.Substring(Constants.Documents.Prefix.Length)));
                     }
 
                     writer.WriteArray(context, nameof(DatabasesInfo.Databases), items, (w, c, dbDoc) =>

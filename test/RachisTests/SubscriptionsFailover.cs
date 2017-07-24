@@ -391,7 +391,7 @@ namespace RachisTests
                         {
                             DisableTopologyUpdates = true
                         }
-                    })
+                    }.Initialize())
                     {
                         var curDocName = $"user {index} revision {curVer}";
                         using (var session = (DocumentSession)curStore.OpenSession())

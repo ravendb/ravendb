@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -18,17 +19,21 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task BasicCriteriaTest(bool useSsl)
         {
-            string dbName = null;
+            string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
+                var serverCertPath = SetupServerAuthentication();
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName] = DatabaseAccess.ReadWrite
+                });
             }
 
-            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
             {
-                store.Certificate = clientCertificate; // temporary workaround
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
                     await CreateDocuments(store, 1);
@@ -69,17 +74,21 @@ namespace FastTests.Client.Subscriptions
         [InlineData(false)]
         public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
-            string dbName = null;
+            string dbName = GetDatabaseName();
             X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                SetupAuthenticationInTest(out clientCertificate, out adminCertificate, out dbName, DatabaseAccess.ReadWrite);
+                var serverCertPath = SetupServerAuthentication();
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName] = DatabaseAccess.ReadWrite,
+                });
             }
 
-            using (var store = GetDocumentStore(certificate: adminCertificate, modifyName: s => dbName))
+            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
             {
-                store.Certificate = clientCertificate; // temporary workaround
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
                     await CreateDocuments(store, 1);
