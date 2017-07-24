@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                 }
             };
 
-            Assert.Equal(@"[NULL TO 2012\-01\-01T00\:00\:00.0000000]", facet.Ranges[0]);
+            Assert.Equal(@"[NULL TO 2012-01-01T00:00:00.0000000]", facet.Ranges[0]);
         }
     }
 }
