@@ -23,6 +23,7 @@ using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 using System.Collections.Concurrent;
 using System.Linq;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;

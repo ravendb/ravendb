@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Smuggler.Documents.Data
+namespace Raven.Client.Documents.Smuggler
 {
     public class SmugglerResult : SmugglerProgressBase, IOperationResult
     {

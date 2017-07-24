@@ -1,4 +1,4 @@
-using Raven.Server.Smuggler.Documents.Data;
+using Raven.Client.Documents.Smuggler;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.PeriodicBackup
