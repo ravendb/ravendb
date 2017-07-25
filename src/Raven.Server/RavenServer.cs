@@ -127,27 +127,8 @@ namespace Raven.Server
             try
             {
                 Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
-
-                var authenticationEnabled = false;
-                try
-                {
-                    if (Configuration.Security.CertificateExec != null)
-                    {
-                        ServerCertificateHolder = ServerStore.Secrets.LoadCerificateWithExecutable();
-                        authenticationEnabled = true;
-                    }
-                    else if (Configuration.Security.CertificatePath != null)
-                    {
-                        ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
-                        authenticationEnabled = true;
-                    }
-                }
-                catch (Exception e)
-                {
-                    throw new InvalidOperationException("Unable to start the server because an invalid certificate configuration! Admin assistance required.", e);
-                }
-                
-                if (authenticationEnabled)
+                bool certificateLoaded = LoadCertificate();
+                if (certificateLoaded)
                 {
                     kestrelOptions += options =>
                     {
@@ -158,22 +139,16 @@ namespace Raven.Server
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
                             ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
-                                // Here we are explicitly ignoring trust chain issues for client certificates
-                                // this is because we don't actually require trust, we just use the certificate
-                                // as a way to authenticate. The admin are going to tell us which specific certs
-                                // we can trust anyway, so we can ignore such errors.
+                                    // Here we are explicitly ignoring trust chain issues for client certificates
+                                    // this is because we don't actually require trust, we just use the certificate
+                                    // as a way to authenticate. The admin is going to tell us which specific certs
+                                    // we can trust anyway, so we can ignore such errors.
                                     errors == SslPolicyErrors.RemoteCertificateChainErrors ||
                                     errors == SslPolicyErrors.None
                         };
 
                         options.ConnectionFilter = new AuthenticatingFilter(this, new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
                     };
-
-                    // Enforce https in all network activities
-                    if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException(
-                            $"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " +
-                            Configuration.Core.ServerUrl);
                 }
 
                 _webHost = new WebHostBuilder()
@@ -221,6 +196,30 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+
+        private bool LoadCertificate()
+        {
+            var certificateLoaded = false;
+            try
+            {
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                {
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateWithExecutable();
+                    certificateLoaded = true;
+                }
+                else if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
+                {
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
+                    certificateLoaded = true;
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Unable to start the server due to  invalid certificate configuration! Admin assistance required.", e);
+            }
+
+            return certificateLoaded;
         }
 
         private async Task ListenToPipe()
@@ -626,7 +625,7 @@ namespace Raven.Server
                                         $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+                            var authSuccessful = TryAuthorize(Configuration, tcp, header, out var err);
 
 
                             using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -829,13 +828,18 @@ namespace Raven.Server
             return stream;
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, out string msg)
         {
+            Stream stream = tcp.Stream;
             msg = null;
+
             if (configuration.Security.AuthenticationEnabled == false)
             {
+                if (tcp.TcpClient.Client.RemoteEndPoint is IPEndPoint ipEndPoint)
+                    return SecurityUtils.IsUnsecuredAccessAllowedForAddress(
+                        configuration.Security.UnsecuredAccessAddressRange, ipEndPoint.Address);
 
-                return true;
+                throw new InvalidOperationException($"Client endpoint is not an IP endpoint: { tcp.TcpClient.Client.AddressFamily }.");
             }
 
             if (!(stream is SslStream sslStream))

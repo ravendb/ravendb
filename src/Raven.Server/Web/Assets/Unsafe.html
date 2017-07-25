@@ -146,9 +146,16 @@
         </div>
         <h2 class="text-warning">Running in a potentially unsafe mode </h2>
     </div>
-    <p>Server is exposed to the world and the security option <span class="text-file long-word">Security.Authentication.Enabled</span> is set to <strong class="text-file text-warning">false</strong>. </p>
-    <p>Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and set this option to <strong class="text-success text-file">true</strong> to prevent unauthorized access. In order to gain administrative access to the server please access it through <strong class="text-file">localhost</strong>.</p>
-    <p>If you intended to grant administrative access to the server for anonymous users set <span class="text-file long-word">Security.Authentication.RequiredForPublicNetworks</span> security option to <strong class="text-warning text-file">false</strong>. </p>
+    
+    <p>
+        Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.
+    </p>
+    <p>
+        Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information in either <span class="text-file long-word">Security.Certificate.Path</span> or <span class="text-file long-word">Security.Certificate.Exec</span> option.
+    </p>
+    <p>
+        If you would rather like to keep your server unsecured, please relax the <span class="text-file long-word">Security.UnsecuredAccessAllowed</span> setting to match the <span class="text-file long-word">ServerUrl</span> setting value.
+    </p>
 </div>
 </body>
 </html>

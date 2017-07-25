@@ -128,6 +128,10 @@ namespace Raven.Server.Config.Categories
                                 {
                                     property.SetValue(this, new UriSetting(value));
                                 }
+                                else if (t.IsConstructedGenericType && t.GetGenericTypeDefinition() == typeof(FlagSetting<>))
+                                {
+                                    property.SetValue(this, Activator.CreateInstance(t, value));
+                                }
                                 else
                                 {
                                     var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
@@ -188,6 +192,13 @@ namespace Raven.Server.Config.Categories
                     if (property.PropertyType == typeof(PathSetting) && defaultValue != null)
                     {
                         property.SetValue(this, new PathSetting(Convert.ToString(defaultValue), type, resourceName));
+                    }
+                    else if (property.PropertyType.IsConstructedGenericType 
+                        && property.PropertyType.GetGenericTypeDefinition() == typeof(FlagSetting<>) && 
+                        defaultValue != null)
+                    {
+                        var defaultFlagVal = Activator.CreateInstance(property.PropertyType, Convert.ToString(defaultValue));
+                        property.SetValue(this, defaultFlagVal);
                     }
                     else
                         property.SetValue(this, defaultValue);

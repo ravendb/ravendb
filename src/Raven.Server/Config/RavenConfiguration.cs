@@ -168,6 +168,11 @@ namespace Raven.Server.Config
         public void PostInit()
         {
             CheckDirectoryPermissions();
+
+            if (ResourceType != ResourceType.Server)
+                return;
+
+            SecurityConfiguration.Validate(this);
         }
 
         public void SetSetting(string key, string value)

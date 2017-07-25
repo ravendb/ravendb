@@ -17,6 +17,7 @@ using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Voron;
 
@@ -408,7 +409,8 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.Allowed:
                 case RavenServer.AuthenticationStatus.NotYetValid:
-                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                    if (Server.Configuration.Security.AuthenticationEnabled == false 
+                        && SecurityUtils.IsUnsecuredAccessAllowedForAddress(Server.Configuration.Security.UnsecuredAccessAddressRange, HttpContext.Connection.RemoteIpAddress))
                         return true;
 
                     Server.Router.UnlikelyFailAuthorization(HttpContext, null, null);
@@ -434,7 +436,7 @@ namespace Raven.Server.Web
                 case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
                 case RavenServer.AuthenticationStatus.Expired:
                 case RavenServer.AuthenticationStatus.NotYetValid:
-                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                    if (Server.Configuration.Security.AuthenticationEnabled == false && SecurityUtils.IsUnsecuredAccessAllowedForAddress(Server.Configuration.Security.UnsecuredAccessAddressRange, HttpContext.Connection.RemoteIpAddress))
                         return true;
 
                     Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);

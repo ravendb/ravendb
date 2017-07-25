@@ -54,7 +54,12 @@ namespace Raven.Server.Config.Categories
         public override void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
             base.Initialize(settings, serverWideSettings, type, resourceName);
+
+            if (type != ResourceType.Server)
+                return;
+
             ValidatePublicUrls();
+            ValidateSchemePublicVsBoundUrl();
         }
 
         internal string GetNodeHttpServerUrl(string serverWebUrl)
@@ -104,6 +109,21 @@ namespace Raven.Server.Config.Categories
 
             if (PublicTcpServerUrl.HasValue)
                 ValidatePublicUrl(PublicTcpServerUrl.Value.UriValue, RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl));
+        }
+
+        private void ValidateSchemePublicVsBoundUrl()
+        {
+            if (PublicServerUrl.HasValue == false)
+                return;
+
+            if (Uri.TryCreate(ServerUrl, UriKind.Absolute, out var serverUri) == false)
+                throw new ArgumentException($"ServerUrl could not be parsed: {ServerUrl}.");
+
+            if (Uri.TryCreate(PublicServerUrl.Value.UriValue, UriKind.Absolute, out var publicServerUri) == false)
+                throw new ArgumentException($"PublicServerUrl could not be parsed: {PublicServerUrl}.");
+
+            if (serverUri.Scheme != publicServerUri.Scheme)
+                throw new ArgumentException($"ServerUrl and PublicServerUrl schemes do not match: {ServerUrl} and {PublicServerUrl.Value.UriValue}.");
         }
 
         private void ValidatePublicUrl(string uriString, string optName)

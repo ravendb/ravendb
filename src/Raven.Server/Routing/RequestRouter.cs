@@ -93,11 +93,19 @@ namespace Raven.Server.Routing
                 return null;
             }
 
-            if (_ravenServer.Configuration.Security.AuthenticationEnabled)
+            var authEnabled = _ravenServer.Configuration.Security.AuthenticationEnabled;
+            if (authEnabled)
             {
                 var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.Name;
+            }
+
+            if (authEnabled == false 
+                && SecurityUtils.IsUnsecuredAccessAllowedForAddress(_ravenServer.Configuration.Security.UnsecuredAccessAddressRange, context.Connection.RemoteIpAddress) == false)
+            {
+                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
+                return reqCtx.Database?.Name;
             }
 
             if (reqCtx.Database != null)
@@ -115,7 +123,7 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.Name;
         }
 
-        private bool TryAuthorize(RouteInformation route,HttpContext context, DocumentDatabase database)
+        private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
             switch (route.AuthorizationStatus)
             {
