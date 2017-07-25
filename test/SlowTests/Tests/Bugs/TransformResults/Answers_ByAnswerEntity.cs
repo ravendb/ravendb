@@ -72,12 +72,14 @@ namespace SlowTests.Tests.Bugs.TransformResults
                             let answer = LoadDocument<Answer2>(vote.AnswerId.ToString())
                             let firstVote = answer.Votes.FirstOrDefault(x => x.QuestionId == result.QuestionId)
                             select new // AnswerVote2
-                            {
+                            { 
                                 vote.Id,
                                 vote.Delta,
                                 vote.QuestionId,
-                                Answer = answer,
-                                FirstVote = firstVote
+                                Answer = new
+                                {
+                                    Id = answer.Id
+                                }
                             }
                 };
         }

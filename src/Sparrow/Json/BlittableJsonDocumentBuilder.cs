@@ -370,8 +370,8 @@ namespace Sparrow.Json
                 _modifier?.StartObject();
                 _continuationState.Push(new BuildingState(ContinuationState.ReadObject));
             }
-            else
-            {
+            else if (current != JsonParserToken.EndObject)
+            { 
                 ReadJsonValueUnlikely<TWriteStrategy>(current);
             }       
         }
