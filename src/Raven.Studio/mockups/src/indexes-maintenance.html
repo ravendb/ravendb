@@ -14,7 +14,7 @@
 
             <div class="content-container">
                 <div class="indexes-maintenance absolute-fill content-margin">
-                    <button class="btn btn-primary"><i class="icon-check"></i><span>Resolve selected issues...</span></button>
+                    <button class="btn btn-primary" data-toggle="modal" data-target="#resolveIssuesModal"><i class="icon-check"></i><span>Resolve selected issues...</span></button>
                     <div class="checkbox align-checkboxes">
                         <input id="selectAll" class="styled" type="checkbox">
                         <label for="selectAll">
@@ -26,36 +26,52 @@
                         <hr />
                     </div>
                     <div class="panel padding">
-                        <strong><a href="#">Orders/ByTotalPrice</a></strong> and <strong><a href="#">Orders/ByDestination</a></strong>
-                        <div class="checkbox">
-                            <input id="checkbox1" class="styled" type="checkbox">
-                            <label for="checkbox1">
-                                remove <a href="#">Companies/ByName</a> &nbsp;&nbsp;<a class="text-info "><i class="icon-preview"></i></a>
-                            </label>
-                        </div>
-                    </div>
-                    <div class="panel padding">
-                        <strong><a href="#">Companies/ByNameAndProducts</a></strong>
-                        <div class="checkbox">
-                            <input id="checkbox1" class="styled" type="checkbox">
-                            <label for="checkbox1">
-                                remove <a href="#">Companies/ByName</a>
-                            </label>
-                        </div>
-                        <div class="checkbox">
-                            <input id="checkbox2" class="styled" type="checkbox">
-                            <label for="checkbox2">
-                                remove <a href="#">Companies/ByProduct</a>
-                            </label>
-                        </div>
-                    </div>
+                        <a href="#">Orders/ByTotalPrice</a> and <a href="#">Orders/ByDestination</a> can be merged.
+                        <div class="flex-horizontal">
+                            <div class="checkbox flex-start">
+                                <input id="checkbox1" class="styled" type="checkbox"><label for="checkbox1"></label>
+                            </div>
+                            <div class="flex-grow">
+                                <div class="form-inline">
+                                    <span>merge into &nbsp;</span>
+                                    <input class="form-control input-sm"" value="Orders/ByDestinationAndTotalPrice" />
+                                </div>
 
+                                <div class="checkbox">
+                                    <input id="checkbox1" class="styled" type="checkbox" checked>
+                                    <label for="checkbox1">remove <strong>Orders/ByTotalPrice</strong></label>
+                                </div>
+                                <div class="checkbox">
+                                    <input id="checkbox1" class="styled" type="checkbox" checked>
+                                    <label for="checkbox1">remove <strong>Orders/ByDestination</strong></label>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
                     <div class="hr-title margin-top">
-                        <h5>ABANDONED AUTOMATIC INDEXES <i class="icon-info text-info"></i></h5>
+                        <h5>REDUNDANT INDEXES <i class="icon-info text-info"></i></h5>
                         <hr />
                     </div>
                     <div class="panel padding">
-                        <strong><a href="#">Orders/ByCustomerName</a></strong> <small>(last used 15 days ago)</small>
+                        <a href="#">Companies/ByNameAndProducts</a> includes <a href="#">Companies/ByName</a> and <a href="#">Companies/ByProduct</a>.
+                        <div class="checkbox">
+                            <input id="checkbox1" class="styled" type="checkbox" checked>
+                            <label for="checkbox1">remove <strong>Companies/ByName</strong></label>
+                        </div>
+                        <div class="checkbox">
+                            <input id="checkbox1" class="styled" type="checkbox" checked>
+                            <label for="checkbox1">remove <strong>Companies/ByProduct</strong></label>
+                        </div>
+                    </div>
+
+                    
+                    <div class="hr-title margin-top">
+                        <h5>ABANDONED AUTO-INDEXES <i class="icon-info text-info"></i></h5>
+                        <hr />
+                    </div>
+                    <div class="panel padding">
+                        <a href="#">Auto/Orders/ByCustomerName</a> was last used <strong>15 days</strong> ago.
                         <div class="checkbox">
                             <input id="checkbox3" class="styled" type="checkbox">
                             <label for="checkbox3">
@@ -63,7 +79,20 @@
                             </label>
                         </div>
                     </div>
-                    
+                    <div class="hr-title margin-top">
+                        <h5>ABANDONED INDEXES <i class="icon-info text-info"></i></h5>
+                        <hr />
+                    </div>
+                    <div class="panel padding">
+                        <a href="#">Orders/ByCustomerName</a> was last used <strong>15 days</strong> ago.
+                        <div class="checkbox">
+                            <input id="checkbox3" class="styled" type="checkbox">
+                            <label for="checkbox3">
+                                remove index
+                            </label>
+                        </div>
+                    </div>
+
                 </div>
             </div>
             {{> notification-center }}
