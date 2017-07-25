@@ -138,12 +138,11 @@ namespace Raven.Server.Documents.Handlers
             }
             var throwOnTimeoutInWaitForReplicas = GetBoolValueQueryString("throwOnTimeoutInWaitForReplicas") ?? true;
 
-            var waitForReplicationAsync = Database.ReplicationLoader.WaitForReplicationAsync(
+            var replicatedPast = await Database.ReplicationLoader.WaitForReplicationAsync(
                 numberOfReplicasToWaitFor,
                 waitForReplicasTimeout,
                 mergedCmd.LastChangeVector);
 
-            var replicatedPast = await waitForReplicationAsync;
             if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
             {
                 throw new TimeoutException(

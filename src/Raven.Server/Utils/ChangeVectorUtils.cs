@@ -27,13 +27,13 @@ namespace Raven.Server.Utils
             //any missing entries from a change vector are assumed to have zero value
             var remoteHasLargerEntries = local.Length < remote.Length;
             var localHasLargerEntries = remote.Length < local.Length;
-
+            
             Array.Sort(remote); // todo: check if we need this
             Array.Sort(local); // todo: check if we need this
-
+            
             var localIndex = 0;
             var remoteIndex = 0;
-
+            
             while (localIndex < local.Length && remoteIndex < remote.Length)
             {
                 var compareResult = remote[remoteIndex].DbId.CompareTo(local[localIndex].DbId);
@@ -54,27 +54,27 @@ namespace Raven.Server.Utils
                     remoteIndex++;
                     remoteHasLargerEntries = true;
                 }
-
+            
                 if (localHasLargerEntries && remoteHasLargerEntries)
                     break;
             }
-
+            
             if (remoteIndex < remote.Length)
             {
                 remoteHasLargerEntries = true;
             }
-
+            
             if (localIndex < local.Length)
             {
                 localHasLargerEntries = true;
             }
-
+            
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
-
+            
             if (remoteHasLargerEntries == false && localHasLargerEntries == false)
                 return ConflictStatus.AlreadyMerged; // change vectors identical
-
+            
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Utils
             } while (etag != 0);
             return count;
         }
-
+            
         private static void WriteNumberBackwards(StringBuilder sb, int offset, long etag)
         {
             do
@@ -102,17 +102,17 @@ namespace Raven.Server.Utils
                 etag /= 10;
                 sb[offset--]= (char)((char)rem + '0');
             } while (etag != 0);
-        }
-
+            }
+            
         private static long ParseToLong(string s, int count, int len)
-        {
+            {
             int num;
             num = s[count] - '0';
             for (int i = 1; i < len; i++)
             {
                 num *= 10;
                 num += s[count+i] - '0';
-            }
+        }
             return num;
         }
 
@@ -132,7 +132,7 @@ namespace Raven.Server.Utils
             var dbIndex = changeVector.IndexOf(_dbIdBuffer, StringComparison.Ordinal);
 
             if (dbIndex < 0)
-            {
+                {
                 _changeVectorBuffer.Append(changeVector)
                     .Append(", ")
                     .Append(nodeTag)
@@ -143,7 +143,7 @@ namespace Raven.Server.Utils
 
                 changeVector = _changeVectorBuffer.ToString();
                 return true;
-            }
+                }
 
             var existingEtagEndIndex = dbIndex - 1;
             var currentEtagStartIndex = changeVector.LastIndexOf(':', existingEtagEndIndex)+1;
@@ -153,7 +153,7 @@ namespace Raven.Server.Utils
             // assume no trailing zeros
             var diff = newEtagLen - existingLen;
             if (diff == 0)
-            {
+                {
                 // compare the strings instead of parsing to int
                 if (existingEtag >= etag)
                 {
@@ -170,32 +170,32 @@ namespace Raven.Server.Utils
                 return true;
             }
             if (diff < 0)
-            {
+                {
                 // nothing to do, already known to be smaller
                 return false;
-            }
+                }
             // allocate new string
             _changeVectorBuffer.Append(changeVector, 0, currentEtagStartIndex)
                 .Append(etag)
                 .Append(changeVector, existingEtagEndIndex, changeVector.Length - existingEtagEndIndex);
             changeVector = _changeVectorBuffer.ToString();
             return true;
-        }
+            }
 
         private static void InitiailizeThreadLocalState()
-        {
+            {
             if (_dbIdBuffer == null)
                 _dbIdBuffer = new string(' ', 22);
             if (_changeVectorBuffer == null)
                 _changeVectorBuffer = new StringBuilder();
             _changeVectorBuffer.Length = 0;
-        }
+            }
 
         [ThreadStatic]
         private static List<ChangeVectorEntry> _mergeVectorBuffer;
 
         public static string MergeVectors(string vectorAstring, string vectorBstring)
-        {
+            {
             if (string.IsNullOrEmpty(vectorAstring))
                 return vectorBstring;
             if (string.IsNullOrEmpty(vectorBstring))
@@ -209,23 +209,23 @@ namespace Raven.Server.Utils
             ChangeVectorParser.MergeChangeVector(vectorBstring, _mergeVectorBuffer);
 
             return _mergeVectorBuffer.SerializeVector();
-        }
+            }
 
         public static string MergeVectors(List<string> changeVectors)
         {
             if (_mergeVectorBuffer == null)
                 _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
             _mergeVectorBuffer.Clear();
-
+            
             for (int i = 0; i < changeVectors.Count; i++)
             {
                 ChangeVectorParser.MergeChangeVector(changeVectors[i], _mergeVectorBuffer);
-            }
-
+                    }
+            
             return _mergeVectorBuffer.SerializeVector();
         }
 
-      
+
         public static unsafe string NewChangeVector(string nodeTag, long etag, Guid dbId)
         {
             InitiailizeThreadLocalState();
@@ -234,7 +234,7 @@ namespace Raven.Server.Utils
             {
                 var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&dbId, 0, 16);
                 Debug.Assert(result == 22);
-            }
+        }
 
             return _changeVectorBuffer
                 .Append(nodeTag)
@@ -243,6 +243,6 @@ namespace Raven.Server.Utils
                 .Append('-')
                 .Append(_dbIdBuffer)
                 .ToString();
-        }
+    }
     }
 }
