@@ -651,7 +651,7 @@ namespace Raven.Server.Documents
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
-                    Etag = etag,
+                    ChangeVector = str,
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Conflict,

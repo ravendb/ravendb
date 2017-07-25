@@ -2,6 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
 class resolveMergeCommand extends commandBase {
+    //TODO: is it used?
 
     constructor(private db: database, private documentId: string) {
         super();

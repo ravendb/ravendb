@@ -12,7 +12,6 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
 class revisionsBin extends viewModelBase {
 
@@ -25,7 +24,7 @@ class revisionsBin extends viewModelBase {
         delete: ko.observable<boolean>(false)
     }
 
-    private revisionsBinEntryNextEtag = undefined as number;
+    private revisionsBinEntryNextChangeVector = undefined as string;
 
     private gridController = ko.observable<virtualGridController<document>>();
     private columnPreview = new columnPreviewPlugin<document>();
@@ -58,22 +57,21 @@ class revisionsBin extends viewModelBase {
 
     refresh() {
         eventsCollector.default.reportEvent("revisions-bin", "refresh");
-        this.revisionsBinEntryNextEtag = undefined;
+        this.revisionsBinEntryNextChangeVector = undefined;
         this.gridController().reset(true);
     }
 
     fetchRevisionsBinEntries(skip: number): JQueryPromise<pagedResult<document>> {
         const task = $.Deferred<pagedResult<document>>();
 
-        new getRevisionsBinEntryCommand(this.activeDatabase(), this.revisionsBinEntryNextEtag, 101)
+        new getRevisionsBinEntryCommand(this.activeDatabase(), this.revisionsBinEntryNextChangeVector, 101)
             .execute()
             .done(result => {
-                //TODO: etag
                 const hasMore = result.items.length === 101;
                 const totalCount = skip + result.items.length;
                 if (hasMore) {
                     const nextItem = result.items.pop();
-                    this.revisionsBinEntryNextEtag = nextItem.__metadata.etag();
+                    this.revisionsBinEntryNextChangeVector = nextItem.__metadata.changeVector();
                 }
 
                 task.resolve({
@@ -95,7 +93,7 @@ class revisionsBin extends viewModelBase {
         grid.init((s, _) => this.fetchRevisionsBinEntries(s), () => [
             new checkedColumn(false),
             new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-            new textColumn<document>(grid, x => x.__metadata.etag(), "ETag", "200px"),
+            new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "210px"), 
             new textColumn<document>(grid, x => x.__metadata.lastModified(), "Deletion date", "300px")
         ]);
 

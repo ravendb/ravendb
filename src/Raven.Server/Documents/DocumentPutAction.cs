@@ -173,7 +173,7 @@ namespace Raven.Server.Documents
 
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
-                    Etag = newEtag,
+                    ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Put,

@@ -5,13 +5,13 @@ import endpoints = require("endpoints");
 
 class getDocumentAtRevisionCommand extends commandBase {
 
-    constructor(private etag: number, private db: database) {
+    constructor(private changeVector: string, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<document> {
         const args = {
-            etag: this.etag
+            changeVector: this.changeVector
         }
 
         const url = endpoints.databases.revisions.revisions + this.urlEncodeArgs(args);

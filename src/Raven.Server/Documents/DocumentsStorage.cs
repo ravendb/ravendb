@@ -928,8 +928,8 @@ namespace Raven.Server.Documents
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,
-                    Etag = etag,
                     Id = id,
+                    ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
                     IsSystemDocument = collectionName.IsSystem,
                 });
@@ -996,7 +996,6 @@ namespace Raven.Server.Documents
                 context.Transaction.AddAfterCommitNotification(new DocumentChange
                 {
                     Type = DocumentChangeTypes.Delete,
-                    Etag = etag,
                     Id = id,
                     ChangeVector = changeVector,
                     CollectionName = collectionName.Name,

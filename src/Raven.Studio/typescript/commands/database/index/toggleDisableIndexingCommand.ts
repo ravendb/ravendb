@@ -14,7 +14,7 @@ class toggleDisableIndexingCommand extends commandBase {
             databaseConfigDocument["Settings"][configuration.indexing.disabled] = true;
 
         const jQueryOptions: JQueryAjaxSettings = {
-            headers: { "ETag": databaseConfigDocument["@metadata"]["@etag"] }
+            headers: { "ETag": databaseConfigDocument["Etag"] }
         };
 
         return this.put<void>(basicUrl, JSON.stringify(databaseConfigDocument), null, jQueryOptions)

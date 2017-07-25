@@ -60,19 +60,14 @@ interface documentMetadataDto {
     '@id': string;
     'Temp-Index-Score'?: number;
     '@last-modified'?: string;
-    '@etag': number;
     '@flags'?: string;
     '@attachments'?: Array<documentAttachmentDto>;
-    '@change-vector'?: Array<changeVectorDto>;
+    '@change-vector'?: string;
 
 }
 
 interface updateDatabaseConfigurationsResult {
     RaftCommandIndex: number;
-}
-interface changeVectorDto {
-    DbId: string;
-    Etag: number;
 }
 interface documentAttachmentDto {
     ContentType: string;

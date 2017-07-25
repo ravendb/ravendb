@@ -47,7 +47,7 @@ class testSubscriptionTaskCommand extends commandBase {
 
                             const doc = new document(ex.DocumentData);
                             (doc as any).Exception = ex.Exception;
-                            (doc as any).Etag = ex.Etag;
+                            (doc as any).ChangeVector = ex.ChangeVector;
 
                             return doc;
                         }

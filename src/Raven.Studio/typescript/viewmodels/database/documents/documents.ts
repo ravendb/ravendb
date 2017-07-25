@@ -146,17 +146,17 @@ class documents extends viewModelBase {
             }
         }));
 
-        this.registerDisposable(this.tracker.registerOnCollectionUpdatedHandler((c, etag) => {
+        this.registerDisposable(this.tracker.registerOnCollectionUpdatedHandler((c, lastDocumentChangeVector) => {
             if (c.name === this.currentCollection().name) {
-                if (etag !== this.gridController().resultEtag()) {
+                if (lastDocumentChangeVector !== this.gridController().resultEtag()) {
                     this.dirtyCurrentCollection(true);
                 }
             }
         }));
 
-        this.registerDisposable(this.tracker.registerOnGlobalEtagUpdatedHandler((etag: string) => {
+        this.registerDisposable(this.tracker.registerOnGlobalChangeVectorUpdatedHandler((changeVector: string) => {
             if (this.currentCollection().isAllDocuments) {
-                if (this.gridController().resultEtag() !== etag) {
+                if (this.gridController().resultEtag() !== changeVector) {
                     this.dirtyCurrentCollection(true);
                 }
             }
@@ -196,7 +196,7 @@ class documents extends viewModelBase {
                 return [
                     new checkedColumn(true),
                     new hyperlinkColumn<document>(grid, x => x.getId(), x => appUrl.forEditDoc(x.getId(), this.activeDatabase()), "Id", "300px"),
-                    new textColumn<document>(grid, x => x.__metadata.etag(), "ETag", "200px"),
+                    new textColumn<document>(grid, x => x.__metadata.changeVector(), "Change Vector", "200px"),
                     new textColumn<document>(grid, x => x.__metadata.lastModified(), "Last Modified", "300px"),
                     new hyperlinkColumn<document>(grid, x => x.getCollection(), x => appUrl.forDocuments(x.getCollection(), this.activeDatabase()), "Collection", "200px")
                 ];

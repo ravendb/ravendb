@@ -1,5 +1,4 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import saveDatabaseSettingsCommand = require("commands/resources/saveDatabaseSettingsCommand");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import appUrl = require("common/appUrl");

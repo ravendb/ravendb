@@ -66,7 +66,7 @@ class patchDocument extends document {
         this.query(incoming.query());
         this.script(incoming.script());
         this.patchAll(true);
-        this.__metadata.etag(0);
+        this.__metadata.changeVector(undefined);
     }
 }
 
