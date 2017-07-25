@@ -35,7 +35,7 @@ class editDocument extends viewModelBase {
     static docEditorSelector = "#docEditor";
 
     inReadOnlyMode = ko.observable<boolean>(false);
-    revisionEtag = ko.observable<number>();
+    revisionChangeVector = ko.observable<string>();
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
@@ -102,7 +102,7 @@ class editDocument extends viewModelBase {
 
     activate(navigationArgs: { list: string, database: string, item: string, id: string, new: string, index: string, revision: number }) {
         super.activate(navigationArgs);
-        this.updateHelpLink('M72H1R');        
+        this.updateHelpLink('M72H1R');
 
         //TODO: raw url for revision
         if (!navigationArgs || !navigationArgs.id) {
@@ -162,9 +162,9 @@ class editDocument extends viewModelBase {
         return canActivateResult;
     }
 
-    private activateByRevision(id: string, etag: number) {
+    private activateByRevision(id: string, revisionChangeVector: string) {
         const canActivateResult = $.Deferred<canActivateResultDto>();
-        this.loadRevision(etag)
+        this.loadRevision(revisionChangeVector)
             .done(() => {
                 canActivateResult.resolve({ can: true });
             })
@@ -214,9 +214,9 @@ class editDocument extends viewModelBase {
         this.isSaveEnabled = ko.pureComputed(() => {
             const isSaving = this.isSaving();
             const isDirty = this.dirtyFlag().isDirty();
-            const etag = this.metadata().etag();
+            const changeVector = this.metadata().changeVector();
 
-            if (isSaving || (!isDirty && etag)) {
+            if (isSaving || (!isDirty && changeVector)) {
                 return false;
             }
 
@@ -241,7 +241,7 @@ class editDocument extends viewModelBase {
             const isRevision = this.inReadOnlyMode();
 
             const docId = this.userSpecifiedId();
-            const revisionEtag = this.revisionEtag();
+            const revisionChangeVector = this.revisionChangeVector();
 
             const activeDb = this.activeDatabase();
             if (!activeDb) {
@@ -249,7 +249,7 @@ class editDocument extends viewModelBase {
             }
 
             return isRevision ? 
-                appUrl.forDocumentRevisionRawData(activeDb, revisionEtag) :
+                appUrl.forDocumentRevisionRawData(activeDb, revisionChangeVector) :
                 appUrl.forDocumentRawData(activeDb, docId);
         });
 
@@ -337,7 +337,7 @@ class editDocument extends viewModelBase {
     }
 
     onDocumentChange(n: Raven.Client.Documents.Changes.DocumentChange): void {
-        if (this.isSaving() || n.Etag === this.metadata().etag() || this.inReadOnlyMode()) {
+        if (this.isSaving() || n.ChangeVector === this.metadata().changeVector() || this.inReadOnlyMode()) {
             return;
         }
 
@@ -476,7 +476,7 @@ class editDocument extends viewModelBase {
         // 3. Clear data..
         this.document().__metadata.attachments([]); 
         this.connectedDocuments.gridController().reset(true);
-        this.metadata().etag(null);
+        this.metadata().changeVector(undefined);
 
         this.userSpecifiedId(docId);
     }
@@ -484,11 +484,11 @@ class editDocument extends viewModelBase {
     saveDocument() {       
         if (this.isValid(this.globalValidationGroup)) {
             eventsCollector.default.reportEvent("document", "save");
-            this.saveInternal(this.userSpecifiedId(), false);
+            this.saveInternal(this.userSpecifiedId());
         }
     }
 
-    private saveInternal(documentId: string, eraseEtag: boolean) {
+    private saveInternal(documentId: string) {
         let message = "";
         let updatedDto: any;
 
@@ -516,7 +516,7 @@ class editDocument extends viewModelBase {
 
         const meta = updatedDto['@metadata'];
 
-        // Fix up the metadata: if we're a new doc, attach the expected reserved properties like @id, @etag, and @collection.
+        // Fix up the metadata: if we're a new doc, attach the expected reserved properties like @id and @collection.
         // AFAICT, Raven requires these reserved meta properties in order for the doc to be seen as a member of a collection.
         if (this.isCreatingNewDocument()) {
             this.attachReservedMetaProperties(documentId, meta);
@@ -530,10 +530,6 @@ class editDocument extends viewModelBase {
             });
             // force document id to support save as new
             meta['@id'] = documentId;
-
-            if (eraseEtag) {
-                meta['@etag'] = 0;
-            }
         }
 
         // skip some not necessary meta in headers
@@ -575,7 +571,7 @@ class editDocument extends viewModelBase {
         const newDoc = new document(localDoc);
         this.document(newDoc);
         this.inReadOnlyMode(false);
-        this.revisionEtag(null);
+        this.revisionChangeVector(null);
         this.displayDocumentChange(false);
         this.dirtyFlag().reset();
 
@@ -597,7 +593,6 @@ class editDocument extends viewModelBase {
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@etag'] = 0;
         target['@collection'] = target['@collection'] || document.getCollectionFromId(id);
         target['@id'] = id;
     }
@@ -669,17 +664,17 @@ class editDocument extends viewModelBase {
             });
     }
 
-    private loadRevision(etag: number) : JQueryPromise<document> {
+    private loadRevision(changeVector: string) : JQueryPromise<document> {
         this.isBusy(true);
 
-        return new getDocumentAtRevisionCommand(etag, this.activeDatabase())
+        return new getDocumentAtRevisionCommand(changeVector, this.activeDatabase())
             .execute()
             .done((doc: document) => {
                 this.document(doc);
                 this.displayDocumentChange(false);
 
                 this.inReadOnlyMode(true);
-                this.revisionEtag(etag);
+                this.revisionChangeVector(changeVector);
 
                 this.dirtyFlag().reset();
 

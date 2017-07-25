@@ -201,9 +201,9 @@ class appUrl {
         return "#databases/edit?" + docIdUrlPart + collectionPart + databaseUrlPart;
     }
 
-    static forViewDocumentAtRevision(id: string, revisionEtag: number, db: database | databaseInfo): string {
+    static forViewDocumentAtRevision(id: string, revisionChangeVector: string, db: database | databaseInfo): string {
         const databaseUrlPart = appUrl.getEncodedDbPart(db);
-        const docIdUrlPart = "&id=" + encodeURIComponent(id) + "&revision=" + revisionEtag;
+        const docIdUrlPart = "&id=" + encodeURIComponent(id) + "&revision=" + encodeURIComponent(revisionChangeVector);
         return "#databases/edit?" + docIdUrlPart + databaseUrlPart;
     }
 
@@ -632,8 +632,8 @@ class appUrl {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/docs?id=" + docId;
     }
 
-    static forDocumentRevisionRawData(db: database | databaseInfo, revisionEtag: number): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/revisions?etag=" + revisionEtag;
+    static forDocumentRevisionRawData(db: database | databaseInfo, revisionChangeVector: string): string { 
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/revisions?changeVector=" + encodeURIComponent(revisionChangeVector);
     }
 
     static getDatabaseNameFromUrl(): string {

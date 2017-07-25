@@ -265,12 +265,11 @@ class connectedDocuments {
                 });
 
                 if (doc.__metadata.hasFlag("Revision") || doc.__metadata.hasFlag("DeleteRevision")) {
-                    const etag = doc.__metadata.etag();
-                    const resultIdx = result.items.findIndex(x => x.__metadata.etag() === etag);
+                    const changeVector = doc.__metadata.changeVector();
+                    const resultIdx = result.items.findIndex(x => x.__metadata.changeVector() === changeVector);
                     if (resultIdx >= 0) {
-                        this.gridController().setSelectedItems([mappedResults[resultIdx]]);    
+                        this.gridController().setSelectedItems([mappedResults[resultIdx]]);
                     }
-                    
                 }
             })
             .fail(xhr => fetchTask.reject(xhr));
@@ -280,7 +279,7 @@ class connectedDocuments {
 
     private revisionToConnectedDocument(doc: document): connectedDocumentItem {
         return {
-            href: appUrl.forViewDocumentAtRevision(doc.getId(), doc.__metadata.etag(), this.db()),
+            href: appUrl.forViewDocumentAtRevision(doc.getId(), doc.__metadata.changeVector(), this.db()),
             id: doc.__metadata.lastModified(),
             deletedRevision: doc.__metadata.hasFlag("DeleteRevision")
         };

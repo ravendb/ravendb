@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.Notifications
 
                 Assert.Equal("users/1", documentChange.Id);
                 Assert.Equal(documentChange.Type, DocumentChangeTypes.Put);
-                Assert.NotNull(documentChange.Etag);
+                Assert.NotNull(documentChange.ChangeVector);
             }
         }
 

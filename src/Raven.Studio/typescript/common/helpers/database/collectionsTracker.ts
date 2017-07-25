@@ -18,9 +18,9 @@ class collectionsTracker {
 
     private events = {
         created: [] as Array<(coll: collection) => void>,
-        changed: [] as Array<(coll: collection, etag: string) => void>,
+        changed: [] as Array<(coll: collection, changeVector: string) => void>,
         removed: [] as Array<(coll: collection) => void>,
-        globalEtag: [] as Array<(etag: string) => void>
+        globalChangeVector: [] as Array<(changeVector: string) => void>
     }
 
     onDatabaseChanged(db: database) {
@@ -65,7 +65,7 @@ class collectionsTracker {
             this.onCollectionRemoved(toRemove);
         });
 
-        //TODO this.events.globalEtag.forEach(handler => handler(notification.GlobalDocumentsEtag));
+        this.events.globalChangeVector.forEach(handler => handler(notification.GlobalChangeVector));
 
         changedCollections.forEach(c => {
             const existingCollection = this.collections().find(x => x.name.toLowerCase() === c.Name.toLocaleLowerCase());
@@ -111,7 +111,7 @@ class collectionsTracker {
         }
     }
 
-    registerOnCollectionUpdatedHandler(handler: (collection: collection, etag: string) => void): disposable {
+    registerOnCollectionUpdatedHandler(handler: (collection: collection, lastDocumentChangeVector: string) => void): disposable { 
         this.events.changed.push(handler);
 
         return {
@@ -119,11 +119,11 @@ class collectionsTracker {
         }
     }
 
-    registerOnGlobalEtagUpdatedHandler(handler: (etag: string) => void): disposable {
-        this.events.globalEtag.push(handler);
+    registerOnGlobalChangeVectorUpdatedHandler(handler: (changeVector: string) => void): disposable {
+        this.events.globalChangeVector.push(handler);
 
         return {
-            dispose: () => _.pull(this.events.globalEtag, handler)    
+            dispose: () => _.pull(this.events.globalChangeVector, handler)    
         }
     }
 
@@ -143,7 +143,7 @@ class collectionsTracker {
     private onCollectionChanged(item: collection, incomingData: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged.ModifiedCollection) {
         item.documentCount(incomingData.Count);
 
-        //TODO this.events.changed.forEach(handler => handler(item, incomingData.CollectionEtag));
+        this.events.changed.forEach(handler => handler(item, incomingData.LastDocumentChangeVector));
     }
     
 }

@@ -35,14 +35,9 @@ namespace Raven.Client.Documents.Changes
         public string TypeName { get; set; }
 
         /// <summary>
-        /// Document etag.
-        /// </summary>
-        public long? Etag { get; set; }
-
-        /// <summary>
         /// Document change vector
         /// </summary>
-        public string ChangeVector { get; set; }
+        public string ChangeVector { get; set; } 
 
         internal bool TriggeredByReplicationThread;
 
@@ -59,14 +54,14 @@ namespace Raven.Client.Documents.Changes
                 [nameof(Id)] = Id,
                 [nameof(CollectionName)] = CollectionName,
                 [nameof(TypeName)] = TypeName,
-                [nameof(Etag)] = Etag
+                [nameof(ChangeVector)] = ChangeVector
             };
         }
 
         internal static DocumentChange FromJson(BlittableJsonReaderObject value)
         {
             value.TryGet(nameof(CollectionName), out string collectionName);
-            value.TryGet(nameof(Etag), out long? etag);
+            value.TryGet(nameof(ChangeVector), out string changeVector);
             value.TryGet(nameof(TypeName), out string typeName);
             value.TryGet(nameof(Id), out string id);
             value.TryGet(nameof(Type), out string type);
@@ -74,7 +69,7 @@ namespace Raven.Client.Documents.Changes
             return new DocumentChange
             {
                 CollectionName = collectionName,
-                Etag = etag,
+                ChangeVector = changeVector,
                 IsSystemDocument = false,
                 Id = id,
                 TypeName = typeName,

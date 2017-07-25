@@ -73,13 +73,13 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             public readonly long Count;
 
-            public readonly long LastDocumentEtag;
+            public readonly string LastDocumentChangeVector;
 
-            public ModifiedCollection(string name, long count, long lastDocumentEtag)
+            public ModifiedCollection(string name, long count, string lastDocumentChangeVector)
             {
                 Name = name;
                 Count = count;
-                LastDocumentEtag = lastDocumentEtag;
+                LastDocumentChangeVector = lastDocumentChangeVector;
             }
 
             public bool Equals(ModifiedCollection other)
@@ -89,7 +89,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 if (ReferenceEquals(this, other))
                     return true;
 
-                return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) && Count == other.Count && LastDocumentEtag == other.LastDocumentEtag;
+                return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) && Count == other.Count && LastDocumentChangeVector == other.LastDocumentChangeVector;
             }
 
             public DynamicJsonValue ToJson()
@@ -98,7 +98,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 {
                     [nameof(Name)] = Name,
                     [nameof(Count)] = Count,
-                    [nameof(LastDocumentEtag)] = LastDocumentEtag,
+                    [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector,
                 };
             }
 
@@ -120,7 +120,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 {
                     var hashCode = Name?.GetHashCode() ?? 0;
                     hashCode = (hashCode * 397) ^ Count.GetHashCode();
-                    hashCode = (hashCode * 397) ^ LastDocumentEtag.GetHashCode();
+                    hashCode = (hashCode * 397) ^ LastDocumentChangeVector.GetHashCode();
                     return hashCode;
                 }
             }

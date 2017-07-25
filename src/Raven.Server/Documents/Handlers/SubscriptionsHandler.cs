@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Handlers
                                 var docWithExcepton = new DocumentWithException()
                                 {
                                     Exception = itemDetails.Exception.ToString(),
-                                    Etag = itemDetails.Doc.Etag,
+                                    ChangeVector = itemDetails.Doc.ChangeVector,
                                     Id = itemDetails.Doc.Id,
                                     DocumentData = itemDetails.Doc.Data
                                 };
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
     public class DocumentWithException : IDynamicJson
     {
         public string Id { get; set; }
-        public long Etag { get; set; }
+        public string ChangeVector { get; set; }
         public string Exception { get; set; }
         public object DocumentData { get; set; }
 
@@ -211,7 +211,7 @@ namespace Raven.Server.Documents.Handlers
            return new DynamicJsonValue
            {
                 [nameof(Id)] = Id,
-                [nameof(Etag)] = Etag,
+                [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Exception)] = Exception,
                 [nameof(DocumentData)] = DocumentData
            };
