@@ -1,0 +1,75 @@
+<!-- Resolve Issues Modal -->
+<div class="modal fade" id="resolveIssuesModal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+                <h4 class="modal-title" id="myModalLabel">Resolve issues</h4>
+            </div>
+            <div class="padding">
+
+                <p>The following actions are going to be performed:</p>
+
+                <div class="well">
+                    <ul class="resolve-list">
+                        <li class="flex-horizontal">
+                            <i class="icon-merge text-warning flex-start"></i>
+                            <span>
+                                <span>merge <a href="#">Orders/ByTotalPrice</a></span> and <a href="#">Orders/ByDestination</a><br />
+                                into a new index <span class="text-warning">Orders/ByDestinationAndTotalPrice</span>
+
+                            </span>
+                        </li>
+                        <li>
+                            <i class="icon-trash text-danger"></i><span>remove <a href="#">Orders/ByTotalPrice</a></span>
+                        </li>
+                        <li>
+                            <i class="icon-trash text-danger"></i><span>remove <a href="#">Orders/ByDestination</a></span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="well">
+                    <ul class="resolve-list">
+                        <li>
+                            <i class="icon-trash text-danger"></i><span>remove <a href="#">Companies/ByName</a></span>
+                        </li>
+                        <li>
+                            <i class="icon-trash text-danger"></i><span>remove <a href="#">Companies/ByProduct</a></span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="well">
+                    <ul class="resolve-list">
+                        <li>
+                            <i class="icon-trash text-danger"></i>
+                            <span>remove <a href="#">Auto/Orders/ByCustomerName</a></span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="well">
+                    <ul class="resolve-list">
+                        <li>
+                            <i class="icon-trash text-danger"></i>
+                            <span>remove <a href="#">Orders/ByCustomerName</a></span>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-default" data-dismiss="modal">
+                    <i class="icon-cancel"></i>
+                    <span>Cancel</span>
+                </button>
+                <button type="button" class="btn btn-primary">
+                    <i class="icon-check"></i>
+                    <span>Resolve</span>
+                </button>
+            </div>
+        </div>
+
+    </div>
+</div>
