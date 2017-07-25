@@ -345,7 +345,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
-                                        if (section.Headers.ContainsKey("Content-Encoding"))
+                                        if (section.Headers.ContainsKey("Content-Encoding") && section.Headers["Content-Encoding"] == "gzip")
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
