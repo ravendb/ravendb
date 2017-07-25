@@ -78,7 +78,7 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    if (expectedChangeVector != null)
+                    if (string.IsNullOrEmpty(expectedChangeVector) == false)
                     {
                         var oldChangeVector = TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref oldValue);
                         if (string.Compare(expectedChangeVector, oldChangeVector, StringComparison.Ordinal) != 0)
@@ -231,14 +231,14 @@ namespace Raven.Server.Documents
                 }
             }
 
-            if (changeVector != null)
+            if (string.IsNullOrEmpty(changeVector) == false)
                return (changeVector, nonPersistentFlags);
 
             string oldChangeVector;
             if (fromReplication == false)
             {
                 if(context.LastDatabaseChangeVector == null)
-                    context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
                 oldChangeVector = context.LastDatabaseChangeVector;
             }
             else
@@ -408,9 +408,9 @@ namespace Raven.Server.Documents
 
         private string SetDocumentChangeVectorForLocalChange(DocumentsOperationContext context, Slice lowerId, string oldChangeVector, long newEtag)
         {
-            if (oldChangeVector != null)
+            if (string.IsNullOrEmpty(oldChangeVector) == false)
             {
-                ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref oldChangeVector);
+                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.DbId, newEtag, ref oldChangeVector);
                 return oldChangeVector;
             }
 

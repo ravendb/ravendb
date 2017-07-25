@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Replication
             if (resolved == null || duplicateResolverEtagAt == maxEtag)
                 return false;
 
-            resolved.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
+            resolved.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
             return true;
         }
 
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.Replication
 
             updatedConflict.Doc = resolved;
             updatedConflict.Collection = collection;
-            updatedConflict.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
+            updatedConflict.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
 
             resolvedConflict = updatedConflict;
 
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Replication
                 }
             }
 
-            latestDoc.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList()));
+            latestDoc.ChangeVector = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
 
             return latestDoc;
         }

@@ -290,7 +290,7 @@ namespace Raven.Server.Documents
 
             var changeVectors = new List<string>();
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
-            LazyStringValue deleteAttachmentChangeVector = null;
+            string deleteAttachmentChangeVector = null;
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents
                     if ((flags & DocumentFlags.HasAttachments) != DocumentFlags.HasAttachments)
                         return;
 
-                    if (deleteAttachmentChangeVector == null)
+                    if (string.IsNullOrEmpty(deleteAttachmentChangeVector))
                     {
                         var newEtag = _documentsStorage.GenerateNextEtag();
                         deleteAttachmentChangeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
@@ -336,7 +336,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private NonPersistentDocumentFlags DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId,
-            BlittableJsonReaderObject document, Table.TableValueHolder before, LazyStringValue changeVector)
+            BlittableJsonReaderObject document, Table.TableValueHolder before, string changeVector)
         {
             var dataPtr = before.Reader.Read((int)ConflictsTable.Data, out int size);
             Debug.Assert(size >= 0);
@@ -427,7 +427,7 @@ namespace Raven.Server.Documents
             return items;
         }
 
-        public LazyStringValue GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
+        public string GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
             if (ConflictsCount == 0)
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
@@ -438,19 +438,18 @@ namespace Raven.Server.Documents
                 return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
 
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
-            conflictChangeVectors.Add(context.GetLazyString(newChangeVector));
-            return context.GetLazyString(ChangeVectorUtils.MergeVectors(conflictChangeVectors));
+            conflictChangeVectors.Add(newChangeVector);
+            return ChangeVectorUtils.MergeVectors(conflictChangeVectors);
         }
 
-        private LazyStringValue MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
+        private string MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
         {
             if (existing != null)
             {
-                var str = existing;
-                ChangeVectorUtils.TryUpdateChangeVector(_documentsStorage.Environment.DbId, newEtag, ref str);
-                return context.GetLazyString(str);
+                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentsStorage.Environment.DbId, newEtag, ref existing);
+                return existing;
             }
-            return context.GetLazyString(ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId));
+            return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
         }
 
         public bool ShouldThrowConcurrencyExceptionOnConflict(DocumentsOperationContext context, Slice lowerId, long? expectedEtag, out long? currentMaxConflictEtag)
@@ -499,8 +498,8 @@ namespace Raven.Server.Documents
                 }
                 mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, changeVector);
             }
-            if (documentChangeVector != null)
-                mergedChangeVectorEntries = context.GetLazyString(ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector));
+            if (string.IsNullOrEmpty(documentChangeVector) == false)
+                mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, documentChangeVector);
             var newChangeVector =
                 ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
             mergedChangeVectorEntries = ChangeVectorUtils.MergeVectors(mergedChangeVectorEntries, newChangeVector);
@@ -615,9 +614,7 @@ namespace Raven.Server.Documents
                 }
 
                 var etag = _documentsStorage.GenerateNextEtag();
-                var str = context.LastDatabaseChangeVector.ToString();
-                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.DbId, etag, ref str);
-                context.LastDatabaseChangeVector = context.GetLazyString(str);
+                ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, _documentDatabase.DbId, etag, ref context.LastDatabaseChangeVector);
 
                 byte* doc = null;
                 var docSize = 0;
