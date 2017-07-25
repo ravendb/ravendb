@@ -1,19 +1,12 @@
-namespace Raven.Server.Documents.Queries.Parser.Lucene
+namespace Raven.Server.Documents.Queries
 {
     public enum LuceneTermType
     {
-        Quoted,
-        QuotedWildcard,
-        UnQuoted,
-        Float,
+        String,
         Double,
-        DateTime,
-        Int,
         Long,
-        UnAnalyzed,
         Null,
-        WildCardTerm,
-        PrefixTerm,
-        Hex
+        WildCard,
+        Prefix
     }
 }

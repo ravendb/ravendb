@@ -11,7 +11,6 @@ using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Queries.LuceneIntegration;
-using Raven.Server.Documents.Queries.Parser.Lucene;
 using Sparrow.Json;
 using Query = Raven.Server.Documents.Queries.Parser.Query;
 using Version = Lucene.Net.Util.Version;
@@ -64,11 +63,6 @@ namespace Raven.Server.Documents.Queries
 
                         var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
 
-                        if (expression.Type == OperatorType.Equal && fieldType == LuceneFieldType.String)
-                        {
-                            return CreateTermNode(luceneFieldName, value as string, valueType, analyzer);
-                        }
-
                         switch (fieldType)
                         {
                             case LuceneFieldType.String:
@@ -77,7 +71,7 @@ namespace Raven.Server.Documents.Queries
                                 switch (expression.Type)
                                 {
                                     case OperatorType.Equal:
-                                        return CreateTermNode(luceneFieldName, valueAsString, valueType, analyzer);
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString);
                                     case OperatorType.LessThan:
                                         return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString);
                                     case OperatorType.GreaterThan:
@@ -163,7 +157,7 @@ namespace Raven.Server.Documents.Queries
                         foreach (var valueToken in expression.Values)
                         {
                             foreach (var (value, _) in GetValues(fieldName, query, metadata, parameters, valueToken))
-                                matches.AddRange(LuceneQueryHelper.GetAnalyzedTerm(luceneFieldName, value, termType, analyzer));
+                                matches.Add(LuceneQueryHelper.GetTermValue(value, termType));
                         }
 
                         return new TermsMatchQuery(luceneFieldName, matches);
@@ -195,13 +189,13 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Boost:
                             return HandleBoost(query, expression, metadata, parameters, analyzer);
                         case MethodType.StartsWith:
-                            return HandleStartsWith(query, expression, metadata, parameters, analyzer);
+                            return HandleStartsWith(query, expression, metadata, parameters);
                         case MethodType.EndsWith:
-                            return HandleEndsWith(query, expression, metadata, parameters, analyzer);
+                            return HandleEndsWith(query, expression, metadata, parameters);
                         case MethodType.Lucene:
                             return HandleLucene(query, expression, metadata, parameters, analyzer);
                         case MethodType.Exists:
-                            return HandleExists(query, expression, metadata, analyzer);
+                            return HandleExists(query, expression, metadata);
                         default:
                             throw new NotSupportedException($"Method '{methodType}' is not supported.");
                     }
@@ -242,11 +236,11 @@ namespace Raven.Server.Documents.Queries
             return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
         }
 
-        private static Lucene.Net.Search.Query HandleExists(Query query, QueryExpression expression, QueryMetadata metadata, Analyzer analyzer)
+        private static Lucene.Net.Search.Query HandleExists(Query query, QueryExpression expression, QueryMetadata metadata)
         {
             var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
 
-            return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCardTerm, analyzer);
+            return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
         }
 
         private static Lucene.Net.Search.Query HandleLucene(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
@@ -261,7 +255,7 @@ namespace Raven.Server.Documents.Queries
             return parser.Parse(value as string);
         }
 
-        private static Lucene.Net.Search.Query HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
             var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
@@ -275,10 +269,10 @@ namespace Raven.Server.Documents.Queries
             else
                 valueAsString += LuceneQueryHelper.Asterisk;
 
-            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.PrefixTerm, analyzer);
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix);
         }
 
-        private static Lucene.Net.Search.Query HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
         {
             var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
@@ -291,7 +285,7 @@ namespace Raven.Server.Documents.Queries
                 ? LuceneQueryHelper.Asterisk
                 : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
 
-            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCardTerm, analyzer);
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
         }
 
         private static Lucene.Net.Search.Query HandleBoost(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
@@ -319,45 +313,45 @@ namespace Raven.Server.Documents.Queries
             if (values.Length == 1)
             {
                 var nValue = values[0];
-                return LuceneQueryHelper.Term(fieldName, nValue, GetTermType(nValue), analyzer);
+                return LuceneQueryHelper.AnalyzedTerm(fieldName, nValue, GetTermType(nValue), analyzer);
             }
 
             var q = new BooleanQuery();
             foreach (var v in values)
-                q.Add(LuceneQueryHelper.Term(fieldName, v, GetTermType(v), analyzer), Occur.SHOULD);
+                q.Add(LuceneQueryHelper.AnalyzedTerm(fieldName, v, GetTermType(v), analyzer), Occur.SHOULD);
 
             return q;
 
             LuceneTermType GetTermType(string termValue)
             {
                 if (string.IsNullOrEmpty(termValue))
-                    return LuceneTermType.Quoted;
+                    return LuceneTermType.String;
 
                 if (termValue[0] == LuceneQueryHelper.AsteriskChar)
-                    return LuceneTermType.WildCardTerm;
+                    return LuceneTermType.WildCard;
 
                 if (termValue[termValue.Length - 1] == LuceneQueryHelper.AsteriskChar)
                 {
                     if (termValue[termValue.Length - 2] != '\\')
-                        return LuceneTermType.PrefixTerm;
+                        return LuceneTermType.Prefix;
                 }
 
-                return LuceneTermType.Quoted;
+                return LuceneTermType.String;
             }
         }
 
         public static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
-            var valueOrParameterName = QueryExpression.Extract(query.QueryText, value);
-
             if (value.Type == ValueTokenType.Parameter)
             {
+                var parameterName = QueryExpression.Extract(query.QueryText, value);
+
                 var expectedValueType = metadata.WhereFields[fieldName];
 
                 if (parameters == null)
                     throw new InvalidOperationException();
 
-                if (parameters.TryGetMember(valueOrParameterName, out var parameterValue) == false)
+                if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     throw new InvalidOperationException();
 
                 var array = parameterValue as BlittableJsonReaderArray;
@@ -381,7 +375,7 @@ namespace Raven.Server.Documents.Queries
                 yield return (parameterValue.ToString(), parameterValueType);
             }
 
-            yield return (valueOrParameterName, value.Type);
+            yield return (QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars), value.Type);
         }
 
         private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType)
@@ -443,11 +437,14 @@ namespace Raven.Server.Documents.Queries
             switch (valueType)
             {
                 case ValueTokenType.String:
-                    return (fieldName, LuceneFieldType.String, LuceneTermType.Quoted);
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 case ValueTokenType.Double:
                     return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double); // TODO arek - avoid +
                 case ValueTokenType.Long:
                     return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long); // TODO arek - avoid +
+                case ValueTokenType.True:
+                case ValueTokenType.False:
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 default:
                     ThrowUnhandledValueTokenType(valueType);
                     break;
@@ -455,7 +452,7 @@ namespace Raven.Server.Documents.Queries
 
             Debug.Assert(false);
 
-            return (null, LuceneFieldType.String, LuceneTermType.Quoted);
+            return (null, LuceneFieldType.String, LuceneTermType.String);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -506,39 +503,6 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 yield return (item.ToString(), GetValueTokenType(item));
-            }
-        }
-
-        private static Lucene.Net.Search.Query CreateTermNode(string fieldName, string value, ValueTokenType valueType, Analyzer analyzer)
-        {
-            switch (valueType)
-            {
-                case ValueTokenType.Null:
-                    return LuceneQueryHelper.Term(fieldName, value, LuceneTermType.Null, analyzer);
-                case ValueTokenType.False:
-                case ValueTokenType.True:
-                    throw new NotImplementedException("expression.Value.Type:" + valueType);
-                default:
-                    LuceneTermType type;
-
-                    switch (valueType)
-                    {
-                        case ValueTokenType.String:
-                            type = LuceneTermType.Quoted;
-                            break;
-                        case ValueTokenType.Long:
-                            type = LuceneTermType.Long;
-                            break;
-                        case ValueTokenType.Double:
-                            type = LuceneTermType.Double;
-                            break;
-                        default:
-                            throw new NotImplementedException("Unhandled value type: " + valueType);
-                            //type = TermLuceneASTNode.TermType.Quoted;
-                            //break;
-                    }
-
-                    return LuceneQueryHelper.Term(fieldName, value, type, analyzer);
             }
         }
 
@@ -677,7 +641,7 @@ namespace Raven.Server.Documents.Queries
 
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
         {
-            throw new NotSupportedException($"Unhandled toke type: {type}");
+            throw new NotSupportedException($"Unhandled token type: {type}");
         }
 
         private enum MethodType

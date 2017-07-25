@@ -540,7 +540,7 @@ namespace Raven.Client.Documents.Session
             SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
         }
-        
+
         internal void AddGroupByAlias(string fieldName, string projectedName)
         {
             _aliasToGroupByFieldName[projectedName] = fieldName;
@@ -762,7 +762,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             AppendOperatorIfNeeded(WhereTokens);
 
-            WhereTokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(fieldName, whereClause)));
+            WhereTokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(whereClause)));
         }
 
         /// <summary>
@@ -836,7 +836,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(whereParams.FieldName, transformToEqualValue)));
+            WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         ///<summary>
@@ -857,7 +857,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         /// <summary>
@@ -883,7 +883,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(whereParams.FieldName, transformToEqualValue)));
+            WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         /// <summary>
@@ -909,7 +909,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(whereParams.FieldName, transformToEqualValue)));
+            WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         /// <summary>
@@ -924,8 +924,8 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            var fromParameterName = AddQueryParameter(fieldName, start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }));
-            var toParameterName = AddQueryParameter(fieldName, end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }));
+            var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }));
+            var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }));
 
             WhereTokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName));
         }
@@ -940,7 +940,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(fieldName, value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
 
         /// <summary>
@@ -953,7 +953,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(fieldName, value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
 
         /// <summary>
@@ -966,7 +966,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(fieldName, value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
 
         /// <summary>
@@ -979,7 +979,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded();
 
-            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(fieldName, value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
 
         /// <summary>
@@ -1356,7 +1356,7 @@ If you really want to do in memory filtering on the data returned from the query
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
                 );
 
-            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(fieldName, searchTerms)));
+            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms)));
         }
 
         /// <summary>
@@ -1415,7 +1415,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
@@ -1425,7 +1425,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
-            WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(fieldName, TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void AddRootType(Type type)
@@ -1761,6 +1761,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return whereParams.Value;
             if (whereParams.Value is string)
                 return whereParams.Value;
+            if (whereParams.Value is bool)
+                return whereParams.Value;
 
             if (whereParams.Value is ValueType)
                 return Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture);
@@ -1791,7 +1793,7 @@ If you really want to do in memory filtering on the data returned from the query
             //return RavenQuery.Escape(sb.ToString(), false, true);
         }
 
-        private string AddQueryParameter(string fieldName, object value)
+        private string AddQueryParameter(object value)
         {
             var parameterName = $"p{QueryParameters.Count.ToInvariantString()}";
             QueryParameters.Add(parameterName, value);

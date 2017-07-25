@@ -32,12 +32,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 case ValueTokenType.True:
                     return "true";
             }
+
             return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
         }
 
         internal static string Extract(string q, FieldToken field)
         {
-            if(field.IsQuoted)
+            if (field.IsQuoted)
                 return Extract(q, field.TokenStart + 1, field.TokenLength - 2, field.EscapeChars);
             return Extract(q, field.TokenStart, field.TokenLength, field.EscapeChars);
         }
@@ -189,7 +190,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         }
                         else
                         {
-                            var val = (ValueToken) arg;
+                            var val = (ValueToken)arg;
                             writer.Write(Extract(query, val));
                         }
                     }
@@ -223,7 +224,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     switch (Value.Type)
                     {
                         case ValueTokenType.Null:
-                            writer.WriteValue((string) null);
+                            writer.WriteValue((string)null);
                             break;
                         case ValueTokenType.False:
                             writer.WriteValue(false);
@@ -289,7 +290,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         }
                         else
                         {
-                            var val = (ValueToken) arg;
+                            var val = (ValueToken)arg;
                             WriteValue(query, writer, val.TokenStart, val.TokenLength, val.EscapeChars,
                                 val.Type == ValueTokenType.Double || val.Type == ValueTokenType.Long);
                         }

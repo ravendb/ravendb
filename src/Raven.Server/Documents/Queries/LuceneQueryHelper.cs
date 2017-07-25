@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
-using Raven.Server.Documents.Queries.Parser.Lucene;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -40,7 +38,7 @@ namespace Raven.Server.Documents.Queries
 
         public static Query Equal(string fieldName, LuceneTermType termType, string value)
         {
-            return CreateRange(fieldName, value, termType, true, value, termType, true);
+            return Term(fieldName, value, termType);
         }
 
         public static Query Equal(string fieldName, LuceneTermType termType, long value)
@@ -55,7 +53,7 @@ namespace Raven.Server.Documents.Queries
 
         public static Query LessThan(string fieldName, LuceneTermType termType, string value)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, false);
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false);
         }
 
         public static Query LessThan(string fieldName, LuceneTermType termType, long value)
@@ -70,7 +68,7 @@ namespace Raven.Server.Documents.Queries
 
         public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, string value)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCardTerm, false, value, termType, true);
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true);
         }
 
         public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, long value)
@@ -128,79 +126,47 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, fromValue, true, toValue, true);
         }
 
-        public static IEnumerable<string> GetAnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer)
-        {
-            switch (type)
-            {
-                case LuceneTermType.Quoted:
-                case LuceneTermType.UnQuoted:
-                    var tokenStream = analyzer.ReusableTokenStream(fieldName, new StringReader(term));
-                    while (tokenStream.IncrementToken())
-                    {
-                        var attribute = (TermAttribute)tokenStream.GetAttribute<ITermAttribute>();
-                        yield return attribute.Term;
-                    }
-                    break;
-                case LuceneTermType.QuotedWildcard:
-                case LuceneTermType.WildCardTerm:
-                case LuceneTermType.PrefixTerm:
-                    yield return GetWildcardTerm(fieldName, term, type, analyzer).Text;
-                    break;
-                case LuceneTermType.Float:
-                case LuceneTermType.Double:
-                case LuceneTermType.Hex:
-                case LuceneTermType.DateTime:
-                case LuceneTermType.Int:
-                case LuceneTermType.Long:
-                case LuceneTermType.Null:
-                    yield return term;
-                    break;
-                case LuceneTermType.UnAnalyzed:
-                    yield return term.Substring(2, term.Length - 4);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
-        }
-
-        public static Query Term(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null)
+        public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null)
         {
             if (boost.HasValue == false)
                 boost = 1;
 
-            //Look into changing the grammar to better handle quoted/unquoted non-analyzed terms
-            if (type == LuceneTermType.UnAnalyzed)
+            if (type == LuceneTermType.Double || type == LuceneTermType.Long)
+                return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
+
+            term = GetTermValue(term, type);
+
+            if (type == LuceneTermType.WildCard)
             {
-                var originalLength = term.Length;
-                var quoted = term[2] == '\"' && term[originalLength - 3] == '\"';
-                var start = quoted ? 3 : 2;
-                var length = quoted ? originalLength - 6 : originalLength - 4;
-                return new TermQuery(new Term(fieldName, term.Substring(start, length))) { Boost = boost.Value };
+                return new WildcardQuery(new Term(fieldName, term))
+                {
+                    Boost = boost.Value
+                };
             }
 
-            switch (type)
+            if (type == LuceneTermType.Prefix)
             {
-                case LuceneTermType.Float:
-                case LuceneTermType.Hex:
-                case LuceneTermType.Double:
-                case LuceneTermType.DateTime:
-                case LuceneTermType.Int:
-                case LuceneTermType.Long:
-                    return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
+                var actualTerm = term[term.Length - 1] == AsteriskChar ? term.Substring(0, term.Length - 1) : term;
+                return new PrefixQuery(new Term(fieldName, actualTerm)) { Boost = boost.Value };
             }
 
-            if (type == LuceneTermType.QuotedWildcard)
-            {
-                var res = AnalyzedWildCardQueries(fieldName, term, type, analyzer);
-                res.Boost = boost.Value;
-                return res;
-            }
+            return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
+        }
 
-            if (type == LuceneTermType.WildCardTerm)
+        public static Query AnalyzedTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer, float? boost = null, float? similarity = null)
+        {
+            if (type != LuceneTermType.String && type != LuceneTermType.Prefix && type != LuceneTermType.WildCard)
+                throw new InvalidOperationException("Analyzed terms can be only created from string values.");
+
+            if (boost.HasValue == false)
+                boost = 1;
+
+            if (type == LuceneTermType.WildCard)
             {
-                var res = AnalyzedWildCardQueries(fieldName, term, type, analyzer);
-                res.Boost = boost.Value;
-                return res;
+                return new WildcardQuery(GetAnalyzedWildcardTerm(fieldName, term, analyzer))
+                {
+                    Boost = boost.Value
+                };
             }
 
             var tokenStream = analyzer.ReusableTokenStream(fieldName, new StringReader(term));
@@ -212,11 +178,11 @@ namespace Raven.Server.Documents.Queries
                 terms.Add(attribute.Term);
             }
 
-            if (type == LuceneTermType.PrefixTerm)
+            if (type == LuceneTermType.Prefix)
             {
                 if (terms.Count != 0)
                 {
-                    var first = terms.First();
+                    var first = terms[0];
                     var actualTerm = first[first.Length - 1] == AsteriskChar ? first.Substring(0, first.Length - 1) : first;
                     return new PrefixQuery(new Term(fieldName, actualTerm)) { Boost = boost.Value };
                 }
@@ -236,56 +202,40 @@ namespace Raven.Server.Documents.Queries
                 return booleanQuery;
             }
 
-            if (terms.Count == 0)
-                return null;
-
-            if (type == LuceneTermType.Quoted)
-            {
-                /*if (!string.IsNullOrEmpty(Proximity))
-                {
-                    var pq = new PhraseQuery() { Boost = boost };
-                    pq.Add(new Term(configuration.FieldName, Term));
-                    pq.Slop = int.Parse(Proximity);
-                    return pq;
-                }*/
-                if (terms.Count == 1)
-                {
-                    return new TermQuery(new Term(fieldName, terms.First())) { Boost = boost.Value };
-                }
-                var pq = new PhraseQuery { Boost = boost.Value };
-                foreach (var t in terms)
-                {
-                    pq.Add(new Term(fieldName, t));
-                }
-                return pq;
-                //return new TermQuery(new Term(configuration.FieldName, Term.Substring(1, Term.Length - 2))){Boost = boost};
-            }
-
-            //This is probably wrong, need to check what happens with analyzed unquoted terms.
-            if (type == LuceneTermType.UnQuoted && similarity.HasValue)
-            {
-                return new FuzzyQuery(new Term(fieldName, terms.FirstOrDefault()), similarity.Value, 0) { Boost = boost.Value };
-            }
-
             if (terms.Count == 1)
             {
-                return new TermQuery(new Term(fieldName, terms[0])) { Boost = boost.Value };
+                return new TermQuery(new Term(fieldName, terms[0]))
+                {
+                    Boost = boost.Value
+                };
             }
 
-            var phrase = new PhraseQuery { Boost = boost.Value };
-            foreach (var t in terms)
+            var pq = new PhraseQuery
             {
-                phrase.Add(new Term(fieldName, t));
-            }
+                Boost = boost.Value
+            };
 
-            return phrase;
+            foreach (var t in terms)
+                pq.Add(new Term(fieldName, t));
+
+            return pq;
         }
 
-
-        private static Term GetWildcardTerm(string fieldName, string term, LuceneTermType type, Analyzer analyzer)
+        public static string GetTermValue(string value, LuceneTermType type)
         {
-            var quoted = type == LuceneTermType.QuotedWildcard;
-            var reader = new StringReader(quoted ? term.Substring(1, term.Length - 2) : term);
+            switch (type)
+            {
+                case LuceneTermType.Double:
+                case LuceneTermType.Long:
+                    return value;
+                default:
+                    return value.ToLowerInvariant();
+            }
+        }
+
+        private static Term GetAnalyzedWildcardTerm(string fieldName, string term, Analyzer analyzer)
+        {
+            var reader = new StringReader(term);
             var tokenStream = analyzer.ReusableTokenStream(fieldName, reader);
             var terms = new List<string>();
             while (tokenStream.IncrementToken())
@@ -303,12 +253,16 @@ namespace Raven.Server.Documents.Queries
             int expectedLength;
             if (terms.Count == 1)
             {
-                var firstTerm = terms.First();
-                if (term.StartsWith(Asterisk) && !firstTerm.StartsWith(Asterisk)) sb.Append(Asterisk);
+                var firstTerm = terms[0];
+                if (term.StartsWith(Asterisk) && !firstTerm.StartsWith(Asterisk))
+                    sb.Append(Asterisk);
+
                 sb.Append(firstTerm);
-                if (term.EndsWith(Asterisk) && !firstTerm.EndsWith(Asterisk)) sb.Append(Asterisk);
+                if (term.EndsWith(Asterisk) && !firstTerm.EndsWith(Asterisk))
+                    sb.Append(Asterisk);
+
                 var res = sb.ToString();
-                expectedLength = (quoted ? 2 : 0) + res.Length;
+                expectedLength = res.Length;
                 Debug.Assert(expectedLength == term.Length,
                     @"if analyzer changes length of term and removes wildcards after processing it, 
 there is no way to know where to put the wildcard character back after the analysis. 
@@ -330,18 +284,13 @@ This edge-case has a very slim chance of happening, but still we should not igno
             }
 
             var analyzedTermString = sb.ToString();
-            expectedLength = analyzedTermString.Length + (quoted ? 2 : 0);
+            expectedLength = analyzedTermString.Length;
             Debug.Assert(expectedLength == term.Length,
                 @"if analyzer changes length of term and removes wildcards after processing it, 
 there is no way to know where to put the wildcard character back after the analysis. 
 This edge-case has a very slim chance of happening, but still we should not ignore it completely.");
 
             return new Term(fieldName, analyzedTermString);
-        }
-
-        private static Query AnalyzedWildCardQueries(string fieldName, string term, LuceneTermType type, Analyzer analyzer)
-        {
-            return new WildcardQuery(GetWildcardTerm(fieldName, term, type, analyzer));
         }
 
         private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax)
