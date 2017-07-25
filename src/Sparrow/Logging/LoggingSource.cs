@@ -252,13 +252,6 @@ namespace Sparrow.Logging
 
         public void Log(ref LogEntry entry)
         {
-#if DEBUG
-            if (entry.Type == LogMode.Information && IsInfoEnabled == false)
-                throw new InvalidOperationException("Logging of info level when information is disabled");
-
-            if (entry.Type == LogMode.Operations && IsOperationsEnabled == false)
-                throw new InvalidOperationException("Logging of ops level when ops is disabled");
-#endif
             WebSocketMessageEntry item;
             var state = _localState.Value;
             if (state.Generation != _generation)

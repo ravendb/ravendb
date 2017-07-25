@@ -12,21 +12,22 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            using (var store = new DocumentStore
-            {
-                Urls = new string[] { "http://127.0.0.1:8080" },
-                Database = "test"
-            }.Initialize())
-            {
-                var sub = store.Subscriptions.Open(new Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions(11));
-                sub.Run(batch =>
-                {
-                    foreach (var item in batch.Items)
-                    {
-                        Console.WriteLine(item.Id);
-                    }
-                }).Wait();
-            }
+            //using (var store = new DocumentStore
+            //{
+            //    Urls = new string[] { "http://127.0.0.1:8080" },
+            //    Database = "test"
+            //}.Initialize())
+            //{
+            //    var sub = store.Subscriptions.Open(new Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions(11));
+            //    sub.Run(batch =>
+            //    {
+            //        foreach (var item in batch.Items)
+            //        {
+            //            Console.WriteLine(item.Id);
+            //        }
+            //    }).Wait();
+            //}
+            RunTest();
         }
 
         private static void RunTest()
@@ -35,11 +36,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.Revisions.RevisionsReplication())
+                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())
                 {
                     try
                     {
-                        test.RevisionsOrder().Wait();
+                        test.ServerSideWriteAssurance().Wait();
                     }
                     catch (Exception e)
                     {
