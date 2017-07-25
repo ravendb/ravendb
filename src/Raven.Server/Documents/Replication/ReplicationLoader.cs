@@ -101,7 +101,6 @@ namespace Raven.Server.Documents.Replication
         }
 
         private readonly Logger _log;
-        private int _numberOfSiblings;
 
         public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
@@ -351,7 +350,7 @@ namespace Raven.Server.Documents.Replication
 
             lock (_locker)
             {
-                _internalDestinations = record.Topology.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology(),_server.IsPassive());
+                _internalDestinations = record.Topology.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology(), _server.IsPassive());
                 _externalDestinations = record.ExternalReplication;
                 
                 _destinations.AddRange(_internalDestinations);
@@ -485,7 +484,6 @@ namespace Raven.Server.Documents.Replication
                 if (destination.Disabled)
                     continue;
 
-                _numberOfSiblings++;
                 if (_log.IsInfoEnabled)
                     _log.Info("Initialized outgoing replication for " + destination.FromString());
                 AddAndStartOutgoingReplication(destination, external);
@@ -517,7 +515,6 @@ namespace Raven.Server.Documents.Replication
                 _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
                 if(info != null)
                     _reconnectQueue.TryRemove(info);
-                _numberOfSiblings--;
             }
         }
 
@@ -528,14 +525,12 @@ namespace Raven.Server.Documents.Replication
                 if (_log.IsInfoEnabled)
                     _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
 
-                _numberOfSiblings = 0;
                 Database.DocumentTombstoneCleaner?.Unsubscribe(this);
                 return;
             }
 
             Database.DocumentTombstoneCleaner.Subscribe(this);
 
-            _numberOfSiblings = 0;
             StartOutgoingConnections(Destinations);
         }
 
@@ -631,11 +626,9 @@ namespace Raven.Server.Documents.Replication
         {
             UpdateLastEtag(instance);
 
-            ConnectionShutdownInfo failureInfo;
-            if (_outgoingFailureInfo.TryGetValue(instance.Node, out failureInfo))
+            if (_outgoingFailureInfo.TryGetValue(instance.Node, out ConnectionShutdownInfo failureInfo))
                 failureInfo.Reset();
-            TaskCompletionSource<object> result;
-            while (_waitForReplicationTasks.TryDequeue(out result))
+            while (_waitForReplicationTasks.TryDequeue(out TaskCompletionSource<object> result))
             {
                 TaskExecutor.Complete(result);
             }
@@ -768,26 +761,24 @@ namespace Raven.Server.Documents.Replication
 
         public int GetSizeOfMajority()
         {
-            return _numberOfSiblings / 2 + 1;
+            var numberOfSiblings = _internalDestinations.Count + _externalDestinations.Count;
+            return numberOfSiblings / 2 + 1;
         }
 
         public async Task<int> WaitForReplicationAsync(int numberOfReplicasToWaitFor, TimeSpan waitForReplicasTimeout, string lastChangeVector)
         {
-            if (_numberOfSiblings == 0)
+            var numberOfSiblings = _internalDestinations.Count + _externalDestinations.Count;
+            if (numberOfSiblings == 0)
             {
                 if (_log.IsInfoEnabled)
-                {
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request");
-                }
                 return numberOfReplicasToWaitFor;
             }
-            if (_numberOfSiblings < numberOfReplicasToWaitFor)
+            if (numberOfSiblings < numberOfReplicasToWaitFor)
             {
                 if (_log.IsInfoEnabled)
-                {
-                    _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers but we have only {_numberOfSiblings} servers, reducing request to {_numberOfSiblings}");
-                }
-                numberOfReplicasToWaitFor = _numberOfSiblings;
+                    _log.Info($"Was asked to get write assurance on a database with {numberOfReplicasToWaitFor} servers but we have only {numberOfSiblings} servers, reducing request to {numberOfSiblings}");
+                numberOfReplicasToWaitFor = numberOfSiblings;
             }
             var sp = Stopwatch.StartNew();
             while (true)
@@ -802,7 +793,6 @@ namespace Raven.Server.Documents.Replication
                     return ReplicatedPast(lastChangeVector);
 
                 var timeout = TimeoutManager.WaitFor(remaining);
-
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
@@ -819,8 +809,7 @@ namespace Raven.Server.Documents.Replication
 
         private Task WaitForNextReplicationAsync()
         {
-            TaskCompletionSource<object> result;
-            if (_waitForReplicationTasks.TryPeek(out result))
+            if (_waitForReplicationTasks.TryPeek(out TaskCompletionSource<object> result))
                 return result.Task;
 
             result = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
@@ -830,7 +819,7 @@ namespace Raven.Server.Documents.Replication
 
         private int ReplicatedPast(string changeVector)
         {
-            int count = 0;
+            var count = 0;
             foreach (var destination in _outgoing)
             {
                 if (ChangeVectorUtils.GetConflictStatus(destination.LastAcceptedChangeVector,changeVector) == ConflictStatus.AlreadyMerged)
