@@ -239,11 +239,6 @@ namespace Raven.Client.Documents.Linq
             var processor = GetQueryProviderProcessor<T>();
             var documentQuery = (IAsyncDocumentQuery<TResult>)processor.GetAsyncDocumentQueryFor(expression);
 
-            if (FieldsToRename.Count > 0)
-            {
-                documentQuery.AfterQueryExecuted(processor.RenameResults);
-                documentQuery.AfterStreamExecuted(processor.RenameSingleResult);
-            }
             return documentQuery;
         }
 
@@ -265,9 +260,6 @@ namespace Raven.Client.Documents.Linq
                     return renamedField.NewField ?? field;
                 return field;
             }).ToArray();
-
-            if (renamedFields.Length > 0)
-                query.AfterQueryExecuted(processor.RenameResults);
 
             if (FieldsToFetch.Count > 0)
                 query = query.SelectFields<TS>(FieldsToFetch.ToArray(), renamedFields);
@@ -294,9 +286,6 @@ namespace Raven.Client.Documents.Linq
                     return renamedField.NewField ?? field;
                 return field;
             }).ToArray();
-
-            if (renamedFields.Length > 0)
-                query.AfterQueryExecuted(processor.RenameResults);
 
             if (FieldsToFetch.Count > 0)
                 query = query.SelectFields<TS>(FieldsToFetch.ToArray(), renamedFields);
@@ -343,19 +332,7 @@ namespace Raven.Client.Documents.Linq
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
 
             result.SetTransformer(ResultTransformer);
-            var renamedFields = FieldsToFetch.Select(field =>
-            {
-                var renamedField = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
-                if (renamedField != null)
-                    return renamedField.NewField ?? field;
-                return field;
-            }).ToArray();
 
-            if (renamedFields.Length > 0)
-            {
-                result.AfterQueryExecuted(processor.RenameResults);
-                result.AfterStreamExecuted(processor.RenameSingleResult);
-            }
             return result;
         }
     }
