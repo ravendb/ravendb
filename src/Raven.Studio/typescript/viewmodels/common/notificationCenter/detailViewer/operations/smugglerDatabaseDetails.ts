@@ -48,7 +48,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 return [];
             }
 
-            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase;
+            const status = (this.op.isCompleted() ? this.op.result() : this.op.progress()) as Raven.Client.Documents.Smuggler.SmugglerProgressBase;
 
             if (!status) {
                 return [];
@@ -96,10 +96,10 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
                 const previousMessages = this.previousProgressMessages || [];
                 return previousMessages.concat(...errors);
             } else if (this.op.isCompleted()) {
-                const result = this.op.result() as Raven.Server.Smuggler.Documents.Data.SmugglerResult;
+                const result = this.op.result() as Raven.Client.Documents.Smuggler.SmugglerResult;
                 return result ? result.Messages : [];
             } else {
-                const progress = this.op.progress() as Raven.Server.Smuggler.Documents.Data.SmugglerResult;
+                const progress = this.op.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
                 if (progress) {
                     this.previousProgressMessages = progress.Messages;
                 }
@@ -139,7 +139,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
         this.detailsVisible(!this.detailsVisible());
     }
 
-    private mapToExportListItem(name: string, item: Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
+    private mapToExportListItem(name: string, item: Raven.Client.Documents.Smuggler.SmugglerProgressBase.Counts, hasAttachments: boolean = false): smugglerListItem {
         let stage: smugglerListItemStatus = "processing";
         if (item.Skipped) {
             stage = "skipped";
@@ -149,7 +149,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
 
         let attachmentsItem = null as attachmentsListItem;
         if (hasAttachments) {
-            const attachments = (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithLastEtag).Attachments;
+            const attachments = (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithLastEtag).Attachments;
             attachmentsItem = {
                 readCount: attachments.ReadCount.toLocaleString(),
                 erroredCount: attachments.ErroredCount.toLocaleString()
@@ -162,7 +162,7 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             hasReadCount: true, // it will be reassigned in post-processing
             readCount: item.ReadCount.toLocaleString(),
             hasSkippedCount: name === "Documents",
-            skippedCount: name === "Documents" ? (item as Raven.Server.Smuggler.Documents.Data.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
+            skippedCount: name === "Documents" ? (item as Raven.Client.Documents.Smuggler.SmugglerProgressBase.CountsWithSkippedCountAndLastEtag).SkippedCount.toLocaleString() : "-",
             hasErroredCount: true, // it will be reassigned in post-processing
             erroredCount: item.ErroredCount.toLocaleString(),
             hasAttachments: hasAttachments,
@@ -189,13 +189,13 @@ class smugglerDatabaseDetails extends abstractOperationDetails {
             // object was just created  - only copy message -> message field
 
             if (!existing.isCompleted()) {
-                const result = existing.progress() as Raven.Server.Smuggler.Documents.Data.SmugglerResult;
+                const result = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
                 result.Messages = [result.Message];
             }
             
         } else if (incoming.State.Status === "InProgress") { // if incoming operaton is in progress, then merge messages into existing item
-            const incomingResult = incoming.State.Progress as Raven.Server.Smuggler.Documents.Data.SmugglerResult;
-            const existingResult = existing.progress() as Raven.Server.Smuggler.Documents.Data.SmugglerResult;
+            const incomingResult = incoming.State.Progress as Raven.Client.Documents.Smuggler.SmugglerResult;
+            const existingResult = existing.progress() as Raven.Client.Documents.Smuggler.SmugglerResult;
 
             incomingResult.Messages = existingResult.Messages.concat(incomingResult.Message);
         }
