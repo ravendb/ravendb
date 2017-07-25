@@ -9,7 +9,7 @@
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
                 <div class="panel destination-item">
                     <div data-bind="attr: { 'data-state-text': createStateObservable($root.topology), class: 'state ' + createStateClassObservable($root.topology)() } "></div>
-                    <div class="padding padding-sm destination-info">
+                    <div class="padding destination-info">
                         <div class="info-container">
                             <div class="flex-horizontal">
                                 <div class="node flex-grow">
@@ -36,10 +36,7 @@
                             <div class="address">
                                 <h5>ADDRESS</h5>
                                 <a target="_blank" data-bind="attr: { href: serverUrl }"><small data-bind="text: serverUrl"></small></a>
-                            </div>
-                            <div class="text-danger" data-bind="text: errorDetails">
-                                
-                            </div>
+                            </div>                            
                         </div>
                         <div class="flex-separator"></div>
                         <div class="actions-container">
@@ -66,6 +63,10 @@
                                     <i class="icon-trash"></i>
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                    <div class="panel-addon" data-bind="visible: errorDetails">
+                        <div class="padding bg-danger small" data-bind="text: errorDetails">
                         </div>
                     </div>
                 </div>
