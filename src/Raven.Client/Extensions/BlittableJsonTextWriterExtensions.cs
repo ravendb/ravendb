@@ -279,6 +279,13 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
+            if (query.IsIntersect)
+            {
+                writer.WritePropertyName(nameof(query.IsIntersect));
+                writer.WriteBool(true);
+                writer.WriteComma();
+            }
+
             if (string.IsNullOrWhiteSpace(query.Transformer) == false)
             {
                 writer.WritePropertyName(nameof(query.Transformer));

@@ -213,8 +213,6 @@ namespace Raven.Client
                 private Querying()
                 {
                 }
-
-                public const string IntersectSeparator = " INTERSECT ";
             }
 
             public class Encryption

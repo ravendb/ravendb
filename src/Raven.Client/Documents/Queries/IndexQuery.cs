@@ -117,6 +117,11 @@ namespace Raven.Client.Documents.Queries
         /// An array of relative paths that specify related documents ids which should be included in a query result
         /// </summary>
         public string[] Includes { get; set; }
+        
+        /// <summary>
+        /// Indicates if it's intersect query
+        /// </summary>
+        public bool IsIntersect { get; set; }
 
         /// <summary>
         /// Gets the custom query string variables.

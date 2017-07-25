@@ -1140,7 +1140,8 @@ namespace Raven.Client.Documents.Session
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,
                 LastEquality = LastEquality,
-                ShouldExplainScores = ShouldExplainScores
+                ShouldExplainScores = ShouldExplainScores,
+                IsIntersect = IsIntersect
             };
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);

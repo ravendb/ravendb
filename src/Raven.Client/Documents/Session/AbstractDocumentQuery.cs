@@ -75,6 +75,8 @@ namespace Raven.Client.Documents.Session
 
         protected Dictionary<string, object> QueryParameters = new Dictionary<string, object>();
 
+        protected bool IsIntersect;
+
         protected bool IsGroupBy;
         /// <summary>
         /// The session for this query
@@ -1326,7 +1328,8 @@ If you really want to do in memory filtering on the data returned from the query
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
                 ExplainScores = ShouldExplainScores,
-                Includes = Includes.ToArray()
+                Includes = Includes.ToArray(),
+                IsIntersect = IsIntersect
             };
 
             if (PageSize != null)
@@ -1402,9 +1405,13 @@ If you really want to do in memory filtering on the data returned from the query
         {
             var last = WhereTokens.Last?.Value;
             if (last is WhereToken || last is CloseSubclauseToken)
-                WhereTokens.AddLast(IntersectToken.Instance);
+            {
+                IsIntersect = true;
 
-            throw new InvalidOperationException("Cannot add INTERSECT at this point.");
+                WhereTokens.AddLast(IntersectMarkerToken.Instance);
+            }
+            else
+                throw new InvalidOperationException("Cannot add INTERSECT at this point.");
         }
 
         public void WhereExists(string fieldName)
@@ -1566,14 +1573,21 @@ If you really want to do in memory filtering on the data returned from the query
             writer
                 .Append(" WHERE ");
 
+            if (IsIntersect)
+                writer.Append("intersect(");
+
             var token = WhereTokens.First;
             while (token != null)
             {
                 AddSpaceIfNeeded(token.Previous?.Value, token.Value, writer);
+
                 token.Value.WriteTo(writer);
 
                 token = token.Next;
             }
+
+            if (IsIntersect)
+                writer.Append(") ");
         }
 
         private void BuildGroupBy(StringBuilder writer)

@@ -19,11 +19,11 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        public static Lucene.Net.Search.Query BuildQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        public static Lucene.Net.Search.Query BuildQuery(QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(metadata.Query, metadata.Query.Where, metadata, parameters, analyzer);
+                var luceneQuery = ToLuceneQuery(metadata.Query, whereExpression, metadata, parameters, analyzer);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.

@@ -11,8 +11,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Query = Lucene.Net.Search.Query;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
@@ -93,12 +95,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return analyzerInstance;
         }
 
-        protected Query GetLuceneQuery(string q, QueryOperator defaultOperator, string defaultField, Analyzer analyzer)
+        protected Query GetLuceneQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-            throw new NotSupportedException("TODO arek - remove");
+            return GetLuceneQuery(metadata, metadata.Query.Where, parameters, analyzer);
         }
 
-        protected Query GetLuceneQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        protected Query GetLuceneQuery(QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             Query documentQuery;
 
@@ -129,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(metadata, parameters, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(metadata, whereExpression, parameters, analyzer);
                 }
                 finally
                 {

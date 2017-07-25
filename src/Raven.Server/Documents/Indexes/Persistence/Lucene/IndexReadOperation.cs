@@ -31,8 +31,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class IndexReadOperation : IndexOperationBase
     {
-        private static readonly string[] IntersectSeparators = { Constants.Documents.Querying.IntersectSeparator };
-
         private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
 
         private readonly IndexType _indexType;
@@ -131,7 +129,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
-            var subQueries = query.Query.Split(IntersectSeparators, StringSplitOptions.RemoveEmptyEntries);
+            if (query.Metadata.Query.Where.Type != OperatorType.Method)
+                throw new InvalidOperationException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got {query.Metadata.Query.Where.Type} expression");
+            
+            var methodName = QueryExpression.Extract(query.Metadata.Query.QueryText, query.Metadata.Query.Where.Field);
+            
+            if (string.Equals("intersect", methodName) == false)
+                throw new InvalidOperationException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got {methodName} method");
+
+            var subQueries = new Query[query.Metadata.Query.Where.Arguments.Count];
+
+            for (var i = 0; i < subQueries.Length; i++)
+            {
+                subQueries[i] = GetLuceneQuery(query.Metadata, query.Metadata.Query.Where.Arguments[i] as QueryExpression, query.QueryParameters, _analyzer);
+            }
+            
             if (subQueries.Length <= 1)
                 throw new InvalidOperationException("Invalid INTERSECT query, must have multiple intersect clauses.");
 
@@ -142,7 +154,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int intersectMatches, skippedResultsInCurrentLoop = 0;
             int previousBaseQueryMatches = 0, currentBaseQueryMatches;
 
-            var firstSubDocumentQuery = GetLuceneQuery(null /* TODO [ppekrol] subQueries[0] */, query.QueryParameters, _analyzer);
+            var firstSubDocumentQuery = subQueries[0];
             var sort = GetSort(query);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -168,8 +180,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     for (var i = 1; i < subQueries.Length; i++)
                     {
-                        var luceneSubQuery = GetLuceneQuery(null /* TODO [ppekrol] subQueries[i]*/, query.QueryParameters, _analyzer);
-                        _searcher.Search(luceneSubQuery, null, intersectionCollector, _state);
+                        _searcher.Search(subQueries[i], null, intersectionCollector, _state);
                     }
 
                     var currentIntersectResults = intersectionCollector.DocumentsIdsForCount(subQueries.Length).ToList();
@@ -392,7 +403,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(query.Metadata, null, _analyzer);
+                var additionalQuery = QueryBuilder.BuildQuery(query.Metadata, query.Metadata.Query.Where, null, _analyzer);
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},

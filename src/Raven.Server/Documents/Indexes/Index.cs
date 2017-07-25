@@ -1669,8 +1669,7 @@ namespace Raven.Server.Documents.Indexes
                             var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
                             IEnumerable<Document> documents;
 
-                            if (string.IsNullOrWhiteSpace(query.Query) ||
-                                query.Query.Contains(Constants.Documents.Querying.IntersectSeparator) == false)
+                            if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
                                     GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
