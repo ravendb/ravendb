@@ -2,6 +2,8 @@ using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 
 namespace SlowTests.Bugs.Indexing
 {
@@ -23,9 +25,16 @@ namespace SlowTests.Bugs.Indexing
                                                                   x.LastName == last &&
                                                                   x.BirthDate == birthDate &&
                                                                   x.Country == country);
-                    Assert.Equal("(((-FirstName:Ayende AND LastName:Rahien)) AND BirthDate:2001-01-01T00:00:00.0000000) AND Country:Israel", queryable.ToString());
-                    queryable.Any();
+                    
+                    var query = GetIndexQuery(queryable);
+                    
+                    Assert.Equal("FROM Clients WHERE (((exists(FirstName) AND NOT FirstName = :p0 AND LastName = :p1)) AND BirthDate = :p2) AND Country = :p3", query.Query);
+                    Assert.Equal("Ayende", query.QueryParameters["p0"]);
+                    Assert.Equal("Rahien", query.QueryParameters["p1"]);
+                    Assert.Equal(birthDate, query.QueryParameters["p2"]);
+                    Assert.Equal("Israel", query.QueryParameters["p3"]);
 
+                    queryable.Any();
                 }
             }
         }
@@ -46,11 +55,25 @@ namespace SlowTests.Bugs.Indexing
                                                                   x.LastName == last &&
                                                                   x.BirthDate == birthDate &&
                                                                   x.Country == country);
-                    Assert.Equal("((FirstName:Ayende AND LastName:Rahien) AND BirthDate:2001-01-01T00:00:00.0000000) AND Country:Israel", queryable.ToString());
+
+                    var query = GetIndexQuery(queryable);
+
+                    Assert.Equal("FROM Clients WHERE ((FirstName = :p0 AND LastName = :p1) AND BirthDate = :p2) AND Country = :p3", query.Query);
+                    Assert.Equal("Ayende", query.QueryParameters["p0"]);
+                    Assert.Equal("Rahien", query.QueryParameters["p1"]);
+                    Assert.Equal(birthDate, query.QueryParameters["p2"]);
+                    Assert.Equal("Israel", query.QueryParameters["p3"]);
+
                     queryable.Any();
 
                 }
             }
+        }
+
+        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class Client

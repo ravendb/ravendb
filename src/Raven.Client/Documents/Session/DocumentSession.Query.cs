@@ -37,14 +37,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
         public IDocumentQuery<T> DocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
-            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
-
-            if (isIndex && isCollection)
-                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
-
-            if (isIndex == false && isCollection == false)
-                collectionName = Conventions.GetCollectionName(typeof(T));
+            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
 
             return new DocumentQuery<T>(this, indexName, collectionName, isGroupBy: isMapReduce);
         }
@@ -58,14 +51,7 @@ namespace Raven.Client.Documents.Session
         /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
-            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
-
-            if (isIndex && isCollection)
-                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
-
-            if (isIndex == false && isCollection == false)
-                collectionName = Conventions.GetCollectionName(typeof(T));
+            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
 
             var ravenQueryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();

@@ -600,7 +600,7 @@ namespace Raven.Client.Documents.Session
         public void WhereTrue()
         {
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(null);
 
             WhereTokens.AddLast(TrueToken.Instance);
         }
@@ -761,6 +761,7 @@ If you really want to do in memory filtering on the data returned from the query
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.Lucene(fieldName, AddQueryParameter(whereClause)));
         }
@@ -807,7 +808,7 @@ If you really want to do in memory filtering on the data returned from the query
             _currentClauseDepth++;
 
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(null);
 
             WhereTokens.AddLast(OpenSubclauseToken.Instance);
         }
@@ -834,7 +835,7 @@ If you really want to do in memory filtering on the data returned from the query
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
@@ -852,10 +853,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void WhereIn(string fieldName, IEnumerable<object> values)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
-
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
@@ -881,7 +882,7 @@ If you really want to do in memory filtering on the data returned from the query
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.StartsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
@@ -907,7 +908,7 @@ If you really want to do in memory filtering on the data returned from the query
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.EndsWith(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
@@ -921,8 +922,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <returns></returns>
         public void WhereBetween(string fieldName, object start, object end)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(fieldName);
 
             var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }));
             var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }));
@@ -937,8 +940,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereGreaterThan(string fieldName, object value)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
@@ -950,8 +955,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereGreaterThanOrEqual(string fieldName, object value)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
@@ -963,8 +970,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "value">The value.</param>
         public void WhereLessThan(string fieldName, object value)
         {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
@@ -977,7 +986,7 @@ If you really want to do in memory filtering on the data returned from the query
         public void WhereLessThanOrEqual(string fieldName, object value)
         {
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
         }
@@ -1332,10 +1341,10 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
-
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             switch (escapeQueryOptions)
             {
@@ -1400,30 +1409,30 @@ If you really want to do in memory filtering on the data returned from the query
 
         public void WhereExists(string fieldName)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
-
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.Exists(fieldName));
         }
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
-
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
         {
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded();
-
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
@@ -1652,12 +1661,19 @@ If you really want to do in memory filtering on the data returned from the query
             }
         }
 
-        private void NegateIfNeeded()
+        private void NegateIfNeeded(string fieldName)
         {
             if (Negate == false)
                 return;
 
             Negate = false;
+
+            if (fieldName != null && WhereTokens.Count == 0 || WhereTokens.Last.Value is OpenSubclauseToken)
+            {
+                WhereExists(fieldName);
+                AndAlso();
+            }
+
             WhereTokens.AddLast(NegateToken.Instance);
         }
 

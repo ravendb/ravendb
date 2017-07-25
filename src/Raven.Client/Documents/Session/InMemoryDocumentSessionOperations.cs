@@ -1281,6 +1281,20 @@ more responsive application.
         {
             OnBeforeQueryExecuted?.Invoke(this, beforeQueryExecutedEventArgs);
         }
+
+        protected (string IndexName, string CollectionName) ProcessQueryParameters(Type type, string indexName, string collectionName, DocumentConventions conventions)
+        {
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
+
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(type);
+
+            return (indexName, collectionName);
+        }
     }
 
     /// <summary>

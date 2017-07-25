@@ -210,6 +210,10 @@ namespace Raven.Client.Documents.Conventions
                         .Append(DefaultGetCollectionName(argument));
                 result = sb.ToString();
             }
+            else if (t == typeof(object))
+            {
+                result = Constants.Documents.Collections.AllDocumentsCollection;
+            }
             else
             {
                 result = Inflector.Pluralize(t.Name);

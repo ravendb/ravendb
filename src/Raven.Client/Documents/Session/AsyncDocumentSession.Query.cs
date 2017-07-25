@@ -14,14 +14,7 @@ namespace Raven.Client.Documents.Session
 
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
-            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
-
-            if (isIndex && isCollection)
-                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
-
-            if (isIndex == false && isCollection == false)
-                collectionName = Conventions.GetCollectionName(typeof(T));
+            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
 
             var ravenQueryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
@@ -55,14 +48,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
-            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
-
-            if (isIndex && isCollection)
-                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
-
-            if (isIndex == false && isCollection == false)
-                collectionName = Conventions.GetCollectionName(typeof(T));
+            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
 
             return new AsyncDocumentQuery<T>(this, indexName, collectionName, isGroupBy: isMapReduce);
         }

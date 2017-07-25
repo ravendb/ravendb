@@ -413,6 +413,8 @@ namespace Raven.Client.Documents.Linq
             {
                 var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
                 _documentQuery.OpenSubclause();
+                _documentQuery.WhereExists(expressionMemberInfo.Path);
+                _documentQuery.AndAlso();
                 _documentQuery.NegateNext();
                 _documentQuery.WhereEquals(new WhereParams
                 {
@@ -421,15 +423,6 @@ namespace Raven.Client.Documents.Linq
                     IsAnalyzed = true,
                     AllowWildcards = false
                 });
-                _documentQuery.AndAlso();
-                _documentQuery
-                    .WhereEquals(new WhereParams
-                    {
-                        FieldName = expressionMemberInfo.Path,
-                        Value = "*",
-                        IsAnalyzed = true,
-                        AllowWildcards = true
-                    });
                 _documentQuery.CloseSubclause();
                 return;
             }
@@ -442,7 +435,12 @@ namespace Raven.Client.Documents.Linq
 
             var memberInfo = GetMember(expression.Left);
             if (_isNotEqualCheckBoundsToAndAlso == false)
+            {
                 _documentQuery.OpenSubclause();
+                _documentQuery.WhereExists(memberInfo.Path);
+                _documentQuery.AndAlso();
+            }
+            
             _documentQuery.NegateNext();
             _documentQuery.WhereEquals(new WhereParams
             {
@@ -451,18 +449,9 @@ namespace Raven.Client.Documents.Linq
                 IsAnalyzed = true,
                 AllowWildcards = false
             });
+            
             if (_isNotEqualCheckBoundsToAndAlso == false)
-            {
-                _documentQuery.AndAlso();
-                _documentQuery.WhereEquals(new WhereParams
-                {
-                    FieldName = memberInfo.Path,
-                    Value = "*",
-                    IsAnalyzed = true,
-                    AllowWildcards = true
-                });
                 _documentQuery.CloseSubclause();
-            }
         }
 
         private static Type GetMemberType(ExpressionInfo info)
@@ -485,7 +474,7 @@ namespace Raven.Client.Documents.Linq
             if (parameterExpression != null)
             {
                 if (_currentPath.EndsWith("[]."))
-                    _currentPath = _currentPath.Substring(0, _currentPath.Length - 1);
+                    _currentPath = _currentPath.Substring(0, _currentPath.Length - 3);
                 return new ExpressionInfo(_currentPath, parameterExpression.Type, false);
             }
 
@@ -498,12 +487,12 @@ namespace Raven.Client.Documents.Linq
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
             result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
-            result.Path = CastingRemover.Replace(result.Path, ""); // removing cast remains
+            result.Path = CastingRemover.Replace(result.Path, string.Empty); // removing cast remains
 
             if (expression.NodeType == ExpressionType.ArrayLength)
                 result.Path += ".Length";
 
-            var propertyName = IndexName == null || IndexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase)
+            var propertyName = IndexName == null && _collectionName != null
                                    ? QueryGenerator.Conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, CurrentPath,
                                                                                                 result.Path)
                                    : QueryGenerator.Conventions.FindPropertyNameForIndex(typeof(T), IndexName, CurrentPath,
