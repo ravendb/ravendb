@@ -9,6 +9,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
     public class ReduceTreePage : IDisposable
     {
         private bool _disposed;
+        private bool _isLeaf;
 
         public ReduceTreePage()
         {
@@ -24,7 +25,10 @@ namespace Raven.Server.Documents.Indexes.Debugging
             Page = p;
 
             if (Page.IsLeaf)
+            {
+                _isLeaf = true;
                 Entries = new List<MapResultInLeaf>(Page.NumberOfEntries);
+            }
             else
                 Children = new List<ReduceTreePage>(Page.NumberOfEntries);
         }
@@ -48,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
             _disposed = true;
 
-            if (Page.IsLeaf)
+            if (_isLeaf)
                 DecompressedLeaf?.Dispose();
             else
             {
