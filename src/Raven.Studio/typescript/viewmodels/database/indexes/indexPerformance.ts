@@ -166,6 +166,7 @@ class indexPerformance extends viewModelBase {
             "LoadDocument": "#008cc9",
             "Bloom": "#34b3e4",
             "Lucene/Delete": "#66418c",
+            "Lucene/Suggestion": "#553570",
             "Lucene/AddDocument": "#8d6cab",
             "Lucene/Convert": "#7b539d",
             "CreateBlittableJson": "#313fa0",
