@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
@@ -102,6 +101,9 @@ namespace Sparrow.Collections
 
         private Entry[] _entries;
 
+        private int[] _usedEntries;
+        private int _usedEntriesIndex;
+
         private readonly int _initialCapacity; // This is the initial capacity of the dictionary, we will never shrink beyond this point.
         private int _capacity;
         private int _capacityMask;
@@ -164,6 +166,10 @@ namespace Sparrow.Collections
                 // Initialization through copy (very efficient) because the comparer is the same.
                 this._entries = new Entry[_capacity];
                 Array.Copy(src._entries, _entries, _capacity);
+
+                _usedEntries = new int[src._usedEntries.Length];
+                Array.Copy(src._usedEntries, _usedEntries, src._usedEntries.Length);
+                _usedEntriesIndex = src._usedEntriesIndex;
             }
             else
             {
@@ -173,6 +179,7 @@ namespace Sparrow.Collections
 
                 // Creating a temporary alias to use for rehashing.
                 this._entries = src._entries;
+                _usedEntries = new int[_capacity];
 
                 // This call will rewrite the aliases
                 Rehash(entries);
@@ -200,6 +207,9 @@ namespace Sparrow.Collections
             // Initialization
             this._entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(this._entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
+
+            _usedEntries = new int[newCapacity];
+            _usedEntriesIndex = 0;
 
             this._capacity = newCapacity;
             this._capacityMask = this._capacity - 1;
@@ -276,6 +286,10 @@ namespace Sparrow.Collections
             this._entries[bucket].Hash = uhash;
             this._entries[bucket].Key = key;
             this._entries[bucket].Value = value;
+
+            if (_usedEntriesIndex >= _usedEntries.Length)
+                Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
+            this._usedEntries[_usedEntriesIndex++] = bucket;
         }
 
         private void ThrowWhenKeyIsNull(TKey key)
@@ -348,6 +362,8 @@ namespace Sparrow.Collections
 
             var entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
+
+            Array.Resize(ref _usedEntries, newCapacity);
 
             Rehash(entries);
         }
@@ -470,6 +486,10 @@ namespace Sparrow.Collections
                 this._entries[bucket].Hash = uhash;
                 this._entries[bucket].Key = key;
                 this._entries[bucket].Value = value;
+
+                if (_usedEntriesIndex >= _usedEntries.Length)
+                    Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
+                _usedEntries[_usedEntriesIndex++] = bucket;
             }
         }
 
@@ -482,6 +502,19 @@ namespace Sparrow.Collections
         {
             BlockCopyMemoryHelper.Memset(this._entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
 
+            this._numberOfUsed = 0;
+            this._numberOfDeleted = 0;
+            this._size = 0;
+        }
+
+        public void ClearUsedPortions()
+        {
+            var entry = new Entry(KUnusedHash, default(TKey), default(TValue));
+
+            for (int i = 0; i < _usedEntriesIndex; i++)
+                this._entries[_usedEntries[i]] = entry;
+
+            this._usedEntriesIndex = 0;
             this._numberOfUsed = 0;
             this._numberOfDeleted = 0;
             this._size = 0;
@@ -504,6 +537,8 @@ namespace Sparrow.Collections
 
             var entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
+
+            Array.Resize(ref _usedEntries, newCapacity);
 
             Rehash(entries);
         }
@@ -622,6 +657,7 @@ namespace Sparrow.Collections
         private void Rehash(Entry[] entries)
         {
             var size = 0;
+            _usedEntriesIndex = 0;
 
             int newCapacityMask = entries.Length - 1;
             for (int it = 0; it < _entries.Length; it++)
@@ -642,6 +678,10 @@ namespace Sparrow.Collections
                 entries[bucket].Hash = hash;
                 entries[bucket].Key = _entries[it].Key;
                 entries[bucket].Value = _entries[it].Value;
+
+                if (_usedEntriesIndex >= _usedEntries.Length)
+                    Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
+                _usedEntries[_usedEntriesIndex++] = bucket;
 
                 size++;
             }
