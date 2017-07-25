@@ -36,20 +36,6 @@ namespace Raven.Server.Documents.Queries
             if (expression == null)
                 return new MatchAllDocsQuery();
 
-            if (expression.Type == OperatorType.Field)
-            {
-                throw new NotImplementedException("OperatorType.Field");
-
-                //                return new FieldLuceneASTNode()
-                //                {
-                //                    FieldName = new FieldName(QueryExpression.Extract(query, expression.Field)),
-                //                    Node = new TermLuceneASTNode()
-                //                    {
-                //                        Term = QueryExpression.Extract(query, expression.Value ?? expression.First),
-                //                    }
-                //                };
-            }
-
             switch (expression.Type)
             {
                 case OperatorType.Equal:
@@ -197,38 +183,19 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Exists:
                             return HandleExists(query, expression, metadata);
                         default:
-                            throw new NotSupportedException($"Method '{methodType}' is not supported.");
+                            ThrowMethodNotSupported(methodType);
+                            break;
                     }
 
-                //writer.WritePropertyName("Method");
-                //WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
-                //writer.WritePropertyName("Arguments");
-                //writer.WriteStartArray();
-                //foreach (var arg in Arguments)
-                //{
-                //    if (arg is QueryExpression qe)
-                //    {
-                //        qe.ToJsonAst(query, writer);
-                //    }
-                //    else if (arg is FieldToken field)
-                //    {
-                //        writer.WriteStartObject();
-                //        writer.WritePropertyName("Field");
-                //        WriteValue(query, writer, field.TokenStart, field.TokenLength, field.EscapeChars);
-                //        writer.WriteEndObject();
-                //    }
-                //    else
-                //    {
-                //        var val = (ValueToken)arg;
-                //        WriteValue(query, writer, val.TokenStart, val.TokenLength, val.EscapeChars,
-                //            val.Type == ValueTokenType.Double || val.Type == ValueTokenType.Long);
-                //    }
-                //}
-                //writer.WriteEndArray();
-                //break;
+                    break;
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    ThrowUnhandledExpressionOperatorType(expression.Type);
+                    break;
             }
+
+            Debug.Assert(false, "should never happen");
+
+            return null;
         }
 
         private static string ExtractIndexFieldName(string queryText, FieldToken field, QueryMetadata metadata)
@@ -376,16 +343,6 @@ namespace Raven.Server.Documents.Queries
             }
 
             yield return (QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars), value.Type);
-        }
-
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType)
-        {
-            throw new InvalidOperationException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue);
-        }
-
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item)
-        {
-            throw new InvalidOperationException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value);
         }
 
         public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
@@ -642,6 +599,26 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
         {
             throw new NotSupportedException($"Unhandled token type: {type}");
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType)
+        {
+            throw new InvalidOperationException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue);
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item)
+        {
+            throw new InvalidOperationException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value);
+        }
+
+        private static void ThrowMethodNotSupported(MethodType methodType)
+        {
+            throw new NotSupportedException($"Method '{methodType}' is not supported.");
+        }
+
+        private static void ThrowUnhandledExpressionOperatorType(OperatorType type)
+        {
+            throw new ArgumentOutOfRangeException($"Unhandled expression operator type: {type}");
         }
 
         private enum MethodType
