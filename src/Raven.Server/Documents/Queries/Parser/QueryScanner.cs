@@ -76,36 +76,16 @@ namespace Raven.Server.Documents.Queries.Parser
             return result;
         }
 
-        public bool FromIdentifier(bool skipWhitespace = true)
-        {
-            if (SkipWhitespace(skipWhitespace) == false)
-                return false;
-
-            if (TryPeek('@', skipWhitespace: false) == false)
-                return Identifier(skipWhitespace: false);
-
-            var pos = _pos;
-            _pos++;
-
-            if (Identifier(skipWhitespace: false) == false)
-                return false;
-
-            TokenStart = pos;
-            TokenLength += 1;
-            return true;
-        }
-
         public bool Identifier(bool skipWhitespace = true)
         {
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
-            if (char.IsLetter(_q[_pos]) == false && _q[_pos] != '_')
+            if (char.IsLetter(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '@')
                 return false;
             TokenStart = _pos;
             _pos++;
             for (; _pos < _q.Length; _pos++)
-                if (char.IsLetterOrDigit(_q[_pos]) == false &&
-                    _q[_pos] != '_')
+                if (char.IsLetterOrDigit(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '-')
                     break;
             TokenLength = _pos - TokenStart;
             Column += TokenLength;

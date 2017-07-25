@@ -4,6 +4,8 @@ using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs.Queries
@@ -17,11 +19,14 @@ namespace SlowTests.Bugs.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var str = session.Query<WithInteger>()
-                        .Where(x => x.Sequence < 300 && x.Sequence > 150 )
-                        .ToString();
+                    var q = session.Query<WithInteger>()
+                        .Where(x => x.Sequence < 300 && x.Sequence > 150);
 
-                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
+                    var query = GetIndexQuery(q);
+
+                    Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
+                    Assert.Equal(150, query.QueryParameters["p0"]);
+                    Assert.Equal(300, query.QueryParameters["p1"]);
                 }
             }
         }
@@ -33,11 +38,14 @@ namespace SlowTests.Bugs.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var str = session.Query<WithInteger>()
-                        .Where(x => 150 > x.Sequence && x.Sequence < 300)
-                        .ToString();
+                    var q = session.Query<WithInteger>()
+                        .Where(x => 150 > x.Sequence && x.Sequence < 300);
+                    
+                    var query = GetIndexQuery(q);
 
-                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
+                    Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
+                    Assert.Equal(150, query.QueryParameters["p0"]);
+                    Assert.Equal(300, query.QueryParameters["p1"]);
                 }
             }
         }
@@ -49,11 +57,14 @@ namespace SlowTests.Bugs.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var str = session.Query<WithInteger>()
-                        .Where(x => 150 > x.Sequence && 300 < x.Sequence)
-                        .ToString();
+                    var q = session.Query<WithInteger>()
+                        .Where(x => 150 > x.Sequence && 300 < x.Sequence);
 
-                    Assert.Equal("Sequence_L_Range:{150 TO 300}", str);
+                    var query = GetIndexQuery(q);
+
+                    Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
+                    Assert.Equal(150, query.QueryParameters["p0"]);
+                    Assert.Equal(300, query.QueryParameters["p1"]);
                 }
             }
         }
@@ -65,11 +76,14 @@ namespace SlowTests.Bugs.Queries
             {
                 using (var session = store.OpenSession())
                 {
-                    var str = session.Query<WithInteger>()
-                        .Where(x => x.Sequence >= 150 && x.Sequence <= 300)
-                        .ToString();
+                    var q = session.Query<WithInteger>()
+                        .Where(x => x.Sequence >= 150 && x.Sequence <= 300);
 
-                    Assert.Equal("Sequence_L_Range:[150 TO 300]", str);
+                    var query = GetIndexQuery(q);
+                    
+                    Assert.Equal("FROM WithIntegers WHERE Sequence BETWEEN :p0 AND :p1", query.Query);
+                    Assert.Equal(150, query.QueryParameters["p0"]);
+                    Assert.Equal(300, query.QueryParameters["p1"]);
                 }
             }
         }
@@ -216,12 +230,18 @@ namespace SlowTests.Bugs.Queries
                         .WaitForNonStaleResults(TimeSpan.FromMinutes(5))
                         .WhereEquals("Key", "Color")
                         .AndAlso()
-                        .WhereGreaterThan("Value_D_Range", 20.0d)
+                        .WhereGreaterThan("Value", 20.0d)
                         .ToArray();
 
                     Assert.Equal(2, users.Count());
                 }
             }
+        }
+
+        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class WithInteger
