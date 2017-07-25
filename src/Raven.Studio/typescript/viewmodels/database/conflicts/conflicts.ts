@@ -207,7 +207,7 @@ class conflicts extends viewModelBase {
 
             // force document id to support save as new
             meta['@id'] = this.documentId();
-            meta['@etag'] = 0;
+            delete meta['@change-vector'];
 
             const newDoc = new document(updatedDto);
             const saveCommand = new saveDocumentCommand(this.documentId(), newDoc, this.activeDatabase());

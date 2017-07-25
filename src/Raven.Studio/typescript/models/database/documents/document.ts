@@ -60,11 +60,8 @@ class document implements documentBase {
 
         const meta = dto["@metadata"];
         if (meta) {
-            //TODO: bulkDoc.Metadata = meta;
-
             if (meta["@change-vector"]) {
-                // TODO: Fixme!
-                //bulkDoc.ChangeVector = meta["@change-vector"];
+                bulkDoc.ChangeVector = meta["@change-vector"];
             }
         }
 

@@ -151,7 +151,8 @@ class studioConfig extends viewModelBase {
             .execute()
             .done((saveResult: Raven.Server.Documents.Handlers.CommandData[]) => {
                 this.configDocument(newDocument);
-                this.configDocument().__metadata['etag'] = saveResult[0].Etag;
+                //TODO: apply change vector instead of etag!
+                this.configDocument().__metadata['etag'] = saveResult[0].Etag; 
             });*/
     }
 }

@@ -288,7 +288,7 @@ namespace Raven.Server.Documents
 
         private static void UpdateGlobalReplicationInfoBeforeCommit(DocumentsOperationContext context)
         {
-            if (context.LastDatabaseChangeVector != null)
+            if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
             {
                 context.DocumentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
             }

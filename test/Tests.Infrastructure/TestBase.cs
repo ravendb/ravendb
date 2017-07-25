@@ -98,7 +98,7 @@ namespace FastTests
             _doNotReuseServer = true;
         }
 
-        private static volatile string _selfSignedCertFileName;
+        protected static volatile string _selfSignedCertFileName;
         protected static string GenerateAndSaveSelfSignedCertificate()
         {
             if (_selfSignedCertFileName != null)

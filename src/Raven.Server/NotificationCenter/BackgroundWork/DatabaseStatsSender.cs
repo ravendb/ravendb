@@ -70,7 +70,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                     GlobalChangeVector = DocumentsStorage.GetDatabaseChangeVector(context)
                 };
                 current.Collections = _database.DocumentsStorage.GetCollections(context)
-                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentEtag(context, x.Name)));
+                    .ToDictionary(x => x.Name, x => new DatabaseStatsChanged.ModifiedCollection(x.Name, x.Count, _database.DocumentsStorage.GetLastDocumentChangeVector(context, x.Name)));
             }
 
             if (_latest != null && _latest.Equals(current))
@@ -95,12 +95,12 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
                 {
                     // collection deleted
 
-                    result.Add(new DatabaseStatsChanged.ModifiedCollection(collection.Key, -1, -1));
+                    result.Add(new DatabaseStatsChanged.ModifiedCollection(collection.Key, -1, null));
 
                     continue;
                 }
 
-                if (collection.Value.Count != stats.Count || collection.Value.LastDocumentEtag != stats.LastDocumentEtag)
+                if (collection.Value.Count != stats.Count || collection.Value.LastDocumentChangeVector != stats.LastDocumentChangeVector)
                     result.Add(current.Collections[collection.Key]);
             }
 

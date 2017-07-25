@@ -2,6 +2,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getSubscriptionsCommand = require("commands/database/subscriptions/getSubscriptionsCommand");
 import generalUtils = require("common/generalUtils");
 
+//TODO is it required?
 class subscriptions extends viewModelBase {
 
     private subscriptions = ko.observableArray<subscriptionResponseItemDto>();

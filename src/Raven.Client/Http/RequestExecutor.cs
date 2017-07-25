@@ -675,7 +675,9 @@ namespace Raven.Client.Http
                         command.SetResponseRaw(response, null, context);
                     return true;
                 case HttpStatusCode.Forbidden:
-                    throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url +", " + (Certificate == null ? "a certificate is required": Certificate.FriendlyName + " does not have permission to access it or is unknown"));            
+                    throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url +", " + 
+                        (Certificate == null ? "a certificate is required.": Certificate.FriendlyName + " does not have permission to access it or is unknown.") + 
+                        request.Method + " " +  request.RequestUri);            
                 case HttpStatusCode.GatewayTimeout:
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:

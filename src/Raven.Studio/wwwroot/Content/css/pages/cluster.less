@@ -1,6 +1,6 @@
 @cluster-member-color: #6ebf3a;
 @cluster-promotable-color: #6ebf3a;
-@cluster-watcher-color: darken(#6ebf3a, 20%);
+@cluster-watcher-color: #6f9574;
 
 @cluster-voting-color: #266cb3;
 @cluster-voting-text-color: #74b4f7;
@@ -10,7 +10,10 @@
 
 @cluster-disconnected-color: #f93e3a;
 
+@leader-color: #ffc533;
+
 #clusterGraphContainer {
+    min-height: 400px;
 
     &.graphHidden > svg {
         display: none;
@@ -27,12 +30,13 @@
             .node-tag {
                 font-size: 24px;
                 text-anchor: middle;
-                fill: black;
+                fill: @gray-base;
+                font-weight: bold;
             }
 
             .leader-stroke {
                 fill: none;
-                stroke: #266cb3;
+                stroke: @leader-color;
                 stroke-width: 3px;
                 stroke-dasharray: 20,3;
                 opacity: 0;

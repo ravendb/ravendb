@@ -153,11 +153,6 @@ interface scriptedPatchRequestDto {
     Values: any;
 }
 
-interface databaseDocumentSaveDto {
-    Id: string;
-    ETag: number;
-}
-
 interface backupRequestDto {
     BackupLocation: string;
     DatabaseDocument: databaseDocumentDto;
@@ -506,24 +501,6 @@ interface indexSuggestion extends queryFieldInfo {
     Suggestion: string;
 }
 
-interface mappedResultInfo {
-    ReduceKey?: string;
-    Timestamp?: string;
-    Etag?: string;
-    Data?: any;
-    Bucket?: number;
-    Source?: string;
-}
-
-
-interface visualizerDataObjectDto {
-    x?: number;
-    y?: number;
-    type: number;
-    id: any;
-    source?: any;
-    idx: number;
-}
 
 interface mergeResult {
   Document: string;
@@ -546,9 +523,6 @@ interface bulkOperationStatusDto extends operationStatusDto {
     OperationProgress: bulkOperationProgress;
 }
 
-interface internalStorageBreakdownState extends operationStatusDto {
-    ReportResults: string[];
-}
 
 interface debugDocumentStatsStateDto extends operationStatusDto {
     Stats: debugDocumentStatsDto;

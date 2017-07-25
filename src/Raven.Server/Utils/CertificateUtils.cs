@@ -1,6 +1,5 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using JetBrains.Annotations;
@@ -8,7 +7,6 @@ using Org.BouncyCastle.Asn1.X509;
 using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Crypto.Generators;
 using Org.BouncyCastle.Crypto.Operators;
-using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Prng;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
@@ -54,8 +52,7 @@ namespace Raven.Server.Utils
             const int keyStrength = 2048;
 
             // Generating Random Numbers
-            var randomGenerator = new VmpcRandomGenerator();
-            SecureRandom random = new SecureRandom(randomGenerator);
+            var random = GetSeededSecureRandom();
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerPrivKey, random);
 
             // The Certificate Generator
@@ -112,9 +109,7 @@ namespace Raven.Server.Utils
         {
             const int keyStrength = 2048;
 
-            // Generating Random Numbers
-            var randomGenerator = new VmpcRandomGenerator();
-            SecureRandom random = new SecureRandom(randomGenerator);
+            var random = GetSeededSecureRandom();
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
@@ -156,5 +151,17 @@ namespace Raven.Server.Utils
             return;
         }
 
+        private static SecureRandom GetSeededSecureRandom()
+        {
+            var buffer = new byte[32];
+            using (var cryptoRandom = RandomNumberGenerator.Create())
+            {
+                cryptoRandom.GetBytes(buffer);
+            }
+            var randomGenerator = new VmpcRandomGenerator();
+            randomGenerator.AddSeedMaterial(buffer);
+            SecureRandom random = new SecureRandom(randomGenerator);
+            return random;
+        }
     }
 }

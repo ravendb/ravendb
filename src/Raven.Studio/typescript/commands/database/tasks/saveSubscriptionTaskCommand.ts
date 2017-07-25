@@ -46,7 +46,7 @@ class saveSubscriptionTaskCommand extends commandBase {
 
         const saveTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
-        const subscriptionToSend = {
+        const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
             ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
             Name: this.subscriptionSettings.TaskName,
             Criteria: {

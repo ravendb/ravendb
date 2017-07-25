@@ -428,7 +428,7 @@ namespace Raven.Server.Documents.Replication
 
             public override int Execute(DocumentsOperationContext context)
             {
-                if (context.LastDatabaseChangeVector == null)
+                if (string.IsNullOrEmpty(context.LastDatabaseChangeVector))
                     context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
                 var status = ChangeVectorUtils.GetConflictStatus(_replicationBatchReply.DatabaseChangeVector,
@@ -437,10 +437,7 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                var str = context.LastDatabaseChangeVector;
-                var res = ChangeVectorUtils.TryUpdateChangeVector(_dbId, _replicationBatchReply.CurrentEtag, ref str);
-                context.LastDatabaseChangeVector = context.GetLazyString(str);
-                return res ? 1 : 0;
+                return ChangeVectorUtils.TryUpdateChangeVector(_database.ServerStore.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
             }
         }
         

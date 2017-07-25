@@ -77,5 +77,47 @@ namespace Sparrow.Utils
 
             return j;
         }
+
+        public static unsafe int ConvertToBase64ArrayUnpadded(char* outChars, byte* inData, int offset, int length)
+        {
+            int lengthmod3 = length % 3;
+            int calcLength = offset + (length - lengthmod3);
+            int j = 0;
+            //Convert three bytes at a time to base64 notation.  This will consume 4 chars.
+            int i;
+
+            // get a pointer to the base64Table to avoid unnecessary range checking
+            fixed (char* base64 = &base64Table[0])
+            {
+                for (i = offset; i < calcLength; i += 3)
+                {
+                    outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                    outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                    outChars[j + 2] = base64[((inData[i + 1] & 0x0f) << 2) | ((inData[i + 2] & 0xc0) >> 6)];
+                    outChars[j + 3] = base64[(inData[i + 2] & 0x3f)];
+                    j += 4;
+                }
+
+                //Where we left off before
+                i = calcLength;
+
+                switch (lengthmod3)
+                {
+                    case 2: //One character padding needed
+                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = base64[((inData[i] & 0x03) << 4) | ((inData[i + 1] & 0xf0) >> 4)];
+                        outChars[j + 2] = base64[(inData[i + 1] & 0x0f) << 2];
+                        j += 3;
+                        break;
+                    case 1: // Two character padding needed
+                        outChars[j] = base64[(inData[i] & 0xfc) >> 2];
+                        outChars[j + 1] = base64[(inData[i] & 0x03) << 4];
+                        j += 2;
+                        break;
+                }
+            }
+
+            return j;
+        }
     }
 }

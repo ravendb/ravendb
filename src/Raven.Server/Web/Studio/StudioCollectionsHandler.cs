@@ -50,9 +50,18 @@ namespace Raven.Server.Web.Studio
                 HashSet<string> propertiesPreviewToSend;
                 HashSet<string> fullPropertiesToSend = new HashSet<string>(fullBindings);
 
-                var changeVector = string.IsNullOrEmpty(collection) ? 
-                    DocumentsStorage.GetDatabaseChangeVector(context) : 
-                    Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
+                long totalResults;
+                string changeVector;
+
+                if (string.IsNullOrEmpty(collection))
+                {
+                    changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+                    totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                } else
+                {
+                    changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
+                    totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
+                }
 
                 if (GetStringFromHeaders("If-None-Match") == changeVector)
                 {
@@ -60,8 +69,6 @@ namespace Raven.Server.Web.Studio
                     return Task.CompletedTask;
                 }
                 HttpContext.Response.Headers["ETag"] = "\"" + changeVector + "\"";
-
-                var totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
 
                 if (string.IsNullOrEmpty(collection))
                 {

@@ -382,9 +382,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = subscription.ChangeVector == null ? 
-                                    result.Doc.ChangeVector : 
-                                    context.GetLazyString(ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, context.GetLazyString(subscription.ChangeVector)));
+                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector) ? 
+                                    result.Doc.ChangeVector :
+                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
                                 
                                 if (result.Doc.Data == null)
                                 {
@@ -534,7 +534,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     return startEtag;
                 }
 
-                if (subscription.ChangeVector == null || subscription.ChangeVector.Length == 0)
+                if (string.IsNullOrEmpty(subscription.ChangeVector))
                 {
                     return startEtag;
                 }

@@ -46,7 +46,6 @@ class viewModelBase {
 
     //holds full studio version eg. 4.0.40000
     static clientVersion = ko.observable<string>();
-    static hasContinueTestOption = ko.observable<boolean>(false);
 
     constructor() {
         this.appUrls = appUrl.forCurrentDatabase();
@@ -286,13 +285,6 @@ class viewModelBase {
             // For Safari
             return message;
         }
-    }
-
-    continueTest() {
-        const doc = document.empty();
-        new saveDocumentCommand("Debug/Done", doc, this.activeDatabase(), false)
-            .execute()
-            .done(() => viewModelBase.hasContinueTestOption(false));
     }
 
     updateHelpLink(hash: string = null) {

@@ -185,11 +185,14 @@ namespace Raven.Server.Web.System
             {
                 context.OpenReadTransaction();
 
-                var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
-                if (existingDatabaseRecord != null)
-                    throw new ConcurrencyException($"Database '{name}' already exists!");
-
                 var index = GetLongFromHeaders("ETag");
+                var existingDatabaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out long _);
+
+                if (index.HasValue && existingDatabaseRecord == null)
+                    throw new BadRequestException($"Attempted to modify non-existing database: '{name}'");
+
+                if (existingDatabaseRecord != null && index.HasValue == false)
+                    throw new ConcurrencyException($"Database '{name}' already exists!");
 
                 var json = context.ReadForDisk(RequestBodyStream(), name);
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(json);

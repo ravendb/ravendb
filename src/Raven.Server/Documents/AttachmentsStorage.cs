@@ -148,7 +148,7 @@ namespace Raven.Server.Documents
                     context.LastDatabaseChangeVector = changeVector;
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                    void SetTableValue(TableValueBuilder tvb, LazyStringValue cv)
+                    void SetTableValue(TableValueBuilder tvb, Slice cv)
                     {
                         tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                         tvb.Add(Bits.SwapBytes(attachmentEtag));
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents
                         tvb.Add(contentTypePtr);
                         tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
                         tvb.Add(context.GetTransactionMarker());
-                        tvb.Add(cv.Buffer, cv.Size);
+                        tvb.Add(cv.Content.Ptr, cv.Size);
                     }
 
                     if (table.ReadByKey(keySlice, out TableValueReader oldValue))
@@ -174,10 +174,10 @@ namespace Raven.Server.Documents
                                     ExpectedChangeVector = expectedChangeVector
                                 };
                         }
-
+                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
                         {
-                            SetTableValue(tvb, changeVector);
+                            SetTableValue(tvb, changeVectorSlice);
                             table.Update(oldValue.Id, tvb);
                         }
                     }
@@ -214,9 +214,10 @@ namespace Raven.Server.Documents
                             ThrowConcurrentExceptionOnMissingAttachment(documentId, name, expectedChangeVector);
                         }
 
+                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
                         {
-                            SetTableValue(tvb, changeVector);
+                            SetTableValue(tvb, changeVectorSlice);
                             table.Insert(tvb);
                         }
 
@@ -247,18 +248,19 @@ namespace Raven.Server.Documents
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
-        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, LazyStringValue changeVector)
+        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, string changeVector)
         {
             Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
 
             var newEtag = _documentsStorage.GenerateNextEtag();
-            if (changeVector == null)
+            if (string.IsNullOrEmpty(changeVector))
             {
                 changeVector = _documentsStorage.GetNewChangeVector(context, newEtag);
                 context.LastDatabaseChangeVector = changeVector;
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            using (Slice.From(context.Allocator,changeVector,out var changeVectorSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(key.Content.Ptr, key.Size);
@@ -267,7 +269,7 @@ namespace Raven.Server.Documents
                 tvb.Add(contentType.Content.Ptr, contentType.Size);
                 tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
                 tvb.Add(context.GetTransactionMarker());
-                tvb.Add(changeVector.Buffer, changeVector.Size);
+                tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
 
                 table.Set(tvb);
             }
@@ -280,7 +282,7 @@ namespace Raven.Server.Documents
         /// We need to call this after we already put the attachment, so it can version also this attachment
         /// </summary>
         private string UpdateDocumentAfterAttachmentChange(DocumentsOperationContext context, Slice lowerDocumentId, string documentId,
-            TableValueReader tvr, LazyStringValue changeVector)
+            TableValueReader tvr, string changeVector)
         {
             // We can optimize this by copy just the document's data instead of the all tvr
             var copyOfDoc = context.GetMemory(tvr.Size);
@@ -725,7 +727,7 @@ namespace Raven.Server.Documents
         }
 
         public void DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
-            BlittableJsonReaderObject conflictDocument, LazyStringValue changeVector)
+            BlittableJsonReaderObject conflictDocument, string changeVector)
         {
             if (conflictDocument.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject conflictMetadata) == false ||
                 conflictMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray conflictAttachments) == false)
@@ -776,7 +778,7 @@ namespace Raven.Server.Documents
         }
 
         private void DeleteAttachmentDirect(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
-            LazyStringValue conflictContentType, LazyStringValue conflictHash, LazyStringValue changeVector)
+            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector)
         {
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetSliceFromId(context, conflictContentType, out Slice lowerContentType))
@@ -788,9 +790,7 @@ namespace Raven.Server.Documents
                 DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector);
             }
         }
-
-        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, 
-            LazyStringValue expectedChangeVector, LazyStringValue changeVector)
+        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name, string expectedChangeVector, string changeVector)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
 
