@@ -488,8 +488,7 @@ namespace FastTests.Server.Documents
                 }, "users/1", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     _documentDatabase.DocumentsStorage.Put(ctx, "users/1", null, doc);
-                    var changeVector = ctx.GetLazyString("");
-                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", changeVector, doc));
+                    Assert.Throws<ConcurrencyException>(() => _documentDatabase.DocumentsStorage.Put(ctx, "users/1", "A:1-abc", doc));
                 }
 
                 ctx.Transaction.Commit();

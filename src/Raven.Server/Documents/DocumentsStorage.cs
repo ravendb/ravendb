@@ -296,15 +296,14 @@ namespace Raven.Server.Documents
             return context.GetLazyString(Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length));
         }
 
-        public LazyStringValue GetNewChangeVector(DocumentsOperationContext context, long newEtag)
+        public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)
         {
             var changeVector = GetDatabaseChangeVector(context);
-            if (changeVector == null)
-                return context.GetLazyString(ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId)); ;
+            if (string.IsNullOrEmpty(changeVector))
+                return ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentDatabase.DbId);
 
-            var str = changeVector.ToString();
-            ChangeVectorUtils.TryUpdateChangeVector(Environment.DbId, newEtag, ref str);
-            return context.GetLazyString(str);
+            ChangeVectorUtils.TryUpdateChangeVector(_documentDatabase.ServerStore.NodeTag, Environment.DbId, newEtag, ref changeVector);
+            return changeVector;
         }
 
         public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
@@ -899,7 +898,7 @@ namespace Raven.Server.Documents
 
             if (local.Tombstone != null)
             {
-                if (expectedChangeVector != null && expectedChangeVector.Length != 0)
+                if (string.IsNullOrEmpty(expectedChangeVector) == false)
                     throw new ConcurrencyException($"Document {local.Tombstone.LowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.");
 
@@ -1012,7 +1011,7 @@ namespace Raven.Server.Documents
             {
                 // we adding a tombstone without having any previous document, it could happened if this was called
                 // from the incoming replication or if we delete document that wasn't exist at the first place.
-                if (expectedChangeVector != null && expectedChangeVector.Length != 0)
+                if (string.IsNullOrEmpty(expectedChangeVector) == false)
                     throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
                                                    $"Optimistic concurrency violation, transaction will be aborted.");
 
@@ -1108,7 +1107,7 @@ namespace Raven.Server.Documents
         {
             var newEtag = GenerateNextEtag();
 
-            if (changeVector == null)
+            if (string.IsNullOrEmpty(changeVector))
             {
                 changeVector = ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(
                     context,

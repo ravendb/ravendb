@@ -207,7 +207,7 @@ namespace Raven.Server.Documents.Replication
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
 
             var resolvedHiLoDoc = doc;
-            LazyStringValue mergedChangeVector;
+            string mergedChangeVector;
             if (conflicts.Count == 0)
             {
                 //conflict with another existing document
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Replication
                 double max;
                 if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
                     resolvedHiLoDoc = localHiloDoc.Data;
-                mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(changeVector,localHiloDoc.ChangeVector));
+                mergedChangeVector = ChangeVectorUtils.MergeVectors(changeVector, localHiloDoc.ChangeVector);
             }
             else
             {
@@ -229,7 +229,7 @@ namespace Raven.Server.Documents.Replication
                     }
                 }
                 var merged = ChangeVectorUtils.MergeVectors(conflicts.Select(c => c.ChangeVector).ToList());
-                mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(merged, changeVector));
+                mergedChangeVector = ChangeVectorUtils.MergeVectors(merged, changeVector);
             }
             _database.DocumentsStorage.Put(context, id, null, resolvedHiLoDoc,changeVector: mergedChangeVector);
         }
@@ -256,7 +256,7 @@ namespace Raven.Server.Documents.Replication
                     return false;
 
                 // no real conflict here, both documents have identical content
-                var mergedChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector));
+                var mergedChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingDoc.ChangeVector);
                 var nonPersistentFlags = (compareResult & DocumentCompareResult.ShouldRecreateDocument) == DocumentCompareResult.ShouldRecreateDocument 
                     ? NonPersistentDocumentFlags.ResolveAttachmentsConflict : NonPersistentDocumentFlags.None;
                 _database.DocumentsStorage.Put(context, id, null, incomingDoc, lastModifiedTicks, mergedChangeVector, nonPersistentFlags: nonPersistentFlags);
@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Replication
             if (existingTombstone != null && incomingDoc == null)
             {
                 // Conflict between two tombstones resolves to the local tombstone
-                existingTombstone.ChangeVector = context.GetLazyString(ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector));
+                existingTombstone.ChangeVector = ChangeVectorUtils.MergeVectors(incomingChangeVector, existingTombstone.ChangeVector);
                 using (Slice.External(context.Allocator, existingTombstone.LowerId, out Slice lowerId))
                 {
                     _database.DocumentsStorage.ConflictsStorage.DeleteConflicts(context, lowerId, null, existingTombstone.ChangeVector);

@@ -353,6 +353,98 @@ namespace Raven.Server.Documents.Replication
             return default(ChangeVectorEntry[]); // never hit
         }
 
+
+        public static void MergeChangeVector(string changeVector, List<ChangeVectorEntry> entries)
+        {
+            if (string.IsNullOrEmpty(changeVector))
+                return;
+
+            var start = 0;
+            var current = 0;
+            var state = State.Tag;
+            int tag = -1;
+
+            while (current < changeVector.Length)
+            {
+                switch (state)
+                {
+                    case State.Tag:
+                        if (changeVector[current] == ':')
+                        {
+                            tag = ParseNodeTag(changeVector, start, current - 1);
+                            state = State.Etag;
+                            start = current + 1;
+                        }
+                        current++;
+                        break;
+                    case State.Etag:
+                        if (changeVector[current] == '-')
+                        {
+                            var etag = ParseEtag(changeVector, start, current - 1);
+                            if (current + 23 > changeVector.Length)
+                                ThrowInvalidEndOfString("DbId", changeVector);
+                            bool found = false;
+                            var dbId = ParseDbId(changeVector, current + 1);
+                            for (int i = 0; i < entries.Count; i++)
+                            {
+                                if (entries[i].DbId == dbId)
+                                {
+                                    if (entries[i].Etag < etag)
+                                    {
+                                        entries[i] = new ChangeVectorEntry
+                                        {
+                                            NodeTag = tag,
+                                            Etag = etag,
+                                            DbId = dbId
+                                        };
+                                    }
+                                    found = true;
+                                    break;
+                                }
+                            }
+                            if (found == false)
+                            {
+                                entries.Add(new ChangeVectorEntry
+                                {
+                                    NodeTag = tag,
+                                    Etag = etag,
+                                    DbId = dbId
+                                });
+                            }
+                          
+                            start = current + 23;
+                            current = start;
+                            state = State.Whitespace;
+                        }
+                        current++;
+                        break;
+                    case State.Whitespace:
+                        if (char.IsWhiteSpace(changeVector[current]) ||
+                            changeVector[current] == ',')
+                        {
+                            start++;
+                            current++;
+                        }
+                        else
+                        {
+                            start = current;
+                            current++;
+                            state = State.Tag;
+                        }
+                        break;
+
+                    default:
+                        ThrowInvalidState(state, changeVector);
+                        break;
+                }
+            }
+
+            if (state == State.Whitespace)
+                return;
+
+            ThrowInvalidEndOfString(state.ToString(), changeVector);
+        }
+
         private static void ThrowInvalidEndOfString(string state, string cv)
         {
             throw new ArgumentException("Expected " + state + ", but got end of string in : " + cv);

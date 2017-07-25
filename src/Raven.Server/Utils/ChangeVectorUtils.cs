@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
+using System.Text;
+using Lucene.Net.Support;
 using Raven.Server.Documents.Replication;
+using Sparrow.Utils;
 
 namespace Raven.Server.Utils
 {
@@ -31,13 +27,13 @@ namespace Raven.Server.Utils
             //any missing entries from a change vector are assumed to have zero value
             var remoteHasLargerEntries = local.Length < remote.Length;
             var localHasLargerEntries = remote.Length < local.Length;
-            
+
             Array.Sort(remote); // todo: check if we need this
             Array.Sort(local); // todo: check if we need this
-            
+
             var localIndex = 0;
             var remoteIndex = 0;
-            
+
             while (localIndex < local.Length && remoteIndex < remote.Length)
             {
                 var compareResult = remote[remoteIndex].DbId.CompareTo(local[localIndex].DbId);
@@ -58,150 +54,195 @@ namespace Raven.Server.Utils
                     remoteIndex++;
                     remoteHasLargerEntries = true;
                 }
-            
+
                 if (localHasLargerEntries && remoteHasLargerEntries)
                     break;
             }
-            
+
             if (remoteIndex < remote.Length)
             {
                 remoteHasLargerEntries = true;
             }
-            
+
             if (localIndex < local.Length)
             {
                 localHasLargerEntries = true;
             }
-            
+
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
-            
+
             if (remoteHasLargerEntries == false && localHasLargerEntries == false)
                 return ConflictStatus.AlreadyMerged; // change vectors identical
-            
+
             return remoteHasLargerEntries ? ConflictStatus.Update : ConflictStatus.AlreadyMerged;
         }
 
-        public static bool TryUpdateChangeVector(Guid dbId, long etag, ref string changeVector)
-        {
-            Debug.Assert(changeVector != null);
-            var cv = changeVector.ToChangeVector();
-            var length = cv.Length;
-            for (var i = 0; i < length; i++)
-            {
-                if (dbId != cv[i].DbId)
-                    continue;
-            
-                if (cv[i].Etag >= etag)
-                    return false;
+        [ThreadStatic]
+        private static string _dbIdBuffer;
 
-                cv[i].Etag = etag;
-                changeVector = cv.SerializeVector();
+        [ThreadStatic] private static StringBuilder _changeVectorBuffer;
+
+        private static int NumberOfDigits(long etag)
+        {
+            int count = 0;
+            do
+            {
+                count++;
+                etag /= 10;
+            } while (etag != 0);
+            return count;
+        }
+
+        private static void WriteNumberBackwards(StringBuilder sb, int offset, long etag)
+        {
+            do
+            {
+                var rem = etag % 10;
+                etag /= 10;
+                sb[offset--]= (char)((char)rem + '0');
+            } while (etag != 0);
+        }
+
+        private static long ParseToLong(string s, int count, int len)
+        {
+            int num;
+            num = s[count] - '0';
+            for (int i = 1; i < len; i++)
+            {
+                num *= 10;
+                num += s[count+i] - '0';
+            }
+            return num;
+        }
+
+        public static unsafe bool TryUpdateChangeVector(string nodeTag, Guid dbId, long etag, ref string changeVector)
+        {
+            InitiailizeThreadLocalState();
+
+            Debug.Assert(changeVector != null);
+
+
+            fixed (char* pChars = _dbIdBuffer)
+            {
+                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&dbId, 0, 16);
+                Debug.Assert(result == 22);
+            }
+            var newEtagLen = NumberOfDigits(etag);
+            var dbIndex = changeVector.IndexOf(_dbIdBuffer, StringComparison.Ordinal);
+
+            if (dbIndex < 0)
+            {
+                _changeVectorBuffer.Append(changeVector)
+                    .Append(", ")
+                    .Append(nodeTag)
+                    .Append(':')
+                    .Append(etag)
+                    .Append('-')
+                    .Append(_dbIdBuffer);
+
+                changeVector = _changeVectorBuffer.ToString();
                 return true;
             }
-            
-            Array.Resize(ref cv, length + 1);
-            cv[length] = new ChangeVectorEntry
+
+            var existingEtagEndIndex = dbIndex - 1;
+            var currentEtagStartIndex = changeVector.LastIndexOf(':', existingEtagEndIndex)+1;
+
+            var existingLen = existingEtagEndIndex - currentEtagStartIndex;
+            var existingEtag = ParseToLong(changeVector, currentEtagStartIndex, existingLen);
+            // assume no trailing zeros
+            var diff = newEtagLen - existingLen;
+            if (diff == 0)
             {
-                DbId = dbId,
-                Etag = etag
-            };
-            changeVector = cv.SerializeVector();
+                // compare the strings instead of parsing to int
+                if (existingEtag >= etag)
+                {
+                    //nothing to do
+                    return false;
+                }
+                // we clone the string because others might hold a reference to it and consider it immutable
+                _changeVectorBuffer.Append(changeVector);
+
+                // replace the etag
+
+                WriteNumberBackwards(_changeVectorBuffer, currentEtagStartIndex + newEtagLen - 1, etag);
+                changeVector = _changeVectorBuffer.ToString();
+                return true;
+            }
+            if (diff < 0)
+            {
+                // nothing to do, already known to be smaller
+                return false;
+            }
+            // allocate new string
+            _changeVectorBuffer.Append(changeVector, 0, currentEtagStartIndex)
+                .Append(etag)
+                .Append(changeVector, existingEtagEndIndex, changeVector.Length - existingEtagEndIndex);
+            changeVector = _changeVectorBuffer.ToString();
             return true;
         }
 
+        private static void InitiailizeThreadLocalState()
+        {
+            if (_dbIdBuffer == null)
+                _dbIdBuffer = new string(' ', 22);
+            if (_changeVectorBuffer == null)
+                _changeVectorBuffer = new StringBuilder();
+            _changeVectorBuffer.Length = 0;
+        }
+
+        [ThreadStatic]
+        private static List<ChangeVectorEntry> _mergeVectorBuffer;
+
         public static string MergeVectors(string vectorAstring, string vectorBstring)
         {
-            if (vectorAstring == null)
+            if (string.IsNullOrEmpty(vectorAstring))
                 return vectorBstring;
-            if (vectorBstring == null)
+            if (string.IsNullOrEmpty(vectorBstring))
                 return vectorAstring;
 
-            var vectorA = vectorAstring.ToChangeVector();
-            var vectorB = vectorBstring.ToChangeVector();
+            if (_mergeVectorBuffer == null)
+                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
+            _mergeVectorBuffer.Clear();
 
-            Array.Sort(vectorA);
-            Array.Sort(vectorB);
-            int ia = 0, ib = 0;
-            var merged = new List<ChangeVectorEntry>();
-            while (ia < vectorA.Length && ib < vectorB.Length)
-            {
-                int res = vectorA[ia].DbId.CompareTo(vectorB[ib].DbId);
-                if (res == 0)
-                {
-                    merged.Add(new ChangeVectorEntry
-                    {
-                        DbId = vectorA[ia].DbId,
-                        Etag = Math.Max(vectorA[ia].Etag, vectorB[ib].Etag)
-                    });
-                    ia++;
-                    ib++;
-                }
-                else if (res < 0)
-                {
-                    merged.Add(vectorA[ia]);
-                    ia++;
-                }
-                else
-                {
-                    merged.Add(vectorB[ib]);
-                    ib++;
-                }
-            }
-            for (; ia < vectorA.Length; ia++)
-            {
-                merged.Add(vectorA[ia]);
-            }
-            for (; ib < vectorB.Length; ib++)
-            {
-                merged.Add(vectorB[ib]);
-            }
-            return merged.SerializeVector();
+            ChangeVectorParser.MergeChangeVector(vectorAstring, _mergeVectorBuffer);
+            ChangeVectorParser.MergeChangeVector(vectorBstring, _mergeVectorBuffer);
+
+            return _mergeVectorBuffer.SerializeVector();
         }
 
         public static string MergeVectors(List<string> changeVectors)
         {
-            var mergedVector = new Dictionary<Guid, long>();
-            
-            foreach (var changeVector in changeVectors)
-            {
-                foreach (var changeVectorEntry in changeVector.ToChangeVector())
-                {
-                    if (!mergedVector.ContainsKey(changeVectorEntry.DbId))
-                    {
-                        mergedVector[changeVectorEntry.DbId] = changeVectorEntry.Etag;
-                    }
-                    else
-                    {
-                        mergedVector[changeVectorEntry.DbId] = Math.Max(mergedVector[changeVectorEntry.DbId],
-                            changeVectorEntry.Etag);
-                    }
-                }
-            }
-            
-            var merged = mergedVector.Select(kvp => new ChangeVectorEntry
-            {
-                DbId = kvp.Key,
-                Etag = kvp.Value
-            }).ToArray();
+            if (_mergeVectorBuffer == null)
+                _mergeVectorBuffer = new EquatableList<ChangeVectorEntry>();
+            _mergeVectorBuffer.Clear();
 
-            return merged.SerializeVector();
+            for (int i = 0; i < changeVectors.Count; i++)
+            {
+                ChangeVectorParser.MergeChangeVector(changeVectors[i], _mergeVectorBuffer);
+            }
+
+            return _mergeVectorBuffer.SerializeVector();
         }
 
-        [ThreadStatic]
-        private static ChangeVectorEntry[] _newChangeVectorBuffer;
-
-        public static string NewChangeVector(string nodeTag, long etag, Guid dbId)
+      
+        public static unsafe string NewChangeVector(string nodeTag, long etag, Guid dbId)
         {
-            if (_newChangeVectorBuffer == null)
-                _newChangeVectorBuffer = new ChangeVectorEntry[1];
-            _newChangeVectorBuffer[0] = new ChangeVectorEntry
+            InitiailizeThreadLocalState();
+
+            fixed (char* pChars = _dbIdBuffer)
             {
-                DbId = dbId,
-                Etag = etag,
-                NodeTag = ChangeVectorParser.ParseNodeTag(nodeTag, 0, nodeTag.Length-1),
-            };
-            return _newChangeVectorBuffer.SerializeVector();
+                var result = Base64.ConvertToBase64ArrayUnpadded(pChars, (byte*)&dbId, 0, 16);
+                Debug.Assert(result == 22);
+            }
+
+            return _changeVectorBuffer
+                .Append(nodeTag)
+                .Append(':')
+                .Append(etag)
+                .Append('-')
+                .Append(_dbIdBuffer)
+                .ToString();
         }
     }
 }

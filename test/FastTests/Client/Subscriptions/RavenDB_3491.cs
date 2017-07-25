@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
@@ -218,6 +219,12 @@ namespace FastTests.Client.Subscriptions
                         var keys = new BlockingCollection<string>();
                         var ages = new BlockingCollection<int>();
 
+                        var mre = new ManualResetEvent(false);
+                        subscription.AfterAcknowledgment += batch =>
+                        {
+                            mre.Set();
+                            return Task.CompletedTask;
+                        };
 
                         GC.KeepAlive(subscription.Run(u =>
                         {
@@ -261,6 +268,8 @@ namespace FastTests.Client.Subscriptions
 
                         Assert.True(ages.TryTake(out age, _waitForDocTimeout));
                         Assert.Equal(34, age);
+
+                        Assert.True(mre.WaitOne(250));
                     }
                 }
 
@@ -273,7 +282,7 @@ namespace FastTests.Client.Subscriptions
                     {
                         docs.Add((x));
                     }));
-
+                    
                     dynamic item;
                     var tryTake = docs.TryTake(out item, TimeSpan.FromMilliseconds(250));
                     Assert.False(tryTake);
