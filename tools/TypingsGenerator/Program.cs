@@ -134,6 +134,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(SubscriptionConnectionStats));
             scripter.AddType(typeof(SubscriptionConnectionOptions));
+            scripter.AddType(typeof(SubscriptionTryout));
 
             // changes
             scripter.AddType(typeof(OperationStatusChange));

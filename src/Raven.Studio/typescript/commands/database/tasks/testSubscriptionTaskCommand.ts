@@ -24,11 +24,11 @@ class testSubscriptionTaskCommand extends commandBase {
 
         const testTask = $.Deferred<pagedResult<document>>();
 
-        const subscriptionToTest = {
+        const subscriptionToTest: Raven.Client.Documents.Subscriptions.SubscriptionTryout = {
             ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
             Collection: this.subscriptionSettings.Collection,
             Script: this.subscriptionSettings.Script,
-            IsVersioned: this.subscriptionSettings.IncludeRevisions
+            IncludeRevisions: this.subscriptionSettings.IncludeRevisions
         };
 
         this.post(url, JSON.stringify(subscriptionToTest), this.db)
