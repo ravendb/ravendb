@@ -91,18 +91,15 @@
                             <i class="icon-plus"></i><span>Add reduction</span>
                         </button>
                     </div>
-                    <div class="flex-horizontal margin-bottom">
-                        <div class="input-group flex-grow" data-bind="visible: editedIndex().hasReduce, validationElement: editedIndex().reduceToCollectionName">
-                            <div class="input-group-addon">
-                                <div class="checkbox checkbox-inline">
-                                    <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
-                                    <label for="outputToCollection">
-                                        Output reduce to collection
-                                    </label>
-                                </div>
-                            </div>
-                            <input type="text" class="form-control flex-grow" placeholder="Enter collection name"
-                                   data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
+                    <div class="flex-horizontal margin-bottom" data-bind="visible: editedIndex().hasReduce">
+                        <div class="checkbox checkbox-inline flex-start">
+                            <input id="outputToCollection" class="styled" type="checkbox" data-bind="checked: editedIndex().outputReduceToCollection">
+                            <label for="outputToCollection">
+                                Output reduce to collection
+                            </label>
+                        </div>
+                        <div data-bind="validationElement: editedIndex().reduceToCollectionName">
+                            <input type="text" class="form-control flex-grow has-error" placeholder="Enter collection name" data-bind="textInput: editedIndex().reduceToCollectionName, visible: editedIndex().outputReduceToCollection">
                         </div>
                     </div>
                 </div>
