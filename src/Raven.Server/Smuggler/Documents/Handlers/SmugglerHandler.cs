@@ -312,7 +312,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 }
 
                 var operationId = GetLongQueryString("operationId");
-                var fromClient = GetBoolValueQueryString("fromClient", false)?? false;
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
@@ -346,7 +345,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             continue;
 
                                         BlittableJsonReaderObject blittableJson;
-                                        if (fromClient)
+                                        if (section.Headers.ContainsKey("Content-Encoding"))
                                         {
                                             using (var gzipStream = new GZipStream(section.Body, CompressionMode.Decompress))
                                             {
