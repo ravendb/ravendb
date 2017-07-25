@@ -4,7 +4,7 @@ using Raven.Server.Documents.Queries.Parser;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
-    public class ScannerTests
+    public class ScannerTests : NoDisposalNeeded
     {
         [Theory]
         [InlineData(null)]

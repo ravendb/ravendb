@@ -6,7 +6,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
-    public class ParserTests
+    public class ParserTests : NoDisposalNeeded
     {
         [Theory]
         [InlineData("Name")]

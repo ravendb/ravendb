@@ -5,7 +5,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
-    public class ComplexQueries
+    public class ComplexQueries : NoDisposalNeeded
     {
         [Theory]
         [InlineData("FROM Users", "{\"From\":{\"Index\":false,\"Source\":\"Users\"}}")]
