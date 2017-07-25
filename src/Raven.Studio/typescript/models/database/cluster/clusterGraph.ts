@@ -22,7 +22,8 @@ class clusterGraphEdge<T extends  clusterNode> {
 class clusterGraph {
 
     private static readonly circleRadius = 42;
-    private static readonly drawRadius = 170;
+    private static readonly minDrawRadius = 170;
+    private static readonly minDistanceBetweenCircles = 145;
 
     private $container: JQuery;
     private width: number;
@@ -218,7 +219,8 @@ class clusterGraph {
     }
 
     private updateEdges(selection: d3.Selection<clusterGraphEdge<clusterNodeWithLayout>>, leaderTag: string) {
-        const edgeDistance = 50;
+        const leaderDistance = 52;
+        const nonLeaderDistance = 45;
 
         selection
             .select(".edge-line")
@@ -226,17 +228,18 @@ class clusterGraph {
             .classed("with-leader", x => x.source.tag() === leaderTag || x.target.tag() === leaderTag)
             .classed("with-error", x => !x.source.connected() || !x.target.connected())
             .transition() 
-            .attr("x1", x => graphHelper.shortenLineFromObject(x, edgeDistance).x1)
-            .attr("y1", x => graphHelper.shortenLineFromObject(x, edgeDistance).y1)
-            .attr("x2", x => graphHelper.shortenLineFromObject(x, edgeDistance).x2)
-            .attr("y2", x => graphHelper.shortenLineFromObject(x, edgeDistance).y2)
+            .attr("x1", x => graphHelper.shortenLineFromObject(x, x.target.tag() === leaderTag ? leaderDistance : nonLeaderDistance).x1)
+            .attr("y1", x => graphHelper.shortenLineFromObject(x, x.target.tag() === leaderTag ? leaderDistance : nonLeaderDistance).y1)
+            .attr("x2", x => graphHelper.shortenLineFromObject(x, x.source.tag() === leaderTag ? leaderDistance : nonLeaderDistance).x2)
+            .attr("y2", x => graphHelper.shortenLineFromObject(x, x.source.tag() === leaderTag ? leaderDistance : nonLeaderDistance).y2)
             .style('opacity', 1);
 
     }
 
     private layout(nodes: clusterNode[]) {
         const layoutableNodes = nodes as Array<clusterNodeWithLayout>;
-        graphHelper.circleLayout(layoutableNodes, clusterGraph.drawRadius);
+        const radius = Math.max(clusterGraph.minDrawRadius, Math.floor(clusterGraph.minDistanceBetweenCircles * nodes.length / (2 * Math.PI)));
+        graphHelper.circleLayout(layoutableNodes, radius);
 
     }
 }
