@@ -500,15 +500,6 @@ namespace Sparrow.Collections
 
         public void Clear()
         {
-            BlockCopyMemoryHelper.Memset(this._entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
-
-            this._numberOfUsed = 0;
-            this._numberOfDeleted = 0;
-            this._size = 0;
-        }
-
-        public void ClearUsedPortions()
-        {
             var entry = new Entry(KUnusedHash, default(TKey), default(TValue));
 
             for (int i = 0; i < _usedEntriesIndex; i++)

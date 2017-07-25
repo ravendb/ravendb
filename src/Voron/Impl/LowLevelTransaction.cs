@@ -70,9 +70,9 @@ namespace Voron.Impl
 
             public void Reset()
             {
-                ScratchPagesTablePool2.ClearUsedPortions();
-                ScratchPagesTablePool1.ClearUsedPortions();
-                DirtyOverflowPagesPool.ClearUsedPortions();
+                ScratchPagesTablePool2.Clear();
+                ScratchPagesTablePool1.Clear();
+                DirtyOverflowPagesPool.Clear();
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
             }
