@@ -3,7 +3,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import ongoingTaskSubscriptionEdit = require("models/database/tasks/ongoingTaskSubscriptionEditModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import collection = require("models/database/documents/collection");
 import saveSubscriptionTaskCommand = require("commands/database/tasks/saveSubscriptionTaskCommand");
 import testSubscriptionTaskCommand = require("commands/database/tasks/testSubscriptionTaskCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
