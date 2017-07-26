@@ -71,9 +71,9 @@ namespace Raven.Client.Documents.Session
 
         protected KeyValuePair<string, object> LastEquality;
 
-        protected Dictionary<string, object> TransformerParameters = new Dictionary<string, object>();
+        protected Parameters TransformerParameters = new Parameters();
 
-        protected Dictionary<string, object> QueryParameters = new Dictionary<string, object>();
+        protected Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
 

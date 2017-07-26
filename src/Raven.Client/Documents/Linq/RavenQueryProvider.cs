@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Linq
         private readonly QueryStatistics _queryStatistics;
         private readonly QueryHighlightings _highlightings;
         private readonly bool _isMapReduce;
-        private readonly Dictionary<string, object> _transformerParameters = new Dictionary<string, object>();
+        private readonly Parameters _transformerParameters = new Parameters();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryProvider{T}"/> class.
@@ -87,7 +87,7 @@ namespace Raven.Client.Documents.Linq
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
-        public Dictionary<string, object> TransformerParameters => _transformerParameters;
+        public Parameters TransformerParameters => _transformerParameters;
 
         public void AddQueryInput(string name, object value)
         {

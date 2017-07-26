@@ -88,7 +88,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Transformer parameters that will be passed to transformer if one is specified.
         /// </summary>
-        IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters);
+        IAsyncDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters);
 
         /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.

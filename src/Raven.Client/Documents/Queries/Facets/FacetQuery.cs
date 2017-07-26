@@ -10,9 +10,9 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Facets
 {
-    public class FacetQuery : FacetQuery<Dictionary<string, object>>
+    public class FacetQuery : FacetQuery<Parameters>
     {
-        public static FacetQuery Create(IndexQueryBase<Dictionary<string, object>> query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
+        public static FacetQuery Create(IndexQueryBase<Parameters> query, string facetSetupDoc, List<Facet> facets, int start, int? pageSize, DocumentConventions conventions)
         {
             var result = new FacetQuery
             {

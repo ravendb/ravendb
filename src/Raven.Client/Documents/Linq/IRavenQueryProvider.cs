@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, object> TransformerParameters { get; }
+        Parameters TransformerParameters { get; }
 
         /// <summary>
         /// Adds input to transformer via a key/value pair

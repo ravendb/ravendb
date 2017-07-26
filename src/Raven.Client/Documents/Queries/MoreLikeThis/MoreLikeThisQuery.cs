@@ -4,7 +4,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
+    public class MoreLikeThisQuery : MoreLikeThisQuery<Parameters>
     {
         public ulong GetQueryHash(JsonOperationContext ctx)
         {

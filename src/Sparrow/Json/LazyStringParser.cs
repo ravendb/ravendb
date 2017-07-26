@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
 
-namespace Raven.Server.Utils
+namespace Sparrow.Json
 {
     /// <summary>
     /// This class assumes that the data is in UTF8

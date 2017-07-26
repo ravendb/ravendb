@@ -723,7 +723,7 @@ namespace Raven.Client.Documents.Session
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        public IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> parameters)
+        public IAsyncDocumentQuery<T> SetTransformerParameters(Parameters parameters)
         {
             TransformerParameters = parameters;
             return this;

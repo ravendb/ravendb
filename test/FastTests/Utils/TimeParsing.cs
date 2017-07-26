@@ -2,7 +2,7 @@
 using System.Globalization;
 using System.Text;
 using Raven.Client;
-using Raven.Server.Utils;
+using Sparrow.Json;
 using Xunit;
 
 namespace FastTests.Utils

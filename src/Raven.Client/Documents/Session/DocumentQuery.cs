@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters)
+        public IDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters)
         {
             TransformerParameters = transformerParameters;
             return this;

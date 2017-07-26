@@ -5,10 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices.ComTypes;
 using Raven.Client.Extensions;
-using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -16,9 +13,9 @@ namespace Raven.Client.Documents.Queries
     /// <summary>
     /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IndexQuery<Dictionary<string, object>>
+    public class IndexQuery : IndexQuery<Parameters>
     {
-        public override bool Equals(IndexQuery<Dictionary<string, object>> other)
+        public override bool Equals(IndexQuery<Parameters> other)
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }

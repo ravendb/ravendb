@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery { Query = CreateQuery(index.IndexName), DocumentId = documentId });
         }
 
-        public Task<List<T>> MoreLikeThisAsync<TTransformer, T, TIndexCreator>(string documentId, Dictionary<string, object> transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
+        public Task<List<T>> MoreLikeThisAsync<TTransformer, T, TIndexCreator>(string documentId, Parameters transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             if (documentId == null)
                 throw new ArgumentNullException(nameof(documentId));
@@ -60,7 +60,7 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThisAsync<T>(query);
         }
 
-        public Task<List<T>> MoreLikeThisAsync<T>(string index, string documentId, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public Task<List<T>> MoreLikeThisAsync<T>(string index, string documentId, string transformer = null, Parameters transformerParameters = null)
         {
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery
             {

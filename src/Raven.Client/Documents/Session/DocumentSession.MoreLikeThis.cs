@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThis<T>(new MoreLikeThisQuery { Query = CreateQuery(index.IndexName), DocumentId = documentId });
         }
 
-        public List<T> MoreLikeThis<TTransformer, T, TIndexCreator>(string documentId, Dictionary<string, object> transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
+        public List<T> MoreLikeThis<TTransformer, T, TIndexCreator>(string documentId, Parameters transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             if (documentId == null)
                 throw new ArgumentNullException(nameof(documentId));
@@ -59,7 +59,7 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThis<T>(query);
         }
 
-        public List<T> MoreLikeThis<T>(string index, string documentId, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public List<T> MoreLikeThis<T>(string index, string documentId, string transformer = null, Parameters transformerParameters = null)
         {
             return MoreLikeThis<T>(new MoreLikeThisQuery
             {

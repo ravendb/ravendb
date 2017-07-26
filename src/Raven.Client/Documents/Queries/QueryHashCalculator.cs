@@ -113,7 +113,7 @@ namespace Raven.Client.Documents.Queries
             }
         }
 
-        public void Write(Dictionary<string, object> qp)
+        public void Write(Parameters qp)
         {
             if (qp == null)
                 return;
