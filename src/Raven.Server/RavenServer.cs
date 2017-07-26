@@ -47,6 +47,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
@@ -127,9 +128,20 @@ namespace Raven.Server
             {
                 Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
 
-                if (Configuration.Security.CertificatePath != null)
+                var authenticationEnabled = false;
+                if (Configuration.Security.CertificateExec != null)
                 {
-                    ServerCertificateHolder = LoadCertificate(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCerificateWithExecutable();
+                    authenticationEnabled = true;
+                }
+                else if (Configuration.Security.CertificatePath != null)
+                {
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
+                    authenticationEnabled = true;
+                }
+                
+                if (authenticationEnabled)
+                {
                     kestrelOptions += options =>
                     {
                         var filterOptions = new HttpsConnectionFilterOptions
@@ -420,74 +432,6 @@ namespace Raven.Server
             public string CertificateForClients;
             public X509Certificate2 Certificate;
             public AsymmetricKeyEntry PrivateKey;
-        }
-
-        public static CertificateHolder LoadCertificate(string certificatePath, string certificatePassword)
-        {
-            try
-            {
-                var rawData = File.ReadAllBytes(certificatePath);
-
-                var loadedCertificate = certificatePassword == null
-                    ? new X509Certificate2(rawData)
-                    : new X509Certificate2(rawData, certificatePassword);
-
-                ValidateExpiration(certificatePath, loadedCertificate);
-
-                ValidatePrivateKey(certificatePath, certificatePassword, rawData, out var privateKey);
-
-                ValidateKeyUsages(certificatePath, loadedCertificate);
-
-                return new CertificateHolder
-                {
-                    Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                    PrivateKey = privateKey
-                };
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Could not load certificate file {certificatePath}, please check the path and password", e);
-            }
-        }
-
-        private static void ValidateExpiration(string certificatePath, X509Certificate2 loadedCertificate)
-        {
-            if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                throw new EncryptionException($"The provided certificate {certificatePath} is expired! " + loadedCertificate);
-        }
-
-        private static void ValidatePrivateKey(string certificatePath, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
-        {
-            var store = new Pkcs12Store();
-            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
-            pk = null;
-            foreach (string alias in store.Aliases)
-            {
-                pk = store.GetKey(alias);
-                if (pk != null)
-                    break;
-            }
-
-            if (pk == null)
-                throw new EncryptionException("Unable to find the private key in the provided certificate: " + certificatePath);
-        }
-
-        private static void ValidateKeyUsages(string certificatePath, X509Certificate2 loadedCertificate)
-        {
-            var supported = false;
-            foreach (var extension in loadedCertificate.Extensions)
-            {
-                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
-                    continue;
-
-                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
-
-                supported = extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"); // Client Authentication & Server Authentication
-            }
-
-            if (supported == false)
-                throw new EncryptionException("Server certificate " + certificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
         }
 
         public class TcpListenerStatus

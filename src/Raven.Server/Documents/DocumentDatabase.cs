@@ -95,7 +95,7 @@ namespace Raven.Server.Documents
                 using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 using (ctx.OpenReadTransaction())
                 {
-                    MasterKey = ServerStore.GetSecretKey(ctx, Name);
+                    MasterKey = serverStore.GetSecretKey(ctx, Name);
 
                     var databaseRecord = _serverStore.Cluster.ReadDatabase(ctx, Name);
                     if (databaseRecord != null)

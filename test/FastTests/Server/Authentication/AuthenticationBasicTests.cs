@@ -21,7 +21,9 @@ using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Xunit;
@@ -33,7 +35,7 @@ namespace FastTests.Server.Authentication
         public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
-            var serverCertificateHolder = RavenServer.LoadCertificate(serverCertPath, null);
+            var serverCertificateHolder = new SecretProtection(new SecurityConfiguration()).LoadCertificateFromPath(serverCertPath, null);
 
             var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);
 

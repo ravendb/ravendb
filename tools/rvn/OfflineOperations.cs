@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
@@ -24,7 +25,7 @@ namespace rvn
             dstOptions.MasterKey = masterKey;
 
             var entropy = Sodium.GenerateRandomBuffer(256);
-            var protect = SecretProtection.Protect(masterKey, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
@@ -43,7 +44,7 @@ namespace rvn
             var base64Key = RecoverServerStoreKey(destDir);
             var entropy = Sodium.GenerateRandomBuffer(256);
             var secret = Convert.FromBase64String(base64Key);
-            var protect = SecretProtection.Protect(secret, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(secret, entropy);
 
             using (var f = File.OpenWrite(Path.Combine(destDir, SecretKeyEncrypted)))
             {
@@ -71,7 +72,7 @@ namespace rvn
             dstOptions.MasterKey = masterKey;
 
             var entropy = Sodium.GenerateRandomBuffer(256);
-            var protect = SecretProtection.Protect(masterKey, entropy);
+            var protect = new SecretProtection(new SecurityConfiguration()).Protect(masterKey, entropy);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
@@ -100,7 +101,7 @@ namespace rvn
             var srcOptions = StorageEnvironmentOptions.ForPath(srcDir);
             var dstOptions = StorageEnvironmentOptions.ForPath(dstDir);
 
-            srcOptions.MasterKey = SecretProtection.Unprotect(secret, entropy);
+            srcOptions.MasterKey = new SecretProtection(new SecurityConfiguration()).Unprotect(secret, entropy);
 
             StorageCompaction.Execute(srcOptions, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dstOptions);
 
@@ -127,7 +128,7 @@ namespace rvn
             Array.Copy(buffer, 0, secret, 0, buffer.Length - 32);
             Array.Copy(buffer, buffer.Length - 32, entropy, 0, 32);
 
-            var key = SecretProtection.Unprotect(secret, entropy);
+            var key = new SecretProtection(new SecurityConfiguration()).Unprotect(secret, entropy);
             return Convert.ToBase64String(key);
         }
 
