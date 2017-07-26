@@ -30,19 +30,19 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate:Exec")]
         public string CertificateExec { get; set; }
 
-        [Description("The (optional) command line arguments for the 'Security.Certificate:Exec' command or executable.")]
+        [Description("The command line arguments for the 'Security.Certificate:Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate:Arguments")]
         public string CertificateExecArguments { get; set; }
 
-        [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30,000")]
+        [Description("The number of milliseconds to wait for the certificate executable to exit. Default: 30 seconds")]
         [DefaultValue(30000)]
-        [ConfigurationEntry("Security.Certificate:Timout")]
-        public int CertificateExecTimout { get; set; }
+        [ConfigurationEntry("Security.Certificate:Timeout")]
+        public int CertificateExecTimeout { get; set; }
 
         [Description("The path of the (512-bit) Master Key. If specified, RavenDB will use this key to protect secrets.")]
         [DefaultValue(null)]
-        [ConfigurationEntry("Security.MasterKey")]
+        [ConfigurationEntry("Security.MasterKey:Path")]
         public string MasterKeyPath { get; set; }
 
         [Description("A command or executable to run which will provide a (512-bit) Master Key, If specified, RavenDB will use this key to protect secrets.")]
@@ -50,14 +50,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.MasterKey:Exec")]
         public string MasterKeyExec { get; set; }
 
-        [Description("The (optional) command line arguments for the 'Security.MasterKey:Exec' command or executable.")]
+        [Description("The command line arguments for the 'Security.MasterKey:Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey:Arguments")]
         public string MasterKeyExecArguments { get; set; }
 
-        [Description("The number of milliseconds to wait for the Master Key executable to exit. Default: 30000")]
+        [Description("The number of milliseconds to wait for the Master Key executable to exit. Default: 30 seconds")]
         [DefaultValue(30000)]
-        [ConfigurationEntry("Security.MasterKey:Timout")]
-        public int MasterKeyExecTimout { get; set; }
+        [ConfigurationEntry("Security.MasterKey:Timeout")]
+        public int MasterKeyExecTimeout { get; set; }
     }
 }

@@ -129,15 +129,22 @@ namespace Raven.Server
                 Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
 
                 var authenticationEnabled = false;
-                if (Configuration.Security.CertificateExec != null)
+                try
                 {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCerificateWithExecutable();
-                    authenticationEnabled = true;
+                    if (Configuration.Security.CertificateExec != null)
+                    {
+                        ServerCertificateHolder = ServerStore.Secrets.LoadCerificateWithExecutable();
+                        authenticationEnabled = true;
+                    }
+                    else if (Configuration.Security.CertificatePath != null)
+                    {
+                        ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
+                        authenticationEnabled = true;
+                    }
                 }
-                else if (Configuration.Security.CertificatePath != null)
+                catch (Exception e)
                 {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
-                    authenticationEnabled = true;
+                    throw new InvalidOperationException("Unable to start the server because an invalid certificate configuration! Admin assistance required.", e);
                 }
                 
                 if (authenticationEnabled)
