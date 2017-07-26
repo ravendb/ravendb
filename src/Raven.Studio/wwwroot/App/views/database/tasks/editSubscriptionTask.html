@@ -50,27 +50,18 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel">
-                        <div class="padding">
-                            <div class="toggle" data-bind="validationElement: includeRevisions,  validationOptions: { insertMessages: false }">
-                                <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
-                                <label for="include-revisions">Include Revisions</label>
-                            </div>
-                            <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
-                            <div class="toggle">
-                                <input id="toggle-transform-script" type="checkbox" data-bind="checked: applyScript">
-                                <label for="toggle-transform-script">Apply Transform Script <i class="icon-info text-info" id="scriptInfo"></i></label>
-                            </div>
-                            <div id="collapseTransformScript" data-bind="collapse: applyScript">
-                                <!--TODO : ace editor, add script validations - see issue 7795-->
-                                <pre class="form-control margin-top" placeholder="Enter transform script"
-                                     data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' },  validationElement: script," style="height: 160px;">
-                                </pre>
-                                <div data-bind="validationElement: script">
-                                    <div class="help-block" data-bind="validationMessage: script"></div>
-                                </div>
-                            </div>
+                    <div class="panel padding">
+                        <div class="toggle" data-bind="validationElement: includeRevisions,  validationOptions: { insertMessages: false }">
+                            <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
+                            <label for="include-revisions">Include Revisions</label>
                         </div>
+                        <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
+                    </div>
+                    <div class="panel padding">
+                        <label>Transform Script:&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <pre class="form-control margin-top" placeholder="Enter transform script"
+                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' },  validationElement: script," style="height: 160px;">
+                        </pre>  <!--TODO : ace editor, add script validations - see issue 7795-->    
                     </div>
                     <div class="panel padding flex-form">
                         <div class="form-group">
