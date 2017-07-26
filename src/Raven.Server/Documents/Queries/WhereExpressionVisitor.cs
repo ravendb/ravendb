@@ -8,11 +8,11 @@ namespace Raven.Server.Documents.Queries
 {
     public abstract class WhereExpressionVisitor
     {
-        private readonly string _queryText;
+        protected readonly string QueryText;
 
         protected WhereExpressionVisitor(string queryText)
         {
-            _queryText = queryText;
+            QueryText = queryText;
         }
 
         public void Visit(QueryExpression expression, BlittableJsonReaderObject parameters)
@@ -33,13 +33,13 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
-                    VisitFieldToken(QueryExpression.Extract(_queryText, expression.Field), expression.Value ?? expression.First, parameters);
+                    VisitFieldToken(QueryExpression.Extract(QueryText, expression.Field), expression.Value ?? expression.First, parameters);
                     return;
                 case OperatorType.Between:
-                    VisitFieldTokens(QueryExpression.Extract(_queryText, expression.Field), expression.First, expression.Second, parameters);
+                    VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.First, expression.Second, parameters);
                     return;
                 case OperatorType.In:
-                    VisitFieldTokens(QueryExpression.Extract(_queryText, expression.Field), expression.Values, parameters);
+                    VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.Values, parameters);
                     return;
                 case OperatorType.Method:
                     VisitMethodTokens(expression, parameters);
@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries
 
             if (valueType == ValueTokenType.Parameter)
             {
-                var parameterName = QueryExpression.Extract(_queryText, value);
+                var parameterName = QueryExpression.Extract(QueryText, value);
 
                 if (parameters == null)
                     throw new InvalidOperationException();

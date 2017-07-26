@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
 
@@ -84,7 +85,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             if (Query.Select != null)
-                FillSelectFields();
+                FillSelectFields(parameters);
             else
             {
                 if (IsGroupBy)
@@ -106,7 +107,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void FillSelectFields()
+        private void FillSelectFields(BlittableJsonReaderObject parameters)
         {
             var fields = new List<SelectField>(Query.Select.Count);
 
@@ -115,21 +116,21 @@ namespace Raven.Server.Documents.Queries
                 string alias = null;
 
                 if (fieldInfo.Alias != null)
-                    alias = QueryExpression.Extract(Query.QueryText, fieldInfo.Alias);
+                    alias = QueryExpression.Extract(QueryText, fieldInfo.Alias);
 
                 var expression = fieldInfo.Expression;
 
                 switch (expression.Type)
                 {
                     case OperatorType.Field:
-                        var name = QueryExpression.Extract(Query.QueryText, expression.Field);
+                        var name = QueryExpression.Extract(QueryText, expression.Field);
                         fields.Add(SelectField.Create(name, alias));
                         break;
                     case OperatorType.Method:
-                        var methodName = QueryExpression.Extract(Query.QueryText, expression.Field);
+                        var methodName = QueryExpression.Extract(QueryText, expression.Field);
 
                         if (IsGroupBy == false)
-                            ThrowMethodsAreNotSupportedInSelect(methodName);
+                            ThrowMethodsAreNotSupportedInSelect(methodName, QueryText, parameters);
 
                         if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
                         {
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.Queries
                                     fields.Add(SelectField.CreateGroupByKeyField(alias, GroupBy));
                                     break;
                                 default:
-                                    ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName);
+                                    ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName, QueryText, parameters);
                                     break;
                             }
                         }
@@ -154,9 +155,9 @@ namespace Raven.Server.Documents.Queries
                                     break;
                                 case AggregationOperation.Sum:
                                     if (expression.Arguments == null)
-                                        ThrowMissingFieldNameArgumentOfSumMethod();
+                                        ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
                                     if (expression.Arguments.Count != 1)
-                                        ThrowIncorrectNumberOfArgumentsOfSumMethod(expression.Arguments.Count);
+                                        ThrowIncorrectNumberOfArgumentsOfSumMethod(expression.Arguments.Count, QueryText, parameters);
 
                                     var sumFieldToken = expression.Arguments[0] as FieldToken;
 
@@ -171,7 +172,7 @@ namespace Raven.Server.Documents.Queries
 
                         break;
                     default:
-                        ThrowUnhandledExpressionTypeInSelect(expression.Type);
+                        ThrowUnhandledExpressionTypeInSelect(expression.Type, QueryText, parameters);
                         break;
                 }
             }
@@ -205,41 +206,41 @@ namespace Raven.Server.Documents.Queries
             return fieldNameOrAlias;
         }
 
-        private static void ThrowIncompatibleTypesOfVariables(string fieldName, params ValueToken[] valueTokens)
+        private static void ThrowIncompatibleTypesOfVariables(string fieldName, string queryText, BlittableJsonReaderObject parameters, params ValueToken[] valueTokens)
         {
-            throw new InvalidOperationException($"Incompatible types of variables in WHERE clause on '{fieldName}' field. It got values of the following types: " +
-                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}");
+            throw new InvalidQueryException($"Incompatible types of variables in WHERE clause on '{fieldName}' field. It got values of the following types: " +
+                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}", queryText, parameters);
         }
 
-        private static void ThrowIncompatibleTypesOfParameters(string fieldName, params ValueToken[] valueTokens)
+        private static void ThrowIncompatibleTypesOfParameters(string fieldName, string queryText, BlittableJsonReaderObject parameters, params ValueToken[] valueTokens)
         {
-            throw new InvalidOperationException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field. It got parameters of the following types:   " +
-                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}");
+            throw new InvalidQueryException($"Incompatible types of parameters in WHERE clause on '{fieldName}' field. It got parameters of the following types:   " +
+                                                $"{string.Join(",", valueTokens.Select(x => x.Type.ToString()))}", queryText, parameters);
         }
 
-        private static void ThrowUnknownAggregationMethodInSelectOfGroupByQuery(string methodName)
+        private static void ThrowUnknownAggregationMethodInSelectOfGroupByQuery(string methodName, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new NotSupportedException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'");
+            throw new InvalidQueryException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'", queryText, parameters);
         }
 
-        private static void ThrowMissingFieldNameArgumentOfSumMethod()
+        private static void ThrowMissingFieldNameArgumentOfSumMethod(string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)");
+            throw new InvalidQueryException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)", queryText, parameters);
         }
 
-        private static void ThrowIncorrectNumberOfArgumentsOfSumMethod(int count)
+        private static void ThrowIncorrectNumberOfArgumentsOfSumMethod(int count, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException($"sum() method expects exactly one argument but got {count}");
+            throw new InvalidQueryException($"sum() method expects exactly one argument but got {count}", queryText, parameters);
         }
 
-        private static void ThrowMethodsAreNotSupportedInSelect(string methodName)
+        private static void ThrowMethodsAreNotSupportedInSelect(string methodName, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new NotSupportedException($"Method calls are not supported in SELECT clause while you tried to use '{methodName}' method");
+            throw new InvalidQueryException($"Method calls are not supported in SELECT clause while you tried to use '{methodName}' method", queryText, parameters);
         }
 
-        private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType)
+        private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException($"Unhandled expression of type {expressionType} in SELECT clause");
+            throw new InvalidQueryException($"Unhandled expression of type {expressionType} in SELECT clause", queryText, parameters);
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
@@ -259,13 +260,13 @@ namespace Raven.Server.Documents.Queries
             public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
             {
                 if (firstValue.Type != secondValue.Type)
-                    ThrowIncompatibleTypesOfVariables(fieldName, firstValue, secondValue);
+                    ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, firstValue, secondValue);
 
                 var valueType1 = GetValueTokenType(parameters, firstValue, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, secondValue, unwrapArrays: false);
 
                 if (valueType1 != valueType2)
-                    ThrowIncompatibleTypesOfParameters(fieldName, firstValue, secondValue);
+                    ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
                 _metadata.AddWhereField(fieldName, valueType1);
             }
@@ -280,11 +281,11 @@ namespace Raven.Server.Documents.Queries
                 {
                     var value = values[i];
                     if (i > 0 && value.Type != values[i - 1].Type)
-                        ThrowIncompatibleTypesOfVariables(fieldName, values.ToArray());
+                        ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
                     if (i > 0 && previousType != valueType)
-                        ThrowIncompatibleTypesOfParameters(fieldName, values.ToArray());
+                        ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
                     previousType = valueType;
                 }
@@ -323,12 +324,12 @@ namespace Raven.Server.Documents.Queries
 
                     var value = (ValueToken)arguments[i];
                     if (i > 1 && value.Type != previousType)
-                        ThrowIncompatibleTypesOfVariables(fieldName, arguments.Skip(1).Cast<ValueToken>().ToArray());
+                        ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: false);
 
                     if (i > 1 && previousType != valueType)
-                        ThrowIncompatibleTypesOfParameters(fieldName, arguments.Skip(1).Cast<ValueToken>().ToArray());
+                        ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
                     previousType = valueType;
                 }

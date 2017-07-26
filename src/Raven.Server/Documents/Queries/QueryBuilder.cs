@@ -7,6 +7,7 @@ using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -183,13 +184,13 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Exists:
                             return HandleExists(query, expression, metadata);
                         default:
-                            ThrowMethodNotSupported(methodType);
+                            ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                             break;
                     }
 
                     break;
                 default:
-                    ThrowUnhandledExpressionOperatorType(expression.Type);
+                    ThrowUnhandledExpressionOperatorType(expression.Type, metadata.QueryText, parameters);
                     break;
             }
 
@@ -327,7 +328,7 @@ namespace Raven.Server.Documents.Queries
                     foreach (var item in UnwrapArray(array))
                     {
                         if (expectedValueType != item.Type)
-                            ThrowInvalidParameterType(expectedValueType, item);
+                            ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
 
                         yield return item;
                     }
@@ -337,7 +338,7 @@ namespace Raven.Server.Documents.Queries
 
                 var parameterValueType = GetValueTokenType(parameterValue);
                 if (expectedValueType != parameterValueType)
-                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType);
+                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 yield return (parameterValue.ToString(), parameterValueType);
             }
@@ -601,24 +602,24 @@ namespace Raven.Server.Documents.Queries
             throw new NotSupportedException($"Unhandled token type: {type}");
         }
 
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType)
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue);
+            throw new InvalidQueryException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue, queryText, parameters);
         }
 
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item)
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidOperationException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value);
+            throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
         }
 
-        private static void ThrowMethodNotSupported(MethodType methodType)
+        private static void ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new NotSupportedException($"Method '{methodType}' is not supported.");
+            throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
         }
 
-        private static void ThrowUnhandledExpressionOperatorType(OperatorType type)
+        private static void ThrowUnhandledExpressionOperatorType(OperatorType type, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new ArgumentOutOfRangeException($"Unhandled expression operator type: {type}");
+            throw new InvalidQueryException($"Unhandled expression operator type: {type}", queryText, parameters);
         }
 
         private enum MethodType
