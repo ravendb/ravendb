@@ -7,6 +7,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Client;
 using Raven.Server.Utils;
 using Sparrow.Json;
 
@@ -231,20 +232,23 @@ namespace Raven.Server.Documents.Queries
                 case LuceneTermType.Long:
                     return value;
                 default:
+                {
+                    if (value == null)
+                        return Constants.Documents.Indexing.Fields.NullValue;
+
+                    fixed (char* pValue = value)
                     {
-                        fixed (char* pValue = value)
+                        var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
+                        switch (result)
                         {
-                            var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
-                            switch (result)
-                            {
-                                case LazyStringParser.Result.DateTime:
-                                case LazyStringParser.Result.DateTimeOffset:
-                                    return value;
-                                default:
-                                    return value.ToLowerInvariant();
-                            }
+                            case LazyStringParser.Result.DateTime:
+                            case LazyStringParser.Result.DateTimeOffset:
+                                return value;
+                            default:
+                                return value.ToLowerInvariant();
                         }
                     }
+                }
             }
         }
 
