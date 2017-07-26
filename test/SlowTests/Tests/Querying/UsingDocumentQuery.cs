@@ -23,7 +23,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exactMatch(Name, :p0)", q.ToString());
             Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
@@ -33,7 +33,11 @@ namespace SlowTests.Tests.Querying
             var ayende = "ayende" + 1;
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereExactMatch("Name", ayende);
-            Assert.Equal("Name:[[ayende1]]", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exactMatch(Name, :p0)", q.ToString());
+            Assert.Equal("ayende1", query.QueryParameters["p0"]);
         }
 
         [Fact]
@@ -199,7 +203,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleEqualityOnInt()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereExactMatch("Age", "3");
+                .WhereEquals("Age", 3);
             Assert.Equal("Age:3", q.ToString());
         }
 
