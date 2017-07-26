@@ -187,7 +187,8 @@ namespace Raven.Server.Documents.Handlers.Admin
             SetupCORSHeaders();
 
             var nodeUrl = GetStringQueryString("url");
-            var watcher = GetBoolValueQueryString("watcher");
+            var watcher = GetBoolValueQueryString("watcher", false);
+
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
