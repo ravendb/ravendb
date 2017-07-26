@@ -7,6 +7,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
+using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -221,7 +222,7 @@ namespace Raven.Server.Documents.Queries
             return pq;
         }
 
-        public static string GetTermValue(string value, LuceneTermType type)
+        public static unsafe string GetTermValue(string value, LuceneTermType type)
         {
             switch (type)
             {
@@ -229,7 +230,20 @@ namespace Raven.Server.Documents.Queries
                 case LuceneTermType.Long:
                     return value;
                 default:
-                    return value.ToLowerInvariant();
+                    {
+                        fixed (char* pValue = value)
+                        {
+                            var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
+                            switch (result)
+                            {
+                                case LazyStringParser.Result.DateTime:
+                                case LazyStringParser.Result.DateTimeOffset:
+                                    return value;
+                                default:
+                                    return value.ToLowerInvariant();
+                            }
+                        }
+                    }
             }
         }
 
