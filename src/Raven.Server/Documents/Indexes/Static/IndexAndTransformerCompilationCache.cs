@@ -27,7 +27,11 @@ namespace Raven.Server.Documents.Indexes.Static
             list.AddRange(definition.Maps);
             if (definition.Reduce != null)
                 list.Add(definition.Reduce);
-
+            if (definition.AdditionalSources != null)
+            {
+                list.AddRange(definition.AdditionalSources.Keys);
+                list.AddRange(definition.AdditionalSources.Values);
+            }
             var key = new CacheKey(list);
             Func<StaticIndexBase> createIndex = () => IndexAndTransformerCompiler.Compile(definition);
             var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));

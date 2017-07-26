@@ -121,6 +121,11 @@ namespace Raven.Client.Documents.Indexes
         public string OutputReduceToCollection { get; set; }
 
         /// <summary>
+        /// Add additional sources to be copiled with the index on the server.
+        /// </summary>
+        public Dictionary<string, string> AdditionalSources { get; set; }
+
+        /// <summary>
         /// Initializes a new instance of the <see cref="IndexDefinitionBuilder{TDocument,TReduceResult}"/> class.
         /// </summary>
         public IndexDefinitionBuilder(string indexName = null)
@@ -236,6 +241,8 @@ namespace Raven.Client.Documents.Indexes
 
                     indexDefinition.Maps.Add(convention.PrettifyGeneratedLinqExpressions ? IndexPrettyPrinter.TryFormat(map) : map);
                 }
+
+                indexDefinition.AdditionalSources = AdditionalSources;
 
                 return indexDefinition;
             }
