@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Indexing
                                                                   x.BirthDate == birthDate &&
                                                                   x.Country == country);
                     
-                    var query = GetIndexQuery(queryable);
+                    var query = RavenTestHelper.GetIndexQuery(queryable);
                     
                     Assert.Equal("FROM Clients WHERE (((exists(FirstName) AND NOT FirstName = :p0 AND LastName = :p1)) AND BirthDate = :p2) AND Country = :p3", query.Query);
                     Assert.Equal("Ayende", query.QueryParameters["p0"]);
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs.Indexing
                                                                   x.BirthDate == birthDate &&
                                                                   x.Country == country);
 
-                    var query = GetIndexQuery(queryable);
+                    var query = RavenTestHelper.GetIndexQuery(queryable);
 
                     Assert.Equal("FROM Clients WHERE ((FirstName = :p0 AND LastName = :p1) AND BirthDate = :p2) AND Country = :p3", query.Query);
                     Assert.Equal("Ayende", query.QueryParameters["p0"]);
@@ -68,12 +68,6 @@ namespace SlowTests.Bugs.Indexing
 
                 }
             }
-        }
-
-        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
-        {
-            var inspector = (IRavenQueryInspector)queryable;
-            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class Client

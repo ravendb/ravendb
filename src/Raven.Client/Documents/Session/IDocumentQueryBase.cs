@@ -554,41 +554,40 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
-        ///     Matches exact value
+        ///     Matches value
         /// </summary>
-        /// <remarks>
-        ///     Defaults to NotAnalyzed
-        /// </remarks>
         TSelf WhereEquals(string fieldName, object value);
 
         /// <summary>
+        ///     Matches value
+        /// </summary>
+        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///     Matches value
+        /// </summary>
+        TSelf WhereEquals(WhereParams whereParams);
+
+        /// <summary>
         ///     Matches exact value
         /// </summary>
         /// <remarks>
         ///     Defaults to NotAnalyzed
         /// </remarks>
-        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereExactMatch(string fieldName, string value);
 
         /// <summary>
         ///     Matches exact value
         /// </summary>
         /// <remarks>
-        ///     Defaults to allow wildcards only if analyzed
+        ///     Defaults to NotAnalyzed
         /// </remarks>
-        TSelf WhereEquals(string fieldName, object value, bool isAnalyzed);
+        TSelf WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
         ///     Matches exact value
         /// </summary>
-        /// <remarks>
-        ///     Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed);
-
-        /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        TSelf WhereEquals(WhereParams whereParams);
+        TSelf WhereExactMatch(WhereParams whereParams);
 
         /// <summary>
         ///     Matches fields where the value is greater than the specified value

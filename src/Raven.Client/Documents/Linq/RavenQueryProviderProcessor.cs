@@ -361,7 +361,6 @@ namespace Raven.Client.Documents.Linq
                     {
                         FieldName = expressionMemberInfo.Path,
                         Value = GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
-                        IsAnalyzed = true,
                         AllowWildcards = false
                     });
                 return;
@@ -379,7 +378,6 @@ namespace Raven.Client.Documents.Linq
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-                IsAnalyzed = true,
                 AllowWildcards = false,
                 IsNestedPath = memberInfo.IsNestedPath
             });
@@ -420,7 +418,6 @@ namespace Raven.Client.Documents.Linq
                 {
                     FieldName = expressionMemberInfo.Path,
                     Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
-                    IsAnalyzed = true,
                     AllowWildcards = false
                 });
                 _documentQuery.CloseSubclause();
@@ -446,7 +443,6 @@ namespace Raven.Client.Documents.Linq
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-                IsAnalyzed = true,
                 AllowWildcards = false
             });
             
@@ -598,7 +594,6 @@ namespace Raven.Client.Documents.Linq
             {
                 FieldName = fieldInfo.Path,
                 Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
-                IsAnalyzed = true,
                 AllowWildcards = false
             });
         }
@@ -632,9 +627,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.OpenSubclause();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.NullValue, false);
+            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.NullValue);
             _documentQuery.OrElse();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.EmptyString, false);
+            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.EmptyString);
             _documentQuery.CloseSubclause();
         }
 
@@ -720,7 +715,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     FieldName = memberInfo.Path,
                     Value = "*",
                     AllowWildcards = true,
-                    IsAnalyzed = true,
                     IsNestedPath = memberInfo.IsNestedPath,
                 });
             }
@@ -735,7 +729,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(containsArgument, containsArgument.Type),
-                IsAnalyzed = true,
                 AllowWildcards = false
             });
 
@@ -761,7 +754,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         FieldName = memberInfo.Path,
                         Value = null,
-                        IsAnalyzed = true,
                         AllowWildcards = false
                     });
                     if (boolValue)
@@ -777,7 +769,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         FieldName = memberInfo.Path,
                         Value = boolValue,
-                        IsAnalyzed = true,
                         AllowWildcards = false
                     });
                 }
@@ -793,7 +784,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 {
                     FieldName = _currentPath,
                     Value = GetValueFromExpression(memberExpression, GetMemberType(memberInfo)),
-                    IsAnalyzed = true,
                     AllowWildcards = false,
                     IsNestedPath = memberInfo.IsNestedPath
                 });
@@ -1019,7 +1009,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         {
                             FieldName = memberInfo.Path,
                             Value = GetValueFromExpression(containsArgument, containsArgument.Type),
-                            IsAnalyzed = true,
                             AllowWildcards = false
                         });
 

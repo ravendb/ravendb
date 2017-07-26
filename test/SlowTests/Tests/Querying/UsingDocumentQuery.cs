@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -20,9 +19,12 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleEquality()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereEquals("Name", "ayende", false);
+                .WhereExactMatch("Name", "ayende");
 
-            Assert.Equal("Name:[[ayende]]", q.ToString());
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0", q.ToString());
+            Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
         [Fact]
@@ -30,7 +32,7 @@ namespace SlowTests.Tests.Querying
         {
             var ayende = "ayende" + 1;
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereEquals("Name", ayende, false);
+                .WhereExactMatch("Name", ayende);
             Assert.Equal("Name:[[ayende1]]", q.ToString());
         }
 
@@ -197,7 +199,7 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleEqualityOnInt()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereEquals("Age", 3, false);
+                .WhereExactMatch("Age", "3");
             Assert.Equal("Age:3", q.ToString());
         }
 

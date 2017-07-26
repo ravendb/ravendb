@@ -39,6 +39,13 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
+        public static Query Exact(string fieldName, string value)
+        {
+            var term = GetTermValue(value, LuceneTermType.String, lowerCased: false);
+
+            return new TermQuery(new Term(fieldName, term)) { Boost = 1 };
+        }
+
         public static Query Equal(string fieldName, LuceneTermType termType, string value)
         {
             return Term(fieldName, value, termType);
@@ -224,7 +231,7 @@ namespace Raven.Server.Documents.Queries
             return pq;
         }
 
-        public static unsafe string GetTermValue(string value, LuceneTermType type)
+        public static unsafe string GetTermValue(string value, LuceneTermType type, bool lowerCased = true)
         {
             switch (type)
             {
@@ -238,6 +245,9 @@ namespace Raven.Server.Documents.Queries
 
                     if (string.IsNullOrEmpty(value))
                         return Constants.Documents.Indexing.Fields.EmptyString;
+
+                    if (lowerCased == false)
+                        return value;
 
                     fixed (char* pValue = value)
                     {

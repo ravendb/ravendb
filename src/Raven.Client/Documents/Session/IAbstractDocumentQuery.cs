@@ -87,20 +87,14 @@ namespace Raven.Client.Documents.Session
         void Skip(int count);
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
         void WhereEquals(string fieldName, object value);
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        void WhereEquals(string fieldName, object value, bool isAnalyzed);
+        void WhereEquals(WhereParams whereParams);
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -117,7 +111,18 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches exact value
         /// </summary>
-        void WhereEquals(WhereParams whereParams);
+        /// <remarks>
+        ///   Defaults to NotAnalyzed
+        /// </remarks>
+        void WhereExactMatch(string fieldName, object value);
+
+        /// <summary>
+        ///   Matches exact value
+        /// </summary>
+        /// <remarks>
+        ///   Defaults to NotAnalyzed
+        /// </remarks>
+        void WhereExactMatch(WhereParams whereParams);
 
         ///<summary>
         /// Negate the next operation

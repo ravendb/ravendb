@@ -98,11 +98,8 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// 	Matches exact value
+        /// 	Matches value
         /// </summary>
-        /// <remarks>
-        /// 	Defaults to NotAnalyzed
-        /// </remarks>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value)
         {
             WhereEquals(fieldName, value);
@@ -110,11 +107,8 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
         public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
@@ -122,35 +116,47 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        /// 	Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool isAnalyzed)
-        {
-            WhereEquals(fieldName, value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
-        {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        /// Matches exact value
+        /// Matches value
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
             WhereEquals(whereParams);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Matches exact value
+        /// </summary>
+        /// <remarks>
+        /// 	Defaults to NotAnalyzed
+        /// </remarks>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExactMatch(string fieldName, string value)
+        {
+            WhereExactMatch(fieldName, value);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Matches exact value
+        /// </summary>
+        /// <remarks>
+        ///   Defaults to NotAnalyzed
+        /// </remarks>
+        public IAsyncDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Matches exact value
+        /// </summary>
+        /// <remarks>
+        ///   Defaults to NotAnalyzed
+        /// </remarks>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExactMatch(WhereParams whereExactMatchParams)
+        {
+            WhereExactMatch(whereExactMatchParams);
             return this;
         }
 

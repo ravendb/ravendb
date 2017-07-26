@@ -140,7 +140,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats")
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) AND (Name = :p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -163,7 +163,7 @@ namespace FastTests.Client.Queries
                         .Where(x => x.Name == "User")
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.And);
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE Name = :p0 AND search(Tags, :p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p1"]);
@@ -184,7 +184,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.And)
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) AND (Name = :p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -205,7 +205,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Or)
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE search(Tags, :p0) OR Name = :p1", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -227,7 +227,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Users, "i love cats")
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE (search(Tags, :p0) OR search(Users, :p1)) AND (Name = :p2)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -266,7 +266,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.And | SearchOptions.Not)
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM Images WHERE (exists(Tags) AND NOT search(Tags, :p0)) AND (Name = :p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -289,7 +289,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Not)
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE (exists(Tags) AND NOT search(Tags, :p0)) OR Name = :p1", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -310,7 +310,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats", options: SearchOptions.Not | SearchOptions.And)
                         .Where(x => x.Name == "User");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE (exists(Tags) AND NOT search(Tags, :p0)) AND (Name = :p1)", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -356,7 +356,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love bugs", boost: 20)
                         .Search(x => x.Tags, "canine love", boost: 13);
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE (boost(search(Tags, :p0), 3) OR boost(search(Tags, :p1), 20) OR boost(search(Tags, :p2), 13))", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -401,7 +401,7 @@ namespace FastTests.Client.Queries
                         .Search(x => x.Tags, "i love cats")
                         .Search(x => x.Users, "oren");
 
-                    var query = GetIndexQuery(ravenQueryable);
+                    var query = RavenTestHelper.GetIndexQuery(ravenQueryable);
 
                     Assert.Equal("FROM INDEX 'test' WHERE (search(Tags, :p0) OR search(Users, :p1))", query.Query);
                     Assert.Equal("i love cats", query.QueryParameters["p0"]);
@@ -562,7 +562,7 @@ namespace FastTests.Client.Queries
                             .Customize(x => x.WaitForNonStaleResults())
                             .Search(x => x.Name, specialCharacter.ToString());
 
-                        var query = GetIndexQuery(qry);
+                        var query = RavenTestHelper.GetIndexQuery(qry);
 
                         Assert.Equal("FROM Images WHERE search(Name, :p0)", query.Query);
                         Assert.Equal(specialCharacter.ToString(), query.QueryParameters["p0"]);
@@ -584,7 +584,7 @@ namespace FastTests.Client.Queries
                         .Customize(x => x.WaitForNonStaleResults())
                         .Search(x => x.Name, "He said: hello there");
 
-                    var query = GetIndexQuery(qry);
+                    var query = RavenTestHelper.GetIndexQuery(qry);
 
                     Assert.Equal("FROM Images WHERE search(Name, :p0)", query.Query);
                     Assert.Equal("He said: hello there", query.QueryParameters["p0"]);
@@ -592,12 +592,6 @@ namespace FastTests.Client.Queries
                     qry.ToList();
                 }
             }
-        }
-
-        private static IndexQuery GetIndexQuery(IQueryable<Image> queryable)
-        {
-            var inspector = (IRavenQueryInspector)queryable;
-            return inspector.GetIndexQuery(isAsync: false);
         }
     }
 }

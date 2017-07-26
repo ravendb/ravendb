@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
 using Voron.Platform.Posix;
 using Sparrow.Collections;
@@ -68,6 +70,12 @@ namespace FastTests
                     Thread.Sleep(200);
                 }
             }
+        }
+
+        public static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
         }
     }
 }

@@ -183,6 +183,8 @@ namespace Raven.Server.Documents.Queries
                             return HandleLucene(query, expression, metadata, parameters, analyzer);
                         case MethodType.Exists:
                             return HandleExists(query, expression, metadata);
+                        case MethodType.ExactMatch:
+                            return HandleExactMatch(query, expression, metadata, parameters);
                         default:
                             ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                             break;
@@ -314,6 +316,19 @@ namespace Raven.Server.Documents.Queries
 
                 return LuceneTermType.String;
             }
+        }
+
+        private static Lucene.Net.Search.Query HandleExactMatch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                throw new InvalidOperationException("TODO arek");
+
+            var valueAsString = value as string;
+
+            return LuceneQueryHelper.Exact(fieldName, valueAsString);
         }
 
         public static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
@@ -602,7 +617,11 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "exists", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Exists;
 
+            if (string.Equals(methodName, "exactMatch", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Exists;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
+
         }
 
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
@@ -637,7 +656,8 @@ namespace Raven.Server.Documents.Queries
             StartsWith,
             EndsWith,
             Lucene,
-            Exists
+            Exists,
+            ExactMatch
         }
     }
 }

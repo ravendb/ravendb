@@ -169,6 +169,16 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken ExactMatch(string fieldName, string parameterName)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.ExactMatch
+            };
+        }
+
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -196,6 +206,9 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Exists:
                     writer.Append("exists(");
+                    break;
+                case WhereOperator.ExactMatch:
+                    writer.Append("exactMatch(");
                     break;
             }
 
@@ -256,6 +269,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.EndsWith:
                 case WhereOperator.ContainsAny:
                 case WhereOperator.ContainsAll:
+                case WhereOperator.ExactMatch:
                     writer
                         .Append(", :")
                         .Append(ParameterName)

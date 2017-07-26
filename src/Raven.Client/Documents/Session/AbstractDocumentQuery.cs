@@ -772,11 +772,8 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
         public void WhereEquals(string fieldName, object value)
         {
             WhereEquals(new WhereParams
@@ -785,24 +782,6 @@ If you really want to do in memory filtering on the data returned from the query
                 Value = value
             });
         }
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        public void WhereEquals(string fieldName, object value, bool isAnalyzed)
-        {
-            WhereEquals(new WhereParams
-            {
-                AllowWildcards = isAnalyzed,
-                IsAnalyzed = isAnalyzed,
-                FieldName = fieldName,
-                Value = value
-            });
-        }
-
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -830,7 +809,7 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
         public void WhereEquals(WhereParams whereParams)
         {
@@ -843,6 +822,34 @@ If you really want to do in memory filtering on the data returned from the query
             NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+        }
+
+        /// <summary>
+        ///   Matches exact value
+        /// </summary>
+        public void WhereExactMatch(string fieldName, object value)
+        {
+            WhereExactMatch(new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value
+            });
+        }
+
+        /// <summary>
+        ///   Matches exact value
+        /// </summary>
+        public void WhereExactMatch(WhereParams whereParams)
+        {
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
+
+            var transformToEqualValue = TransformValue(whereParams);
+            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(whereParams.FieldName);
+
+            WhereTokens.AddLast(WhereToken.ExactMatch(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
         }
 
         ///<summary>
@@ -877,7 +884,6 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 FieldName = fieldName,
                 Value = value,
-                IsAnalyzed = true,
                 AllowWildcards = true
             };
 
@@ -903,7 +909,6 @@ If you really want to do in memory filtering on the data returned from the query
             {
                 FieldName = fieldName,
                 Value = value,
-                IsAnalyzed = true,
                 AllowWildcards = true
             };
 
@@ -1669,7 +1674,6 @@ If you really want to do in memory filtering on the data returned from the query
                 var nestedWhereParams = new WhereParams
                 {
                     AllowWildcards = true,
-                    IsAnalyzed = true,
                     FieldName = fieldName,
                     Value = value
                 };
@@ -1776,8 +1780,7 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (type == typeof(string))
             {
-                var valueAsString = (string)whereParams.Value;
-                return whereParams.IsAnalyzed ? valueAsString : string.Concat("[[", valueAsString, "]]");
+                return (string)whereParams.Value;
             }
 
             if (type == typeof(int))

@@ -12,7 +12,6 @@ namespace Raven.Client.Documents.Session
         {
             IsNestedPath = false;
             AllowWildcards = false;
-            IsAnalyzed = true;
         }
 
         /// <summary>
@@ -24,11 +23,6 @@ namespace Raven.Client.Documents.Session
         /// The field value
         /// </summary>
         public object Value { get; set; }
-
-        /// <summary>
-        /// Should the field be analyzed
-        /// </summary>
-        public bool IsAnalyzed { get; set; }
 
         /// <summary>
         /// Should the field allow wildcards

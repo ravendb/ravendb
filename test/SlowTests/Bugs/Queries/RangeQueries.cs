@@ -22,7 +22,7 @@ namespace SlowTests.Bugs.Queries
                     var q = session.Query<WithInteger>()
                         .Where(x => x.Sequence < 300 && x.Sequence > 150);
 
-                    var query = GetIndexQuery(q);
+                    var query = RavenTestHelper.GetIndexQuery(q);
 
                     Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
@@ -41,7 +41,7 @@ namespace SlowTests.Bugs.Queries
                     var q = session.Query<WithInteger>()
                         .Where(x => 150 > x.Sequence && x.Sequence < 300);
                     
-                    var query = GetIndexQuery(q);
+                    var query = RavenTestHelper.GetIndexQuery(q);
 
                     Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
@@ -60,7 +60,7 @@ namespace SlowTests.Bugs.Queries
                     var q = session.Query<WithInteger>()
                         .Where(x => 150 > x.Sequence && 300 < x.Sequence);
 
-                    var query = GetIndexQuery(q);
+                    var query = RavenTestHelper.GetIndexQuery(q);
 
                     Assert.Equal("FROM WithIntegers WHERE Sequence > :p0 AND Sequence < :p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
@@ -79,7 +79,7 @@ namespace SlowTests.Bugs.Queries
                     var q = session.Query<WithInteger>()
                         .Where(x => x.Sequence >= 150 && x.Sequence <= 300);
 
-                    var query = GetIndexQuery(q);
+                    var query = RavenTestHelper.GetIndexQuery(q);
                     
                     Assert.Equal("FROM WithIntegers WHERE Sequence BETWEEN :p0 AND :p1", query.Query);
                     Assert.Equal(150, query.QueryParameters["p0"]);
@@ -236,12 +236,6 @@ namespace SlowTests.Bugs.Queries
                     Assert.Equal(2, users.Count());
                 }
             }
-        }
-
-        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
-        {
-            var inspector = (IRavenQueryInspector)queryable;
-            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class WithInteger

@@ -46,12 +46,12 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query1 = session.Advanced.DocumentQuery<Post>("TagsIndex");
-                    query1 = query1.WhereEquals("Tag", "NoSpace:1", false);
+                    query1 = query1.WhereExactMatch("Tag", "NoSpace:1");
                     var posts = query1.ToArray();
                     Assert.Equal(1, posts.Length); // Passes
 
                     var query2 = session.Advanced.DocumentQuery<Post>("TagsIndex")
-                                        .WhereEquals("Tag", "Space :2", false);
+                                        .WhereExactMatch("Tag", "Space :2");
                     var posts2 = query2.ToArray();
                     Assert.Equal(1, posts2.Length); // Fails
 

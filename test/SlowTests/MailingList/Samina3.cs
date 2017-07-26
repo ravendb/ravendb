@@ -67,7 +67,7 @@ namespace SlowTests.MailingList
 
                     var result = query.ToList();
 
-                    var indexQuery = GetIndexQuery(query);
+                    var indexQuery = RavenTestHelper.GetIndexQuery(query);
 
                     var facetResults = session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                     {
@@ -83,12 +83,6 @@ namespace SlowTests.MailingList
                     Assert.Equal("PropertiesSearchIndex", stats.IndexName);
                 }
             }
-        }
-
-        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
-        {
-            var inspector = (IRavenQueryInspector)queryable;
-            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class SearchingViewModel

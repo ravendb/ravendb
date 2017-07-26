@@ -338,14 +338,41 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
+        /// 	Matches value
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value)
+        {
+            WhereEquals(fieldName, value);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Matches value
+        /// </summary>
+        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        {
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Matches value
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(WhereParams whereEqualsParams)
+        {
+            WhereEquals(whereEqualsParams);
+            return this;
+        }
+
+        /// <summary>
         /// 	Matches exact value
         /// </summary>
         /// <remarks>
         /// 	Defaults to NotAnalyzed
         /// </remarks>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereExactMatch(string fieldName, string value)
         {
-            WhereEquals(fieldName, value);
+            WhereExactMatch(fieldName, value);
             return this;
         }
 
@@ -355,9 +382,9 @@ namespace Raven.Client.Documents.Session
         /// <remarks>
         ///   Defaults to NotAnalyzed
         /// </remarks>
-        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
         {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
+            WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
             return this;
         }
 
@@ -365,32 +392,11 @@ namespace Raven.Client.Documents.Session
         /// 	Matches exact value
         /// </summary>
         /// <remarks>
-        /// 	Defaults to allow wildcards only if analyzed
+        ///   Defaults to NotAnalyzed
         /// </remarks>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool isAnalyzed)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereExactMatch(WhereParams whereExactMatchParams)
         {
-            WhereEquals(fieldName, value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
-        {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(WhereParams whereEqualsParams)
-        {
-            WhereEquals(whereEqualsParams);
+            WhereExactMatch(whereExactMatchParams);
             return this;
         }
 
