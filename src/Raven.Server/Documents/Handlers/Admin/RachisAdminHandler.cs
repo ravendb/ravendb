@@ -188,6 +188,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             var nodeUrl = GetStringQueryString("url");
             var watcher = GetBoolValueQueryString("watcher", false);
+
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {

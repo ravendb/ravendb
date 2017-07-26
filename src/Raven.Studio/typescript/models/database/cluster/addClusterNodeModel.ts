@@ -2,6 +2,7 @@
 
 class addClusterNodeModel {
     serverUrl = ko.observable<string>();
+    addAsWatcher = ko.observable<boolean>(false);
 
     validationGroup = ko.validatedObservable({
         serverUrl: this.serverUrl
