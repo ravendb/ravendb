@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var res = GetUsingDirectiveAndSyntaxTrees(extentions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
-                .WithUsings(RoslynHelper.CreateUsings(res.usinngDirectiveSyntaxs))
+                .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usinngDirectiveSyntaxs, List<SyntaxTree> syntaxTrees) GetUsingDirectiveAndSyntaxTrees(Dictionary<string,string> extentions)
+        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees) GetUsingDirectiveAndSyntaxTrees(Dictionary<string,string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)

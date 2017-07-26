@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 using Raven.Server.Documents.Transformers;
@@ -29,12 +30,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 list.Add(definition.Reduce);
             if (definition.AdditionalSources != null)
             {
-                list.AddRange(definition.AdditionalSources.Keys);
-                list.AddRange(definition.AdditionalSources.Values);
+                foreach (var kvp in definition.AdditionalSources.OrderBy(x=>x.Key))
+                {
+                    list.Add(kvp.Key);
+                    list.Add(kvp.Value);
+                }
             }
             var key = new CacheKey(list);
-            Func<StaticIndexBase> createIndex = () => IndexAndTransformerCompiler.Compile(definition);
-            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(createIndex));
+            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => IndexAndTransformerCompiler.Compile(definition)));
             return result.Value;
         }
 
