@@ -11,6 +11,7 @@ class collection {
     name: string;
     sizeClass: KnockoutComputed<string>;
     countPrefix: KnockoutComputed<number>;
+    hasBounceClass = ko.observable<boolean>(false);
 
     private db: database;
 
@@ -39,6 +40,18 @@ class collection {
                 return _.floor(count / 1000, 2);
             }
             return _.floor(count / 1000000, 2);
+        });
+
+        this.documentCount.subscribe(() => {
+            if (this.hasBounceClass()) {
+                return;
+            }
+
+            this.hasBounceClass(true);
+
+            setTimeout(() => {
+                this.hasBounceClass(false);
+            }, 420);
         });
     }
 
