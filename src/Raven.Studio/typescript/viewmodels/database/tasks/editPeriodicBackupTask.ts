@@ -79,7 +79,7 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     testCredentials(bs: backupSettings) {
-        if (!this.isValid(bs.credentialsValidationGroup)) {
+        if (!this.isValid(bs.validationGroup)) {
             return;
         }
 

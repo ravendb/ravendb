@@ -91,8 +91,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Documents\Indexes\IndexMerging" />
-    <Folder Include="Documents\PeriodicBackup\Aws" />
-    <Folder Include="Documents\PeriodicBackup\Aws" />
     <Folder Include="Exceptions\PeriodicBackup" />
     <Folder Include="Exceptions\PeriodicBackup" />
     <Folder Include="ServerWide\Commands\ETL" />

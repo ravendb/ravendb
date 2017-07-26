@@ -7,6 +7,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Json;
@@ -16,6 +17,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Authentication
 {

@@ -20,21 +20,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public abstract class RavenAwsClient : RavenStorageClient
     {
-        public abstract string ServiceName { get; }
-
         protected const string DefaultRegion = "us-east-1";
+        protected bool IsRegionInvariantRequest;
+        public abstract string ServiceName { get; }
 
         private readonly string _awsAccessKey;
         private readonly byte[] _awsSecretKey;
 
-        protected string AwsRegion { get; }
+        protected string AwsRegion { get; set; }
 
         protected RavenAwsClient(string awsAccessKey, string awsSecretKey, string awsRegionName,
             UploadProgress uploadProgress, CancellationToken? cancellationToken = null)
             : base(uploadProgress, cancellationToken)
         {
             if (string.IsNullOrWhiteSpace(awsRegionName))
-                awsRegionName = DefaultRegion;
+                throw new ArgumentException("AWS region cannot be null or empty!");
 
             awsRegionName = awsRegionName.ToLower();
 
@@ -51,34 +51,32 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             using (var hash = new HMACSHA256(signingKey))
             {
-                var scope = $"{date:yyyyMMdd}/{AwsRegion}/{ServiceName}/aws4_request";
+                var regionForRequest = IsRegionInvariantRequest ? DefaultRegion : AwsRegion;
+                var scope = $"{date:yyyyMMdd}/{regionForRequest}/{ServiceName}/aws4_request";
                 var stringToHash = $"AWS4-HMAC-SHA256\n{RavenAwsHelper.ConvertToString(date)}\n{scope}\n{canonicalRequestHash}";
 
                 var hashedString = hash.ComputeHash(Encoding.UTF8.GetBytes(stringToHash));
                 var signature = RavenAwsHelper.ConvertToHex(hashedString);
 
-                var credentials = $"{_awsAccessKey}/{date:yyyyMMdd}/{AwsRegion}/{ServiceName}/aws4_request";
+                var credentials = $"{_awsAccessKey}/{date:yyyyMMdd}/{regionForRequest}/{ServiceName}/aws4_request";
 
                 return new AuthenticationHeaderValue("AWS4-HMAC-SHA256", $"Credential={credentials},SignedHeaders={signedHeaders},Signature={signature}");
             }
         }
 
-        protected Dictionary<string, string> ConvertToHeaders(HttpHeaders headers, string name = null)
+        protected Dictionary<string, string> ConvertToHeaders(HttpHeaders headers)
         {
             var result = headers.ToDictionary(x => x.Key, x => x.Value.FirstOrDefault());
-
-            if(string.IsNullOrWhiteSpace(name) == false)
-                result.Add("Host", GetHost(name));
-
+            result.Add("Host", GetHost());
             return result;
         }
 
-        public string GetUrl(string name)
+        public virtual string GetUrl()
         {
-            return "https://" + GetHost(name);
+            return "https://" + GetHost();
         }
 
-        public abstract string GetHost(string bucketName);
+        public abstract string GetHost();
 
         private static string CalculateCanonicalRequestHash(HttpMethod httpMethod, string url, IDictionary<string, string> httpHeaders, out string signedHeaders)
         {
@@ -90,7 +88,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var query = QueryHelpers.ParseQuery(uri.Query);
             var canonicalQueryString = query
                 .OrderBy(parameter => parameter.Key)
-                .Select(parameter => parameter.Value.Aggregate((current, value) => current + $"{parameter.Key}={value.Trim()}&"))
+                .Select(parameter => parameter.Value.Aggregate(string.Empty, (current, value) =>
+                    current + $"{parameter.Key}={value.Trim()}&"))
                 .Aggregate(string.Empty, (current, parameter) => current + parameter);
 
             if (canonicalQueryString.EndsWith("&"))
@@ -124,8 +123,9 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var hash = new HMACSHA256(_awsSecretKey))
                 key = hash.ComputeHash(Encoding.UTF8.GetBytes(date.ToString("yyyyMMdd")));
 
+            var regionForRequest = IsRegionInvariantRequest ? DefaultRegion : AwsRegion;
             using (var hash = new HMACSHA256(key))
-                key = hash.ComputeHash(Encoding.UTF8.GetBytes(AwsRegion));
+                key = hash.ComputeHash(Encoding.UTF8.GetBytes(regionForRequest));
 
             using (var hash = new HMACSHA256(key))
                 key = hash.ComputeHash(Encoding.UTF8.GetBytes(service));

@@ -57,7 +57,7 @@ namespace Raven.Client.Server.PeriodicBackup
         public string BucketName { get; set; }
 
         /// <summary>
-        /// Amazon S3 Remote folder name.
+        /// Amazon S3 remote folder name.
         /// </summary>
         public string RemoteFolderName { get; set; }
 

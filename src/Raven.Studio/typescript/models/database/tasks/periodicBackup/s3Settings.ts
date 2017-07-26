@@ -25,27 +25,39 @@ class s3Settings extends amazonSettings {
         */
 
         const ipRegExp = /^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$/;
+        const letterOrNumberRegex = /^[a-z0-9]+$/;
+        const regExp = /^[a-z0-9\.-]+$/;
         this.bucketName.extend({
             validation: [
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && bucketName.length >= 4 && bucketName.length <= 62),
-                    message: "Bucket name must be at least 3 characters long and no more than 63"
+                        !!bucketName && bucketName.length >= 3 && bucketName.length <= 63),
+                    message: "Bucket name should be between 3 and 63 characters long"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && bucketName[0] !== "."),
-                    message: "Bucket name cannot start with a period (.)"
+                        !!bucketName && regExp.test(bucketName)),
+                    message: "Allowed characters are lowercase characters, numbers, periods, and dashes"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && bucketName[bucketName.length - 1] !== "."),
-                    message: "Bucket name cannot end with a period (.)"
+                        !!bucketName && letterOrNumberRegex.test(bucketName[0])),
+                    message: "Bucket name should start with a number or letter"
+                },
+                {
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && letterOrNumberRegex.test(bucketName[bucketName.length - 1])),
+                    message: "Bucket name should end with a number or letter"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
                         !!bucketName && !!bucketName && !bucketName.includes("..")),
-                    message: "There can be only one period between labels"
+                    message: "Bucket name cannot contain consecutive periods"
+                },
+                {
+                    validator: (bucketName: string) => this.validate(() =>
+                        !!bucketName && !!bucketName && !bucketName.includes(".-") && !bucketName.includes("-.")),
+                    message: "Bucket names cannot contain dashes next to periods (e.g. \" -.\" and/or \".-\")"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() => !ipRegExp.test(bucketName)),
@@ -54,43 +66,12 @@ class s3Settings extends amazonSettings {
             ]
         });
 
-        this.remoteFolderName.extend({
-            required: {
-                onlyIf: () => this.enabled()
-            }
-        });
-
         this.validationGroup = ko.validatedObservable({
             awsAccessKey: this.awsAccessKey,
             awsSecretKey: this.awsSecretKey,
             awsRegionName: this.awsRegionName,
-            bucketName: this.bucketName,
-            remoteFolderName: this.remoteFolderName
+            bucketName: this.bucketName
         });
-    }
-
-    validateS3BucketName(bucketName: string): boolean {
-        const labels = bucketName.split(".");
-        const labelRegExp = /^[a-z0-9-]+$/;
-        const validLabel = (label: string) => {
-            if (label == null || label.length === 0) {
-                return false;
-            }
-            if (!labelRegExp.test(label)) {
-                return false;
-            }
-            if (label.startsWith("-") || label.endsWith("-")) {
-                return false;
-            }
-
-            return true;
-        };
-
-        if (labels.some(l => !validLabel(l))) {
-            return true;
-        }
-
-        return false;
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.S3Settings {

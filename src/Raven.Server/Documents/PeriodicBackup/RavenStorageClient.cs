@@ -18,6 +18,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly List<HttpClient> _clients = new List<HttpClient>();
         protected readonly CancellationToken CancellationToken;
         protected readonly UploadProgress UploadProgress;
+        protected const int MaxRetriesForMultiPartUpload = 5;
 
         protected RavenStorageClient(UploadProgress uploadProgress, CancellationToken? cancellationToken)
         {
