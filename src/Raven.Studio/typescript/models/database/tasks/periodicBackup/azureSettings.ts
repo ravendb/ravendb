@@ -31,28 +31,26 @@ class azureSettings extends backupSettings {
         this.storageContainer.extend({
             validation: [
                 {
-                    validator: (storageContainer: string) => this.validate(() => !!storageContainer && storageContainer.length >= 4 && storageContainer.length <= 64),
-                    message: "Container name must be at least 3 characters long and no more than 63"
+                    validator: (storageContainer: string) => this.validate(() =>
+                        !!storageContainer && storageContainer.length >= 3 && storageContainer.length <= 63),
+                    message: "Container name should be between 3 and 63 characters long"
                 },
                 {
-                    validator: (storageContainer: string) => this.validate(() => allowedCharactersRegExp.test(storageContainer)),
-                    message: "Allowed characters are a-z, 0-9 and '-' (hyphen)"
+                    validator: (storageContainer: string) => this.validate(() =>
+                        allowedCharactersRegExp.test(storageContainer)),
+                    message: "Allowed characters lowercase characters, numbers and dashes"
                 },
                 {
-                    validator: (storageContainer: string) => this.validate(() => !!storageContainer && storageContainer[0] !== "-" && storageContainer[storageContainer.length - 1] !== "-"),
+                    validator: (storageContainer: string) => this.validate(() =>
+                        !!storageContainer && storageContainer[0] !== "-" && storageContainer[storageContainer.length - 1] !== "-"),
                     message: "Container name must start and end with a letter or number"
                 },
                 {
-                    validator: (storageContainer: string) => this.validate(() => !twoDashesRegExp.test(storageContainer)),
+                    validator: (storageContainer: string) => this.validate(() =>
+                        !twoDashesRegExp.test(storageContainer)),
                     message: "Consecutive dashes are not permitted in container names"
                 }
             ]
-        });
-
-        this.remoteFolderName.extend({
-            required: {
-                onlyIf: () => this.enabled()
-            }
         });
 
         this.accountName.extend({
@@ -68,13 +66,6 @@ class azureSettings extends backupSettings {
         });
 
         this.validationGroup = ko.validatedObservable({
-            storageContainer: this.storageContainer,
-            remoteFolderName: this.remoteFolderName,
-            accountName: this.accountName,
-            accountKey: this.accountKey
-        });
-
-        this.credentialsValidationGroup = ko.validatedObservable({
             storageContainer: this.storageContainer,
             accountName: this.accountName,
             accountKey: this.accountKey

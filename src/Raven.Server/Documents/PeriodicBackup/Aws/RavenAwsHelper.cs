@@ -37,6 +37,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             }
         }
 
+        public static string CalculatePayloadHashFromString(string str)
+        {
+            using (var stream = new MemoryStream())
+            using (var writer = new StreamWriter(stream))
+            {
+                writer.Write(str);
+                writer.Flush();
+                stream.Position = 0;
+                return CalculatePayloadHash(stream);
+            }
+        }
+
         /**
         * Computes the SHA-256 tree hash for the given file
         * 

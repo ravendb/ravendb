@@ -551,14 +551,19 @@ namespace Raven.Server.Documents.PeriodicBackup
                     {
                         await uploadToServer(settings, fileStream, uploadProgress);
                     }
-                    catch (OperationCanceledException)
+                    catch (OperationCanceledException e)
                     {
                         // shutting down
+                        exception.Value = e;
                     }
                     catch (Exception e)
                     {
                         exception.Value = e;
                         throw;
+                    }
+                    finally
+                    {
+                        uploadProgress.ChangeState(UploadState.Done);
                     }
                 }
             }));
@@ -579,10 +584,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress,
             string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName, uploadProgress, _cancellationToken.Token))
+            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, 
+                settings.AwsRegionName, settings.BucketName, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
-                await client.PutObject(settings.BucketName, key, stream, new Dictionary<string, string>
+                await client.PutObject(key, stream, new Dictionary<string, string>
                 {
                     {"Description", archiveDescription}
                 });
@@ -600,9 +606,11 @@ namespace Raven.Server.Documents.PeriodicBackup
             string fileName,
             UploadProgress uploadProgress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, settings.AwsRegionName, uploadProgress, _cancellationToken.Token))
+            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, 
+                settings.AwsRegionName, settings.VaultName, uploadProgress, _cancellationToken.Token))
             {
-                var archiveId = await client.UploadArchive(settings.VaultName, stream, fileName);
+                var key = CombinePathAndKey(_database.Name, folderName, fileName);
+                var archiveId = await client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Successfully uploaded backup {fileName} to Glacier, archive ID: {archiveId}");
             }

@@ -2,17 +2,13 @@
 
 abstract class backupSettings {
     enabled = ko.observable<boolean>();
-    enabledOneTimeValue: boolean;
 
     connectionType: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType;
     isTestingCredentials = ko.observable<boolean>();
-
     validationGroup: KnockoutValidationGroup;
-    credentialsValidationGroup: KnockoutValidationGroup;
 
     constructor(dto: Raven.Client.Server.PeriodicBackup.BackupSettings) {
         this.enabled(!dto.Disabled);
-        this.enabledOneTimeValue = !dto.Disabled;
     }
 
     validate(action: () => boolean): boolean {
@@ -27,7 +23,6 @@ abstract class backupSettings {
             Disabled: !this.enabled()
         }
     }
-
 }
 
 export = backupSettings;

@@ -72,9 +72,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task PutBlob(string key, Stream stream, Dictionary<string, string> metadata)
         {
+            await TestConnection();
+
             if (stream.Length > MaxUploadPutBlobInBytes)
             {
-                //for blobs over 256MB
+                // for blobs over 256MB
                 await PutBlockApi(key, stream, metadata);
                 return;
             }
@@ -115,7 +117,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             var streamLength = stream.Length;
             if (streamLength > TotalBlocksSizeLimitInBytes)
                 throw new InvalidOperationException(@"Can't upload more than 4.75TB to Azure, " +
-                                                    $"current upload size: {new Size(stream.Length).HumaneSize}");
+                                                    $"current upload size: {new Size(streamLength).HumaneSize}");
 
             var blockNumber = 0;
             var blockIds = new List<string>();
@@ -133,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                     var blockIdString = Convert.ToBase64String(blockNumberInBytes);
                     blockIds.Add(blockIdString);
 
-                    var length = Math.Min(OnePutBlockSizeLimitInBytes, stream.Length - stream.Position);
+                    var length = Math.Min(OnePutBlockSizeLimitInBytes, streamLength - stream.Position);
                     var baseUrlForUpload = baseUrl + "?comp=block&blockid=";
                     var url = baseUrlForUpload + WebUtility.UrlEncode(blockIdString);
 
@@ -141,7 +143,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 }
 
                 // put block list
-                await PutBlockList(baseUrl, blockIds, metadata);
+                await PutBlockList(baseUrl, client, blockIds, metadata);
             }
             finally
             {
@@ -180,13 +182,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                         response.StatusCode == HttpStatusCode.BadRequest)
                         throw StorageException.FromResponseMessage(response);
 
-                    if (retryCount == 3)
+                    if (retryCount == MaxRetriesForMultiPartUpload)
                         throw StorageException.FromResponseMessage(response);
                     
                 }
                 catch (Exception)
                 {
-                    if (retryCount == 3)
+                    if (retryCount == MaxRetriesForMultiPartUpload)
                         throw;
                 }
 
@@ -198,15 +200,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             // maybe there was a network issue?
             await Task.Delay(1000);
 
-            if (CancellationToken.IsCancellationRequested)
-                return;
+            CancellationToken.ThrowIfCancellationRequested();
 
             // restore the stream position before retrying
             baseStream.Position = position;
             await PutBlock(baseStream, client, url, length, ++retryCount);
         }
 
-        private async Task PutBlockList(string baseUrl, List<string> blockIds, Dictionary<string, string> metadata)
+        private async Task PutBlockList(string baseUrl, HttpClient client,
+            List<string> blockIds, Dictionary<string, string> metadata)
         {
             var url = baseUrl + "?comp=blocklist";
             var now = SystemTime.UtcNow;
@@ -226,7 +228,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
             foreach (var metadataKey in metadata.Keys)
                 content.Headers.Add("x-ms-meta-" + metadataKey.ToLower(), metadata[metadataKey]);
 
-            var client = GetClient(TimeSpan.FromHours(1));
             client.DefaultRequestHeaders.Authorization = CalculateAuthorizationHeaderValue(HttpMethods.Put, url, content.Headers);
 
             var response = await client.PutAsync(url, content, CancellationToken);
@@ -238,10 +239,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
         public async Task TestConnection()
         {
-            await GetContainer();
+            if (await ContainerExists())
+                return;
+
+            throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
         }
 
-        private async Task GetContainer()
+        private async Task<bool> ContainerExists()
         {
             var url = _serverUrlForContainer + "?restype=container";
             var now = SystemTime.UtcNow;
@@ -259,10 +263,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
             var response = await client.SendAsync(requestMessage, CancellationToken);
             if (response.IsSuccessStatusCode)
-                return;
+                return true;
 
             if (response.StatusCode == HttpStatusCode.NotFound)
-                throw new ContainerNotFoundException($"Container '{_containerName}' not found!");
+                return false;
 
             throw StorageException.FromResponseMessage(response);
         }

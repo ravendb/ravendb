@@ -94,12 +94,6 @@ abstract class amazonSettings extends backupSettings {
                 onlyIf: () => this.enabled()
             }
         });
-
-        this.credentialsValidationGroup = ko.validatedObservable({
-            awsRegionName: this.awsRegionName,
-            awsAccessKey: this.awsAccessKey,
-            awsSecretKey: this.awsSecretKey
-        });
     }
 
     createAwsRegionAutoCompleter(hasS3: boolean) {

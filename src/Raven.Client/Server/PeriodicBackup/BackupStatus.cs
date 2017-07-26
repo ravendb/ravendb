@@ -97,7 +97,10 @@ namespace Raven.Client.Server.PeriodicBackup
         public UploadProgress()
         {
             UploadType = UploadType.Regular;
+            _sw = Stopwatch.StartNew();
         }
+
+        private readonly Stopwatch _sw;
 
         public long UploadedInBytes { get; set; }
 
@@ -110,6 +113,8 @@ namespace Raven.Client.Server.PeriodicBackup
         public void ChangeState(UploadState newState)
         {
             UploadState = newState;
+            if (newState == UploadState.Done)
+                _sw.Stop();
         }
 
         public void SetTotal(long totalLength)
