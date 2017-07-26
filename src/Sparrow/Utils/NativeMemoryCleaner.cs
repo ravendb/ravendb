@@ -4,7 +4,7 @@ using Sparrow.LowMemory;
 
 namespace Sparrow.Utils
 {
-    public class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
+    public sealed class NativeMemoryCleaner<TStack, TPooledItem> : IDisposable where TPooledItem : PooledItem where TStack : StackHeader<TPooledItem>
     {
         private readonly ThreadLocal<TStack> _pool;
         private readonly object _lock = new object();
