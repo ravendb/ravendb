@@ -661,34 +661,40 @@ namespace Sparrow.Json
         {
             if (_disposed)
                 ThrowObjectDisposed();
-
-            _jsonParserState.Reset();
+            
             UnmanagedJsonParser parser = null;
             BlittableJsonDocumentBuilder builder = null;
             var generation = _generation;
             try
             {
+                _jsonParserState.Reset();
+
                 parser = new UnmanagedJsonParser(this, _jsonParserState, documentId);
                 builder = new BlittableJsonDocumentBuilder(this, mode, documentId, parser, _jsonParserState);
 
                 CachedProperties.NewDocument();
                 builder.ReadObjectDocument();
+
+                CancellationToken ct = token ?? CancellationToken.None;
+
+                var buffer = bytes.Buffer;
+                
                 while (true)
                 {
-                    token?.ThrowIfCancellationRequested();
+                    ct.ThrowIfCancellationRequested();
                     if (bytes.Valid == bytes.Used)
                     {
-                        var read = token.HasValue
-                            ? await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value)
-                            : await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
+                        var read = await stream.ReadAsync(buffer.Array, buffer.Offset, bytes.Length, ct);
                         if (read == 0)
-                            throw new EndOfStreamException("Stream ended without reaching end of json content");
+                            goto ThrowStreamEnded;
+                        
                         bytes.Valid = read;
                         bytes.Used = 0;
                         maxSize -= read;
-                        if(maxSize < 0)
-                            throw new ArgumentException($"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
+                        if (maxSize < 0)
+                            goto ThrowMaxSizeExceeded;
                     }
+                    
                     parser.SetBuffer(bytes);
                     var result = builder.Read();
                     bytes.Used += parser.BufferOffset;
@@ -704,6 +710,9 @@ namespace Sparrow.Json
             {
                 DisposeIfNeeded(generation, parser, builder);
             }
+
+            ThrowStreamEnded: throw new EndOfStreamException("Stream ended without reaching end of json content");
+            ThrowMaxSizeExceeded: throw new ArgumentException($"The maximum size allowed for {documentId} ({maxSize}) has been exceeded, aborting");
         }
 
         private void DisposeIfNeeded(int generation, UnmanagedJsonParser parser, BlittableJsonDocumentBuilder builder)
