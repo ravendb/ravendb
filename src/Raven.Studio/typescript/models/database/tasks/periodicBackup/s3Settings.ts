@@ -31,32 +31,32 @@ class s3Settings extends amazonSettings {
             validation: [
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && bucketName.length >= 3 && bucketName.length <= 63),
+                        bucketName && bucketName.length >= 3 && bucketName.length <= 63),
                     message: "Bucket name should be between 3 and 63 characters long"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && regExp.test(bucketName)),
+                        bucketName && regExp.test(bucketName)),
                     message: "Allowed characters are lowercase characters, numbers, periods, and dashes"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && letterOrNumberRegex.test(bucketName[0])),
+                        bucketName && letterOrNumberRegex.test(bucketName[0])),
                     message: "Bucket name should start with a number or letter"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && letterOrNumberRegex.test(bucketName[bucketName.length - 1])),
+                        bucketName && letterOrNumberRegex.test(bucketName[bucketName.length - 1])),
                     message: "Bucket name should end with a number or letter"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && !!bucketName && !bucketName.includes("..")),
+                        bucketName && !bucketName.includes("..")),
                     message: "Bucket name cannot contain consecutive periods"
                 },
                 {
                     validator: (bucketName: string) => this.validate(() =>
-                        !!bucketName && !!bucketName && !bucketName.includes(".-") && !bucketName.includes("-.")),
+                        bucketName && !bucketName.includes(".-") && !bucketName.includes("-.")),
                     message: "Bucket names cannot contain dashes next to periods (e.g. \" -.\" and/or \".-\")"
                 },
                 {

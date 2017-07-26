@@ -32,7 +32,7 @@ class azureSettings extends backupSettings {
             validation: [
                 {
                     validator: (storageContainer: string) => this.validate(() =>
-                        !!storageContainer && storageContainer.length >= 3 && storageContainer.length <= 63),
+                        storageContainer && storageContainer.length >= 3 && storageContainer.length <= 63),
                     message: "Container name should be between 3 and 63 characters long"
                 },
                 {
@@ -42,7 +42,7 @@ class azureSettings extends backupSettings {
                 },
                 {
                     validator: (storageContainer: string) => this.validate(() =>
-                        !!storageContainer && storageContainer[0] !== "-" && storageContainer[storageContainer.length - 1] !== "-"),
+                        storageContainer && storageContainer[0] !== "-" && storageContainer[storageContainer.length - 1] !== "-"),
                     message: "Container name must start and end with a letter or number"
                 },
                 {

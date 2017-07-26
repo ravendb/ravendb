@@ -20,7 +20,8 @@ class glacierSettings extends amazonSettings {
         this.vaultName.extend({
             validation: [
                 {
-                    validator: (vaultName: string) => this.validate(() => !!vaultName && vaultName.length >= 1 && vaultName.length <= 255),
+                    validator: (vaultName: string) => this.validate(() =>
+                        vaultName && vaultName.length >= 1 && vaultName.length <= 255),
                     message: "Vault name must be at least 1 character and no more than 255 characters long"
                 },
                 {
