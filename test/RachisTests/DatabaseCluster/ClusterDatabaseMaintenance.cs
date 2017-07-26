@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Raven.Server;
@@ -215,6 +216,44 @@ namespace RachisTests.DatabaseCluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
                 await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisConsensus.State.Follower, Servers[1].ServerStore.CurrentState);
+            }
+        }
+
+        [Fact]
+        public async Task RedistrebuteDatabaseIfNodeFailes()
+        {
+            MiscUtils.DisableLongTimespan = true;
+            var clusterSize = 3;
+            var dbGroupSize = 2;
+            var databaseName = "RedistrebuteDatabaseIfNodeFailes";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                doc.Topology = new DatabaseTopology();
+                doc.Topology.Members.Add("A");
+                doc.Topology.Members.Add("B");
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
+                Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User {Name = "Karmel"},"users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1",u=>u.Name == "Karmel", TimeSpan.FromSeconds(5)));
+                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+
+                // the db should move from node B to node C
+                var newTopology = new DatabaseTopology();
+                newTopology.Members.Add("A");
+                newTopology.Members.Add("C");
+                Assert.True(await WaitForDocumentInClusterAsync<User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
             }
         }
 

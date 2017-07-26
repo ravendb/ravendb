@@ -71,7 +71,9 @@ namespace Raven.Client.Server
         public List<string> Promotables = new List<string>();
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
         public Dictionary<string, string> PromotablesStatus = new Dictionary<string, string>();
+
         public LeaderStamp Stamp;
+        public bool DynamicNodesDistribution = true;
 
         public bool RelevantFor(string nodeTag)
         {
@@ -168,8 +170,8 @@ namespace Raven.Client.Server
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
                 [nameof(Stamp)] = Stamp.ToJson(),
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
-                [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons)
-
+                [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
+                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution
             };
         }
 

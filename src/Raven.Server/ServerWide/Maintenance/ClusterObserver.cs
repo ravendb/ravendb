@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Xml;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Util;
@@ -14,6 +16,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
@@ -132,18 +135,18 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool _hasLivingNodesFlag;
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
-            Dictionary<string, ClusterNodeStatusReport> currentClusterStats,
-            Dictionary<string, ClusterNodeStatusReport> previousClusterStats)
+            Dictionary<string, ClusterNodeStatusReport> current,
+            Dictionary<string, ClusterNodeStatusReport> previous)
         {
             if (topology.Members.Count > 1)
             {
                 var hasLivingNode = false;
                 foreach (var member in topology.Members)
                 {
-                    if (currentClusterStats.TryGetValue(member, out var nodeStats) &&
+                    if (current.TryGetValue(member, out var nodeStats) &&
                         nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
                         nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
-                        dbStats.Status == DatabaseStatus.Loaded)
+                        dbStats.Status == Loaded)
                     {
                         hasLivingNode = true;
                         _hasLivingNodesFlag = true;
@@ -176,10 +179,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 foreach (var member in topology.Members)
                 {
-                    if (currentClusterStats.TryGetValue(member, out var nodeStats) == false ||
+                    if (current.TryGetValue(member, out var nodeStats) == false ||
                         nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok ||
                         nodeStats.LastReport.TryGetValue(dbName, out var dbStats) == false ||
-                        dbStats.Status == DatabaseStatus.Faulted)
+                        dbStats.Status == Faulted)
                     {
                         topology.Members.Remove(member);
                         topology.Promotables.Add(member);
@@ -198,7 +201,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             reason = $"Demoted because the last report status was \"{nodeStats.LastReportStatus}\" ";
                         }
-                        else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == DatabaseStatus.Faulted)
+                        else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
                         {
                             reason = "Demoted because the DatabaseStatus for this node is Faulted";
                         }
@@ -218,11 +221,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         return true;
                     }
 
-                    if (dbStats.Status == DatabaseStatus.Loading)
+                    if (dbStats.Status == Loading)
                     {
-                        if (previousClusterStats.TryGetValue(member, out var prevNodeStats) &&
+                        if (previous.TryGetValue(member, out var prevNodeStats) &&
                             prevNodeStats.LastReport.TryGetValue(dbName, out var prevDbStats) &&
-                            prevDbStats.Status == DatabaseStatus.Loading)
+                            prevDbStats.Status == Loading)
                         {
                             topology.Members.Remove(member);
                             topology.Promotables.Add(member);
@@ -252,18 +255,39 @@ namespace Raven.Server.ServerWide.Maintenance
                     // We are in passive mode and were kicked out of the cluster.
                     return false;
                 }
-                if (previousClusterStats.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
+
+                if (ShouldReassign(topology, promotable, dbName, current, previous))
+                {
+                    var node = FindLeastDbNode(promotable, dbName, current);
+                    if (node == null)
+                    {
+                        if (_logger.IsOperationsEnabled)
+                        {
+                            _logger.Operations($"Somthing is wrong with {dbName} on {promotable}, but we were unable to reassign it.");
+                        }
+                        continue;
+                    }
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations($"Somthing is wrong with {dbName} on {promotable}, so we reassign it to {node}.");
+                    }
+                    topology.RemoveFromTopology(promotable);
+                    topology.Promotables.Add(node);
+                    return true;
+                }
+
+                if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
                     mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
                     continue;
 
-                if (currentClusterStats.TryGetValue(promotable, out var promotableClusterStats) == false ||
+                if (current.TryGetValue(promotable, out var promotableClusterStats) == false ||
                    promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
                     continue;
 
                 var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
                 if (status == ConflictStatus.AlreadyMerged)
                 {
-                    if (previousClusterStats.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
+                    if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                         promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
                         continue;
 
@@ -305,6 +329,56 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
+        private const DatabaseStatus BadFlags = Faulted | Shutdown;
+        private bool ShouldReassign(
+            DatabaseTopology topology, string node, string db,
+            Dictionary<string, ClusterNodeStatusReport> current, 
+            Dictionary<string, ClusterNodeStatusReport> previous)
+        {
+            if (topology.DynamicNodesDistribution == false)
+                return false;
+
+            DatabaseStatusReport currentDbStats = null;
+            DatabaseStatusReport prevDbStats = null;
+            var hasCurrent = current.TryGetValue(node, out var currentNodeStats) && currentNodeStats.LastReport.TryGetValue(db, out currentDbStats);
+            var hasPrev = previous.TryGetValue(node, out var prevNodeStats) && prevNodeStats.LastReport.TryGetValue(db, out prevDbStats);
+
+            if (hasCurrent == false && hasPrev == false)
+                return true;
+
+            // Wait until we have more info
+            if (hasCurrent == false || hasPrev == false)
+                return false;
+
+            if (currentNodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok &&
+                prevNodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+                return true;
+
+            if ((currentDbStats.Status & BadFlags) != 0 && (prevDbStats.Status & BadFlags) != 0)
+                return true;
+
+            return false;
+        }
+
+        private string FindLeastDbNode(string badNode, string db,
+            Dictionary<string, ClusterNodeStatusReport> current)
+        {
+            string bestNode = null;
+            var dbCount = int.MaxValue;
+            foreach (var report in current)
+            {
+                if(report.Key == badNode)
+                    continue;
+                if(report.Value.LastReport.ContainsKey(db))
+                    continue;
+                if (dbCount > report.Value.LastReport.Count)
+                {
+                    dbCount = report.Value.LastReport.Count;
+                    bestNode = report.Key;
+                }
+            }
+            return bestNode;
+        }
 
         private bool CheckIndexProgress(
             long lastPrevEtag,

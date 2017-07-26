@@ -437,7 +437,7 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                return ChangeVectorUtils.TryUpdateChangeVector(_database.ServerStore.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
+                return ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
             }
         }
         

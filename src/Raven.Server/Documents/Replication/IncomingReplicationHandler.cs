@@ -504,6 +504,8 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
+                [nameof(ReplicationMessageReply.NodeTag)] = _parent._server.NodeTag,
+
             };
 
             documentsContext.Write(writer, heartbeat);
@@ -967,7 +969,7 @@ namespace Raven.Server.Documents.Replication
                     Debug.Assert(context.LastDatabaseChangeVector != null);
 
                     // instead of : SetDatabaseChangeVector -> maxReceivedChangeVectorByDatabase , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
-                    context.LastDatabaseChangeVector = context.GetLazyString(maxReceivedChangeVectorByDatabase);
+                    context.LastDatabaseChangeVector = maxReceivedChangeVectorByDatabase;
 
                     // instead of : SetLastReplicateEtagFrom -> _incoming.ConnectionInfo.SourceDatabaseId, _lastEtag , we will store in context and write once right before commit (one time instead of repeating on all docs in the same Tx)
                     if (context.LastReplicationEtagFrom == null)

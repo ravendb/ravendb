@@ -293,7 +293,7 @@ namespace Raven.Server.Documents
             {
                 return context.GetLazyString(string.Empty);
             }
-            return context.GetLazyString(Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length));
+            return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
 
         public string GetNewChangeVector(DocumentsOperationContext context, long newEtag)

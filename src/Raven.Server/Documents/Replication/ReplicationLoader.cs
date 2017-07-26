@@ -215,6 +215,7 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageReply.Type)] = "Ok",
                         [nameof(ReplicationMessageReply.MessageType)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageReply.LastEtagAccepted)] = lastEtagFromSrc,
+                        [nameof(ReplicationMessageReply.NodeTag)] = _server.NodeTag,
                         [nameof(ReplicationMessageReply.DatabaseChangeVector)] = changeVector
                     };
 

@@ -6,13 +6,14 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance
 {
+    [Flags]
     public enum DatabaseStatus
     {
-        Loaded,
-        Loading,
-        Faulted,
-        Unloaded,
-        Shutdown,
+        Loaded = 1,
+        Loading = 2,
+        Faulted = 4,
+        Unloaded = 8,
+        Shutdown = 16,
     }
 
     public class DatabaseStatusReport : IDynamicJson
