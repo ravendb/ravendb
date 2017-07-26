@@ -42,7 +42,7 @@ class cluster extends viewModelBase {
     compositionComplete() {
         super.compositionComplete();
 
-        this.graph.init($("#clusterGraphContainer"));
+        this.graph.init($("#clusterGraphContainer"), this.topology().nodes().length);
 
         this.graph.draw(this.topology().nodes(), this.topology().leader());
 
