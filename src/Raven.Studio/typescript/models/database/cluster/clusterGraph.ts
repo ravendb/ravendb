@@ -52,9 +52,6 @@ class clusterGraph {
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
 
-        const defs = this.svg
-            .append("defs");
-
         const tranform = this.svg.append("g")
             .attr("transform", "translate(" + (this.width / 2) + "," + (this.height / 2) + ")");
 

@@ -127,7 +127,7 @@
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
             <i class="icon-recent"></i>
             <span>Recent</span>
-            <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
+            <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce': hasBounceClass }"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
         </a>
         <!-- /ko -->
     </li>
@@ -143,7 +143,7 @@
         <!-- ko with: $root.collectionsTracker.getSystemDocumentsCollection() -->
         <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data) }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }">
             <i class="icon-system"></i> <span>System</span>
-            <div class="collection-count" data-bind="attr: { title: documentCount().toLocaleString() }"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
+            <div class="collection-count" data-bind="attr: { title: documentCount().toLocaleString() }, css: { 'bounce': hasBounceClass }"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
         </a>
         <!-- /ko -->
     </li>
@@ -156,7 +156,7 @@
             <li>
                 <a data-bind="click: $parent.menu.navigate.bind($parent.menu), attr: { href: $root.urlForCollection($data), title: name }, css: { 'active': $parent.item.isOpen($parent.menu.activeItem, $data) }, visible: !isAllDocuments && !isSystemDocuments">
                     <span data-bind="text: name"></span>
-                    <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
+                    <div class="collection-count" data-bind="attr: {title: documentCount().toLocaleString()}, css: { 'bounce' : hasBounceClass }"><div class="value" data-bind="text: countPrefix"></div><div data-bind="attr: { class: sizeClass }"></div></div>
                 </a>
             </li>
             <!-- /ko -->
