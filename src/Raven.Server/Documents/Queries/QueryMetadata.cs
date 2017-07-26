@@ -320,9 +320,12 @@ namespace Raven.Server.Documents.Queries
                         continue;
                     }
 
+                    if (arguments.Count == 3 && i == 2 && argument is FieldToken)
+                        continue; // e.g. search(FieldName, 'sth', AND)
+
                     // validation of parameters
 
-                    var value = (ValueToken)arguments[i];
+                    var value = (ValueToken)argument;
                     if (i > 1 && value.Type != previousType)
                         ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 

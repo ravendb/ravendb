@@ -15,7 +15,7 @@ namespace SlowTests.Bugs
                 {
                     s.Advanced
                         .DocumentQuery<User>()
-                        .WhereLucene("Widgets,Sprockets,Name", "Sprock01")
+                        .WhereLucene("Widgets[].Sprockets[].Name", "Sprock01")
                         .ToList();
                 }
             }

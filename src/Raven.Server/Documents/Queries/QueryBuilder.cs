@@ -284,9 +284,17 @@ namespace Raven.Server.Documents.Queries
                 return LuceneQueryHelper.AnalyzedTerm(fieldName, nValue, GetTermType(nValue), analyzer);
             }
 
+            var occur = Occur.SHOULD;
+            if (expression.Arguments.Count == 3)
+            {
+                var op = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[2]);
+                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
+                    occur = Occur.MUST;
+            }
+
             var q = new BooleanQuery();
             foreach (var v in values)
-                q.Add(LuceneQueryHelper.AnalyzedTerm(fieldName, v, GetTermType(v), analyzer), Occur.SHOULD);
+                q.Add(LuceneQueryHelper.AnalyzedTerm(fieldName, v, GetTermType(v), analyzer), occur);
 
             return q;
 

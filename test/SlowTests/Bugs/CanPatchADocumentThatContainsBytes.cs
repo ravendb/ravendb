@@ -9,10 +9,10 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.Bugs
@@ -42,13 +42,9 @@ namespace SlowTests.Bugs
 
                 using (var session = store.OpenSession())
                 {
-                    var index = new IndexQuery
-                    {
-                        Query =
-                            session.Query<PrimarySkills.Result, PrimarySkills>()
-                                .Where(result => result.SkillId == 1)
-                                .ToString()
-                    };
+                    var index = GetIndexQuery(session.Query<PrimarySkills.Result, PrimarySkills>()
+                        .Where(result => result.SkillId == 1));
+
                     var patch = new PatchRequest
                     {
                         Script = @"
@@ -66,6 +62,12 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
                     Assert.False(user.Skills.Single().IsPrimary);
                 }
             }
+        }
+
+        private static IndexQuery GetIndexQuery<T>(IQueryable<T> queryable)
+        {
+            var inspector = (IRavenQueryInspector)queryable;
+            return inspector.GetIndexQuery(isAsync: false);
         }
 
         private class User

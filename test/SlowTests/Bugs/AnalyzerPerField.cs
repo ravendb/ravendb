@@ -51,7 +51,7 @@ namespace SlowTests.Bugs
                     Assert.Equal(1, movies.Count);
 
                     movies = s.Advanced.DocumentQuery<Movie>("Movies")
-                        .WhereLucene("Name", "she's")
+                        .WhereLucene("Tagline", "she's")
                         .WaitForNonStaleResults()
                         .ToList();
 

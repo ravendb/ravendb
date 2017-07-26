@@ -401,6 +401,9 @@ namespace Raven.Client.Documents.Session
 
         public void UsingDefaultOperator(QueryOperator @operator)
         {
+            if (WhereTokens.Count != 0)
+                throw new InvalidOperationException("Default operator can only be set before any where clause is added.");
+            
             DefaultOperator = @operator;
         }
 
@@ -1368,7 +1371,7 @@ If you really want to do in memory filtering on the data returned from the query
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
                 );
 
-            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms)));
+            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), DefaultOperator));
         }
 
         /// <summary>
