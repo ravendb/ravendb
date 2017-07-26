@@ -1,5 +1,4 @@
-﻿using System;
-using System.Text;
+﻿using System.Text;
 
 namespace Raven.Client.Documents.Session.Tokens
 {
@@ -13,7 +12,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append(", ");
+            writer.Append(",");
         }
     }
 }

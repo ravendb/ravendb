@@ -1635,7 +1635,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (previousToken == null)
                 return;
 
-            if (previousToken is OpenSubclauseToken || currentToken is CloseSubclauseToken)
+            if (previousToken is OpenSubclauseToken || currentToken is CloseSubclauseToken || currentToken is IntersectMarkerToken)
                 return;
 
             writer.Append(" ");
