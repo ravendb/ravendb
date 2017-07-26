@@ -20,6 +20,8 @@ namespace Raven.Server.Documents.Queries
             qp.Init(query);
             Query = qp.Parse();
 
+            QueryText = Query.QueryText;
+
             IsDynamic = Query.From.Index == false;
             IsDistinct = Query.IsDistinct;
             IsGroupBy = Query.GroupBy != null;
@@ -45,6 +47,8 @@ namespace Raven.Server.Documents.Queries
         public readonly string IndexName;
 
         public readonly Query Query;
+
+        public readonly string QueryText;
 
         public readonly HashSet<string> IndexFieldNames = new HashSet<string>();
 
@@ -294,26 +298,29 @@ namespace Raven.Server.Documents.Queries
                 if (arguments.Count == 0)
                     return;
 
-                var firstArgument = arguments[0];
-                var firstArgumentAsExpression = firstArgument as QueryExpression;
-                if (firstArgumentAsExpression != null)
-                {
-                    Visit(firstArgumentAsExpression, parameters);
-                    return;
-                }
-
-                var firstArgumentAsField = (FieldToken)firstArgument;
-                var fieldName = QueryExpression.Extract(_metadata.Query.QueryText, firstArgumentAsField);
-
-                if (arguments.Count == 1)
-                {
-                    _metadata.AddExistField(fieldName);
-                    return;
-                }
-
+                string fieldName = null;
                 var previousType = ValueTokenType.Null;
-                for (var i = 1; i < arguments.Count; i++)
+
+                for (var i = 0; i < arguments.Count; i++)
                 {
+                    var argument = arguments[i];
+
+                    if (argument is QueryExpression expressionArgument)
+                    {
+                        Visit(expressionArgument, parameters);
+                        continue;
+                    }
+
+                    if (i == 0)
+                    {
+                        if (argument is FieldToken fieldTokenArgument)
+                            fieldName = QueryExpression.Extract(_metadata.Query.QueryText, fieldTokenArgument);
+                        
+                        continue;
+                    }
+
+                    // validation of parameters
+
                     var value = (ValueToken)arguments[i];
                     if (i > 1 && value.Type != previousType)
                         ThrowIncompatibleTypesOfVariables(fieldName, arguments.Skip(1).Cast<ValueToken>().ToArray());
@@ -326,7 +333,16 @@ namespace Raven.Server.Documents.Queries
                     previousType = valueType;
                 }
 
-                _metadata.AddWhereField(fieldName, previousType);
+                if (fieldName == null)
+                {
+                    // we can have null field name here e.g. boost(search(Tags, :p1), 20), intersect(Age > 20, Name = 'Joe')
+                    return;
+                }
+
+                if (arguments.Count == 1)
+                    _metadata.AddExistField(fieldName); // exists(FieldName)
+                else
+                    _metadata.AddWhereField(fieldName, previousType);
             }
         }
     }

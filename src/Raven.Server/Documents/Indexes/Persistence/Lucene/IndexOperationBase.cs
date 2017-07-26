@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             Query documentQuery;
 
-            if (string.IsNullOrEmpty(metadata.Query.QueryText))
+            if (string.IsNullOrEmpty(metadata.QueryText))
             {
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Issuing query on index {_indexName} for all documents");

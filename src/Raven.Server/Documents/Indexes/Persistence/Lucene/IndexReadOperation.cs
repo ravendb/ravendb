@@ -10,6 +10,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
@@ -130,29 +131,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
         {
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
-                throw new InvalidOperationException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got {query.Metadata.Query.Where.Type} expression");
+                throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText);
             
-            var methodName = QueryExpression.Extract(query.Metadata.Query.QueryText, query.Metadata.Query.Where.Field);
+            var methodName = QueryExpression.Extract(query.Metadata.QueryText, query.Metadata.Query.Where.Field);
             
             if (string.Equals("intersect", methodName) == false)
-                throw new InvalidOperationException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got {methodName} method");
+                throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText);
+
+            if (query.Metadata.Query.Where.Arguments.Count <= 1)
+                throw new InvalidQueryException("The valid intersect query must have multiple intersect clauses.", query.Metadata.QueryText);
 
             var subQueries = new Query[query.Metadata.Query.Where.Arguments.Count];
 
             for (var i = 0; i < subQueries.Length; i++)
             {
-                subQueries[i] = GetLuceneQuery(query.Metadata, query.Metadata.Query.Where.Arguments[i] as QueryExpression, query.QueryParameters, _analyzer);
+                var whereExpression = query.Metadata.Query.Where.Arguments[i] as QueryExpression;
+
+                if (whereExpression == null)
+                    throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText);
+
+                subQueries[i] = GetLuceneQuery(query.Metadata, whereExpression, query.QueryParameters, _analyzer);
             }
-            
-            if (subQueries.Length <= 1)
-                throw new InvalidOperationException("Invalid INTERSECT query, must have multiple intersect clauses.");
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
             //of the final result because we're doing an intersection query (but we might exclude some of them)
             var pageSize = GetPageSize(_searcher, query.PageSize);
             int pageSizeBestGuess = GetPageSize(_searcher, ((long)query.Start + query.PageSize) * 2);
-            int intersectMatches, skippedResultsInCurrentLoop = 0;
-            int previousBaseQueryMatches = 0, currentBaseQueryMatches;
+            int skippedResultsInCurrentLoop = 0;
+            int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
             var sort = GetSort(query);
@@ -161,9 +167,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 //Do the first sub-query in the normal way, so that sorting, filtering etc is accounted for
                 var search = ExecuteQuery(firstSubDocumentQuery, 0, pageSizeBestGuess, sort);
-                currentBaseQueryMatches = search.ScoreDocs.Length;
+                var currentBaseQueryMatches = search.ScoreDocs.Length;
                 var intersectionCollector = new IntersectionCollector(_searcher, search.ScoreDocs, _state);
 
+                int intersectMatches;
                 do
                 {
                     token.ThrowIfCancellationRequested();
