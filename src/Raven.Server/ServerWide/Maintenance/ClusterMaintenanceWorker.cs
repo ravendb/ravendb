@@ -94,13 +94,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask) == false)
                 {
-                    yield return (dbName, new DatabaseStatusReport
-                    {
-                        Name = dbName,
-                        NodeName = _server.NodeTag,
-                        Status = DatabaseStatus.Unloaded
-                    });
-                    continue;
+                    continue; // Database does not exists in this server
                 }
 
                 var report = new DatabaseStatusReport

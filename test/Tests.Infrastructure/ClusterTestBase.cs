@@ -261,6 +261,7 @@ namespace Tests.Infrastructure
                 timeout *= 100;
 
             var sw = Stopwatch.StartNew();
+            Exception ex = null;
             while (sw.ElapsedMilliseconds < timeout)
             {
                 using (var session = store.OpenSession())
@@ -274,8 +275,9 @@ namespace Tests.Infrastructure
                                 return true;
                         }
                     }
-                    catch (ConflictException)
+                    catch (Exception e)
                     {
+                        ex = e;
                         // expected that we might get conflict, ignore and wait
                     }
                 }
@@ -292,6 +294,10 @@ namespace Tests.Infrastructure
                     if (predicate == null || predicate(doc))
                         return true;
                 }
+            }
+            if (ex != null)
+            {
+                throw ex;
             }
             return false;
         }
