@@ -236,6 +236,9 @@ namespace Raven.Server.Documents.Queries
                     if (value == null)
                         return Constants.Documents.Indexing.Fields.NullValue;
 
+                    if (string.IsNullOrEmpty(value))
+                        return Constants.Documents.Indexing.Fields.EmptyString;
+
                     fixed (char* pValue = value)
                     {
                         var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
