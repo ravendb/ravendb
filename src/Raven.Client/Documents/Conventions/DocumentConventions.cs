@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Conventions
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
 
-            FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
+            FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
             FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 
             MaxNumberOfRequestsPerSession = 30;
