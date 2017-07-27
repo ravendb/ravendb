@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Raven.Server.Documents.PeriodicBackup
@@ -14,7 +15,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
     public class RestorePoint
     {
-        public string Key { get; set; }
+        public DateTime Key { get; set; }
         
         public RestorePointDetails Details { get; set; }
     }
