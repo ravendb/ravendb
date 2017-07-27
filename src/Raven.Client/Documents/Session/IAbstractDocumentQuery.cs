@@ -114,7 +114,7 @@ namespace Raven.Client.Documents.Session
         /// <remarks>
         ///   Defaults to NotAnalyzed
         /// </remarks>
-        void WhereExactMatch(string fieldName, object value);
+        void WhereExactMatch(string fieldName, string value);
 
         /// <summary>
         ///   Matches exact value

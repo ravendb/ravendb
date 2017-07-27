@@ -382,9 +382,9 @@ namespace Raven.Client.Documents.Session
         /// <remarks>
         ///   Defaults to NotAnalyzed
         /// </remarks>
-        public IDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, string value)
         {
-            WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
+            base.WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
             return this;
         }
 

@@ -827,7 +827,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches exact value
         /// </summary>
-        public void WhereExactMatch(string fieldName, object value)
+        public void WhereExactMatch(string fieldName, string value)
         {
             WhereExactMatch(new WhereParams
             {

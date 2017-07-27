@@ -219,7 +219,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
-                throw new InvalidOperationException();
+                ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
             return parser.Parse(value as string);
@@ -231,7 +231,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
-                throw new InvalidOperationException();
+                ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var valueAsString = value as string;
             if (string.IsNullOrEmpty(valueAsString))
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
-                throw new InvalidOperationException();
+                ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var valueAsString = value as string;
             valueAsString = string.IsNullOrEmpty(valueAsString)
@@ -275,7 +275,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
-                throw new InvalidOperationException();
+                ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var valueAsString = (string)value;
             var values = valueAsString.Split(' ');
@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Queries
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
             if (valueType != ValueTokenType.String)
-                throw new InvalidOperationException("TODO arek");
+                ThrowMethodExpectsArgumentOfTheFollowingType("exactMatch", ValueTokenType.String, valueType, metadata.QueryText, parameters);
 
             var valueAsString = value as string;
 
@@ -420,9 +420,9 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.String:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 case ValueTokenType.Double:
-                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double); // TODO arek - avoid +
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double);
                 case ValueTokenType.Long:
-                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long); // TODO arek - avoid +
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long);
                 case ValueTokenType.True:
                 case ValueTokenType.False:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.String);
@@ -647,6 +647,11 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnhandledExpressionOperatorType(OperatorType type, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unhandled expression operator type: {type}", queryText, parameters);
+        }
+
+        private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
         }
 
         private enum MethodType

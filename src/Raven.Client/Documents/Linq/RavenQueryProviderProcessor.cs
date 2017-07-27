@@ -897,7 +897,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                     memberInfo = GetMember(expression.Arguments[firstArgIndex]);
                     objects = GetValueFromExpression(expression.Arguments[firstArgIndex + 1], GetMemberType(memberInfo));
-                    _documentQuery.WhereExactMatch(memberInfo.Path, objects);
+                    _documentQuery.WhereExactMatch(memberInfo.Path, (string)objects);
                     break;
                 default:
                     {

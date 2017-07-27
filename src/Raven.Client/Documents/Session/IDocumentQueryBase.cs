@@ -582,7 +582,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <remarks>
         ///     Defaults to NotAnalyzed
         /// </remarks>
-        TSelf WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, string value);
 
         /// <summary>
         ///     Matches exact value
