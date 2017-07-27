@@ -38,8 +38,8 @@ namespace Raven.Client.Server
         public static (HashSet<string> addDestinations, HashSet<string> removeDestinations) FindExternalConnectionChanges(
             List<ExternalReplication> oldDestinations, List<ExternalReplication> newDestinations)
         {
-            var oldList = new List<string>(); // TODO: Remove the allocation
-            var newList = new List<string>(); // TODO: Remove the allocation
+            var oldList = new List<string>();
+            var newList = new List<string>();
 
             if (oldDestinations != null)
             {

@@ -23,7 +23,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
-    public class DatabasesHandler : RequestHandler
+    public sealed class DatabasesHandler : RequestHandler
     {
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()

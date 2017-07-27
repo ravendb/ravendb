@@ -689,7 +689,8 @@ namespace Raven.Server.Documents
             catch (Exception e)
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Got exception during StateChanged({index}).");
+                    _logger.Info($"Got exception during StateChanged({index}).", e);
+
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown(e);
 

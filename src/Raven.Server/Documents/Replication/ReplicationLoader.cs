@@ -777,34 +777,17 @@ namespace Raven.Server.Documents.Replication
                 var waitForNextReplicationAsync = WaitForNextReplicationAsync();
                 var past = ReplicatedPast(lastChangeVector);
                 if (past >= numberOfReplicasToWaitFor)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Succeed to get write assurance on a database with {numberOfReplicasToWaitFor} servers by writing to {past} servers. " +
-                                  $"LastChangeVector is: {lastChangeVector}.");
                     return past;
-                }
 
                 var remaining = waitForReplicasTimeout - sp.Elapsed;
                 if (remaining < TimeSpan.Zero)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"Timeout ({remaining}) while trying to get write assurance on a database with {numberOfReplicasToWaitFor} servers. " +
-                                  $"Written so far to {past} servers only. " +
-                                  $"LastChangeVector is: {lastChangeVector}.");
                     return ReplicatedPast(lastChangeVector);
-                }
 
                 var timeout = TimeoutManager.WaitFor(remaining);
                 try
                 {
                     if (await Task.WhenAny(waitForNextReplicationAsync, timeout) == timeout)
-                    {
-                        if (_log.IsInfoEnabled)
-                            _log.Info($"Timeout while trying to get write assurance on a database with {numberOfReplicasToWaitFor} servers. " +
-                                      $"Written so far to {past} servers only. " +
-                                      $"LastChangeVector is: {lastChangeVector}.");
                         return ReplicatedPast(lastChangeVector);
-                    }
                 }
                 catch (OperationCanceledException e)
                 {
@@ -833,11 +816,7 @@ namespace Raven.Server.Documents.Replication
             foreach (var destination in _outgoing)
             {
                 if (ChangeVectorUtils.GetConflictStatus(destination.LastAcceptedChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
-                {
-                    if (_log.IsInfoEnabled)
-                        _log.Info($"ReplicatedPast +1 for change vector: {changeVector} and destination: {destination.LastAcceptedChangeVector}.");
                     count++;
-                }
             }
             return count;
         }

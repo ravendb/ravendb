@@ -1,12 +1,11 @@
 using System.Net;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
-using Raven.Server.Web.System;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Operations
 {
-    public class OperationsServerHandler : DatabasesHandler
+    public class OperationsServerHandler : RequestHandler
     {
         [RavenAction("/operations/state", "GET", AuthorizationStatus.ValidUser)]
         public Task State()
