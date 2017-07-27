@@ -386,15 +386,16 @@ namespace Raven.Server.Documents.Replication
             if (newRecord == null || _server.IsPassive())
             {
                 DropOutgoingConnections(Destinations, ref instancesToDispose);
-                _destinations = null;
+                _destinations.Clear();
                 return;
             }
 
             HandleInternalReplication(newRecord, ref instancesToDispose);
             HandleExternalReplication(newRecord, ref instancesToDispose);
-            _destinations.Clear();
-            _destinations.AddRange(_internalDestinations);
-            _destinations.AddRange(_externalDestinations);
+            var destinations = new List<ReplicationNode>();
+            destinations.AddRange(_internalDestinations);
+            destinations.AddRange(_externalDestinations);
+            _destinations = destinations;
 
             foreach (var instance in instancesToDispose)
             {
@@ -755,7 +756,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " +
                               $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations)}");
+                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations.ToList())}");
 
                 return numberOfReplicasToWaitFor;
             }
@@ -766,7 +767,7 @@ namespace Raven.Server.Documents.Replication
                               $"but we have only {numberOfSiblings} servers, reducing request to {numberOfSiblings}. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " +
                               $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations)}");
+                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations.ToList())}");
 
                 numberOfReplicasToWaitFor = numberOfSiblings;
             }
