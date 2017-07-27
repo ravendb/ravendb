@@ -180,10 +180,6 @@ namespace Raven.Client
 
                     public const string IgnoredDynamicField = "__ignored";
 
-                    public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
-
-                    public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
-
                     public const string NullValue = "NULL_VALUE";
 
                     public const string EmptyString = "EMPTY_STRING";
