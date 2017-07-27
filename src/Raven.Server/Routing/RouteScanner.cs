@@ -34,9 +34,8 @@ namespace Raven.Server.Routing
                     if(predicate != null && predicate(route) == false)
                         continue;
 
-                    RouteInformation routeInfo;                    
                     var routeKey = route.Method + route.Path;
-                    if (routes.TryGetValue(routeKey, out routeInfo) == false)
+                    if (routes.TryGetValue(routeKey, out RouteInformation routeInfo) == false)
                     {
                         routes[routeKey] = routeInfo = new RouteInformation(
                             route.Method, 

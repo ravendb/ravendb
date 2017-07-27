@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client;
 using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Server.Documents.Operations;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;
@@ -29,8 +27,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 Operations.Operations.OperationType.IndexCompact,
                 onProgress => Task.Factory.StartNew(() => index.Compact(onProgress), token.Token), operationId, token);
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationId(context, operationId);

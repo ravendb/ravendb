@@ -6,7 +6,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.Collections;
-using Sparrow.Global;
 using Sparrow.Json.Parsing;
 
 namespace Sparrow.Json

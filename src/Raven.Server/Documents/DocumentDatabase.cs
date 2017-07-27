@@ -230,12 +230,11 @@ namespace Raven.Server.Documents
                 if (record == null)
                     DatabaseDoesNotExistException.Throw(Name);
 
-                _indexStoreTask = IndexStore.InitializeAsync(record, index);
-                _transformerStoreTask = TransformerStore.InitializeAsync(record);
-
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
-                InitializeFromDatabaseRecord(record, index);
 
+                _indexStoreTask = IndexStore.InitializeAsync(record);
+                _transformerStoreTask = TransformerStore.InitializeAsync(record);
+                ReplicationLoader?.Initialize(record);
                 EtlLoader.Initialize(record);
                 Patcher.Initialize(record);
 
@@ -261,7 +260,7 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
 
-                ReplicationLoader?.Initialize(record);
+                NotifyFeaturesAboutStateChange(record, index);
             }
             catch (Exception)
             {
@@ -689,6 +688,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Got exception during StateChanged({index}).");
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown(e);
 
@@ -702,13 +703,43 @@ namespace Raven.Server.Documents
 
         private void NotifyFeaturesAboutStateChange(DatabaseRecord record, long index)
         {
-            InitializeFromDatabaseRecord(record, index);
+            lock (this)
+            {
+                Debug.Assert(Name == record.DatabaseName);
 
-            TransformerStore.HandleDatabaseRecordChange(record);
-            IndexStore.HandleDatabaseRecordChange(record, index);
-            ReplicationLoader?.HandleDatabaseRecordChange(record);
-            EtlLoader?.HandleDatabaseRecordChange(record);
-            OnDatabaseRecordChanged(record);
+                if (LastDatabaseRecordIndex >= index)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Skipping record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName} because it was already precessed.");
+                    return;
+                }
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
+
+                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, "Should never happen");
+
+                try
+                {
+                    InitializeFromDatabaseRecord(record);
+                    LastDatabaseRecordIndex = index;
+
+                    IndexStore.HandleDatabaseRecordChange(record, index);
+                    TransformerStore.HandleDatabaseRecordChange(record);
+                    ReplicationLoader?.HandleDatabaseRecordChange(record);
+                    EtlLoader?.HandleDatabaseRecordChange(record);
+                    OnDatabaseRecordChanged(record);
+
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
+                }
+                catch (Exception e)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Encounter an error while processing record {index} for {record.DatabaseName}.", e);
+                    throw;
+                }
+            }
         }
 
         private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
@@ -732,20 +763,15 @@ namespace Raven.Server.Documents
             NotifyFeaturesAboutValueChange(record, index);
         }
 
-        private void InitializeFromDatabaseRecord(DatabaseRecord record, long index)
+        private void InitializeFromDatabaseRecord(DatabaseRecord record)
         {
-            lock (this)
-            {
-                if (record == null)
-                    return;
+            if (record == null)
+                return;
 
-                ClientConfiguration = record.Client;
-                DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
-                ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
-                PeriodicBackupRunner.UpdateConfigurations(record);
-
-                LastDatabaseRecordIndex = index;
-            }
+            ClientConfiguration = record.Client;
+            DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(record);
+            ExpiredDocumentsCleaner = ExpiredDocumentsCleaner.LoadConfigurations(this, record, ExpiredDocumentsCleaner);
+            PeriodicBackupRunner.UpdateConfigurations(record);
         }
 
         public IEnumerable<DatabasePerformanceMetrics> GetAllPerformanceMetrics()
