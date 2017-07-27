@@ -34,33 +34,6 @@ namespace SlowTests.Issues
             }
         }
 
-        [TimeBombedFact(2018, 9, 1, "Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
-        public void Can_query_for_special_percentage_character_using_get_request()
-        {
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new User
-                    {
-                        FirstName = "%2F"
-                    });
-
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store);
-
-                using (var commands = store.Commands())
-                {
-                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=FROM%20'Users'%20WHERE%20FirstName%20=%20'%2F'");
-
-                    Assert.True(json.TryGet("TotalResults", out int results));
-                    Assert.Equal(1, results); // it was send in GET request - FAIL
-                }
-            }
-        }
-
         [Fact]
         public void Can_query_for_special_percentage_character()
         {
