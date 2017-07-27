@@ -181,8 +181,12 @@ namespace Raven.Client.Documents.Session.Operations
                         : value;
                 }
 
-                if (document.TryGet(projectionFields[0], out document) == false)
+                if (document.TryGetMember(projectionFields[0], out object inner) == false)
                         return default(T);
+
+                var innerJson = inner as BlittableJsonReaderObject;
+                if (innerJson != null)
+                    document = innerJson;
             }
 
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
