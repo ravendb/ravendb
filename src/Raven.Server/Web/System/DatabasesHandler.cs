@@ -1,20 +1,14 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
-using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
 using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Server.Operations.ConnectionStrings;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
@@ -31,8 +25,6 @@ namespace Raven.Server.Web.System
 {
     public class DatabasesHandler : RequestHandler
     {
-
-     
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()
         {
@@ -91,7 +83,6 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
-
                     if (TryGetAllowedDbs(name, out var _, requireAdmin:false) == false)
                         return Task.CompletedTask;
                     

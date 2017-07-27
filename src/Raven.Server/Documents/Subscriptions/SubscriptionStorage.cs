@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Subscriptions
                 InitialChangeVector = options.ChangeVector,
                 SubscriptionName = options.Name,
                 SubscriptionId = subscriptionId,
-                Disabled = disabled.HasValue ? disabled.Value : false
+                Disabled = disabled ?? false
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);

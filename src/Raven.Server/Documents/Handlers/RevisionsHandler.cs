@@ -62,7 +62,6 @@ namespace Raven.Server.Documents.Handlers
                 throw new RevisionsDisabledException();
 
             var etag = GetLongQueryString("etag", required: false);
-
             if (etag.HasValue)
             {
                 return GetRevisionByEtag(etag.Value);
