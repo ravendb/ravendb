@@ -56,7 +56,7 @@ namespace Raven.Database.Raft.Controllers
             return GetMessageWithObject(tasks.Select(x => new { Uri = x.Uri, Status = x.Task.Result }).ToList());
         }
 
-        private Task<ConnectivityStatus> FetchNodeStatus(NodeConnectionInfo nci)
+        private Task<Tuple<ConnectivityStatus,string>> FetchNodeStatus(NodeConnectionInfo nci)
         {
             return ClusterManager.Client.CheckConnectivity(nci);
         }
