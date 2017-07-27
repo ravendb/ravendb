@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -13,7 +13,7 @@ namespace SlowTests.Issues
     {
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string FirstName { get; set; }
         }
@@ -57,7 +57,22 @@ namespace SlowTests.Issues
                                              .Where(x => x.FirstName == "%2F")
                                              .ToList();
 
-                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(1, queryResult.Count); // passes since it was send in POST request
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var result = commands.Query(new IndexQuery { Query = "FROM Users WHERE FirstName='%2F'" });
+                    Assert.NotEmpty(result.Results);
+                    Assert.Equal(1, result.TotalResults);// passes since it was send in POST request
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=FROM%20'Users'%20WHERE%20FirstName%20=%20'%2F'");
+
+                    Assert.True(json.TryGet("TotalResults", out int results));
+                    Assert.Equal(1, results); // it was send in GET request - FAIL
                 }
             }
         }
@@ -72,8 +87,16 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query(new IndexQuery() { Query = "FROM INDEX 'CustomersIndex' WHERE Number%3D1" });
+                    var result = commands.Query(new IndexQuery() { Query = "FROM INDEX 'CustomersIndex' WHERE Number=1" });
                     Assert.NotEmpty(result.Results);
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=FROM%20INDEX%20'CustomersIndex'%20WHERE%20Number%3D1");
+
+                    Assert.True(json.TryGet("TotalResults", out int results));
+                    Assert.Equal(1, results);
                 }
             }
         }
