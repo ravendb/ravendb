@@ -239,7 +239,7 @@ namespace Raven.Database.Raft
             }
         }
 
-        public async Task<ConnectivityStatus> CheckConnectivity(NodeConnectionInfo node)
+        public async Task<Tuple<ConnectivityStatus, string>> CheckConnectivity(NodeConnectionInfo node)
         {
             try
             {
@@ -247,16 +247,17 @@ namespace Raven.Database.Raft
                 using (var request = CreateRequest(node, url, HttpMethods.Get))
                 {
                     var response = await request.ExecuteAsync().ConfigureAwait(false);
-                    return response.IsSuccessStatusCode ? ConnectivityStatus.Online : ConnectivityStatus.Offline;
+                    return response.IsSuccessStatusCode ? Tuple.Create(ConnectivityStatus.Online,string.Empty) : Tuple.Create(ConnectivityStatus.Offline, await response.Content.ReadAsStringAsync().ConfigureAwait(false));
+                    
                 }
             }
             catch (ErrorResponseException e)
             {
-                return e.StatusCode == HttpStatusCode.Unauthorized ? ConnectivityStatus.WrongCredentials : ConnectivityStatus.Offline;
+                return Tuple.Create(e.StatusCode == HttpStatusCode.Unauthorized ? ConnectivityStatus.WrongCredentials : ConnectivityStatus.Offline, e.ToString());
             }
-            catch (Exception)
+            catch (Exception e)
             {
-                return ConnectivityStatus.Offline;
+                return Tuple.Create(ConnectivityStatus.Offline,e.ToString());
             }
         }
 
