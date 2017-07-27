@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     record.Client = clientConfiguration;
 
                     var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index);
-                    await ServerStore.Cluster.WaitForIndexNotification(result.Etag);
+                    await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Etag);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;

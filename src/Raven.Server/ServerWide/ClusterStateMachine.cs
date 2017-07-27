@@ -839,7 +839,7 @@ namespace Raven.Server.ServerWide
 
     public class RachisLogIndexNotifications
     {
-        private long _lastModifiedIndex;
+        public long LastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
 
         public RachisLogIndexNotifications(CancellationToken token)
@@ -854,12 +854,12 @@ namespace Raven.Server.ServerWide
                 // first get the task, then wait on it
                 var waitAsync = timeout.HasValue == false ? _notifiedListeners.WaitAsync() : _notifiedListeners.WaitAsync(timeout.Value);
 
-                if (index <= Volatile.Read(ref _lastModifiedIndex))
+                if (index <= Volatile.Read(ref LastModifiedIndex))
                     break;
 
                 if (await waitAsync == false)
                 {
-                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, _lastModifiedIndex);
+                    ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, LastModifiedIndex);
                 }
             }
         }
@@ -872,10 +872,10 @@ namespace Raven.Server.ServerWide
 
         public void NotifyListenersAbout(long index)
         {
-            var lastModified = _lastModifiedIndex;
+            var lastModified = LastModifiedIndex;
             while (index > lastModified)
             {
-                lastModified = Interlocked.CompareExchange(ref _lastModifiedIndex, index, lastModified);
+                lastModified = Interlocked.CompareExchange(ref LastModifiedIndex, index, lastModified);
             }
             _notifiedListeners.SetAndResetAtomically();
         }

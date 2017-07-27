@@ -38,7 +38,6 @@ namespace Raven.Client.Server.Operations
                 JsonOperationContext context,
                 string database,
                 ExternalReplication newWatcher
-
             )
             {
                 _context = context ?? throw new ArgumentNullException(nameof(context));
@@ -49,7 +48,7 @@ namespace Raven.Client.Server.Operations
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/external-replication?name={_databaseName}";
+                url = $"{node.Url}/databases/{_databaseName}/admin/tasks/external-replication";
 
                 var request = new HttpRequestMessage
                 {

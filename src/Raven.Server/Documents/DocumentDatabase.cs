@@ -688,6 +688,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Got exception during StateChanged({index}).");
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown(e);
 
@@ -705,18 +707,20 @@ namespace Raven.Server.Documents
             {
                 Debug.Assert(Name == record.DatabaseName);
 
+                if (LastDatabaseRecordIndex >= index)
+                {
+                    if (_logger.IsInfoEnabled)
+                        _logger.Info($"Skipping record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName} because it was already precessed.");
+                    return;
+                }
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
+
+                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, "Should never happen");
+
                 try
                 {
-                    if (LastDatabaseRecordIndex >= index)
-                    {
-                        if (_logger.IsInfoEnabled)
-                            _logger.Info($"Skipping record {index} for {record.DatabaseName} because it was already precessed.");
-                        return;
-                    }
-
-                    if (_logger.IsInfoEnabled)
-                        _logger.Info($"Starting to process record {index} for {record.DatabaseName}.");
-
                     InitializeFromDatabaseRecord(record);
                     LastDatabaseRecordIndex = index;
 
