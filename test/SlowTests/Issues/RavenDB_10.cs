@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Xunit;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 
@@ -67,12 +68,12 @@ namespace SlowTests.Issues
                 {
                     Assert.NotEmpty(session.Query<Item>("test")
                                         .Customize(x => x.WaitForNonStaleResults())
-                                        .Where(x => x.Text == "Seek")
+                                        .Search(x => x.Text, "Seek")
                                         .ToList());
 
                     Assert.NotEmpty(session.Query<Item>("test")
                                         .Customize(x => x.WaitForNonStaleResults())
-                                        .Where(x => x.Text == "Sit's")
+                                        .Search(x => x.Text, "Sit's")
                                         .ToList());
                 }
             }

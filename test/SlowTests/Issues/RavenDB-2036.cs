@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
@@ -102,25 +101,21 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void DynamicUserDefinedIndexNameCreateFail()
+        public void DynamicUserDefinedIndexNameCreateWillNotFail()
         {
-
             using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<RavenException>(() => new Dynamic().Execute(store));
-                Assert.True(ex.Message.Contains("Index name dynamic is reserved!"));
+                new Dynamic().Execute(store);
 
             }
         }
 
         [Fact]
-        public void Dynamic_IndexNameCreateFail()
+        public void Dynamic_IndexNameCreateWillNotFail()
         {
             using (var store = GetDocumentStore())
             {
-                var ex = Assert.Throws<RavenException>(() => new Dynamic_().Execute(store));
-                Assert.True(ex.Message.Contains("Index names starting with dynamic_ or dynamic/ are reserved!"));
-
+                new Dynamic_().Execute(store);
             }
         }
 

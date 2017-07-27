@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Exceptions;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -113,7 +114,7 @@ namespace Raven.Server.Documents.Queries
         private async Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             if (query.Metadata.IsDynamic)
-                throw new InvalidOperationException("Facet query must be executed against static index.");
+                throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
 
             var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)
