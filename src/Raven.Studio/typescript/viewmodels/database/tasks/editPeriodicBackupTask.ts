@@ -92,7 +92,9 @@ class editPeriodicBackupTask extends viewModelBase {
             trigger: "hover",
             template: popoverUtils.longPopoverTemplate,
             container: "body",
-            content: "Backup schedule is defined by a cron expression that can represent fixed times, dates, or intervals.<br/>" +
+            content:
+                "<div class='schedule-info-text'>" +  
+                "Backup schedule is defined by a cron expression that can represent fixed times, dates, or intervals.<br/>" +
                 "We support cron expressions which consist of 5 <span style='color: #B9F4B7'>Fields</span>.<br/>" +
                 "Each field can contain any of the following <span style='color: #f9d291'>Values</span> along with " +
                 "various combinations of <span style='color: white'>Special Characters</span> for that field.<br/>" + 
@@ -110,7 +112,7 @@ class editPeriodicBackupTask extends viewModelBase {
                 "<small><i class='icon-star-filled'></i></small>&nbsp;" +
                 "<small><i class='icon-star-filled'></i></small>" +
                 "</span></pre><br/>" +
-                "For more info see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a>"
+                "For more information see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a></div>"
         });
     }
 
