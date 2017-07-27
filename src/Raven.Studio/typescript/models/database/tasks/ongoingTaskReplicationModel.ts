@@ -39,17 +39,13 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     toDto(): externalReplicationDataFromUI {
         return {
-            TaskName: this.taskName(),
+            TaskName: this.taskName() || `External replication to ${this.destinationDB()}@${this.destinationURL()}`,
             DestinationURL: this.destinationURL(),
             DestinationDB: this.destinationDB()
         };
     }
 
     initValidation() {
-
-        this.taskName.extend({
-            required: true
-        });
 
         this.destinationDB.extend({
             required: true,
@@ -64,8 +60,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.validationGroup = ko.validatedObservable({
             destinationDB: this.destinationDB,
-            destinationURL: this.destinationURL,
-            taskName: this.taskName
+            destinationURL: this.destinationURL
         });
     }
 
