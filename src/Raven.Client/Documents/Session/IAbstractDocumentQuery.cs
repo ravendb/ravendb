@@ -314,7 +314,7 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
+        void Search(string fieldName, string searchTerms);
 
         /// <summary>
         ///   Returns a <see cref = "System.String" /> that represents this instance.

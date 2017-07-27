@@ -24,22 +24,11 @@ namespace SlowTests.MailingList
             {
                 using (var session = store.OpenSession())
                 {
-                    Assert.Equal(@"FirstName:(\*Ore\?n\*)", session.Query<User>()
-                        .Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.EscapeAll)
-                        .ToString());
+                    var query = RavenTestHelper.GetIndexQuery(session.Query<User>()
+                        .Search(x => x.FirstName, "*Ore?n*"));
 
-                    Assert.Equal(@"FirstName:(*Ore?n*)", session.Query<User>()
-                        .Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.RawQuery)
-                        .ToString());
-
-
-                    Assert.Equal(@"FirstName:(*Ore\?n*)", session.Query<User>()
-                        .Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
-                        .ToString());
-
-                    Assert.Equal(@"FirstName:(\*Ore\?n*)", session.Query<User>()
-                        .Search(x => x.FirstName, "*Ore?n*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
-                        .ToString());
+                    Assert.Equal("FROM Users WHERE search(FirstName, :p0)", query.Query);
+                    Assert.Equal(@"*Ore?n*", query.QueryParameters["p0"]);
                 }
             }
         }

@@ -73,7 +73,7 @@ namespace SlowTests.Issues
                     var result = session.Advanced.DocumentQuery<object, BlogPosts_ForSearch>()
                         .SelectFields<BlogPosts_ForSearch.Result>()
                         .Highlight(f => f.SearchText, 128, 10, out highlightings)
-                        .Search(f => f.SearchText, "lorem", EscapeQueryOptions.EscapeAll)
+                        .Search(f => f.SearchText, "lorem")
                         .ToList();
 
                     //That works
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                     var result = session.Advanced.DocumentQuery<object, BlogPosts_ForSearch>()
                         .SelectFields<BlogPosts_ForSearch.Result>()
                         .Highlight(f => f.SearchText, 128, 10, out highlightings)
-                        .Search(f => f.SearchText, "lore*", EscapeQueryOptions.AllowPostfixWildcard) //Postfix wildcard here
+                        .Search(f => f.SearchText, "lore*") //Postfix wildcard here
                         .ToList();
 
                     Assert.NotEmpty(result);

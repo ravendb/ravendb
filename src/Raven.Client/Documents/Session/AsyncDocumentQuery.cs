@@ -808,9 +808,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search(string fieldName, string searchTerms)
         {
-            Search(fieldName, searchTerms, escapeQueryOptions);
+            Search(fieldName, searchTerms);
             return this;
         }
 
@@ -818,9 +818,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
+        public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
         {
-            Search(GetMemberQueryPath(propertySelector.Body), searchTerms, escapeQueryOptions);
+            Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
             return this;
         }
 

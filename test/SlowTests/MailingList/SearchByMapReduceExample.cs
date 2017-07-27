@@ -146,7 +146,7 @@ namespace SlowTests.MailingList
                 List<LogEntries_Search.ReduceResult> reduceResults = documentSession.Query<LogEntries_Search.ReduceResult, LogEntries_Search>()
                     .Statistics(out stats)
                     .Customize(x => x.WaitForNonStaleResults())
-                    .Search(x => x.Query, query + "*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
+                    .Search(x => x.Query, query + "*")
                     .ToList();
                 return reduceResults;
             }

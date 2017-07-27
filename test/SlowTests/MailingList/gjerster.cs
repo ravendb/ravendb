@@ -39,8 +39,7 @@ namespace SlowTests.MailingList
                         .Query<SampleDataIndex.ReducedResult, SampleDataIndex>()
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow());
                     var result =
-                        rq.Search(x => x.Query, query,
-                                  escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
+                        rq.Search(x => x.Query, query)
                             .As<SampleData>()
                             .Take(10)
                             .ToList();

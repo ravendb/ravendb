@@ -12,7 +12,6 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
@@ -32,7 +31,6 @@ namespace Raven.Client.Documents.Session
     public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
-        private static readonly Regex EscapePostfixWildcard = new Regex(@"\\\*(\s|$)", RegexOptions.Compiled);
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
 
         protected QueryOperator DefaultOperator;
@@ -403,7 +401,7 @@ namespace Raven.Client.Documents.Session
         {
             if (WhereTokens.Count != 0)
                 throw new InvalidOperationException("Default operator can only be set before any where clause is added.");
-            
+
             DefaultOperator = @operator;
         }
 
@@ -1350,31 +1348,17 @@ If you really want to do in memory filtering on the data returned from the query
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        public void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
+        public void Search(string fieldName, string searchTerms)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            switch (escapeQueryOptions)
-            {
-                case EscapeQueryOptions.AllowPostfixWildcard:
-                    searchTerms = EscapePostfixWildcard.Replace(searchTerms, "*${1}");
-                    break;
-                case EscapeQueryOptions.AllowAllWildcards:
-                    searchTerms = searchTerms.Replace("\\*", "*");
-                    break;
-                case EscapeQueryOptions.EscapeAll:
-                case EscapeQueryOptions.RawQuery:
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(escapeQueryOptions), "Value: " + escapeQueryOptions);
-            }
             var hasWhiteSpace = searchTerms.Any(char.IsWhiteSpace);
             LastEquality = new KeyValuePair<string, object>(fieldName,
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
-                );
+            );
 
             WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), DefaultOperator));
         }

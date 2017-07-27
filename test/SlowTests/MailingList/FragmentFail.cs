@@ -83,7 +83,7 @@ namespace SlowTests.MailingList
                     var hits = session.Query<The_Search.Result, The_Search>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Customize(x => x.Highlight("Query", 128, 1, out h))
-                        .Search(x => x.Query, q, escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
+                        .Search(x => x.Query, q)
                         .As<TheArticle>()
                         .ToList();
 

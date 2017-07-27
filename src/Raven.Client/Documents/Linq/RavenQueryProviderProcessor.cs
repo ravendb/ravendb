@@ -437,7 +437,7 @@ namespace Raven.Client.Documents.Linq
                 _documentQuery.WhereExists(memberInfo.Path);
                 _documentQuery.AndAlso();
             }
-            
+
             _documentQuery.NegateNext();
             _documentQuery.WhereEquals(new WhereParams
             {
@@ -445,7 +445,7 @@ namespace Raven.Client.Documents.Linq
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false
             });
-            
+
             if (_isNotEqualCheckBoundsToAndAlso == false)
                 _documentQuery.CloseSubclause();
         }
@@ -972,12 +972,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     _documentQuery.NegateNext();
                 }
 
-                if (LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[5], out value) == false)
-                {
-                    throw new InvalidOperationException("Could not extract value from " + expression);
-                }
-                var queryOptions = (EscapeQueryOptions)value;
-                _documentQuery.Search(expressionInfo.Path, searchTerms, queryOptions);
+                _documentQuery.Search(expressionInfo.Path, searchTerms);
                 if (options.HasFlag(SearchOptions.Not))
                 {
                     _documentQuery.CloseSubclause();

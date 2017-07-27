@@ -1192,8 +1192,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
                                                    decimal boost = 1,
-                                                   SearchOptions options = SearchOptions.Guess,
-                                                   EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
+                                                   SearchOptions options = SearchOptions.Guess)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod("Search");
 
@@ -1206,8 +1205,7 @@ namespace Raven.Client.Documents
                                                                       fieldSelector,
                                                                       Expression.Constant(searchTerms),
                                                                       Expression.Constant(boost),
-                                                                      Expression.Constant(options),
-                                                                      Expression.Constant(escapeQueryOptions)));
+                                                                      Expression.Constant(options)));
             return (IRavenQueryable<T>)queryable;
         }
 
