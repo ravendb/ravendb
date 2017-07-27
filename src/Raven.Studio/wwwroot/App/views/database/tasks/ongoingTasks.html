@@ -187,6 +187,15 @@
                                             <h4>
                                                 <a title="Backup destinations" class="destination-name"><i class="icon-backup"></i><span data-bind="text: backupDestinations"></span></a>
                                             </h4>
+                                            <div data-bind="visible: lastFullBackup">
+                                                Last full backup: <strong data-bind="text: lastFullBackup"></strong>
+                                            </div>
+                                            <div data-bind="visible: lastIncrementalBackup">
+                                                Last incremental backup: <strong data-bind="text: lastIncrementalBackup"></strong>
+                                            </div>
+                                            <div data-bind="visible: nextBackup">
+                                                Next estimated backup: <strong data-bind="text: nextBackup"></strong>
+                                            </div>
                                         </div>
                                         <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                         <div class="status" data-bind="template: { name: 'status-template' }"></div>

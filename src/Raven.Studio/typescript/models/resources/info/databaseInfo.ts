@@ -79,7 +79,7 @@ class databaseInfo {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
 
-    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo, lastBackup: Date) {
+    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo) {
         if (!dto.LastBackup) {
             return "text-danger";
         }
@@ -167,10 +167,8 @@ class databaseInfo {
         this.uptime(generalUtils.timeSpanAsAgo(dto.UpTime, false));
         this.backupEnabled(!!dto.BackupInfo);
         if (this.backupEnabled()) {
-            const lastBackup = dto.BackupInfo.LastBackup;
-            const lastBackupDate = new Date(lastBackup);
-            this.lastFullOrIncrementalBackup(moment(lastBackupDate).fromNow());
-            this.backupStatus(this.computeBackupStatus(dto.BackupInfo, lastBackupDate));
+            this.lastFullOrIncrementalBackup(moment.utc(dto.BackupInfo.LastBackup).local().fromNow());
+            this.backupStatus(this.computeBackupStatus(dto.BackupInfo));
         }
 
         this.rejectClients(dto.RejectClients);

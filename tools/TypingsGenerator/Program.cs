@@ -198,6 +198,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(PeriodicBackupTestConnectionType));
             scripter.AddType(typeof(RestoreBackupConfiguration));
             scripter.AddType(typeof(RestorePoints));
+            scripter.AddType(typeof(NextBackupOccurrence));
 
             // custom functions
             scripter.AddType(typeof(CustomFunctions));

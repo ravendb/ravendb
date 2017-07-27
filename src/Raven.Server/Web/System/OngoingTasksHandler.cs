@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
@@ -12,10 +13,12 @@ using Raven.Client.Server;
 using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -41,7 +44,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        public static OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore store)
+        public OngoingTasksResult GetOngoingTasksFor(string dbName, ServerStore store)
         {
             var ongoingTasksResult = new OngoingTasksResult();
             using (store.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -132,7 +135,11 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static IEnumerable<OngoingTask> CollectBackupTasks(DatabaseRecord databaseRecord, DatabaseTopology dbTopology, ClusterTopology clusterTopology, ServerStore store)
+        private IEnumerable<OngoingTask> CollectBackupTasks(
+            DatabaseRecord databaseRecord,
+            DatabaseTopology dbTopology,
+            ClusterTopology clusterTopology,
+            ServerStore store)
         {
             if (dbTopology == null)
                 yield break;
@@ -140,11 +147,19 @@ namespace Raven.Server.Web.System
             if (databaseRecord.PeriodicBackups == null)
                 yield break;
 
+            if (databaseRecord.PeriodicBackups.Count == 0)
+                yield break;
+
+            var database = store.DatabasesLandlord.TryGetOrCreateResourceStore(databaseRecord.DatabaseName).Result;
+
             foreach (var backupConfiguration in databaseRecord.PeriodicBackups)
             {
                 var tag = dbTopology.WhoseTaskIsIt(backupConfiguration, store.IsPassive());
 
                 var backupDestinations = GetBackupDestinations(backupConfiguration);
+
+                var backupStatus = database.PeriodicBackupRunner.GetBackupStatus(backupConfiguration.TaskId);
+                var nextBackup = database.PeriodicBackupRunner.GetNextBackupDetails(databaseRecord, backupConfiguration, backupStatus);
 
                 yield return new OngoingTaskBackup
                 {
@@ -152,6 +167,9 @@ namespace Raven.Server.Web.System
                     BackupType = backupConfiguration.BackupType,
                     TaskName = backupConfiguration.Name,
                     TaskState = backupConfiguration.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                    LastFullBackup = backupStatus.LastFullBackup,
+                    LastIncrementalBackup = backupStatus.LastIncrementalBackup,
+                    NextBackup = nextBackup,
                     ResponsibleNode = new NodeId
                     {
                         NodeTag = tag,
@@ -160,6 +178,14 @@ namespace Raven.Server.Web.System
                     BackupDestinations = backupDestinations
                 };
             }
+        }
+
+        private static CrontabSchedule GetSchedule(string backupFrequency)
+        {
+            if (string.IsNullOrWhiteSpace(backupFrequency))
+                return null;
+
+            return CrontabSchedule.TryParse(backupFrequency);
         }
 
         private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
@@ -749,7 +775,10 @@ namespace Raven.Server.Web.System
     {
         public BackupType BackupType { get; set; }
         public List<string> BackupDestinations { get; set; }
-
+        public DateTime? LastFullBackup { get; set; }
+        public DateTime? LastIncrementalBackup { get; set; }
+        public NextBackup NextBackup { get; set; }
+        
         public OngoingTaskBackup()
         {
             TaskType = OngoingTaskType.Backup;
@@ -760,6 +789,9 @@ namespace Raven.Server.Web.System
             var json = base.ToJson();
             json[nameof(BackupType)] = BackupType;
             json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
+            json[nameof(LastFullBackup)] = LastFullBackup;
+            json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
+            json[nameof(NextBackup)] = TypeConverter.ToBlittableSupportedType(NextBackup);
             return json;
         }
     }
