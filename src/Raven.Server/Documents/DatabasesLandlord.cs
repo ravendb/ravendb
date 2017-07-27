@@ -385,11 +385,11 @@ namespace Raven.Server.Documents
             try
             {
                 if (_serverStore.Disposed)
-                    return null;
+                    ThrowServerIsBeingDisposed(databaseName);
 
                 //if false, this means we have started disposing, so we shouldn't create a database now
                 if (_disposing.TryEnterReadLock(0) == false)
-                    return null;
+                    ThrowServerIsBeingDisposed(databaseName);
 
                 var db = CreateDocumentsStorage(databaseName, config);
                 _serverStore.NotificationCenter.Add(

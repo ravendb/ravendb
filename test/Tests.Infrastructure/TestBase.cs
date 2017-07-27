@@ -16,6 +16,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
@@ -121,9 +122,19 @@ namespace FastTests
 
         private static int _serverCounter;
 
-        public Task<DocumentDatabase> GetDatabase(string databaseName)
+        public async Task<DocumentDatabase> GetDatabase(string databaseName)
         {
-            return Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            if (database == null)
+            {
+                using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                {
+                    context.OpenReadTransaction();
+                    var doc = Server.ServerStore.Cluster.Read(context, "db/" + databaseName.ToLowerInvariant());
+                    throw new InvalidOperationException("Database is null and database record is: " + (doc == null ? "null" : doc.ToString()));
+                }
+            }
+            return database;
         }
 
         public RavenServer Server
