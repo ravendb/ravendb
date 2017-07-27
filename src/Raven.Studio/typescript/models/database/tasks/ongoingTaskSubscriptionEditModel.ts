@@ -55,7 +55,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     }
 
     dataFromUI(): subscriptionDataFromUI {
-        const script = (!this.script()) || (_.trim(this.script()).length === 0) ? null : this.script();
+        const script = _.trim(this.script()) || null;
 
         return {
             TaskName: this.taskName(),
@@ -141,7 +141,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 Disabled: false,
                 Criteria: {
                      Collection: null,
-                     Script: null,
+                     Script: "",
                      IncludeRevisions: false
                 },
                 ChangeVector: null,
