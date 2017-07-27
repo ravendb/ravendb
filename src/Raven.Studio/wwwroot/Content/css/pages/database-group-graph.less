@@ -1,0 +1,77 @@
+@db-group-task-node-bg: #39434f;
+@db-group-member-color: #6ebf3a;
+@db-group-task-name-color: @gray-light;
+
+#databaseGroupGraphContainer {
+    min-height: 400px;
+
+    .db-node {
+        .node-bg {
+            fill: @db-group-member-color;
+            cursor: move;
+        }
+
+        .node-tag {
+            font-size: 24px;
+            text-anchor: middle;
+            fill: @gray-base;
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        .node-icon {
+            text-anchor: middle;
+            font-size: 34px;
+            fill: white;
+            pointer-events: none;
+        }
+    }
+
+    .task-node {
+        .node-bg {
+            fill: @db-group-task-node-bg;
+            cursor: move;
+        }
+
+        .task-desc {
+            font-size: 12px;
+        } 
+
+        .task-name {
+            fill: @db-group-task-name-color;
+            pointer-events: none;
+        }
+
+        .task-icon {
+            pointer-events: none;
+            font-size: 30px;
+        }
+
+        &.Replication {
+            fill: @external-replication-color;
+        }
+
+        &.Backup {
+            fill: @backup-color;
+        }
+
+        &.RavenEtl {
+            fill: @ravendb-etl-color;
+        }
+
+        &.SqlEtl {
+            fill: @sql-etl-color;
+        }
+
+        &.Subscription {
+            fill: @subscription-color;
+        }
+    }
+
+    .edges {
+        line {
+            stroke-width: 2px;
+            stroke: @db-group-task-node-bg;
+        }
+    }
+}

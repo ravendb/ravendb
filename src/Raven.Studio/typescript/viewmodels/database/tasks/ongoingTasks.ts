@@ -18,6 +18,7 @@ import ongoingTaskModel = require("models/database/tasks/ongoingTaskModel");
 import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoingTaskCommand");
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
+import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -27,6 +28,8 @@ class ongoingTasks extends viewModelBase {
 
     private clusterManager = clusterTopologyManager.default;
     myNodeTag = ko.observable<string>();
+
+    private graph = new databaseGroupGraph();
 
     // The Ongoing Tasks Lists:
     replicationTasks = ko.observableArray<ongoingTaskReplication>(); 
@@ -65,6 +68,14 @@ class ongoingTasks extends viewModelBase {
 
         this.selectedTaskType("All tasks"); 
         this.selectedNode("All nodes"); 
+    }
+
+    compositionComplete(): void {
+        super.compositionComplete();
+
+        this.graph.init($("#databaseGroupGraphContainer"));
+
+        this.graph.draw(); //TODO: pass real data!
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
@@ -210,6 +221,13 @@ class ongoingTasks extends viewModelBase {
     setSelectedNode(node: string) {
         this.selectedNode(node);
     }
+
+    shuffle() {
+        this.graph.shuffle();
+
+        this.graph.draw();
+    }
+
 }
 
 export = ongoingTasks;
