@@ -2,7 +2,7 @@
     <div class="row flex-row absolute-fill">
         <div class="col-xs-12 col-lg-6 flex-vertical">
             <div class="flex-header">
-                <button data-bind="click: saveExternalReplication, enable: isSaveEnabled" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
+                <button data-bind="click: saveExternalReplication" class="btn btn-primary"><i class="icon-save"></i><span>Save</span></button>
                 <button data-bind="click: cancelOperation" class="btn btn-default" title="Return to Ongoing Tasks View"><i class="icon-cancel"></i><span>Cancel</span></button>
             </div>
             <div class="panel">
@@ -12,13 +12,13 @@
                         <h2 data-bind="visible: !$parent.isAddingNewReplicationTask()">Edit External Replication</h2>
                         <div class="form-group">
                             <label for="taskName" class="control-label">Task Name</label>
-                            <div class="flex-grow" data-bind="validationElement: taskName">
+                            <div class="flex-grow">
                                 <input type="text" class="form-control" data-bind="textInput: taskName" id="taskName" placeholder="Enter a descriptive name for the replication task">
                             </div>
                         </div>
-                        <div class="form-group" data-bind="validationElement: destinationURL">
+                        <div class="form-group">
                             <label for="url" class="control-label">Destination URL</label>
-                            <div class="flex-grow">
+                            <div class="flex-grow" data-bind="validationElement: destinationURL">
                                 <input type="text" class="form-control" data-bind="textInput: destinationURL" id="url">     
                             </div>
                         </div>
@@ -28,15 +28,23 @@
                                 <input type="text" class="form-control" data-bind="textInput: destinationDB" id="databaseName">
                             </div>
                         </div>
-                        <!-- Todo: Add Test Connection -->
-                        <!--<div class="flex-horizontal">
+                        <div class="flex-horizontal">
+                            <div class="flex-grow" data-bind="with: $root.testConnectionResult">
+                                <div class="text-success" data-bind="visible: Success">
+                                    Successfully connected to node
+                                </div>
+                                <div class="text-danger" data-bind="visible: !Success">
+                                    Connection test failed: <span data-bind="text: Error"></span>
+                                </div>
+                            </div>
                             <div>
-                                <button type="submit" class="btn btn-default">
+                                <button type="submit" class="btn btn-default"
+                                        data-bind="click: $root.testConnection, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }">
                                     <i class="icon-rocket"></i>
                                     <span>Test connection</span>
                                 </button>
                             </div>
-                        </div>-->
+                        </div>
                     </div>
                 </form>
             </div>
