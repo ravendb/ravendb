@@ -889,6 +889,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
                     _documentQuery.ContainsAll(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
                     break;
+                case "WhereExactMatch":
+                    var firstArgIndex = 0;
+
+                    if (expression.Arguments[0].NodeType == ExpressionType.Convert)
+                        firstArgIndex = 1;
+
+                    memberInfo = GetMember(expression.Arguments[firstArgIndex]);
+                    objects = GetValueFromExpression(expression.Arguments[firstArgIndex + 1], GetMemberType(memberInfo));
+                    _documentQuery.WhereExactMatch(memberInfo.Path, objects);
+                    break;
                 default:
                     {
                         throw new NotSupportedException("Method not supported: " + expression.Method.Name);

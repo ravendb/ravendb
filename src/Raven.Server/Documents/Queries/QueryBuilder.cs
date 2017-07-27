@@ -328,7 +328,7 @@ namespace Raven.Server.Documents.Queries
 
             var valueAsString = value as string;
 
-            return LuceneQueryHelper.Exact(fieldName, valueAsString);
+            return LuceneQueryHelper.ExactMatch(fieldName, valueAsString);
         }
 
         public static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
@@ -618,7 +618,7 @@ namespace Raven.Server.Documents.Queries
                 return MethodType.Exists;
 
             if (string.Equals(methodName, "exactMatch", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Exists;
+                return MethodType.ExactMatch;
 
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
 

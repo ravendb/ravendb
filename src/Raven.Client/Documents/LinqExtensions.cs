@@ -1280,5 +1280,21 @@ namespace Raven.Client.Documents
             var session = documentQuery.AsyncSession;
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
+
+        /// <summary>
+        /// Perform an exact match for documents which fields were marked as not analyzed in an index definition
+        /// </summary>
+        public static IRavenQueryable<T> WhereExactMatch<T>(this IQueryable<T> self, Expression<Func<T, object>> propertySelector, string value)
+        {
+            var currentMethod = typeof(LinqExtensions).GetMethod("WhereExactMatch");
+            Expression expression = self.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+            {
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+            }
+            var queryable =
+                self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, propertySelector, Expression.Constant(value)));
+            return (IRavenQueryable<T>)queryable;
+        }
     }
 }

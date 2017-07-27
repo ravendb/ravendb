@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query Exact(string fieldName, string value)
+        public static Query ExactMatch(string fieldName, string value)
         {
             var term = GetTermValue(value, LuceneTermType.String, lowerCased: false);
 
