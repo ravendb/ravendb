@@ -176,7 +176,8 @@ class indexDefinition {
             Configuration: this.configurationToDto(),
             Fields: this.fieldToDto(),
             IsTestIndex: false, //TODO: test indexes
-            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null
+            OutputReduceToCollection: this.outputReduceToCollection() ? this.reduceToCollectionName() : null,
+            AdditionalSources: null
         }
     }
 
@@ -230,7 +231,8 @@ class indexDefinition {
             Configuration: null,
             IsTestIndex: false,
             Type: "Map",
-            OutputReduceToCollection: null
+            OutputReduceToCollection: null,
+            AdditionalSources: null
         });
     }
 }
