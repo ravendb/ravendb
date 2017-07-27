@@ -61,25 +61,27 @@ namespace Raven.Server.Documents.Handlers
             if (revisionsStorage.Configuration == null)
                 throw new RevisionsDisabledException();
 
-            var etag = GetLongQueryString("etag", required: false);
-
-            if (etag.HasValue)
+            var changeVector = GetStringQueryString("changeVector", required: false);
+            if (changeVector != null)
             {
-                return GetRevisionByEtag(etag.Value);
+                return GetRevision(changeVector);
             }
             return GetRevisions();
         }
 
-        private Task GetRevisionByEtag(long etag)
+        private Task GetRevision(string changeVector)
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var revisionsStorage = Database.DocumentsStorage.RevisionsStorage;
-                var revision = revisionsStorage.GetRevisionsFrom(context, etag, 1).FirstOrDefault();
-
-                if (revision != null)
+                var revision = revisionsStorage.GetRevision(context, changeVector);
+                if (revision == null)
                 {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
@@ -88,11 +90,6 @@ namespace Raven.Server.Documents.Handlers
                         writer.WriteEndObject();
                     }
                 }
-                else
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                }
-            }
 
             return Task.CompletedTask;
         }
