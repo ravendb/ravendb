@@ -136,13 +136,17 @@ namespace Raven.Server.Utils
 
             if (dbIndex < 0)
                 {
-                _changeVectorBuffer.Append(changeVector)
-                    .Append(", ")
-                    .Append(nodeTag)
-                    .Append(':')
-                    .Append(etag)
-                    .Append('-')
-                    .Append(_dbIdBuffer);
+                if (string.IsNullOrEmpty(changeVector) == false)
+                {
+                    _changeVectorBuffer.Append(changeVector)
+                        .Append(", ");
+                }
+
+                _changeVectorBuffer.Append(nodeTag)
+                .Append(':')
+                .Append(etag)
+                .Append('-')
+                .Append(_dbIdBuffer);
 
                 changeVector = _changeVectorBuffer.ToString();
                 return true;

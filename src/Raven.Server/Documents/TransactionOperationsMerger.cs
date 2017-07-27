@@ -290,7 +290,7 @@ namespace Raven.Server.Documents
         {
             if (string.IsNullOrEmpty(context.LastDatabaseChangeVector) == false)
             {
-                context.DocumentDatabase.DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
+                DocumentsStorage.SetDatabaseChangeVector(context, context.LastDatabaseChangeVector);
             }
 
             if (context.LastReplicationEtagFrom != null)

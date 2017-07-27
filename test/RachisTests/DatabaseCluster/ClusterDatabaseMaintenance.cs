@@ -241,12 +241,13 @@ namespace RachisTests.DatabaseCluster
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"},"users/1");
+                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
                     await session.SaveChangesAsync();
                 }
-                Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1",u=>u.Name == "Karmel", TimeSpan.FromSeconds(5)));
+                Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
 
                 // the db should move from node B to node C

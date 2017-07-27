@@ -146,6 +146,7 @@ namespace Raven.Server.Web.System
                     databaseRecord.Topology.PromotablesStatus[newNode] = "Waiting for first promotion";
                 }
 
+                databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
@@ -219,6 +220,7 @@ namespace Raven.Server.Web.System
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
                     databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
+                    topology.ReplicationFactor = factor;
                 }
 
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
