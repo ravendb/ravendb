@@ -19,7 +19,10 @@ namespace Raven.Server.Utils
     {
         public static ConflictStatus GetConflictStatus(string remoteAsString, string localAsString)
         {
-            if (localAsString == null || remoteAsString == null)
+            if (remoteAsString == localAsString)
+                return ConflictStatus.AlreadyMerged;
+
+            if (string.IsNullOrEmpty(remoteAsString) || string.IsNullOrEmpty(localAsString))
                 return ConflictStatus.Update;
 
             var local = localAsString.ToChangeVector();

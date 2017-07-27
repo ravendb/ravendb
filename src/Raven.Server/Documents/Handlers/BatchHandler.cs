@@ -145,8 +145,12 @@ namespace Raven.Server.Documents.Handlers
 
             if (replicatedPast < numberOfReplicasToWaitFor && throwOnTimeoutInWaitForReplicas)
             {
-                throw new TimeoutException(
-                    $"Could not verify that etag {mergedCmd.LastChangeVector} was replicated to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. So far, it only replicated to {replicatedPast}");
+                var message = $"Could not verify that etag {mergedCmd.LastChangeVector} was replicated " +
+                              $"to {numberOfReplicasToWaitFor} servers in {waitForReplicasTimeout}. " +
+                              $"So far, it only replicated to {replicatedPast}";
+                if (Logger.IsInfoEnabled)
+                    Logger.Info(message);
+                throw new TimeoutException(message);
             }
         }
 
