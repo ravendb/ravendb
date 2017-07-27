@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Linq
         private Action<QueryResult> _afterQueryExecuted;
         private Action<IDocumentQueryCustomization> _customizeQuery;
         private readonly string _indexName;
-        private string _collectionName;
+        private readonly string _collectionName;
         private readonly IDocumentQueryGenerator _queryGenerator;
         private readonly QueryStatistics _queryStatistics;
         private readonly QueryHighlightings _highlightings;
@@ -40,13 +40,14 @@ namespace Raven.Client.Documents.Linq
             IDocumentQueryGenerator queryGenerator,
             string indexName,
             string collectionName,
+            Type originalQueryType,
             QueryStatistics queryStatistics,
             QueryHighlightings highlightings,
-            bool isMapReduce
-)
+            bool isMapReduce)
         {
             FieldsToFetch = new HashSet<string>();
             FieldsToRename = new List<RenamedField>();
+            OriginalQueryType = originalQueryType;
 
             _queryGenerator = queryGenerator;
             _indexName = indexName;
@@ -87,6 +88,7 @@ namespace Raven.Client.Documents.Linq
         /// Gets the results transformer to use
         /// </summary>
         public string ResultTransformer { get; private set; }
+        
         public Parameters TransformerParameters => _transformerParameters;
 
         public void AddQueryInput(string name, object value)
@@ -104,7 +106,7 @@ namespace Raven.Client.Documents.Linq
             TransformerParameters[name] = value.GetDefaultRavenFormat(isUtc: value.Kind == DateTimeKind.Utc);
         }
 
-        public Type OriginalQueryType { get; set; }
+        public Type OriginalQueryType { get; }
 
 
         /// <summary>
@@ -120,7 +122,7 @@ namespace Raven.Client.Documents.Linq
             if (typeof(T) == typeof(TS))
                 return this;
 
-            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, _queryStatistics, _highlightings, _isMapReduce)
+            var ravenQueryProvider = new RavenQueryProvider<TS>(_queryGenerator, _indexName, _collectionName, OriginalQueryType, _queryStatistics, _highlightings, _isMapReduce)
             {
                 ResultTransformer = ResultTransformer
             };

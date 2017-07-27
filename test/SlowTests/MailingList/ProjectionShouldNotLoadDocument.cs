@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
                 {
                     commands.Put("FOO", null, new { Name = "Ayende" }, new Dictionary<string, object> { { Constants.Documents.Metadata.Collection, "Foos" } });
 
-                    var result = commands.Query(new IndexQuery { Query = "SELECT Name FROM @AllDocs WHERE NAME = 'Ayende'" });
+                    var result = commands.Query(new IndexQuery { Query = "SELECT Name FROM @all_docs WHERE Name = 'Ayende'" });
 
                     // if this is upper case, then we loaded this from the db, because we used Auto-Index that is not storing fields
                     var json = (BlittableJsonReaderObject)result.Results[0];

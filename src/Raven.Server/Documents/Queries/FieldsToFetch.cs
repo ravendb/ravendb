@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
 using Sparrow;
 
@@ -83,28 +85,38 @@ namespace Raven.Server.Documents.Queries
 
                 if (indexDefinition == null)
                 {
-                    result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, false);
+                    result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
                     continue;
                 }
 
-                if (selectFieldName[0] == '_' && selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
+                if (selectFieldName[0] == '_')
                 {
-                    if (result.Count > 0)
-                        result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
-
-                    extractAllStoredFields = true;
-
-                    foreach (var kvp in indexDefinition.MapFields)
+                    if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     {
-                        var stored = kvp.Value.Storage == FieldStorage.Yes;
-                        if (stored == false)
-                            continue;
-
+                        result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
                         anyExtractableFromIndex = true;
-                        result[kvp.Key] = new FieldToFetch(kvp.Key, null, canExtractFromIndex: true);
+                        continue;
                     }
+                    
+                    if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
+                    {
+                        if (result.Count > 0)
+                            result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
 
-                    return result;
+                        extractAllStoredFields = true;
+
+                        foreach (var kvp in indexDefinition.MapFields)
+                        {
+                            var stored = kvp.Value.Storage == FieldStorage.Yes;
+                            if (stored == false)
+                                continue;
+
+                            anyExtractableFromIndex = true;
+                            result[kvp.Key] = new FieldToFetch(kvp.Key, null, canExtractFromIndex: true, isDocumentId: false);
+                        }
+
+                        return result;
+                    }
                 }
 
                 IndexField value;
@@ -112,7 +124,7 @@ namespace Raven.Server.Documents.Queries
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, extract | indexDefinition.HasDynamicFields);
+                result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
             }
 
             if (indexDefinition != null)
@@ -128,10 +140,11 @@ namespace Raven.Server.Documents.Queries
 
         public class FieldToFetch
         {
-            public FieldToFetch(string name, string projectedName, bool canExtractFromIndex)
+            public FieldToFetch(string name, string projectedName, bool canExtractFromIndex, bool isDocumentId)
             {
                 Name = name;
                 ProjectedName = projectedName;
+                IsDocumentId = isDocumentId;
                 CanExtractFromIndex = canExtractFromIndex;
             }
 
@@ -150,6 +163,8 @@ namespace Raven.Server.Documents.Queries
             public readonly bool CanExtractFromIndex;
 
             public readonly bool IsCompositeField;
+
+            public readonly bool IsDocumentId;
 
             public readonly string[] Components;
         }

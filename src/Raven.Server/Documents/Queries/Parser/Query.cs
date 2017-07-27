@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 WriteSelectOrWith("WITH", writer, With, isDistinct: false);
             }
-            writer.Write("FROM ");
+            writer.Write(" FROM ");
             if (From.Index)
             {
                 writer.Write("INDEX ");

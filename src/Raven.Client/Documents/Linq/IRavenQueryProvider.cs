@@ -113,6 +113,6 @@ namespace Raven.Client.Documents.Linq
 
         void AddTransformerParameter(string input, DateTime value);
 
-        Type OriginalQueryType { get; set; }
+        Type OriginalQueryType { get; }
     }
 }

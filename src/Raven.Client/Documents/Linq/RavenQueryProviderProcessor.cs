@@ -83,7 +83,7 @@ namespace Raven.Client.Documents.Linq
             _customizeQuery = customizeQuery;
             _resultsTransformer = resultsTransformer;
             _transformerParameters = transformerParameters;
-            _originalQueryType = originalType;
+            _originalQueryType = originalType ?? throw new ArgumentNullException(nameof(originalType));
             _linqPathProvider = new LinqPathProvider(queryGenerator.Conventions);
         }
 
@@ -1674,7 +1674,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private void AddToFieldsToFetch(string docField, string renamedField)
         {
-            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(typeof(T));
+            var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
             if (identityProperty != null && identityProperty.Name == docField)
             {
                 FieldsToFetch.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);

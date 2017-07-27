@@ -117,10 +117,6 @@ namespace Raven.Client.Documents.Linq
             var transformer = new TTransformer();
             _provider.TransformWith(transformer.TransformerName);
             var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            res.OriginalQueryType = res.OriginalQueryType ?? typeof(T);
-            var p = res.Provider as IRavenQueryProvider;
-            if (null != p)
-                p.OriginalQueryType = res.OriginalQueryType;
             return res;
         }
 
@@ -128,11 +124,6 @@ namespace Raven.Client.Documents.Linq
         {
             _provider.TransformWith(transformerName);
             var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            res.OriginalQueryType = res.OriginalQueryType ?? typeof(T);
-            _provider.OriginalQueryType = res.OriginalQueryType;
-            var p = res.Provider as IRavenQueryProvider;
-            if (null != p)
-                p.OriginalQueryType = res.OriginalQueryType;
             return res;
         }
 
@@ -159,8 +150,6 @@ namespace Raven.Client.Documents.Linq
 
             return Customize(x => x.SortByDistance(sortParamsClause.Latitude, sortParamsClause.Longitude, sortParamsClause.FieldName));
         }
-
-        public Type OriginalQueryType { get; set; }
 
         /// <summary>
         /// Returns a <see cref="System.String"/> that represents this instance.
@@ -246,7 +235,7 @@ namespace Raven.Client.Documents.Linq
         {
             return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, _indexName, _collectionName,
                                                       new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
-                                                      _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
+                                                      _provider.ResultTransformer, _provider.TransformerParameters, _provider.OriginalQueryType);
         }
 
         public string IndexName => _indexName;
@@ -259,7 +248,7 @@ namespace Raven.Client.Documents.Linq
         public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
             var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, _indexName, _collectionName, new HashSet<string>(),
-                new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, OriginalQueryType);
+                new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, _provider.OriginalQueryType);
 
             if (isAsync)
             {

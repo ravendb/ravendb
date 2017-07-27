@@ -51,13 +51,14 @@ namespace Raven.Client.Documents.Session
         /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
+            var type = typeof(T);
+            (indexName, collectionName) = ProcessQueryParameters(type, indexName, collectionName, Conventions);
 
-            var ravenQueryStatistics = new QueryStatistics();
+            var queryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, ravenQueryStatistics, highlightings, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, type, queryStatistics, highlightings, isMapReduce);
             var inspector = new RavenQueryInspector<T>();
-            inspector.Init(ravenQueryProvider, ravenQueryStatistics, highlightings, indexName, collectionName, null, this, isMapReduce);
+            inspector.Init(ravenQueryProvider, queryStatistics, highlightings, indexName, collectionName, null, this, isMapReduce);
             return inspector;
         }
 

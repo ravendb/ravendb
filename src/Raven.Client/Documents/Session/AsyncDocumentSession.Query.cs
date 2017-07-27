@@ -14,14 +14,15 @@ namespace Raven.Client.Documents.Session
 
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
+            var type = typeof(T);
+            (indexName, collectionName) = ProcessQueryParameters(type, indexName, collectionName, Conventions);
 
-            var ravenQueryStatistics = new QueryStatistics();
+            var queryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
             var ravenQueryInspector = new RavenQueryInspector<T>();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, ravenQueryStatistics, highlightings, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, type, queryStatistics, highlightings, isMapReduce);
             ravenQueryInspector.Init(ravenQueryProvider,
-                ravenQueryStatistics,
+                queryStatistics,
                 highlightings,
                 indexName,
                 collectionName,

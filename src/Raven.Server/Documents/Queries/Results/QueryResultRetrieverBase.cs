@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, x.IsStored));
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, x.IsStored, isDocumentId: false));
                 }
 
                 if (FieldsToFetch.ExtractAllFromDocument)
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fields.ContainsKey(name))
                                 continue;
 
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, canExtractFromIndex: false);
+                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, canExtractFromIndex: false, isDocumentId: false);
                         }
                     }
                 }
@@ -238,7 +238,11 @@ namespace Raven.Server.Documents.Queries.Results
         {
             object value;
 
-            if (fieldToFetch.IsCompositeField == false)
+            if (fieldToFetch.IsDocumentId)
+            {
+                value = document.Id;
+            }
+            else if (fieldToFetch.IsCompositeField == false)
             {
                 if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, fieldToFetch.Name, out value) == false)
                     return;
