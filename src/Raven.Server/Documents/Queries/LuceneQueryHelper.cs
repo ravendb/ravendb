@@ -8,7 +8,6 @@ using Lucene.Net.Analysis.Tokenattributes;
 using Lucene.Net.Index;
 using Lucene.Net.Search;
 using Raven.Client;
-using Raven.Server.Utils;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -41,7 +40,7 @@ namespace Raven.Server.Documents.Queries
 
         public static Query ExactMatch(string fieldName, string value)
         {
-            var term = GetTermValue(value, LuceneTermType.String, lowerCased: false);
+            var term = GetTermValue(value, LuceneTermType.String, lowerCase: false);
 
             return new TermQuery(new Term(fieldName, term)) { Boost = 1 };
         }
@@ -231,7 +230,7 @@ namespace Raven.Server.Documents.Queries
             return pq;
         }
 
-        public static unsafe string GetTermValue(string value, LuceneTermType type, bool lowerCased = true)
+        public static unsafe string GetTermValue(string value, LuceneTermType type, bool lowerCase = true)
         {
             switch (type)
             {
@@ -239,29 +238,29 @@ namespace Raven.Server.Documents.Queries
                 case LuceneTermType.Long:
                     return value;
                 default:
-                {
-                    if (value == null)
-                        return Constants.Documents.Indexing.Fields.NullValue;
-
-                    if (string.IsNullOrEmpty(value))
-                        return Constants.Documents.Indexing.Fields.EmptyString;
-
-                    if (lowerCased == false)
-                        return value;
-
-                    fixed (char* pValue = value)
                     {
-                        var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
-                        switch (result)
+                        if (value == null)
+                            return Constants.Documents.Indexing.Fields.NullValue;
+
+                        if (value == string.Empty)
+                            return Constants.Documents.Indexing.Fields.EmptyString;
+
+                        if (lowerCase == false)
+                            return value;
+
+                        fixed (char* pValue = value)
                         {
-                            case LazyStringParser.Result.DateTime:
-                            case LazyStringParser.Result.DateTimeOffset:
-                                return value;
-                            default:
-                                return value.ToLowerInvariant();
+                            var result = LazyStringParser.TryParseDateTime(pValue, value.Length, out DateTime _, out DateTimeOffset _);
+                            switch (result)
+                            {
+                                case LazyStringParser.Result.DateTime:
+                                case LazyStringParser.Result.DateTimeOffset:
+                                    return value;
+                                default:
+                                    return value.ToLowerInvariant();
+                            }
                         }
                     }
-                }
             }
         }
 
@@ -332,7 +331,7 @@ This edge-case has a very slim chance of happening, but still we should not igno
             if (minTermIsNullOrStar && maxTermIsNullOrStar)
                 return new WildcardQuery(new Term(fieldName, Asterisk));
 
-            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : minValue, maxTermIsNullOrStar ? null : maxValue, inclusiveMin, inclusiveMax);
+            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType), inclusiveMin, inclusiveMax);
         }
 
         private static Query CreateRange(string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)

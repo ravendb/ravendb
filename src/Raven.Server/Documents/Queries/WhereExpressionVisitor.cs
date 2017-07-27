@@ -17,6 +17,9 @@ namespace Raven.Server.Documents.Queries
 
         public void Visit(QueryExpression expression, BlittableJsonReaderObject parameters)
         {
+            if (expression.Type == OperatorType.True)
+                return;
+            
             if (expression.Field == null)
             {
                 Visit(expression.Left, parameters);

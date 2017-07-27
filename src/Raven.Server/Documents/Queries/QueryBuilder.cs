@@ -165,6 +165,8 @@ namespace Raven.Server.Documents.Queries
                         LucenePrefixOperator.None,
                         ToLuceneQuery(query, expression.Right, metadata, parameters, analyzer),
                         orPrefix);
+                case OperatorType.True:
+                    return new MatchAllDocsQuery();
                 case OperatorType.Method:
                     var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
                     var methodType = GetMethodType(methodName);
@@ -407,7 +409,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.False:
                     return (LuceneDocumentConverterBase.FalseString, ValueTokenType.String);
                 case ValueTokenType.Null:
-                    return (Constants.Documents.Indexing.Fields.NullValue, ValueTokenType.String);
+                    return (null, ValueTokenType.String);
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -464,7 +466,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.False:
                     return LuceneDocumentConverterBase.FalseString;
                 case ValueTokenType.Null:
-                    return Constants.Documents.Indexing.Fields.NullValue;
+                    return null;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(parameterType), parameterType, null);
             }

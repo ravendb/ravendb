@@ -368,51 +368,63 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private bool Operator(out QueryExpression op)
         {
-            if (Field(out var field) == false)
-            {
-                op = null;
-                return false;
-            }
-
-            if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
-                ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
-
             OperatorType type;
-
-            switch (match)
+            FieldToken field = null;
+            
+            if (Scanner.TryScan("true"))
+                type = OperatorType.True;
+            else
             {
-                case "<":
-                    type = OperatorType.LessThan;
-                    break;
-                case ">":
-                    type = OperatorType.GreaterThan;
-                    break;
-                case "<=":
-                    type = OperatorType.LessThanEqual;
-                    break;
-                case ">=":
-                    type = OperatorType.GreaterThanEqual;
-                    break;
-                case "=":
-                case "==":
-                    type = OperatorType.Equal;
-                    break;
-                case "BETWEEN":
-                    type = OperatorType.Between;
-                    break;
-                case "IN":
-                    type = OperatorType.In;
-                    break;
-                case "(":
-                    type = OperatorType.Method;
-                    break;
-                default:
+                if (Field(out field) == false)
+                {
                     op = null;
                     return false;
+                }
+
+                if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
+                    ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
+
+                switch (match)
+                {
+                    case "<":
+                        type = OperatorType.LessThan;
+                        break;
+                    case ">":
+                        type = OperatorType.GreaterThan;
+                        break;
+                    case "<=":
+                        type = OperatorType.LessThanEqual;
+                        break;
+                    case ">=":
+                        type = OperatorType.GreaterThanEqual;
+                        break;
+                    case "=":
+                    case "==":
+                        type = OperatorType.Equal;
+                        break;
+                    case "BETWEEN":
+                        type = OperatorType.Between;
+                        break;
+                    case "IN":
+                        type = OperatorType.In;
+                        break;
+                    case "(":
+                        type = OperatorType.Method;
+                        break;
+                    default:
+                        op = null;
+                        return false;
+                }
             }
 
             switch (type)
             {
+                case OperatorType.True:
+                    op = new QueryExpression
+                    {
+                        Type = type
+                    };
+                    return true;
                 case OperatorType.Method:
                     return Method(field, op: out op);
 
