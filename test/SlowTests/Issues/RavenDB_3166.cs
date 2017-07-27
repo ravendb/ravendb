@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         public void QueryOnDictionaryWithDateTimeAsKeyShouldWork()
         {
             var dt = new DateTime(1982, 11, 28);
-            var dates = new List<object>() { 7, dt, "Shalom", 17.3 };
+            var dates = new List<object>() { dt, "Shalom"};
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())

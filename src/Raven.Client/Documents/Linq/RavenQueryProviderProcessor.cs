@@ -1822,7 +1822,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
-            return q.SelectFields<T>(FieldsToFetch.ToArray());
+            var projections = GetProjections();
+
+            return q.SelectFields<T>(FieldsToFetch.ToArray(), projections);
         }
         /// <summary>
         /// Gets the lucene query.
@@ -1875,10 +1877,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 throw new NotSupportedException("Could not understand expression: " + expression, e);
             }
 
-
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
 
-            return asyncDocumentQuery.SelectFields<T>(FieldsToFetch.ToArray());
+            var projections = GetProjections();
+
+            return asyncDocumentQuery.SelectFields<T>(FieldsToFetch.ToArray(), projections);
         }
 
         /// <summary>
@@ -1901,13 +1904,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         private object ExecuteQuery<TProjection>()
         {
-            var renamedFields = FieldsToFetch.Select(field =>
-            {
-                var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
-                if (value != null)
-                    return value.NewField ?? field;
-                return field;
-            }).ToArray();
+            var renamedFields = GetProjections();
 
             var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
 
@@ -1963,6 +1960,19 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         return finalQuery;
                     }
             }
+        }
+
+        private string[] GetProjections()
+        {
+            var renamedFields = FieldsToFetch.Select(field =>
+            {
+                var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
+                if (value != null)
+                    return value.NewField ?? field;
+                return field;
+            }).ToArray();
+
+            return renamedFields;
         }
 
         #region Nested type: SpecialQueryType
