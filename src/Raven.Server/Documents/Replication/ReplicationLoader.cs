@@ -834,7 +834,7 @@ namespace Raven.Server.Documents.Replication
                 if (ChangeVectorUtils.GetConflictStatus(destination.LastAcceptedChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
                 {
                     if (_log.IsInfoEnabled)
-                        _log.Info($"ReplicatedPast +1 for change vector: {changeVector} and destination: {destination.LastAcceptedChangeVector}.";
+                        _log.Info($"ReplicatedPast +1 for change vector: {changeVector} and destination: {destination.LastAcceptedChangeVector}.");
                     count++;
                 }
             }
