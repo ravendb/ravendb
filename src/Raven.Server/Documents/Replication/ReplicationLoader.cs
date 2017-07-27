@@ -756,7 +756,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " +
                               $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations.ToList())}");
+                              $"Destinations: {_destinations.Count}.");
 
                 return numberOfReplicasToWaitFor;
             }
@@ -767,7 +767,7 @@ namespace Raven.Server.Documents.Replication
                               $"but we have only {numberOfSiblings} servers, reducing request to {numberOfSiblings}. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " +
                               $"ExternalDestinations: {_externalDestinations.Count}. " +
-                              $"Destinations: {_destinations.Count} - {string.Join(",", _destinations.ToList())}");
+                              $"Destinations: {_destinations.Count}.");
 
                 numberOfReplicasToWaitFor = numberOfSiblings;
             }
