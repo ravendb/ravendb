@@ -13,6 +13,7 @@ requirejs.config({
           "jszip": "../lib/jszip/dist/jszip",
           "jszip-utils": "../lib/jszip-utils/dist/jszip-utils",
           "d3": "../Content/custom_d3",
+          "cola": "../lib/webcola/WebCola/cola.min",
           "rbush": "../Content/rbush/rbush",
           "toastr": "../lib/toastr/toastr",
           "quickselect": "../Content/rbush/quickselect",

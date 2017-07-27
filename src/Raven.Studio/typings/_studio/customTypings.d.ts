@@ -16,6 +16,12 @@ declare module "jszip-utils" {
     export = JSZipUtils;
 }
 
+/// Cola.js
+
+declare module 'cola' {
+    export = cola;
+}
+
 /// Favico
 ///
 /// Using *any* as official typings are broken

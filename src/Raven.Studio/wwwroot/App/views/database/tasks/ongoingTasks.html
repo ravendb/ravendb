@@ -254,6 +254,9 @@
                 <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
                 <div class="flex-separator"></div>
                 <div>
+                    <button class="btn btn-default" data-bind="click: $root.shuffle">Shuffle</button>
+                    <button class="btn btn-default" data-bind="click: $root.graph.addNode">Add </button>
+                    <button class="btn btn-default" data-bind="click: $root.graph.removeNode">Remove</button>
                     <button class="btn btn-info btn-upcoming disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
                 </div>
                 <div class="btn-group dropdown-right">
@@ -266,18 +269,7 @@
                     </ul>
                 </div>
             </div>
-            <div class="panel flex-grow">
-
-                <div class="row">
-                    <div class="col-sm-8 col-sm-offset-2 col-lg-6 col-lg-offset-3">
-                        <br /><br /><br />
-                        <i class="icon-xl icon-hammer-driver text-warning"></i>
-                        <h2 class="text-center text-warning">
-                            Graph is under development
-                        </h2>
-                    </div>
-                </div>
-
+            <div class="panel flex-grow" id="databaseGroupGraphContainer">
             </div>
             <div class="legend">
                 <div class="row">
