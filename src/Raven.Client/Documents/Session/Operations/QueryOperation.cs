@@ -180,6 +180,9 @@ namespace Raven.Client.Documents.Session.Operations
                         ? default(T)
                         : value;
                 }
+
+                if (document.TryGet(projectionFields[0], out document) == false)
+                        return default(T);
             }
 
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
