@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     foreach (var item in UnwrapArray(array))
                     {
-                        if (expectedValueType != item.Type)
+                        if (expectedValueType != item.Type && item.Type != ValueTokenType.Null)
                             ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
 
                         yield return item;
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 var parameterValueType = GetValueTokenType(parameterValue);
-                if (expectedValueType != parameterValueType)
+                if (expectedValueType != parameterValueType && parameterValueType != ValueTokenType.Null)
                     ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 yield return (parameterValue.ToString(), parameterValueType);
@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Queries
 
                 var parameterValueType = GetValueTokenType(parameterValue);
 
-                if (expectedValueType != parameterValueType)
+                if (expectedValueType != parameterValueType && parameterValueType != ValueTokenType.Null)
                     throw new InvalidOperationException();
 
                 return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
@@ -427,6 +427,8 @@ namespace Raven.Server.Documents.Queries
                     return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long);
                 case ValueTokenType.True:
                 case ValueTokenType.False:
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                case ValueTokenType.Null:
                     return (fieldName, LuceneFieldType.String, LuceneTermType.String);
                 default:
                     ThrowUnhandledValueTokenType(valueType);
@@ -570,7 +572,7 @@ namespace Raven.Server.Documents.Queries
         public static ValueTokenType GetValueTokenType(object parameterValue, bool unwrapArrays = false)
         {
             if (parameterValue == null)
-                return ValueTokenType.String;
+                return ValueTokenType.Null;
 
             if (parameterValue is LazyStringValue || parameterValue is LazyCompressedStringValue)
                 return ValueTokenType.String;

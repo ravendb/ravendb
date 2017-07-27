@@ -35,6 +35,15 @@ namespace Raven.Server.Documents.Queries
                 IndexName = QueryExpression.Extract(Query.QueryText, fromToken);
 
             Build(parameters);
+
+            foreach (var kvp in WhereFields)
+            {
+                if (kvp.Value != ValueTokenType.Null)
+                    continue;
+                
+                CanCache = false;
+                break;
+            }
         }
 
         public readonly bool IsDistinct;
@@ -60,6 +69,8 @@ namespace Raven.Server.Documents.Queries
         public (string Name, OrderByFieldType OrderingType, bool Ascending)[] OrderBy;
 
         public SelectField[] SelectFields;
+
+        public bool CanCache { get; private set; }
 
         private void AddExistField(string fieldName)
         {
@@ -265,7 +276,7 @@ namespace Raven.Server.Documents.Queries
                 var valueType1 = GetValueTokenType(parameters, firstValue, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, secondValue, unwrapArrays: false);
 
-                if (valueType1 != valueType2)
+                if (valueType1 != ValueTokenType.Null && valueType2 != ValueTokenType.Null && valueType1 != valueType2)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
                 _metadata.AddWhereField(fieldName, valueType1);
@@ -280,14 +291,20 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < values.Count; i++)
                 {
                     var value = values[i];
-                    if (i > 0 && value.Type != values[i - 1].Type)
-                        ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
+                    if (i > 0)
+                    {
+                        var previousValue = values[i - 1];
+
+                        if (previousValue.Type != ValueTokenType.Null && value.Type != ValueTokenType.Null && previousValue.Type != value.Type)
+                            ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
+                    }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && previousType != valueType)
+                    if (i > 0 && previousType != ValueTokenType.Null && valueType != ValueTokenType.Null && previousType != valueType)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
-                    previousType = valueType;
+                    if (valueType != ValueTokenType.Null)
+                        previousType = valueType;
                 }
 
                 _metadata.AddWhereField(fieldName, previousType);
@@ -316,7 +333,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         if (argument is FieldToken fieldTokenArgument)
                             fieldName = QueryExpression.Extract(_metadata.Query.QueryText, fieldTokenArgument);
-                        
+
                         continue;
                     }
 
@@ -326,15 +343,13 @@ namespace Raven.Server.Documents.Queries
                     // validation of parameters
 
                     var value = (ValueToken)argument;
-                    if (i > 1 && value.Type != previousType)
-                        ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
-                    var valueType = GetValueTokenType(parameters, value, unwrapArrays: false);
-
-                    if (i > 1 && previousType != valueType)
+                    var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
+                    if (i > 0 && previousType != ValueTokenType.Null && valueType != ValueTokenType.Null && previousType != valueType)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
-                    previousType = valueType;
+                    if (valueType != ValueTokenType.Null)
+                        previousType = valueType;
                 }
 
                 if (fieldName == null)

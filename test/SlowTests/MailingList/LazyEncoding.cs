@@ -52,6 +52,7 @@ namespace SlowTests.MailingList
                 {
                     var x = session.Advanced.DocumentQuery<User, UserIndex>()
                         .WhereLucene("Name", "Oren")
+                        .AndAlso()
                         .WhereLucene("Name", "Eini")
                         .ToFacets(new Facet[]
                         {
@@ -68,6 +69,7 @@ namespace SlowTests.MailingList
                 {
                     var x = session.Advanced.DocumentQuery<User, UserIndex>()
                         .WhereLucene("Name", "Oren")
+                        .AndAlso()
                         .WhereLucene("Name", "Eini")
                         .ToFacetsLazy(new Facet[]
                         {
