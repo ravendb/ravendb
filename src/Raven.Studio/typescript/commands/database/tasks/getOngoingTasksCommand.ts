@@ -9,10 +9,9 @@ class getOngoingTasksCommand extends commandBase {
     }
 
     execute(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
-        const url = endpoints.global.ongoingTasks.ongoingTasks;
-        const args = { databaseName: this.db.name };
+        const url = endpoints.databases.ongoingTasks.tasks;
 
-        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, args)
+        return this.query<Raven.Server.Web.System.OngoingTasksResult>(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to get ongoing tasks", response.responseText, response.statusText));
     }
 }

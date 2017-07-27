@@ -40,7 +40,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
 
     private updateReplication(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
 
-        const url = endpoints.global.ongoingTasks.adminExternalReplication + this.urlEncodeArgs({ name: this.db.name });
+        const url = endpoints.databases.ongoingTasks.adminTasksExternalReplication;
         
         const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
 
@@ -48,7 +48,7 @@ class saveExternalReplicationTaskCommand extends commandBase {
             Watcher: this.externalReplicationToSend
         };
 
-        this.post(url, JSON.stringify(payload))
+        this.post(url, JSON.stringify(payload), this.db)
             .done((results: Array<Raven.Client.Server.Operations.ModifyOngoingTaskResult>) => {
                 addRepTask.resolve(results[0]);
             })
