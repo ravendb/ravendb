@@ -276,7 +276,7 @@ namespace Raven.Server.Documents.Queries
                 var valueType1 = GetValueTokenType(parameters, firstValue, unwrapArrays: false);
                 var valueType2 = GetValueTokenType(parameters, secondValue, unwrapArrays: false);
 
-                if (valueType1 != ValueTokenType.Null && valueType2 != ValueTokenType.Null && valueType1 != valueType2)
+                if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
                 _metadata.AddWhereField(fieldName, valueType1);
@@ -295,12 +295,12 @@ namespace Raven.Server.Documents.Queries
                     {
                         var previousValue = values[i - 1];
 
-                        if (previousValue.Type != ValueTokenType.Null && value.Type != ValueTokenType.Null && previousValue.Type != value.Type)
+                        if (QueryBuilder.AreValueTokenTypesValid(previousValue.Type, value.Type) == false)
                             ThrowIncompatibleTypesOfVariables(fieldName, QueryText, parameters, values.ToArray());
                     }
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && previousType != ValueTokenType.Null && valueType != ValueTokenType.Null && previousType != valueType)
+                    if (i > 0 && QueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, values.ToArray());
 
                     if (valueType != ValueTokenType.Null)
@@ -345,7 +345,7 @@ namespace Raven.Server.Documents.Queries
                     var value = (ValueToken)argument;
 
                     var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && previousType != ValueTokenType.Null && valueType != ValueTokenType.Null && previousType != valueType)
+                    if (i > 0 && QueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
                         ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
 
                     if (valueType != ValueTokenType.Null)

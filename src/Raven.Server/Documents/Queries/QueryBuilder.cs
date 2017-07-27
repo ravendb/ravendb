@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     foreach (var item in UnwrapArray(array))
                     {
-                        if (expectedValueType != item.Type && item.Type != ValueTokenType.Null)
+                        if (AreValueTokenTypesValid(expectedValueType, item.Type) == false)
                             ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
 
                         yield return item;
@@ -362,7 +362,7 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 var parameterValueType = GetValueTokenType(parameterValue);
-                if (expectedValueType != parameterValueType && parameterValueType != ValueTokenType.Null)
+                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
                     ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 yield return (parameterValue.ToString(), parameterValueType);
@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Queries
 
                 var parameterValueType = GetValueTokenType(parameterValue);
 
-                if (expectedValueType != parameterValueType && parameterValueType != ValueTokenType.Null)
+                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
                     throw new InvalidOperationException();
 
                 return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
@@ -599,6 +599,18 @@ namespace Raven.Server.Documents.Queries
             }
 
             throw new NotImplementedException();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool AreValueTokenTypesValid(ValueTokenType previous, ValueTokenType current)
+        {
+            if (previous == ValueTokenType.Null)
+                return true;
+
+            if (current == ValueTokenType.Null)
+                return true;
+
+            return previous == current;
         }
 
         private static MethodType GetMethodType(string methodName)
