@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Queries
                     {
                         foreach (var id in QueryBuilder.GetValues(fieldName, _query, _metadata, parameters, item))
                         {
-                            AddId(id.Value);
+                            AddId(id.Value?.ToString());
                         }
                     }
                 }

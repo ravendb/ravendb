@@ -36,6 +36,7 @@ namespace Raven.Server.Documents.Queries
 
             Build(parameters);
 
+            CanCache = true;
             foreach (var kvp in WhereFields)
             {
                 if (kvp.Value != ValueTokenType.Null)
@@ -70,7 +71,7 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] SelectFields;
 
-        public bool CanCache { get; private set; }
+        public readonly bool CanCache;
 
         private void AddExistField(string fieldName)
         {

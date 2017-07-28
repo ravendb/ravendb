@@ -138,16 +138,16 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.In:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        var (luceneFieldName, _, termType) = GetLuceneField(fieldName, metadata.WhereFields[fieldName]);
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
 
                         var matches = new List<string>(expression.Values.Count);
                         foreach (var valueToken in expression.Values)
                         {
                             foreach (var (value, _) in GetValues(fieldName, query, metadata, parameters, valueToken))
-                                matches.Add(LuceneQueryHelper.GetTermValue(value, termType, exact));
+                                matches.Add(LuceneQueryHelper.GetTermValue(value?.ToString(), termType, exact));
                         }
 
-                        return new TermsMatchQuery(luceneFieldName, matches);
+                        return new TermsMatchQuery(fieldName, matches);
                     }
                 case OperatorType.And:
                 case OperatorType.AndNot:
@@ -325,7 +325,7 @@ namespace Raven.Server.Documents.Queries
             return ToLuceneQuery(query, (QueryExpression)expression.Arguments[0], metadata, parameters, analyzer, exact: true);
         }
 
-        public static IEnumerable<(string Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             if (value.Type == ValueTokenType.Parameter)
             {
@@ -466,7 +466,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static IEnumerable<(string Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
+        private static IEnumerable<(object Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
         {
             foreach (var item in array)
             {
@@ -479,7 +479,7 @@ namespace Raven.Server.Documents.Queries
                     continue;
                 }
 
-                yield return (item.ToString(), GetValueTokenType(item));
+                yield return (item, GetValueTokenType(item));
             }
         }
 
@@ -583,8 +583,8 @@ namespace Raven.Server.Documents.Queries
                 var array = parameterValue as BlittableJsonReaderArray;
                 if (array != null)
                 {
-                    if (array.Length == 0) // TODO [ppekrol]
-                        throw new InvalidOperationException();
+                    if (array.Length == 0)
+                        return ValueTokenType.Null;
 
                     return GetValueTokenType(array[0], unwrapArrays: true);
                 }
@@ -642,7 +642,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue, queryText, parameters);
         }
 
-        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (string Value, ValueTokenType Type) item, string queryText, BlittableJsonReaderObject parameters)
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (object Value, ValueTokenType Type) item, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
         }
