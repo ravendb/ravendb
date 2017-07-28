@@ -625,7 +625,7 @@ namespace Raven.Server
                                         $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            var authSuccessful = TryAuthorize(Configuration, tcp, header, out var err);
+                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
 
                             using (var writer = new BlittableJsonTextWriter(context, stream))
@@ -828,19 +828,12 @@ namespace Raven.Server
             return stream;
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, TcpConnectionOptions tcp, TcpConnectionHeaderMessage header, out string msg)
+        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
-            Stream stream = tcp.Stream;
             msg = null;
 
             if (configuration.Security.AuthenticationEnabled == false)
-            {
-                if (tcp.TcpClient.Client.RemoteEndPoint is IPEndPoint ipEndPoint)
-                    return SecurityUtils.IsUnsecuredAccessAllowedForAddress(
-                        configuration.Security.UnsecuredAccessAddressRange, ipEndPoint.Address);
-
-                throw new InvalidOperationException($"Client endpoint is not an IP endpoint: { tcp.TcpClient.Client.AddressFamily }.");
-            }
+                return true;
 
             if (!(stream is SslStream sslStream))
             {

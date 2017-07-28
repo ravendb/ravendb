@@ -93,19 +93,11 @@ namespace Raven.Server.Routing
                 return null;
             }
 
-            var authEnabled = _ravenServer.Configuration.Security.AuthenticationEnabled;
-            if (authEnabled)
+            if (_ravenServer.Configuration.Security.AuthenticationEnabled)
             {
                 var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.Name;
-            }
-
-            if (authEnabled == false 
-                && SecurityUtils.IsUnsecuredAccessAllowedForAddress(_ravenServer.Configuration.Security.UnsecuredAccessAddressRange, context.Connection.RemoteIpAddress) == false)
-            {
-                context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
-                return reqCtx.Database?.Name;
             }
 
             if (reqCtx.Database != null)
