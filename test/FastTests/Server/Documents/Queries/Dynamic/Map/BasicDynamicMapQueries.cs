@@ -1,4 +1,5 @@
-﻿using System.Diagnostics.CodeAnalysis;
+﻿using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
@@ -471,6 +472,69 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                     Assert.Equal("Arek", users[0].Name);
                 }
             }
+        }
+
+        [Fact]
+        public void Can_query_on_dictionary()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new DictItem
+                    {
+                        NumericDict = new Dictionary<int, int>
+                        {
+                            {0, 2},
+                            {1, 2}
+                        },
+                        StringDict = new Dictionary<string, string>()
+                        {
+                            { "a", "b" },
+                            { "b", "b" },
+                            { "c c", "b" }
+                        }
+                    });
+
+                    session.Store(new DictItem
+                    {
+                        NumericDict = new Dictionary<int, int>(),
+                        StringDict = new Dictionary<string, string>()
+                        {
+                            { "a", "c" }
+                        }
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict["a"] == "b").ToList();
+                    Assert.Equal(1, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict.Any(y => y.Key == "a")).ToList();
+                    Assert.Equal(2, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict.Any(y => y.Value == "b" && y.Key == "b")).ToList();
+                    Assert.Equal(1, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict.Any(y => y.Value == "c" || y.Key == "b")).ToList();
+                    Assert.Equal(2, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.NumericDict[1] == 2).ToList();
+                    Assert.Equal(1, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.NumericDict[1] >= 2).ToList();
+                    Assert.Equal(1, items.Count);
+                }
+            }
+        }
+
+        private class DictItem
+        {
+            public Dictionary<int, int> NumericDict { get; set; }
+            public Dictionary<string, string> StringDict { get; set; }
         }
     }
 }

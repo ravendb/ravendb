@@ -252,22 +252,16 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ContainsField(string field)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields.ContainsKey(field);
         }
 
         public IndexField GetField(string field)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields[field];
         }
 
         public virtual bool TryGetField(string field, out IndexField value)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields.TryGetValue(field, out value);
         }
 

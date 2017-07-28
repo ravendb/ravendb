@@ -51,14 +51,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 Reason = reason;
             }
 
-            public string Index { get; private set; }
-            public string Reason { get; private set; }
+            public string Index { get; }
+            public string Reason { get; }
         }
 
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap())
+                .Where(x => x.Type.IsAuto() && (query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap()))
                 .Select(x => x.Definition)
                 .ToList();
 
@@ -110,13 +110,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
-            else
+
+            if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
             {
-                if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
-                {
-                    explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
-                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                }
+                explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
 
             var index = _indexStore.GetIndex(definition.Name);
@@ -134,29 +132,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in query.MapFields)
             {
-                IndexField indexField;
-                if (definition.TryGetField(field.Name, out indexField))
+                if (definition.ContainsField(field.Name) == false)
                 {
-                    if (string.IsNullOrWhiteSpace(indexField.Analyzer) == false)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field have a custom analyzer: {indexField.Name}"));
-                        currentBestState = DynamicQueryMatchType.Partial;
-                    }
-
-                    if (indexField.Indexing != FieldIndexing.Default)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field is not using default indexing: {indexField.Name}"));
-                        currentBestState = DynamicQueryMatchType.Partial;
-                    }
-                }
-                else
-                {
-                    explanations?.Add(new Explanation(indexName, $"The following field is missing: {indexField.Name}"));
+                    explanations?.Add(new Explanation(indexName, $"The following field is missing: {field.Name}"));
                     currentBestState = DynamicQueryMatchType.Partial;
                 }
             }
-
-            //TODO arek: ignore highlighting for now
 
             foreach (var sortInfo in query.SortDescriptors) // with matching sort options
             {
@@ -167,8 +148,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 {
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }
-
-                sortFieldName = FieldUtil.RemoveRangeSuffixIfNecessary(sortFieldName);
 
                 IndexField indexField = null;
                 // if the field is not in the output, then we can't sort on it. 

@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
@@ -13,7 +12,7 @@ namespace SlowTests.MailingList
     public class DynamicQueryIndexSelection : RavenTestBase
     {
         [Fact]
-        public void DynamicQueryWillChooseStaticIndex()
+        public void DynamicQueryShouldNotChooseStaticIndex_TheyCanBeSatisfiedOnlyByAutoIndexes()
         {
 
             using (var store = GetDocumentStore())
@@ -99,7 +98,11 @@ namespace SlowTests.MailingList
                         .Customize(x => x.WaitForNonStaleResults())
                         .Statistics(out stats).ToList();
 
-                    /*
+
+                    Assert.Equal(3, result.Count);
+
+                    Assert.NotEqual("Foos/TestDynamicQueries", stats.IndexName);
+
                     var result2 = session.Query<Foo>("Foos/TestDynamicQueries")
                         .Where(x =>
                             x.Bar.SomeDictionary.Any(y => y.Key == "KeyOne" && y.Value == "ValueOne") ||
@@ -107,16 +110,12 @@ namespace SlowTests.MailingList
                                     x.Bar == null)
                                         .Customize(x => x.WaitForNonStaleResults())
                                             .Statistics(out stats).ToList();
-                    */
 
-                    Assert.Equal(stats.IndexName, "Foos/TestDynamicQueries");
-
+                    Assert.Equal(3, result2.Count);
                 }
 
             }
-
         }
-
 
         private class Foo
         {

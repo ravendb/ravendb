@@ -85,7 +85,7 @@ namespace Raven.Server.Documents.Queries.Parser
             TokenStart = _pos;
             _pos++;
             for (; _pos < _q.Length; _pos++)
-                if (char.IsLetterOrDigit(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '-')
+                if (char.IsLetterOrDigit(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '-' && _q[_pos] != '.')
                     break;
             TokenLength = _pos - TokenStart;
             Column += TokenLength;
