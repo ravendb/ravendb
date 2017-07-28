@@ -644,9 +644,11 @@ namespace Raven.Server.Documents.Queries.Parser
             var tokenStart = -1;
             var tokenLength = 0;
             var escapeChars = 0;
+            var part = 0;
+
             while (true)
             {
-                if (Scanner.Identifier() == false)
+                if (Scanner.Identifier(beginning: part++ == 0) == false)
                 {
                     if (Scanner.String())
                     {
@@ -677,6 +679,7 @@ namespace Raven.Server.Documents.Queries.Parser
                             break;
                     }
                 }
+
                 if (Scanner.TryScan('.') == false)
                     break;
 

@@ -527,6 +527,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
                     items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.NumericDict[1] >= 2).ToList();
                     Assert.Equal(1, items.Count);
+
+                    items = session.Query<DictItem>().Customize(x => x.WaitForNonStaleResults()).Where(x => x.StringDict["c c"] == "b").ToList();
+                    Assert.Equal(1, items.Count);
                 }
             }
         }
