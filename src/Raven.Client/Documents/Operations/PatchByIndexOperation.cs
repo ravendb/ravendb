@@ -44,10 +44,10 @@ namespace Raven.Client.Documents.Operations
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<TEntity>(_indexName).Where(_expression);
-                    _queryToUpdate = new IndexQuery
-                    {
-                        Query = query.ToString()
-                    };
+
+                    var inspector = (IRavenQueryInspector)query;
+
+                    _queryToUpdate = inspector.GetIndexQuery(isAsync: false);
                 }
             }
 

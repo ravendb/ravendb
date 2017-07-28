@@ -6,6 +6,7 @@ using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -45,10 +46,9 @@ namespace Raven.Client.Documents.Operations
                         .Query<TEntity>(_indexName)
                         .Where(_expression);
 
-                    _queryToDelete = new IndexQuery
-                    {
-                        Query = query.ToString()
-                    };
+                    var inspector = (IRavenQueryInspector)query;
+
+                    _queryToDelete = inspector.GetIndexQuery(isAsync: false);
                 }
             }
 
