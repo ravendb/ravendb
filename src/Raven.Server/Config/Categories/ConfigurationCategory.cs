@@ -54,7 +54,7 @@ namespace Raven.Server.Config.Categories
                     val = cfg[tmpName];
                     if (val != null)
                         return val;
-                    lastPeriod = name.LastIndexOf('.', 0, lastPeriod);
+                    lastPeriod = name.LastIndexOf('.', lastPeriod-1);
                 }
                 return null;
             }

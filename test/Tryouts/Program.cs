@@ -17,11 +17,11 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Logger.Info("Program: " + i);
 
-                using (var test = new ReplicationWriteAssurance())
+                using (var test = new FastTests.Server.Documents.Patching.AdvancedPatching())
                 {
                     try
                     {
-                        test.ServerSideWriteAssurance().Wait();
+                        test.CanUseMathFloor().Wait();
                     }
                     catch (Exception e)
                     {
