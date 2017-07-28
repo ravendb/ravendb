@@ -19,6 +19,7 @@ class clusterTopology {
         const watchers = this.mapNodes("Watcher", topologyDto.Watchers, dto.Status);
 
         this.nodes(_.concat<clusterNode>(members, promotables, watchers));
+        this.nodes(_.sortBy(this.nodes(), x => x.tag().toUpperCase()));        
     }
 
     private mapNodes(type: clusterNodeType, dict: System.Collections.Generic.Dictionary<string, string>,
@@ -52,7 +53,8 @@ class clusterTopology {
             if (matchedNode) {
                 matchedNode.updateWith(node);
             } else {
-                this.nodes.push(node);
+                let locationToInsert = _.sortedIndexBy(this.nodes(), node, item => item.tag().toLowerCase());
+                this.nodes.splice(locationToInsert, 0, node);
             }
         });
 

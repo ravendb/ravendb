@@ -108,15 +108,14 @@ namespace Raven.Server.Documents.Handlers.Admin
                     );
                     nodeTag = tag;
                 }
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                var blit = EntityToBlittable.ConvertEntityToBlittable(topology, DocumentConventions.Default, context);
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var json = new DynamicJsonValue
                     {
-                        ["Topology"] = blit,
+                        ["Topology"] = topology.ToSortedJson(),
                         ["Leader"] = ServerStore.LeaderTag,
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
