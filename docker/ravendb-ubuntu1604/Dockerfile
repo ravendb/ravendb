@@ -1,6 +1,6 @@
 FROM ubuntu:16.04
 
-ENV SecurityAuthenticationEnabled=true DataDir=APPDRIVE:/databases PublicServerUrl='' PublicTcpServerUrl=''
+ENV DataDir=APPDRIVE:/databases PublicServerUrl='' PublicTcpServerUrl='' CertificatePath='' UnsecuredAccessAllowed=''
 
 COPY RavenDB-4.0.*-*-*-ubuntu.16.04-x64.tar.bz2 /opt/RavenDB.tar.bz2
 COPY run-raven.sh /opt/run-raven.sh

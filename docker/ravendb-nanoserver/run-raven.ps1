@@ -24,7 +24,6 @@ Push-Location $ServerDir
 $command = './rvn.exe'
 $commandArgs = @( 'windows-service', 'register' )
 
-$commandArgs += "--Security.Authentication.RequiredForPublicNetworks=false"
 $commandArgs += "--ServerUrl=http://0.0.0.0:8080"
 $commandArgs += "--ServerUrl.Tcp=tcp://0.0.0.0:38888"
 $commandArgs += "--DataDir=$($env:DataDir)"
@@ -34,8 +33,8 @@ if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
     $commandArgs += "`"$CUSTOM_SETTINGS_PATH`""
 }
 
-if ([string]::IsNullOrEmpty($env:SecurityAuthenticationEnabled) -eq $False) {
-    $commandArgs += "--Security.Authentication.Enabled=$($env:SecurityAuthenticationEnabled)"
+if ([string]::IsNullOrEmpty($env:UnsecuredAccessAllowed) -eq $False) {
+    $commandArgs += "--Security.Authentication.UnsecuredAccessAllowed=$($env:UnsecuredAccessAllowed)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicServerUrl) -eq $False) {

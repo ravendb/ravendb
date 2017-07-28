@@ -6,7 +6,6 @@ cd /opt/RavenDB/Server
 
 COMMAND="./Raven.Server"
 
-COMMAND="$COMMAND --Security.Authentication.RequiredForPublicNetworks=false"
 COMMAND="$COMMAND --ServerUrl=http://0.0.0.0:8080"
 COMMAND="$COMMAND --ServerUrl.Tcp=tcp://0.0.0.0:38888"
 
@@ -18,8 +17,8 @@ if [ ! -z "$PublicTcpServerUrl" ]; then
     COMMAND="$COMMAND --PublicServerUrl.Tcp=$PublicTcpServerUrl"
 fi
 
-if [ ! -z "$SecurityAuthenticationEnabled" ]; then
-    COMMAND="$COMMAND --Security.Authentication.Enabled=$SecurityAuthenticationEnabled"
+if [ ! -z "$UnsecuredAccessAllowed" ]; then
+    COMMAND="$COMMAND --Security.Authentication.UnsecuredAccessAllowed=$UnsecuredAccessAllowed"
 fi
 
 if [ ! -z "$DataDir" ]; then
