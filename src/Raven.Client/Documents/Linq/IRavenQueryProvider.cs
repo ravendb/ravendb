@@ -92,7 +92,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Set the fields to fetch
         /// </summary>
-        HashSet<string> FieldsToFetch { get; }
+        HashSet<FieldToFetch> FieldsToFetch { get; }
 
         /// <summary>
         /// The result transformer to use

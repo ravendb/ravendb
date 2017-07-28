@@ -70,11 +70,10 @@ namespace Raven.Client.Documents.Linq
         /// <param name="transformerParameters"></param>
         /// /// <param name ="originalType" >the original type of the query if TransformWith is called otherwise null</param>
         public RavenQueryProviderProcessor(IDocumentQueryGenerator queryGenerator, Action<IDocumentQueryCustomization> customizeQuery, Action<QueryResult> afterQueryExecuted,
-             string indexName, string collectionName, HashSet<string> fieldsToFetch, List<RenamedField> fieldsTRename, bool isMapReduce, string resultsTransformer,
+             string indexName, string collectionName, HashSet<FieldToFetch> fieldsToFetch, bool isMapReduce, string resultsTransformer,
             Parameters transformerParameters, Type originalType)
         {
             FieldsToFetch = fieldsToFetch;
-            FieldsToRename = fieldsTRename;
             _newExpressionType = typeof(T);
             QueryGenerator = queryGenerator;
             IndexName = indexName;
@@ -92,12 +91,7 @@ namespace Raven.Client.Documents.Linq
         /// Gets or sets the fields to fetch.
         /// </summary>
         /// <value>The fields to fetch.</value>
-        public HashSet<string> FieldsToFetch { get; set; }
-
-        /// <summary>
-        /// Rename the fields from one name to another
-        /// </summary>
-        public List<RenamedField> FieldsToRename { get; set; }
+        public HashSet<FieldToFetch> FieldsToFetch { get; set; }
 
         /// <summary>
         /// Visits the expression and generate the lucene query
@@ -1430,15 +1424,13 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     AddToFieldsToFetch(GetSelectPath(memberExpression), GetSelectPath(memberExpression));
                     if (_insideSelect == false)
                     {
-                        foreach (var renamedField in FieldsToRename.Where(x => x.OriginalField == memberExpression.Member.Name).ToArray())
+                        foreach (var fieldToFetch in FieldsToFetch)
                         {
-                            FieldsToRename.Remove(renamedField);
+                            if (fieldToFetch.Name != memberExpression.Member.Name)
+                                continue;
+
+                            fieldToFetch.Alias = null;
                         }
-                        FieldsToRename.Add(new RenamedField
-                        {
-                            NewField = null,
-                            OriginalField = memberExpression.Member.Name
-                        });
                     }
                     break;
                 //Anonymous types come through here .Select(x => new { x.Cost } ) doesn't use a member initializer, even though it looks like it does
@@ -1688,41 +1680,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return expressionInfo.Path;
         }
 
-        private void AddToFieldsToFetch(string docField, string renamedField)
+        private void AddToFieldsToFetch(string field, string alias)
         {
             var identityProperty = _documentQuery.Conventions.GetIdentityProperty(_originalQueryType);
-            if (identityProperty != null && identityProperty.Name == docField)
+            if (identityProperty != null && identityProperty.Name == field)
             {
-                FieldsToFetch.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-                if (identityProperty.Name != renamedField)
-                {
-                    docField = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
-                }
+                FieldsToFetch.Add(new FieldToFetch(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias));
+                return;
             }
-            else
-            {
-                FieldsToFetch.Add(docField);
-            }
-            if (renamedField != null && docField != renamedField)
-            {
-                if (identityProperty == null)
-                {
-                    var idPropName = _documentQuery.Conventions.FindIdentityPropertyNameFromEntityName(_documentQuery.Conventions.GetCollectionName(typeof(T)));
-                    if (docField == idPropName)
-                    {
-                        FieldsToRename.Add(new RenamedField
-                        {
-                            NewField = renamedField,
-                            OriginalField = Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                        });
-                    }
-                }
-                FieldsToRename.Add(new RenamedField
-                {
-                    NewField = renamedField,
-                    OriginalField = docField
-                });
-            }
+
+            FieldsToFetch.Add(new FieldToFetch(field, alias));
         }
 
         private void VisitSkip(ConstantExpression constantExpression)
@@ -1813,11 +1780,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
         /// <value>The lucene query.</value>
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
-            var q = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
-            q.SetTransformerParameters(_transformerParameters);
+            var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
+            documentQuery.SetTransformer(_resultsTransformer);
+            documentQuery.SetTransformerParameters(_transformerParameters);
+            _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
-            _documentQuery = (IAbstractDocumentQuery<T>)q;
-            _documentQuery.SetTransformer(_resultsTransformer);
             try
             {
                 VisitExpression(expression);
@@ -1833,36 +1800,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
 
-            var projections = GetProjections();
+            var (fields, projections) = GetProjections();
 
-            return q.SelectFields<T>(FieldsToFetch.ToArray(), projections);
-        }
-        /// <summary>
-        /// Gets the lucene query.
-        /// </summary>
-        /// <value>The lucene query.</value>
-        public IAsyncDocumentQuery<T> GetDocumentQueryForAsync(Expression expression)
-        {
-            var q = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
-
-            _documentQuery = (IAbstractDocumentQuery<T>)q;
-            _documentQuery.SetTransformer(_resultsTransformer);
-            try
-            {
-                VisitExpression(expression);
-            }
-            catch (ArgumentException e)
-            {
-                throw new ArgumentException("Could not understand expression: " + expression, e);
-            }
-            catch (NotSupportedException e)
-            {
-                throw new NotSupportedException("Could not understand expression: " + expression, e);
-            }
-
-            _customizeQuery?.Invoke((IDocumentQueryCustomization)_documentQuery);
-
-            return q.SelectFields<T>(FieldsToFetch.ToArray());
+            return documentQuery.SelectFields<T>(fields, projections);
         }
 
         /// <summary>
@@ -1890,9 +1830,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _customizeQuery?.Invoke((IDocumentQueryCustomization)asyncDocumentQuery);
 
-            var projections = GetProjections();
+            var (fields, projections) = GetProjections();
 
-            return asyncDocumentQuery.SelectFields<T>(FieldsToFetch.ToArray(), projections);
+            return asyncDocumentQuery.SelectFields<T>(fields, projections);
         }
 
         /// <summary>
@@ -1913,11 +1853,28 @@ The recommended method is to use full text search (mark the field as Analyzed an
             return executeQueryWithProjectionType.Invoke(this, new object[0]);
         }
 
+        internal (string[] Fields, string[] Projections) GetProjections()
+        {
+            var fields = new string[FieldsToFetch.Count];
+            var projections = new string[FieldsToFetch.Count];
+
+            var i = 0;
+            foreach (var fieldToFetch in FieldsToFetch)
+            {
+                fields[i] = fieldToFetch.Name;
+                projections[i] = fieldToFetch.Alias ?? fieldToFetch.Name;
+                
+                i++;
+            }
+
+            return (fields, projections);
+        }
+
         private object ExecuteQuery<TProjection>()
         {
-            var renamedFields = GetProjections();
+            var (fields, projections) = GetProjections();
 
-            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(FieldsToFetch.ToArray(), renamedFields);
+            var finalQuery = ((IDocumentQuery<T>)_documentQuery).SelectFields<TProjection>(fields, projections);
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
@@ -1973,19 +1930,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
             }
         }
 
-        private string[] GetProjections()
-        {
-            var renamedFields = FieldsToFetch.Select(field =>
-            {
-                var value = FieldsToRename.FirstOrDefault(x => x.OriginalField == field);
-                if (value != null)
-                    return value.NewField ?? field;
-                return field;
-            }).ToArray();
-
-            return renamedFields;
-        }
-
         #region Nested type: SpecialQueryType
 
         /// <summary>
@@ -2030,9 +1974,36 @@ The recommended method is to use full text search (mark the field as Analyzed an
         #endregion
     }
 
-    internal class RenamedField
+    public class FieldToFetch
     {
-        public string OriginalField { get; set; }
-        public string NewField { get; set; }
+        public FieldToFetch(string name, string alias)
+        {
+            Name = name;
+            Alias = alias;
+        }
+
+        public string Name { get; }
+        public string Alias { get; internal set; }
+
+        protected bool Equals(FieldToFetch other)
+        {
+            return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase) && string.Equals(Alias, other.Alias, StringComparison.Ordinal);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != GetType()) return false;
+            return Equals((FieldToFetch)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) * 397) ^ (Alias != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Alias) : 0);
+            }
+        }
     }
 }

@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                                        .AndAlso()
                                        .WhereEquals(x => x.Email, "email1@test.com")
                                        .OrderBy("Query")
-                                       .OrderBy("+LastName")
+                                       .OrderBy("LastName")
                                        .Skip(0)
                                        .Take(10)
                                        .ToList();
@@ -64,7 +64,7 @@ namespace SlowTests.MailingList
                                    .AndAlso()
                                    .WhereEquals(x => x.Email, "email1@test.com")
                                    .OrderBy("Query")
-                                   .OrderBy("+LastName")
+                                   .OrderBy("LastName")
                                    .SelectFields<PasswordOnly>()
                                    .Skip(0)
                                    .Take(10)

@@ -66,6 +66,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var selectField = selectFields[i];
 
+                var selectFieldKey = selectField.Alias ?? selectField.Name;
                 var selectFieldName = selectField.Name;
 
                 if (string.IsNullOrWhiteSpace(selectFieldName))
@@ -77,15 +78,15 @@ namespace Raven.Server.Documents.Queries
                         selectFieldName = selectField.GroupByKeys[0];
                     else
                     {
-                        var projectedName = selectField.Alias ?? "Key";
-                        result[projectedName] = new FieldToFetch(projectedName, selectField.GroupByKeys);
+                        selectFieldKey = selectFieldKey ?? "Key";
+                        result[selectFieldKey] = new FieldToFetch(selectFieldKey, selectField.GroupByKeys);
                         continue;
                     }
                 }
 
                 if (indexDefinition == null)
                 {
-                    result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
+                    result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
                     continue;
                 }
 
@@ -93,7 +94,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     {
-                        result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
+                        result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
                         anyExtractableFromIndex = true;
                         continue;
                     }
@@ -124,7 +125,7 @@ namespace Raven.Server.Documents.Queries
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[selectFieldName] = new FieldToFetch(selectFieldName, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+                result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
             }
 
             if (indexDefinition != null)

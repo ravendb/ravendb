@@ -36,7 +36,6 @@ namespace Raven.Client.Documents.Linq
         private InMemoryDocumentSessionOperations _session;
         private bool _isMapReduce;
 
-
         /// <summary>
         /// Initializes a new instance of the <see cref="RavenQueryInspector{T}"/> class.
         /// </summary>
@@ -174,7 +173,7 @@ namespace Raven.Client.Documents.Linq
 
             string fields = "";
             if (ravenQueryProvider.FieldsToFetch.Count > 0)
-                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.ToArray()) + ">: ";
+                fields = "<" + string.Join(", ", ravenQueryProvider.FieldsToFetch.Select(x => x.Name).ToArray()) + ">: ";
             return fields + query;
         }
 
@@ -233,9 +232,17 @@ namespace Raven.Client.Documents.Linq
 
         private RavenQueryProviderProcessor<T> GetRavenQueryProvider()
         {
-            return new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, _provider.CustomizeQuery, null, _indexName, _collectionName,
-                                                      new HashSet<string>(), new List<RenamedField>(), _isMapReduce,
-                                                      _provider.ResultTransformer, _provider.TransformerParameters, _provider.OriginalQueryType);
+            return new RavenQueryProviderProcessor<T>(
+                _provider.QueryGenerator,
+                _provider.CustomizeQuery,
+                null,
+                _indexName,
+                _collectionName,
+                new HashSet<FieldToFetch>(),
+                _isMapReduce,
+                _provider.ResultTransformer,
+                _provider.TransformerParameters,
+                _provider.OriginalQueryType);
         }
 
         public string IndexName => _indexName;
@@ -247,8 +254,17 @@ namespace Raven.Client.Documents.Linq
         ///</summary>
         public KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false)
         {
-            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(_provider.QueryGenerator, null, null, _indexName, _collectionName, new HashSet<string>(),
-                new List<RenamedField>(), _isMapReduce, _provider.ResultTransformer, _provider.TransformerParameters, _provider.OriginalQueryType);
+            var ravenQueryProvider = new RavenQueryProviderProcessor<T>(
+                _provider.QueryGenerator,
+                null,
+                null,
+                _indexName,
+                _collectionName,
+                new HashSet<FieldToFetch>(),
+                _isMapReduce,
+                _provider.ResultTransformer,
+                _provider.TransformerParameters,
+                _provider.OriginalQueryType);
 
             if (isAsync)
             {
@@ -267,7 +283,7 @@ namespace Raven.Client.Documents.Linq
         {
             foreach (var field in fields)
             {
-                _provider.FieldsToFetch.Add(field);
+                _provider.FieldsToFetch.Add(new FieldToFetch(field, null));
             }
         }
     }
