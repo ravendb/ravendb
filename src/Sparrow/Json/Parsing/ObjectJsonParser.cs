@@ -89,7 +89,7 @@ namespace Sparrow.Json.Parsing
             }
         }
 
-        public static DynamicJsonValue Convert<T>(Dictionary<string, T> dictionary)
+        public static DynamicJsonValue Convert<T>(IDictionary<string, T> dictionary)
         {
             if (dictionary == null)
                 return null;
