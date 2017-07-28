@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,8 +19,10 @@ using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -47,6 +51,7 @@ namespace Raven.Server
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
             _server = app.ApplicationServices.GetService<RavenServer>();
+
             if (IsServerRunningInASafeManner() == false)
             {
                 app.Run(UnsafeRequestHandler);
@@ -59,13 +64,8 @@ namespace Raven.Server
         {
             if (_server.Configuration.Security.AuthenticationEnabled)
                 return true;
-            if (_server.Configuration.Security.AuthenticationRequiredForPublicNetworks == false)
-                return true;
-            var url = _server.Configuration.Core.ServerUrl.ToLowerInvariant();
-            if(Uri.TryCreate(url, UriKind.Absolute, out var uri) == false)
-                throw new UriFormatException("Unable to parse URL - " + url);
-            //url isn't set to localhost 
-            return uri.IsLoopback || uri.Host == "localhost.fiddler";
+
+            return _server.Configuration.Security.IsUnsecureAccessSetupValid ?? false;
         }
 
         public static bool SkipHttpLogging;
@@ -142,9 +142,9 @@ namespace Raven.Server
 
         private static readonly string[] UnsafeWarning = {
             "Running in a potentially unsafe mode.",
-            $"Server is exposed to the world and the security option { RavenConfiguration.GetKey(x => x.Security.AuthenticationEnabled) } is set to false.",
-            "Please find the RavenDB settings file settings.json in the server directory and set this option to true to prevent unauthorized access. In order to gain administrative access to the server please access it through localhost.",
-            $"If you intended to grant administrative access to the server for anonymous users set { RavenConfiguration.GetKey(x => x.Security.AuthenticationRequiredForPublicNetworks) } security option to false."
+            "Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.",
+            $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateExec) }",
+            $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } setting value." 
         };
 
         private async Task RequestHandler(HttpContext context)

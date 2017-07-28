@@ -57,7 +57,7 @@ if ([string]::IsNullOrEmpty($DataDir) -eq $False) {
 
 if ($AuthenticationDisabled) {
     $dockerArgs += '-e'
-    $dockerArgs += "SecurityAuthenticationEnabled=false"
+    $dockerArgs += "UnsecuredAccessAllowed=PublicNetwork"
 }
 
 if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {

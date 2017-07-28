@@ -231,7 +231,7 @@ namespace Raven.Server.ServerWide
             return unprotectedData;
         }
 
-        public RavenServer.CertificateHolder LoadCerificateWithExecutable()
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable()
         {
             var process = new Process
             {

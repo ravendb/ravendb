@@ -115,7 +115,7 @@ namespace Raven.Server.Routing
             return reqCtx.Database?.Name;
         }
 
-        private bool TryAuthorize(RouteInformation route,HttpContext context, DocumentDatabase database)
+        private bool TryAuthorize(RouteInformation route, HttpContext context, DocumentDatabase database)
         {
             switch (route.AuthorizationStatus)
             {
