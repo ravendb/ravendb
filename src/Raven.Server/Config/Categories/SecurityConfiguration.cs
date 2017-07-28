@@ -58,11 +58,9 @@ namespace Raven.Server.Config.Categories
         public int MasterKeyExecTimeout { get; set; }
 
         [Description("If authentication is disabled, set address range type for which server access is unsecured (None | Local | PrivateNetwork | PublicNetwork).")]
-        [DefaultValue(nameof(UnsecuredAccessAddressRange.Local))]
+        [DefaultValue(UnsecuredAccessAddressRange.Local)]
         [ConfigurationEntry("Security.Authentication.UnsecuredAccessAllowed")]
-        public FlagSetting<UnsecuredAccessAddressRange> UnsecuredAccessAllowed { get; set; }
-
-        public UnsecuredAccessAddressRange UnsecuredAccessAddressRange => UnsecuredAccessAllowed.SettingValue.Value;
+        public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }
 
@@ -82,7 +80,7 @@ namespace Raven.Server.Config.Categories
             var isServerUrlHttps = uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase);
 
             var serverAddresses = DetermineServerIp(uri);
-            var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAddressRange;
+            var unsecuredAccessAddressRange = configuration.Security.UnsecuredAccessAllowed;
             var serverIsWithinUnsecuredAccessRange = serverAddresses.Any(x => SecurityUtils.IsUnsecuredAccessAllowedForAddress(unsecuredAccessAddressRange, x));
 
             if (configuration.Security.AuthenticationEnabled)
@@ -100,7 +98,7 @@ namespace Raven.Server.Config.Categories
                 if (serverIsWithinUnsecuredAccessRange == false)
                 {
                     configuration.Security.UnsecureAccessWarningMessage =
-                        $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrl)} \"{configuration.Core.ServerUrl}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAddressRange }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
+                        $"Configured {RavenConfiguration.GetKey(x => x.Core.ServerUrl)} \"{configuration.Core.ServerUrl}\" is not set within allowed unsecured access address range - { configuration.Security.UnsecuredAccessAllowed }. Use a server url within unsecure access address range ({RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)} option) or fill in server certificate information.";
                     configuration.Security.IsUnsecureAccessSetupValid = false;
                 }
             }
