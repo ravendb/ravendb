@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
@@ -11,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Util;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -129,72 +131,42 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private bool _hasLivingNodesFlag;
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous)
         {
-            if (topology.Members.Count > 1)
+            var hasLivingNodes = false;
+            foreach (var member in topology.Members)
             {
-                var hasLivingNode = false;
-                foreach (var member in topology.Members)
+                if (current.TryGetValue(member, out var nodeStats) &&
+                    nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
+                    nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
+                    dbStats.Status == Loaded)
                 {
-                    if (current.TryGetValue(member, out var nodeStats) &&
-                        nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
-                        nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
-                        dbStats.Status == Loaded)
-                    {
-                        hasLivingNode = true;
-                        _hasLivingNodesFlag = true;
-
-                        topology.DemotionReasons.Remove(member);
-                        topology.PromotablesStatus.Remove(member);
-                    }
+                    hasLivingNodes = true;
+                    topology.DemotionReasons.Remove(member);
+                    topology.PromotablesStatus.Remove(member);
+                    continue;
                 }
-
-                if (hasLivingNode == false)
+           
+                if (FailedDatabaseInstanceOrNode(topology, member, dbName, current))
                 {
-                    var alertMsg = $"It appears that all nodes of the {dbName} database are dead, and we can't demote the last member-node left.";
-                    if (_hasLivingNodesFlag)
-                    {
-                        var alert = AlertRaised.Create(
-                            "No living nodes in the database topology",
-                            alertMsg,
-                            AlertType.ClusterTopologyWarning,
-                            NotificationSeverity.Warning
-                        );
-                        _server.NotificationCenter.Add(alert);
-                    }
-                    _hasLivingNodesFlag = false;
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations(alertMsg);
-                    }
-                    return false;
-                }
+                    MoveToRehab(dbName, topology, current, previous, member);
+                    if (TryFindFitNode(member, dbName, current, out var node) == false)
+                        continue;
 
-                foreach (var member in topology.Members)
-                {
-                    if (IsBroken(topology, member, dbName, current))
-                    {
-                        InvestigateRehabReason(dbName, topology, current, previous, member);
-                        if (TryFindFitNode(member, dbName, current, out var node) == false)
-                            continue;
-
-                        topology.Members.Remove(member);
-                        topology.Promotables.Add(node);
-                        topology.Rehab.Add(member);
-                        return true;
-                    }
+                    topology.Members.Remove(member);
+                    topology.Promotables.Add(node);
+                    topology.Rehab.Add(member);
+                    // we only allow a single topology modification per round, so 
+                    // we abort immediately after making this change
+                    return true;
                 }
             }
-            
+
             foreach (var promotable in topology.Promotables)
             {
-                if (TryGetMontorNode(dbName, topology, clusterTopology, promotable, out var mentorNode) == false)
-                    return false;
-
-                if (IsBroken(topology, promotable, dbName, current))
+                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current))
                 {
                     if (TryFindFitNode(promotable, dbName, current, out var node) == false)
                         continue;
@@ -202,6 +174,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.Promotables.Add(node);
                     return true;
                 }
+
+                if (TryGetMentorNode(dbName, topology, clusterTopology, promotable, out var mentorNode) == false)
+                    continue;
 
                 if (TryPromote(dbName, topology, current, previous, mentorNode, promotable))
                 {
@@ -212,12 +187,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var broked in topology.Rehab)
             {
-                if (IsBroken(topology, broked, dbName, current) == false)
+                if (FailedDatabaseInstanceOrNode(topology, broked, dbName, current) == false)
                 {
-                    if (TryGetMontorNode(dbName, topology, clusterTopology, broked, out var mentorNode) == false)
+                    if (TryGetMentorNode(dbName, topology, clusterTopology, broked, out var mentorNode) == false)
                         return false;
 
-                    if(TryPromote(dbName, topology, current, previous, mentorNode, broked))
+                    if (TryPromote(dbName, topology, current, previous, mentorNode, broked))
                     {
                         if (_logger.IsOperationsEnabled)
                         {
@@ -233,69 +208,56 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
-        private void InvestigateRehabReason(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string member)
+        private void MoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string member)
         {
             DatabaseStatusReport dbStats = null;
-            if (current.TryGetValue(member, out var nodeStats) == false ||
-                nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok ||
-                nodeStats.LastReport.TryGetValue(dbName, out dbStats) == false ||
-                dbStats.Status == Faulted)
+            if (current.TryGetValue(member, out var nodeStats) && 
+                nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
+                nodeStats.LastReport.TryGetValue(dbName, out  dbStats) && 
+                dbStats.Status != Faulted) 
+                return;
+            
+            
+            topology.Members.Remove(member);
+            topology.Rehab.Add(member);
+
+            string reason;
+            if (nodeStats == null)
             {
-                topology.Members.Remove(member);
-                topology.Rehab.Add(member);
-
-                if (_logger.IsOperationsEnabled)
-                {
-                    _logger.Operations($"We rehabilitate the database {dbName} on {member}");
-                }
-
-                string reason;
-                if (nodeStats == null)
-                {
-                    reason = "In rehabilitation because it had no status report in the latest cluster stats";
-                }
-                else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
-                {
-                    reason = $"In rehabilitation because the last report status was \"{nodeStats.LastReportStatus}\" ";
-                }
-                else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
-                {
-                    reason = "In rehabilitation because the DatabaseStatus for this node is Faulted";
-                }
-                else
-                {
-                    reason = "In rehabilitation because it had no DatabaseStatusReport";
-                }
-
-                if (nodeStats?.LastError != null)
-                {
-                    reason += $". {nodeStats.LastError}";
-                }
-
-                topology.DemotionReasons[member] = reason;
-                topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
+                reason = "In rehabilitation because it had no status report in the latest cluster stats";
+            }
+            else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+            {
+                reason = $"In rehabilitation because the last report status was \"{nodeStats.LastReportStatus}\"";
+            }
+            else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
+            {
+                reason = "In rehabilitation because the DatabaseStatus for this node is Faulted";
+            }
+            else
+            {
+                reason = "In rehabilitation because the node is reachable but had no report about the database";
             }
 
-            if (dbStats != null && dbStats.Status == Loading)
+            if (nodeStats?.LastError != null)
             {
-                if (previous.TryGetValue(member, out var prevNodeStats) &&
-                    prevNodeStats.LastReport.TryGetValue(dbName, out var prevDbStats) &&
-                    prevDbStats.Status == Loading)
-                {
-                    topology.Members.Remove(member);
-                    topology.Promotables.Add(member);
+                reason += $". {nodeStats.LastError}";
+            }
+            if (dbStats?.Error != null)
+            {
+                reason += $". {dbStats.Error}";         
+            }
 
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations($"We rehabilitate the database {dbName} on {member}, because it is too long in Loading state.");
-                    }
-                    topology.DemotionReasons[member] = "In rehabilitation because it is too long in Loading state";
-                    topology.PromotablesStatus[member] = "Loading the databse";
-                }
+            topology.DemotionReasons[member] = reason;
+            topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
+
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations(reason);
             }
         }
 
-        private bool TryGetMontorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
+        private bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
         {
             var url = clusterTopology.GetUrlFromTag(promotable);
             var task = new PromotableTask(promotable, url, dbName);
@@ -333,7 +295,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.Members.Add(promotable);
                     if (_logger.IsOperationsEnabled)
                     {
-                        _logger.Operations($"We promote the database {dbName} on {promotable} to be a full member");
+                        _logger.Operations($"We promoted the database {dbName} on {promotable} to be a full member");
                     }
                     topology.PromotablesStatus.Remove(promotable);
                     topology.DemotionReasons.Remove(promotable);
@@ -363,21 +325,22 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private void RemoveOtherNodesIfNeeded(DatabaseTopology topology)
         {
-            if (topology.Members.Count == topology.ReplicationFactor)
+            if (topology.Members.Count != topology.ReplicationFactor) 
+                return;
+
+            if (topology.Promotables.Count  == 0 && 
+                topology.Rehab.Count == 0) 
+                return;
+            
+            if (_logger.IsOperationsEnabled)
             {
-                if (topology.Promotables.Count + topology.Rehab.Count > 0)
-                {
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations("We reached the replication factor, so we remove all other broken/promotable nodes.");
-                    }
-                    topology.Promotables.Clear();
-                    topology.Rehab.Clear();
-                }
+                _logger.Operations($"We reached the replication factor, so we remove all other rehab/promotable nodes {string.Join(", ", topology.Rehab.Concat(topology.Promotables))}");
             }
+            topology.Promotables.Clear();
+            topology.Rehab.Clear();
         }
         
-        private bool IsBroken(
+        private bool FailedDatabaseInstanceOrNode(
             DatabaseTopology topology, string node, string db,
             Dictionary<string, ClusterNodeStatusReport> current)
         {
@@ -396,7 +359,10 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
             {
-                throw new MissingFieldException($"The {db} database last known good time is missing!"); // should never hit
+                // here we have a problem, the topology says that the db needs to be in the node, but the node
+                // doesn't know that the db is on it, that probably indicate some problem and we'll move it
+                // to another node to resolve it.
+                return true;
             }
 
             return DateTime.UtcNow - lastGoodTime > _breakdownTimeout;

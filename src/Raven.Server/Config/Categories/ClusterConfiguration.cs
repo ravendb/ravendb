@@ -48,12 +48,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.StatsStabilizationTimeInSec")]
         public TimeSetting StabilizationTime { get; set; }
 
-
-        [Description("The time we give to a database to be in a good and responsive state, before we adding a replica to match the replication factor.")]
-        [DefaultValue(15)]
-        [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Cluster.TimeBeforeAddingReplicaInMin")]
-        public TimeSetting AddReplicaTimeout { get; set; }
+        [Description("The time we give to a database instance to be in a good and responsive state, before we adding a replica to match the replication factor.")]
+        [DefaultValue(15 * 60)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Cluster.TimeBeforeAddingReplicaInSec")]
+        public TimeSetting AddReplicaTimeout{ get; set; }
 
     }
 }
