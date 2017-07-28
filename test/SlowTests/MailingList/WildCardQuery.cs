@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
                 {
                     commands.Query(new IndexQuery
                     {
-                        Query = "FROM @AllDocs WHERE PortalId = 0 AND Regex(Query, '(*)') OR Regex(QueryBoosted, '(*)')"
+                        Query = "FROM @all_docs WHERE PortalId = 0 AND search(Query, '*') OR search(QueryBoosted, '*')"
                     });
                 }
             }

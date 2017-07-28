@@ -93,25 +93,25 @@ namespace Raven.Client.Documents.Session
         /// <param name="whereClause">The where clause.</param>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause)
         {
-            Where(fieldName, whereClause);
+            WhereLucene(fieldName, whereClause);
             return this;
         }
 
         /// <summary>
         /// 	Matches value
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool exact = false)
         {
-            WhereEquals(fieldName, value);
+            WhereEquals(fieldName, value, exact);
             return this;
         }
 
         /// <summary>
         ///   Matches value
         /// </summary>
-        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -125,56 +125,20 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// 	Matches exact value
+        /// Check that the field has one of the specified value
         /// </summary>
-        /// <remarks>
-        /// 	Defaults to NotAnalyzed
-        /// </remarks>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExactMatch(string fieldName, string value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
-            WhereExactMatch(fieldName, value);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        public IAsyncDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, string value)
-        {
-            base.WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExactMatch(WhereParams whereExactMatchParams)
-        {
-            WhereExactMatch(whereExactMatchParams);
+            WhereIn(fieldName, values, exact);
             return this;
         }
 
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values)
+        public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false)
         {
-            WhereIn(fieldName, values);
-            return this;
-        }
-
-        /// <summary>
-        /// Check that the field has one of the specified value
-        /// </summary>
-        public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
-        {
-            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>(), exact);
             return this;
         }
 
@@ -228,9 +192,9 @@ namespace Raven.Client.Documents.Session
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
-            WhereBetween(fieldName, start, end);
+            WhereBetween(fieldName, start, end, exact);
             return this;
         }
 
@@ -240,9 +204,9 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "start">The start.</param>
         /// <param name = "end">The end.</param>
-        public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+        public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false)
         {
-            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
+            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end, exact);
             return this;
         }
 
@@ -251,9 +215,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThan(fieldName, value);
+            WhereGreaterThan(fieldName, value, exact);
             return this;
         }
 
@@ -262,9 +226,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -273,9 +237,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(fieldName, value);
+            WhereGreaterThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -284,9 +248,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -295,9 +259,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThan(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThan(string fieldName, object value, bool exact = false)
         {
-            WhereLessThan(fieldName, value);
+            WhereLessThan(fieldName, value, exact);
             return this;
         }
 
@@ -306,9 +270,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -317,9 +281,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereLessThanOrEqual(fieldName, value);
+            WhereLessThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -328,9 +292,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 

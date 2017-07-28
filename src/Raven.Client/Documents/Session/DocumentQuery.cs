@@ -333,88 +333,52 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause)
         {
-            Where(fieldName, whereClause);
+            WhereLucene(fieldName, whereClause);
             return this;
         }
 
         /// <summary>
         /// 	Matches value
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool exact = false)
         {
-            WhereEquals(fieldName, value);
+            WhereEquals(fieldName, value, exact);
             return this;
         }
 
         /// <summary>
         /// 	Matches value
         /// </summary>
-        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <summary>
         /// 	Matches value
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(WhereParams whereEqualsParams)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
-            WhereEquals(whereEqualsParams);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        /// 	Defaults to NotAnalyzed
-        /// </remarks>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereExactMatch(string fieldName, string value)
-        {
-            WhereExactMatch(fieldName, value);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        public IDocumentQuery<T> WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, string value)
-        {
-            base.WhereExactMatch(GetMemberQueryPath(propertySelector.Body), value);
-            return this;
-        }
-
-        /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereExactMatch(WhereParams whereExactMatchParams)
-        {
-            WhereExactMatch(whereExactMatchParams);
+            WhereEquals(whereParams);
             return this;
         }
 
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
-            WhereIn(fieldName, values);
+            WhereIn(fieldName, values, exact);
             return this;
         }
 
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        public IDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        public IDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false)
         {
-            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>(), exact);
             return this;
         }
 
@@ -468,9 +432,9 @@ namespace Raven.Client.Documents.Session
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
-            WhereBetween(fieldName, start, end);
+            WhereBetween(fieldName, start, end, exact);
             return this;
         }
 
@@ -480,9 +444,9 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "start">The start.</param>
         /// <param name = "end">The end.</param>
-        public IDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+        public IDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false)
         {
-            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
+            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end, exact);
             return this;
         }
 
@@ -491,9 +455,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThan(fieldName, value);
+            WhereGreaterThan(fieldName, value, exact);
             return this;
         }
 
@@ -502,9 +466,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -513,9 +477,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(fieldName, value);
+            WhereGreaterThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -524,9 +488,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -535,9 +499,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThan(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThan(string fieldName, object value, bool exact = false)
         {
-            WhereLessThan(fieldName, value);
+            WhereLessThan(fieldName, value, exact);
             return this;
         }
 
@@ -546,9 +510,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -557,9 +521,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereLessThanOrEqual(fieldName, value);
+            WhereLessThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -568,9 +532,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 

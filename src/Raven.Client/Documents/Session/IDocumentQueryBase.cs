@@ -521,7 +521,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        TSelf WhereBetween(string fieldName, object start, object end);
+        TSelf WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive
@@ -529,7 +529,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
+        TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.
@@ -548,12 +548,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Matches value
         /// </summary>
-        TSelf WhereEquals(string fieldName, object value);
+        TSelf WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches value
         /// </summary>
-        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches value
@@ -561,91 +561,70 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereEquals(WhereParams whereParams);
 
         /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///     Defaults to NotAnalyzed
-        /// </remarks>
-        TSelf WhereExactMatch(string fieldName, string value);
-
-        /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///     Defaults to NotAnalyzed
-        /// </remarks>
-        TSelf WhereExactMatch<TValue>(Expression<Func<T, TValue>> propertySelector, string value);
-
-        /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        TSelf WhereExactMatch(WhereParams whereParams);
-
-        /// <summary>
         ///     Matches fields where the value is greater than the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThan(string fieldName, object value);
+        TSelf WhereGreaterThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than or equal to the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThanOrEqual(string fieldName, object value);
+        TSelf WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than or equal to the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Check that the field has one of the specified values
         /// </summary>
-        TSelf WhereIn(string fieldName, IEnumerable<object> values);
+        TSelf WhereIn(string fieldName, IEnumerable<object> values, bool exact = false);
 
         /// <summary>
         ///     Check that the field has one of the specified values
         /// </summary>
-        TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+        TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThan(string fieldName, object value);
+        TSelf WhereLessThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than or equal to the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThanOrEqual(string fieldName, object value);
+        TSelf WhereLessThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than or equal to the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which starts with the specified value.

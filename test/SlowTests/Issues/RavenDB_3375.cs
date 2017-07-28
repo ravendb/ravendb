@@ -2,6 +2,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
@@ -46,28 +47,23 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query1 = session.Advanced.DocumentQuery<Post>("TagsIndex");
-                    query1 = query1.WhereExactMatch("Tags", "NoSpace:1");
+                    query1 = query1.WhereEquals("Tags", "NoSpace:1", exact: true);
                     var posts = query1.ToArray();
                     Assert.Equal(1, posts.Length); // Passes
 
                     var query2 = session.Advanced.DocumentQuery<Post>("TagsIndex")
-                                        .WhereExactMatch("Tags", "Space :2");
+                                        .WhereEquals("Tags", "Space :2", exact: true);
                     var posts2 = query2.ToArray();
                     Assert.Equal(1, posts2.Length); // Fails
                 }
 
-                // using Linq
-
                 using (var session = store.OpenSession())
                 {
-                    var query1 = session.Query<Post>("TagsIndex").WhereExactMatch(x => x.Tags, "NoSpace:1");
-                    var posts = query1.ToArray();
-                    Assert.Equal(1, posts.Length);
+                    var posts = session.Query<Post>("TagsIndex")
+                        .Where(x => x.Tags.Contains("NoSpace:1"), exact: true)
+                        .ToList();
 
-                    var query2 = session.Query<Post>("TagsIndex")
-                        .WhereExactMatch(x => x.Tags, "Space :2");
-                    var posts2 = query2.ToArray();
-                    Assert.Equal(1, posts2.Length);
+                    Assert.Equal(1, posts.Count);
                 }
             }
         }

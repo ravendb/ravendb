@@ -1278,21 +1278,53 @@ namespace Raven.Client.Documents
             var session = documentQuery.AsyncSession;
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
-
-        /// <summary>
-        /// Perform an exact match for documents which fields were marked as not analyzed in an index definition
-        /// </summary>
-        public static IRavenQueryable<T> WhereExactMatch<T>(this IQueryable<T> self, Expression<Func<T, object>> propertySelector, string value)
+        
+        public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod("WhereExactMatch");
-            Expression expression = self.Expression;
+            var currentMethod = GetWhereMethod(3);
+            Expression expression = source.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
             {
                 expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
             }
-            var queryable =
-                self.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, propertySelector, Expression.Constant(value)));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
+        {
+            var currentMethod = GetWhereMethod(2);
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+            {
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+            }
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
+        {
+            foreach (var method in typeof(LinqExtensions).GetMethods())
+            {
+                if (method.Name != nameof(Where))
+                    continue;
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != 3)
+                    continue;
+
+                var predicate = parameters[1];
+                var func = predicate.ParameterType.GenericTypeArguments[0];
+                if (func.GenericTypeArguments.Length != numberOfFuncArguments)
+                    continue;
+
+                return method;
+            }
+            
+            throw new InvalidOperationException("Could not find Where method.");
         }
     }
 }

@@ -759,7 +759,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Filter the results from the index using the specified where clause.
         /// </summary>
-        public void Where(string fieldName, string whereClause)
+        public void WhereLucene(string fieldName, string whereClause)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -772,12 +772,13 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches value
         /// </summary>
-        public void WhereEquals(string fieldName, object value)
+        public void WhereEquals(string fieldName, object value, bool exact = false)
         {
             WhereEquals(new WhereParams
             {
                 FieldName = fieldName,
-                Value = value
+                Value = value,
+                Exact = exact
             });
         }
 
@@ -819,35 +820,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(whereParams.FieldName);
 
-            WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
-        }
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        public void WhereExactMatch(string fieldName, string value)
-        {
-            WhereExactMatch(new WhereParams
-            {
-                FieldName = fieldName,
-                Value = value
-            });
-        }
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        public void WhereExactMatch(WhereParams whereParams)
-        {
-            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
-
-            var transformToEqualValue = TransformValue(whereParams);
-            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(whereParams.FieldName);
-
-            WhereTokens.AddLast(WhereToken.ExactMatch(whereParams.FieldName, AddQueryParameter(transformToEqualValue)));
+            WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
         ///<summary>
@@ -861,14 +834,14 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        public void WhereIn(string fieldName, IEnumerable<object> values)
+        public void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereTokens.AddLast(WhereToken.In(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray()), exact));
         }
 
         /// <summary>
@@ -928,7 +901,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "start">The start.</param>
         /// <param name = "end">The end.</param>
         /// <returns></returns>
-        public void WhereBetween(string fieldName, object start, object end)
+        public void WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -938,7 +911,7 @@ If you really want to do in memory filtering on the data returned from the query
             var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }));
             var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }));
 
-            WhereTokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName));
+            WhereTokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName, exact));
         }
 
         /// <summary>
@@ -946,14 +919,14 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereGreaterThan(string fieldName, object value)
+        public void WhereGreaterThan(string fieldName, object value, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
         }
 
         /// <summary>
@@ -961,14 +934,14 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereGreaterThanOrEqual(string fieldName, object value)
+        public void WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
         }
 
         /// <summary>
@@ -976,14 +949,14 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereLessThan(string fieldName, object value)
+        public void WhereLessThan(string fieldName, object value, bool exact = false)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
         }
 
         /// <summary>
@@ -991,12 +964,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "value">The value.</param>
-        public void WhereLessThanOrEqual(string fieldName, object value)
+        public void WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }))));
+            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
         }
 
         /// <summary>

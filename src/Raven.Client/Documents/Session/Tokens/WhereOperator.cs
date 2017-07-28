@@ -15,7 +15,6 @@ namespace Raven.Client.Documents.Session.Tokens
         EndsWith,
         ContainsAny,
         ContainsAll,
-        Exists,
-        ExactMatch
+        Exists
     }
 }

@@ -32,6 +32,7 @@ namespace Raven.Client.Documents.Linq
         private readonly Action<QueryResult> _afterQueryExecuted;
         private bool _chainedWhere;
         private int _insideWhere;
+        private bool _insideExact;
         private IAbstractDocumentQuery<T> _documentQuery;
         private SpecialQueryType _queryType = SpecialQueryType.None;
         private Type _newExpressionType;
@@ -282,12 +283,12 @@ namespace Raven.Client.Documents.Linq
                           : rightMember.Item2;
 
             if (andAlso.Left.NodeType == ExpressionType.GreaterThanOrEqual || andAlso.Left.NodeType == ExpressionType.LessThanOrEqual)
-                _documentQuery.WhereBetween(leftMember.Item1.Path, min, max);
+                _documentQuery.WhereBetween(leftMember.Item1.Path, min, max, _insideExact);
             else
             {
-                _documentQuery.WhereGreaterThan(leftMember.Item1.Path, min);
+                _documentQuery.WhereGreaterThan(leftMember.Item1.Path, min, _insideExact);
                 _documentQuery.AndAlso();
-                _documentQuery.WhereLessThan(leftMember.Item1.Path, max);
+                _documentQuery.WhereLessThan(leftMember.Item1.Path, max, _insideExact);
             }
 
             return true;
@@ -361,7 +362,8 @@ namespace Raven.Client.Documents.Linq
                     {
                         FieldName = expressionMemberInfo.Path,
                         Value = GetValueFromExpression(methodCallExpression.Arguments[1], GetMemberType(expressionMemberInfo)),
-                        AllowWildcards = false
+                        AllowWildcards = false,
+                        Exact = _insideExact
                     });
                 return;
             }
@@ -379,7 +381,8 @@ namespace Raven.Client.Documents.Linq
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false,
-                IsNestedPath = memberInfo.IsNestedPath
+                IsNestedPath = memberInfo.IsNestedPath,
+                Exact = _insideExact
             });
         }
 
@@ -418,7 +421,8 @@ namespace Raven.Client.Documents.Linq
                 {
                     FieldName = expressionMemberInfo.Path,
                     Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
-                    AllowWildcards = false
+                    AllowWildcards = false,
+                    Exact = _insideExact
                 });
                 _documentQuery.CloseSubclause();
                 return;
@@ -443,7 +447,8 @@ namespace Raven.Client.Documents.Linq
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
-                AllowWildcards = false
+                AllowWildcards = false,
+                Exact = _insideExact
             });
 
             if (_isNotEqualCheckBoundsToAndAlso == false)
@@ -594,7 +599,8 @@ namespace Raven.Client.Documents.Linq
             {
                 FieldName = fieldInfo.Path,
                 Value = GetValueFromExpression(constant, GetMemberType(fieldInfo)),
-                AllowWildcards = false
+                AllowWildcards = false,
+                Exact = _insideExact
             });
         }
 
@@ -627,9 +633,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.OpenSubclause();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.NullValue);
+            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.NullValue, _insideExact);
             _documentQuery.OrElse();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.EmptyString);
+            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.EmptyString, _insideExact);
             _documentQuery.CloseSubclause();
         }
 
@@ -645,7 +651,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereGreaterThan(
                 GetFieldNameForRangeQuery(memberInfo, value),
-                value);
+                value,
+                _insideExact);
         }
 
         private void VisitGreaterThanOrEqual(BinaryExpression expression)
@@ -662,7 +669,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereGreaterThanOrEqual(
                 GetFieldNameForRangeQuery(memberInfo, value),
-                value);
+                value,
+                _insideExact);
         }
 
         private void VisitLessThan(BinaryExpression expression)
@@ -677,7 +685,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereLessThan(
                 GetFieldNameForRangeQuery(memberInfo, value),
-                value);
+                value,
+                _insideExact);
         }
 
         private void VisitLessThanOrEqual(BinaryExpression expression)
@@ -694,7 +703,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             _documentQuery.WhereLessThanOrEqual(
                 GetFieldNameForRangeQuery(memberInfo, value),
-                value);
+                value,
+                _insideExact);
         }
 
         private void VisitAny(MethodCallExpression expression)
@@ -716,6 +726,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     Value = "*",
                     AllowWildcards = true,
                     IsNestedPath = memberInfo.IsNestedPath,
+                    Exact = _insideExact
                 });
             }
         }
@@ -729,7 +740,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(containsArgument, containsArgument.Type),
-                AllowWildcards = false
+                AllowWildcards = false,
+                Exact = _insideExact
             });
 
         }
@@ -754,7 +766,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         FieldName = memberInfo.Path,
                         Value = null,
-                        AllowWildcards = false
+                        AllowWildcards = false,
+                        Exact = _insideExact
                     });
                     if (boolValue)
                     {
@@ -769,7 +782,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     {
                         FieldName = memberInfo.Path,
                         Value = boolValue,
-                        AllowWildcards = false
+                        AllowWildcards = false,
+                        Exact = _insideExact
                     });
                 }
             }
@@ -785,7 +799,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     FieldName = _currentPath,
                     Value = GetValueFromExpression(memberExpression, GetMemberType(memberInfo)),
                     AllowWildcards = false,
-                    IsNestedPath = memberInfo.IsNestedPath
+                    IsNestedPath = memberInfo.IsNestedPath,
+                    Exact = _insideExact
                 });
             }
             else
@@ -877,7 +892,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case "In":
                     var memberInfo = GetMember(expression.Arguments[0]);
                     var objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
-                    _documentQuery.WhereIn(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
+                    _documentQuery.WhereIn(memberInfo.Path, ((IEnumerable)objects).Cast<object>(), _insideExact);
                     break;
                 case "ContainsAny":
                     memberInfo = GetMember(expression.Arguments[0]);
@@ -889,15 +904,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     objects = GetValueFromExpression(expression.Arguments[1], GetMemberType(memberInfo));
                     _documentQuery.ContainsAll(memberInfo.Path, ((IEnumerable)objects).Cast<object>());
                     break;
-                case "WhereExactMatch":
-                    var firstArgIndex = 0;
-
-                    if (expression.Arguments[0].NodeType == ExpressionType.Convert)
-                        firstArgIndex = 1;
-
-                    memberInfo = GetMember(expression.Arguments[firstArgIndex]);
-                    objects = GetValueFromExpression(expression.Arguments[firstArgIndex + 1], GetMemberType(memberInfo));
-                    _documentQuery.WhereExactMatch(memberInfo.Path, (string)objects);
+                case nameof(LinqExtensions.Where):
+                    VisitQueryableMethodCall(expression);
                     break;
                 default:
                     {
@@ -1014,7 +1022,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         {
                             FieldName = memberInfo.Path,
                             Value = GetValueFromExpression(containsArgument, containsArgument.Type),
-                            AllowWildcards = false
+                            AllowWildcards = false,
+                            Exact = _insideExact
                         });
 
                         break;
@@ -1123,7 +1132,14 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         }
                         if (_chainedWhere == false && _insideWhere > 1)
                             _documentQuery.OpenSubclause();
+
+                        if (expression.Arguments.Count == 3)
+                            _insideExact = (bool)GetValueFromExpression(expression.Arguments[2], typeof(bool));
+
                         VisitExpression(((UnaryExpression)expression.Arguments[1]).Operand);
+
+                        _insideExact = false;
+
                         if (_chainedWhere == false && _insideWhere > 1)
                             _documentQuery.CloseSubclause();
                         if (_chainedWhere)

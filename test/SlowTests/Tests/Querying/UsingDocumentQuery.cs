@@ -19,11 +19,11 @@ namespace SlowTests.Tests.Querying
         public void CanUnderstandSimpleEquality()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereExactMatch("Name", "ayende");
+                .WhereEquals("Name", "ayende", exact: true);
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE exactMatch(Name, :p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
             Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
@@ -32,11 +32,11 @@ namespace SlowTests.Tests.Querying
         {
             var ayende = "ayende" + 1;
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
-                .WhereExactMatch("Name", ayende);
+                .WhereEquals("Name", ayende, exact: true);
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE exactMatch(Name, :p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
             Assert.Equal("ayende1", query.QueryParameters["p0"]);
         }
 

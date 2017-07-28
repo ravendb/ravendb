@@ -16,8 +16,8 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void WhereEqualsSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereExactMatch("Name", "ayende").ToString(),
-                CreateUserQuery().WhereExactMatch(x => x.Name, "ayende").ToString());
+            Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende", exact: true).ToString(),
+                CreateUserQuery().WhereEquals(x => x.Name, "ayende", exact: true).ToString());
             Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende").ToString(), CreateUserQuery()
                 .WhereEquals(x => x.Name, "ayende").ToString());
         }

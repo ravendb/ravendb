@@ -38,16 +38,9 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static Query ExactMatch(string fieldName, string value)
+        public static Query Equal(string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            var term = GetTermValue(value, LuceneTermType.String, lowerCase: false);
-
-            return new TermQuery(new Term(fieldName, term)) { Boost = 1 };
-        }
-
-        public static Query Equal(string fieldName, LuceneTermType termType, string value)
-        {
-            return Term(fieldName, value, termType);
+            return Term(fieldName, value, termType, exact: exact);
         }
 
         public static Query Equal(string fieldName, LuceneTermType termType, long value)
@@ -60,9 +53,9 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, value, true);
         }
 
-        public static Query LessThan(string fieldName, LuceneTermType termType, string value)
+        public static Query LessThan(string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false);
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, false, exact);
         }
 
         public static Query LessThan(string fieldName, LuceneTermType termType, long value)
@@ -75,9 +68,9 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, double.MinValue, true, value, false);
         }
 
-        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, string value)
+        public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true);
+            return CreateRange(fieldName, Asterisk, LuceneTermType.WildCard, false, value, termType, true, exact);
         }
 
         public static Query LessThanOrEqual(string fieldName, LuceneTermType termType, long value)
@@ -90,9 +83,9 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, double.MinValue, true, value, true);
         }
 
-        public static Query GreaterThan(string fieldName, LuceneTermType termType, string value)
+        public static Query GreaterThan(string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, value, termType, false, Null, LuceneTermType.Null, true);
+            return CreateRange(fieldName, value, termType, false, Null, LuceneTermType.Null, true, exact);
         }
 
         public static Query GreaterThan(string fieldName, LuceneTermType termType, long value)
@@ -105,9 +98,9 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, false, double.MaxValue, true);
         }
 
-        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, string value)
+        public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, string value, bool exact)
         {
-            return CreateRange(fieldName, value, termType, true, Null, LuceneTermType.Null, true);
+            return CreateRange(fieldName, value, termType, true, Null, LuceneTermType.Null, true, exact);
         }
 
         public static Query GreaterThanOrEqual(string fieldName, LuceneTermType termType, long value)
@@ -120,9 +113,9 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, value, true, double.MaxValue, true);
         }
 
-        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, string toValue)
+        public static Query Between(string fieldName, LuceneTermType termType, string fromValue, string toValue, bool exact)
         {
-            return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true);
+            return CreateRange(fieldName, fromValue, termType, true, toValue, termType, true, exact);
         }
 
         public static Query Between(string fieldName, LuceneTermType termType, long fromValue, long toValue)
@@ -135,7 +128,7 @@ namespace Raven.Server.Documents.Queries
             return CreateRange(fieldName, fromValue, true, toValue, true);
         }
 
-        public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null)
+        public static Query Term(string fieldName, string term, LuceneTermType type, float? boost = null, float? similarity = null, bool exact = false)
         {
             if (boost.HasValue == false)
                 boost = 1;
@@ -143,7 +136,7 @@ namespace Raven.Server.Documents.Queries
             if (type == LuceneTermType.Double || type == LuceneTermType.Long)
                 return new TermQuery(new Term(fieldName, term)) { Boost = boost.Value };
 
-            term = GetTermValue(term, type);
+            term = GetTermValue(term, type, exact);
 
             if (type == LuceneTermType.WildCard)
             {
@@ -230,7 +223,7 @@ namespace Raven.Server.Documents.Queries
             return pq;
         }
 
-        public static unsafe string GetTermValue(string value, LuceneTermType type, bool lowerCase = true)
+        public static unsafe string GetTermValue(string value, LuceneTermType type, bool exact)
         {
             switch (type)
             {
@@ -245,7 +238,7 @@ namespace Raven.Server.Documents.Queries
                         if (value == string.Empty)
                             return Constants.Documents.Indexing.Fields.EmptyString;
 
-                        if (lowerCase == false)
+                        if (exact)
                             return value;
 
                         fixed (char* pValue = value)
@@ -324,14 +317,14 @@ This edge-case has a very slim chance of happening, but still we should not igno
             return new Term(fieldName, analyzedTermString);
         }
 
-        private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax)
+        private static Query CreateRange(string fieldName, string minValue, LuceneTermType minValueType, bool inclusiveMin, string maxValue, LuceneTermType maxValueType, bool inclusiveMax, bool exact)
         {
             var minTermIsNullOrStar = minValueType == LuceneTermType.Null || minValue.Equals(Asterisk);
             var maxTermIsNullOrStar = maxValueType == LuceneTermType.Null || maxValue.Equals(Asterisk);
             if (minTermIsNullOrStar && maxTermIsNullOrStar)
                 return new WildcardQuery(new Term(fieldName, Asterisk));
 
-            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType), inclusiveMin, inclusiveMax);
+            return new TermRangeQuery(fieldName, minTermIsNullOrStar ? null : GetTermValue(minValue, minValueType, exact), maxTermIsNullOrStar ? null : GetTermValue(maxValue, maxValueType, exact), inclusiveMin, inclusiveMax);
         }
 
         private static Query CreateRange(string fieldName, long minValue, bool inclusiveMin, long maxValue, bool inclusiveMax)

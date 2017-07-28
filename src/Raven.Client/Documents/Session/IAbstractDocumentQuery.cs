@@ -89,7 +89,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches value
         /// </summary>
-        void WhereEquals(string fieldName, object value);
+        void WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches value
@@ -108,22 +108,6 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         void CloseSubclause();
 
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        void WhereExactMatch(string fieldName, string value);
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        void WhereExactMatch(WhereParams whereParams);
-
         ///<summary>
         /// Negate the next operation
         ///</summary>
@@ -132,7 +116,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        void WhereIn(string fieldName, IEnumerable<object> values);
+        void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false);
 
         /// <summary>
         ///   Matches fields which starts with the specified value.
@@ -151,39 +135,27 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches fields where the value is between the specified start and end, exclusive
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        /// <returns></returns>
-        void WhereBetween(string fieldName, object start, object end);
+        void WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is greater than the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereGreaterThan(string fieldName, object value);
+        void WhereGreaterThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is greater than or equal to the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereGreaterThanOrEqual(string fieldName, object value);
+        void WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is less than the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereLessThan(string fieldName, object value);
+        void WhereLessThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is less than or equal to the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereLessThanOrEqual(string fieldName, object value);
+        void WhereLessThanOrEqual(string fieldName, object value, bool exact = false);
 
         void WhereExists(string fieldName);
 

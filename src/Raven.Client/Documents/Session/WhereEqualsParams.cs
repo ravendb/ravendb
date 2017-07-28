@@ -33,5 +33,7 @@ namespace Raven.Client.Documents.Session
         /// Is this a root property or not?
         /// </summary>
         public bool IsNestedPath { get; set; }
+        
+        public bool Exact { get; set; }
     }
 }

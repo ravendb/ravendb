@@ -26,14 +26,16 @@ namespace Raven.Client.Documents.Session.Tokens
         public decimal? Boost { get; set; }
         public decimal? Fuzzy { get; set; }
         public int? Proximity { get; set; }
+        public bool Exact { get; set; }
 
-        public static WhereToken Equals(string fieldName, string parameterName)
+        public static WhereToken Equals(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.Equals
+                WhereOperator = WhereOperator.Equals,
+                Exact = exact
             };
         }
 
@@ -57,64 +59,70 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken GreaterThan(string fieldName, string parameterName)
+        public static WhereToken GreaterThan(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.GreaterThan
+                WhereOperator = WhereOperator.GreaterThan,
+                Exact = exact
             };
         }
 
-        public static WhereToken GreaterThanOrEqual(string fieldName, string parameterName)
+        public static WhereToken GreaterThanOrEqual(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.GreaterThanOrEqual
+                WhereOperator = WhereOperator.GreaterThanOrEqual,
+                Exact = exact
             };
         }
 
-        public static WhereToken LessThan(string fieldName, string parameterName)
+        public static WhereToken LessThan(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.LessThan
+                WhereOperator = WhereOperator.LessThan,
+                Exact = exact
             };
         }
 
-        public static WhereToken LessThanOrEqual(string fieldName, string parameterName)
+        public static WhereToken LessThanOrEqual(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.LessThanOrEqual
+                WhereOperator = WhereOperator.LessThanOrEqual,
+                Exact = exact
             };
         }
 
-        public static WhereToken In(string fieldName, string parameterName)
+        public static WhereToken In(string fieldName, string parameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
-                WhereOperator = WhereOperator.In
+                WhereOperator = WhereOperator.In,
+                Exact = exact
             };
         }
 
-        public static WhereToken Between(string fieldName, string fromParameterName, string toParameterName)
+        public static WhereToken Between(string fieldName, string fromParameterName, string toParameterName, bool exact)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 FromParameterName = fromParameterName,
                 ToParameterName = toParameterName,
-                WhereOperator = WhereOperator.Between
+                WhereOperator = WhereOperator.Between,
+                Exact = exact
             };
         }
 
@@ -168,17 +176,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 WhereOperator = WhereOperator.Exists
             };
         }
-
-        public static WhereToken ExactMatch(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.ExactMatch
-            };
-        }
-
+        
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -189,6 +187,9 @@ namespace Raven.Client.Documents.Session.Tokens
 
             if (Proximity.HasValue)
                 writer.Append("proximity(");
+
+            if (Exact)
+                writer.Append("exact(");
 
             switch (WhereOperator)
             {
@@ -206,9 +207,6 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Exists:
                     writer.Append("exists(");
-                    break;
-                case WhereOperator.ExactMatch:
-                    writer.Append("exactMatch(");
                     break;
             }
 
@@ -269,7 +267,6 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.EndsWith:
                 case WhereOperator.ContainsAny:
                 case WhereOperator.ContainsAll:
-                case WhereOperator.ExactMatch:
                     writer
                         .Append(", :")
                         .Append(ParameterName)
@@ -282,6 +279,9 @@ namespace Raven.Client.Documents.Session.Tokens
                 default:
                     throw new ArgumentOutOfRangeException();
             }
+
+            if (Exact)
+                writer.Append(")");
 
             if (Proximity.HasValue)
             {
