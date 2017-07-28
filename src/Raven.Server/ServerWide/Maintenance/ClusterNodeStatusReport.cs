@@ -90,33 +90,42 @@ namespace Raven.Server.ServerWide.Maintenance
         public readonly Exception LastError;
 
         public readonly DateTime LastUpdateDateTime;
+        private readonly ClusterNodeStatusReport _lastSuccessfulReport;
 
-        public readonly DateTime LastSuccessfulUpdateDateTime;
+        public DateTime LastSuccessfulUpdateDateTime => _lastSuccessfulReport?.LastUpdateDateTime ?? DateTime.MinValue;
 
-        public ClusterNodeStatusReport(Dictionary<string, DatabaseStatusReport> lastReport, ReportStatus lastReportStatus, Exception lastError, DateTime lastUpdateDateTime, DateTime lastSuccessfulUpdateDateTime)
+        public ClusterNodeStatusReport(
+            Dictionary<string, DatabaseStatusReport> lastReport, 
+            ReportStatus lastReportStatus, 
+            Exception lastError, 
+            DateTime lastUpdateDateTime, 
+            ClusterNodeStatusReport lastSuccessfulReport)
         {
             LastReport = lastReport;
             LastReportStatus = lastReportStatus;
             LastError = lastError;
             LastUpdateDateTime = lastUpdateDateTime;
-            LastSuccessfulUpdateDateTime = lastSuccessfulUpdateDateTime;
+            _lastSuccessfulReport = lastSuccessfulReport;
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
             foreach (var dbReport in lastReport)
             {
                 var dbName = dbReport.Key;
                 var dbStatus = dbReport.Value.Status;
 
-                if (lastReportStatus == ReportStatus.Error || lastReportStatus == ReportStatus.Timeout)
+                if (lastReportStatus != ReportStatus.Ok)
                 {
-                    LastGoodDatabaseStatus.Add(dbName, lastSuccessfulUpdateDateTime);
+                    LastGoodDatabaseStatus[dbName] = lastSuccessfulReport.LastUpdateDateTime;
                 }
-                else if (dbStatus != DatabaseStatus.Faulted)
+                else if (dbStatus != DatabaseStatus.Loaded)
                 {
-                    LastGoodDatabaseStatus.Add(dbName, lastSuccessfulUpdateDateTime);
-                }
-                else if (LastGoodDatabaseStatus.ContainsKey(dbName) == false)
-                {
-                    LastGoodDatabaseStatus.Add(dbName, DateTime.MinValue);
+                    if (lastSuccessfulReport.LastGoodDatabaseStatus.TryGetValue(dbName, out var lastGood))
+                    {
+                        LastGoodDatabaseStatus[dbName] = lastGood;
+                    }
+                    else
+                    {
+                        LastGoodDatabaseStatus[dbName] = DateTime.MinValue;
+                    }
                 }
             }
         }

@@ -135,6 +135,9 @@ namespace Raven.Server.ServerWide.Maintenance
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous)
         {
+            //TODO: RavenDB-7914 - any change here requires generating alerts
+            
+            var modifiedTopology = false;
             var hasLivingNodes = false;
             foreach (var member in topology.Members)
             {
@@ -160,9 +163,44 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.Rehab.Add(member);
                     // we only allow a single topology modification per round, so 
                     // we abort immediately after making this change
-                    return true;
+                    modifiedTopology = true;
+                    break;
                 }
             }
+
+            if (hasLivingNodes == false)
+            {
+                var alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable";
+
+                foreach (var rehab in topology.Rehab)
+                {
+                    //TODO: RavenDB-7911 - Find the most up to date rehab node
+                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current))
+                        continue;
+                    topology.Rehab.Remove(rehab);
+                    topology.Members.Add(rehab);
+                    modifiedTopology = true;
+                    alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable";
+                    break;
+                }
+                
+                var alert = AlertRaised.Create(
+                    "No living nodes in the database topology",
+                    alertMsg,
+                    AlertType.ClusterTopologyWarning,
+                    NotificationSeverity.Warning
+                );
+                
+                _server.NotificationCenter.Add(alert);
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(alertMsg);
+                }
+                return modifiedTopology;
+            }
+
+            if (modifiedTopology)
+                return true;
 
             foreach (var promotable in topology.Promotables)
             {
