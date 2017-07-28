@@ -194,49 +194,88 @@
 
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ START AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 <div data-bind="if: isAutoIndex, css: { 'content-margin': isAutoIndex }">
-    <div class="flex-window edit-index">
-        <div class="flex-window-head">
-            <div class="toolbar">
-                <div class="row">
-                    <div class="col-lg-6">
-                        <div class="input-group toolbar" data-bind="validationElement: editedIndex().name">
-                            <div class="input-group-addon">Index name</div>
-                            <input class="form-control" data-bind="textInput: editedIndex().name" disabled>
-                        </div>
+    <div class="flex-vertical edit-index auto-index">
+
+        <div class="toolbar">
+            <div class="row">
+                <div class="col-lg-8 col-xl-6 flex-horizontal">
+                    <div class="input-group flex-grow" data-bind="validationElement: editedIndex().name">
+                        <div class="input-group-addon">Index name</div>
+                        <input class="form-control" data-bind="textInput: editedIndex().name" disabled>
                     </div>
-                    <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
+                    <div>
+                        <button class="btn btn-danger" data-bind="visible: isEditingExistingIndex, click: deleteIndex"><i class="icon-trash"></i> <span>Delete</span></button>
+                    </div>
                 </div>
-                <div class="btn-group btn-group-sm pull-right-sm">
-                    <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
-                    <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+                <div class="col-lg-4 col-xl-6 flex-horizontal">
+                    <div class="flex-separator"></div>
+                    <div class="btn-group btn-group-sm">
+                        <a data-bind="attr: { href: queryUrl }, visible: isEditingExistingIndex" class="btn" title="Query the index"><i class="icon-query"></i> <span>Query</span></a>
+                        <a data-bind="attr: { href: termsUrl }, visible: isEditingExistingIndex" class="btn" title="Navigate to index terms"><i class="icon-terms"></i> <span>Terms</span></a>
+                    </div>
                 </div>
             </div>
         </div>
-        <div class="flex-window-scroll">
-            <div class="tabs margin-top">
-                <!-- Nav tabs -->
-                <ul class="nav nav-tabs" role="tablist">
-                    <li role="presentation" class="active">
-                        <a href="#fields-auto-index" aria-controls="fields-auto-index" role="tab" data-toggle="tab">
-                            <i class="icon-admin-logs"></i><span>Fields</span>
-                        </a>
-                    </li>
-                </ul>
 
-                <!-- Tab panes -->
-                <div class="tab-content">
-                    <div role="tabpanel" class="tab-pane fade in active" id="fields-auto-index">
-                        <h3>Map fields:</h3>
-                        <div data-bind="foreach: editedIndex().mapFields">
-                            <div class="panel">
-                                <div data-bind="template: { name: 'field-template-auto-index'}"></div>
+        <div>
+
+            <h2 class="label-margin" data-bind="visible: editedIndex().hasReduce">Map-Reduce</h2>
+            <h2 class="label-margin" data-bind="visible: !editedIndex().hasReduce()">Map</h2>
+            <div>
+                <div class="flex-horizontal">
+                    <div class="label">
+                        <h3>Collection</h3>
+                    </div>
+                    <div class="flex-grow flex-vertical">
+                        <div class="flex-horizontal flex-content-center flex-content-center margin-top">
+                            <div class="panel panel-default padding padding-sm">
+                                <div class="property">
+                                    <h6>Collection</h6>
+                                    <h4 data-bind="text: editedIndex().collection"></h4>
+                                </div>
                             </div>
                         </div>
-                        <h3 data-bind="visible: editedIndex().hasReduce">Reduce (group by) fields:</h3>
-                        <div data-bind="foreach: editedIndex().reduceFields">
-                            <div class="panel">
-                                <div data-bind="template: { name: 'field-template-auto-index'}"></div>
+                    </div>
+                </div>
+
+                <div class="label-margin flex-horizontal">
+                    <hr class="flex-grow" />
+                    <i class="icon-arrow-down text-success"></i>
+                    <hr class="flex-grow" />
+                </div>
+            </div>
+
+            <div data-bind="if: editedIndex().reduceFields().length != 0">
+                <div class="flex-horizontal">
+                    <div class="label">
+                        <h3>Group by</h3>
+                    </div>
+                    <div class="flex-grow flex-vertical">
+                        <div class="flex-horizontal flex-content-center flex-content-center">
+                            <div class="panel" data-bind="foreach: editedIndex().reduceFields">
+                                <div class="padding padding-xs text-center bg-info small">Reduce key</div>
+                                <div class=" padding padding-sm flex-horizontal" data-bind="template: { name: 'field-template-auto-index'}"></div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="label-margin flex-horizontal">
+                    <hr class="flex-grow" />
+                    <i class="icon-arrow-down text-success"></i>
+                    <hr class="flex-grow" />
+                </div>
+            </div>
+
+            <div class="flex-horizontal">
+                <div class="label">
+                    <h3>Result</h3>
+                </div>
+                <div class="flex-grow flex-vertical">
+                    <div class="flex-horizontal flex-content-center">
+                        <div class="flex-horizontal" data-bind="foreach: editedIndex().mapFields">
+                            <div class="panel padding padding-sm flex-horizontal" data-bind="template: { name: 'field-template-auto-index'}"></div>
+                            
                         </div>
                     </div>
                 </div>
@@ -246,276 +285,266 @@
 </div>
 
 <script type="text/html" id="field-template-auto-index">
-    <div class="panel-body">
-        <div class="row">
-            <div class="col-xs-12 col-sm-12 col-xl-7">
-                <div class="properties-container">
-                    <div class="properties-item">
-                        <span class="properties-label">Field name:</span>
-                        <div class="form-group properties-value">                           
-                            <input class="form-control set-size" data-bind="textInput: fieldName" disabled>
-                        </div>
-                    </div>
-                    <div class="properties-item" data-bind="visible: sort() && sort() !== 'None'">
-                        <span class="properties-label">Sort:</span>
-                        <div class="form-group properties-value">
-                            <input class="form-control set-size" data-bind="textInput: sort" disabled>
-                        </div>
-                    </div>
-                    <div class="properties-item" data-bind="visible: operation">
-                        <span class="properties-label">Operation:</span>
-                        <div class="form-group properties-value">
-                            <input class="form-control set-size" data-bind="textInput: operation" disabled>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="property">
+        <h6>Field name</h6>
+        <h4 data-bind="text: fieldName"></h4>
+    </div>
+    <div class="property">
+        <h6>Sort</h6>
+        <h4>Count</h4>
+    </div>
+    <div class="property" data-bind="visible: sort() && sort() !== 'None'">
+        <h6>Sort</h6>
+        <h4 data-bind="text: sort"></h4>
+    </div>
+    <div class="property" data-bind="visible: operation">
+        <h6>Operation</h6>
+        <h4 data-bind="text: operation"></h4>
     </div>
 </script>
 <!-- ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ END AUTO INDEX ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ -->
 
-<script  type="text/html" id="field-template">
-<div class="panel-body">
-<div class="row">
-<div class="col-xs-8 col-sm-6 col-xl-3  margin-bottom">
-    <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
-    <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name" >
-        <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
-        <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
-            <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
-                <a role="menuitem" tabindex="-1" href="#">
-                    <span data-bind="text: $data"></span>
-                </a>
-            </li>
-        </ul>
-    </div>
-</div>
-<div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right  margin-bottom">
-    <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
-        <i class="icon-settings"></i><span>Advanced</span>
-    </button>
-    <button class="btn btn-danger" title="Remove this field from the index" data-bind="click: _.partial($root.removeField, $data)">
-        <i class="icon-trash"></i>
-    </button>
-</div>
-<div class="col-xs-12 col-sm-12 col-xl-7">
-<div class="properties-container">
-    <div class="properties-item">
-        <span class="properties-label">Sort</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveSort }">
-                <span data-bind="text: effectiveSort"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: sort.bind(sort, null)"><span data-bind="text: defaultSort"></span></a></li>
-                <!-- ko foreach: $data.constructor.SortOptions -->
-                <li><a href="#" data-bind="click: $parent.sort.bind($parent.sort, value)"><span data-bind="text: label"></span></a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-    </div>
+<script type="text/html" id="field-template">
+    <div class="panel-body">
+        <div class="row">
+            <div class="col-xs-8 col-sm-6 col-xl-3  margin-bottom">
+                <h3 data-bind="visible: isDefaultOptions()">Default field options</h3>
+                <div class="form-group" data-bind="if: !isDefaultOptions(), validationElement: name">
+                    <input class="form-control" placeholder="Field name" autocomplete="off" data-bind="textInput: name, attr: { id: 'fieldName' + $index() }">
+                    <ul class="dropdown-menu" role="menu" style="display: none;" data-bind="autoComplete: '#' + 'fieldName' + $index(), foreach: $root.createFieldNameAutocompleter($data)">
+                        <li role="presentation" data-bind="click: $parent.name.bind($parent, $data)">
+                            <a role="menuitem" tabindex="-1" href="#">
+                                <span data-bind="text: $data"></span>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-xs-4 col-sm-6 col-xl-2 pull-right-xl text-right  margin-bottom">
+                <button class="btn btn-default" data-bind="css: { 'active': showAdvancedOptions() }, click: toggleAdvancedOptions">
+                    <i class="icon-settings"></i><span>Advanced</span>
+                </button>
+                <button class="btn btn-danger" title="Remove this field from the index" data-bind="click: _.partial($root.removeField, $data)">
+                    <i class="icon-trash"></i>
+                </button>
+            </div>
+            <div class="col-xs-12 col-sm-12 col-xl-7">
+                <div class="properties-container">
+                    <div class="properties-item">
+                        <span class="properties-label">Sort</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveSort }">
+                                <span data-bind="text: effectiveSort"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: sort.bind(sort, null)"><span data-bind="text: defaultSort"></span></a></li>
+                                <!-- ko foreach: $data.constructor.SortOptions -->
+                                <li><a href="#" data-bind="click: $parent.sort.bind($parent.sort, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Store</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: storage.bind(storage, null)"><span data-bind="text: defaultStorage"></span></a></li>
-                <li><a href="#" data-bind="click: storage.bind(storage, 'Yes')"><span>Yes</span></a></li>
-                <li><a href="#" data-bind="click: storage.bind(storage, 'No')"><span>No</span></a></li>
-            </ul>
-        </div>
-    </div>
-                    
-    <div class="properties-item">
-        <span class="properties-label">Full-Text Search</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span data-bind="text: effectiveFullTextSearch"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, null)"><span data-bind="text: defaultFullTextSearch"></span></a></li>
-                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, true)"><span>Yes</span></a></li>
-                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, false)"><span>No</span></a></li>
-            </ul>
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Store</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveStorage"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: storage.bind(storage, null)"><span data-bind="text: defaultStorage"></span></a></li>
+                                <li><a href="#" data-bind="click: storage.bind(storage, 'Yes')"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: storage.bind(storage, 'No')"><span>No</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Highlighting</span>
-                        
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle btn-upcoming" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
-                <span>Default (No)</span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <!-- TODO: -->
-            </ul>
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Full-Text Search</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveFullTextSearch"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, null)"><span data-bind="text: defaultFullTextSearch"></span></a></li>
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, true)"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: fullTextSearch.bind(fullTextSearch, false)"><span>No</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Suggestions</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span data-bind="text: effectiveSuggestions"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: suggestions.bind(suggestions, null)"><span data-bind="text: defaultSuggestions"></span></a></li>
-                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'Yes')"><span>Yes</span></a></li>
-                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'No')"><span>No</span></a></li>
-            </ul>
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Highlighting</span>
 
-    <div class="properties-item">
-        <div class="toggle toggle-right toggle-upcoming">
-            <input id="toggle8" class="styled" type="checkbox" disabled="disabled" data-bind="checked: hasSpatialOptions">
-            <label for="toggle8" class="properties-label">
-                Spatial
-            </label>
-        </div>
-    </div>
-</div>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle btn-upcoming" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
+                                <span>Default (No)</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <!-- TODO: -->
+                            </ul>
+                        </div>
+                    </div>
 
-<div class="hr-title" data-bind="visible: showAdvancedOptions()">
-    <h5>Advanced</h5>
-    <hr />
-</div>
-<div class="properties-container" data-bind="visible: showAdvancedOptions()">
-    <div class="properties-item">
-        <span class="properties-label">TermVector</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveTermVector }">
-                <span data-bind="text: effectiveTermVector"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: termVector.bind(termVector, null)"><span data-bind="text: defaultTermVector"></span></a></li>
-                <!-- ko foreach: $data.constructor.TermVectors -->
-                <li><a href="#" data-bind="click: $parent.termVector.bind($parent.termVector, value)"><span data-bind="text: label"></span></a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Suggestions</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span data-bind="text: effectiveSuggestions"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, null)"><span data-bind="text: defaultSuggestions"></span></a></li>
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'Yes')"><span>Yes</span></a></li>
+                                <li><a href="#" data-bind="click: suggestions.bind(suggestions, 'No')"><span>No</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Indexing</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveIndexing }">
-                <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a></li>
-                <!-- ko foreach: $data.constructor.Indexing -->
-                <li><a href="#" data-bind="click: $parent.indexing.bind($parent.indexing, value)"><span data-bind="text: label"></span></a></li>
-                <!-- /ko -->
-            </ul>
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <div class="toggle toggle-right toggle-upcoming">
+                            <input id="toggle8" class="styled" type="checkbox" disabled="disabled" data-bind="checked: hasSpatialOptions">
+                            <label for="toggle8" class="properties-label">
+                                Spatial
+                            </label>
+                        </div>
+                    </div>
+                </div>
 
-    <div class="properties-item" data-bind="visible: canProvideAnalyzer">
-        <span class="properties-label">Analyzer</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="text" value="" placeholder="StandardAnalyzer" data-bind="textInput: analyzer" />
-        </div>
-    </div>
+                <div class="hr-title" data-bind="visible: showAdvancedOptions()">
+                    <h5>Advanced</h5>
+                    <hr />
+                </div>
+                <div class="properties-container" data-bind="visible: showAdvancedOptions()">
+                    <div class="properties-item">
+                        <span class="properties-label">TermVector</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveTermVector }">
+                                <span data-bind="text: effectiveTermVector"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: termVector.bind(termVector, null)"><span data-bind="text: defaultTermVector"></span></a></li>
+                                <!-- ko foreach: $data.constructor.TermVectors -->
+                                <li><a href="#" data-bind="click: $parent.termVector.bind($parent.termVector, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
+                            </ul>
+                        </div>
+                    </div>
 
-</div>
+                    <div class="properties-item">
+                        <span class="properties-label">Indexing</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveIndexing }">
+                                <span data-bind="text: effectiveIndexing"></span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#" data-bind="click: indexing.bind(indexing, null)"><span data-bind="text: defaultIndexing"></span></a></li>
+                                <!-- ko foreach: $data.constructor.Indexing -->
+                                <li><a href="#" data-bind="click: $parent.indexing.bind($parent.indexing, value)"><span data-bind="text: label"></span></a></li>
+                                <!-- /ko -->
+                            </ul>
+                        </div>
+                    </div>
 
-<div class="hr-title" data-bind="visible: hasSpatialOptions()">
-    <h5>Spatial</h5>
-    <hr />
-</div>
+                    <div class="properties-item" data-bind="visible: canProvideAnalyzer">
+                        <span class="properties-label">Analyzer</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="text" value="" placeholder="StandardAnalyzer" data-bind="textInput: analyzer" />
+                        </div>
+                    </div>
 
-<div class="properties-container" data-bind="if: hasSpatialOptions(), visible: hasSpatialOptions()">
-    <div class="properties-item">
-        <span class="properties-label">Type</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span>Geography</span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
-            </ul>
-        </div>
-    </div>
+                </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Circle Radius Units</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span>Kilometers</span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
-            </ul>
-        </div>
-    </div>
+                <div class="hr-title" data-bind="visible: hasSpatialOptions()">
+                    <h5>Spatial</h5>
+                    <hr />
+                </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Strategy</span>
-        <div class="btn-group properties-value">
-            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
-                <span>GeohashPrefixTree</span> <span class="caret"></span>
-            </button>
-            <ul class="dropdown-menu">
-                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
-            </ul>
-        </div>
-    </div>
+                <div class="properties-container" data-bind="if: hasSpatialOptions(), visible: hasSpatialOptions()">
+                    <div class="properties-item">
+                        <span class="properties-label">Type</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span>Geography</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Max Tree Level</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="number" value="-180" />
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Circle Radius Units</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span>Kilometers</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Min X</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="number" value="-180" />
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Strategy</span>
+                        <div class="btn-group properties-value">
+                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false">
+                                <span>GeohashPrefixTree</span> <span class="caret"></span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a href="#"><i class="icon-check"></i><span>Dropdown</span></a></li>
+                            </ul>
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Min Y</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="number" value="-180" />
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Max Tree Level</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="number" value="-180" />
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Max X</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="number" value="-180" />
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Min X</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="number" value="-180" />
+                        </div>
+                    </div>
 
-    <div class="properties-item">
-        <span class="properties-label">Max Y</span>
-        <div class="btn-group properties-value">
-            <input class="form-control" type="number" value="-180" />
-        </div>
-    </div>
+                    <div class="properties-item">
+                        <span class="properties-label">Min Y</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="number" value="-180" />
+                        </div>
+                    </div>
 
-    <div class="properties-item grow-2">
-        <span class="properties-label">Precision:</span>
-        <div class="properties-value">
-            <div class="set-size">
-                <i class="icon-info text-info"></i><span>Precision at equator, X: 0.004772, Y: 0.004772 kilometers</span>
+                    <div class="properties-item">
+                        <span class="properties-label">Max X</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="number" value="-180" />
+                        </div>
+                    </div>
+
+                    <div class="properties-item">
+                        <span class="properties-label">Max Y</span>
+                        <div class="btn-group properties-value">
+                            <input class="form-control" type="number" value="-180" />
+                        </div>
+                    </div>
+
+                    <div class="properties-item grow-2">
+                        <span class="properties-label">Precision:</span>
+                        <div class="properties-value">
+                            <div class="set-size">
+                                <i class="icon-info text-info"></i><span>Precision at equator, X: 0.004772, Y: 0.004772 kilometers</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
             </div>
         </div>
     </div>
-
-</div>
-
-</div>
-</div>
-</div>
 
 </script>
 
@@ -529,7 +558,7 @@
             </button>
             <ul class="dropdown-menu"  role="menu">
                 <li>
-                    <a title="Replaces current index when specified condition is met" href="#" 
+                    <a title="Replaces current index when specified condition is met" href="#"
                        data-bind="visible: !editedIndex().isSideBySideIndex() && !editedIndex().isTestIndex() && canSaveSideBySideIndex(), click: replaceIndex">
                         <i class="fa fa-reply fa-fw"></i> Side-by-side indexing
                     </a>
@@ -559,7 +588,7 @@
                 <i class="fa fa-refresh"></i>
             </button>
         </div>
-        
+
         <button class="btn btn-danger" title="Cancel side-by-side index" data-bind="visible: editedIndex().isSideBySideIndex(), click: cancelSideBySideIndex">
             <i class="fa fa-undo"></i>
         </button>
@@ -568,9 +597,9 @@
     <div>
         <br />
         <form class="form-horizontal" role="form" data-bind="with: editedIndex">
-            
+
             <div class="alert alert-warning" data-bind="visible: isTestIndex()" role="alert">This is test index which operates on limited data set. Press &quot;Make permanent&quot; to override the original index.</div>
-            
+
             <div class="form-group" data-bind="visible: spatialFields().length > 0">
                 <label class="col-sm-1 control-label">
                     Spatial Fields

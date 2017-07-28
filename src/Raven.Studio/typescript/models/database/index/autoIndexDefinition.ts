@@ -35,11 +35,11 @@ class autoIndexMapField extends autoIndexField{
 
 class autoIndexDefinition extends indexDefinition {
     mapFields = ko.observableArray<autoIndexMapField>(); 
-    reduceFields = ko.observableArray<autoIndexField>(); 
+    reduceFields = ko.observableArray<autoIndexField>();
+    collection = ko.observable<string>();
 
     constructor(dto: Raven.Client.Documents.Indexes.IndexDefinition) {
         super(dto);
-
         this.parseMapFields(dto.Maps[0]);
         if (this.hasReduce()) {
             this.parseReduceFields(dto.Reduce);
@@ -47,6 +47,8 @@ class autoIndexDefinition extends indexDefinition {
     }
 
     private parseMapFields(mapStr: string) {
+        const firstColonIdx = mapStr.indexOf(":");
+        this.collection(mapStr.substr(0, firstColonIdx));
         mapStr = mapStr.substr(mapStr.indexOf("["));
         const fieldsList = mapStr.split(";");
 
