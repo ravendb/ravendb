@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using Microsoft.Extensions.Configuration;
 using Raven.Client.Extensions;
 using Raven.Server.Config.Attributes;
@@ -35,7 +36,32 @@ namespace Raven.Server.Config.Categories
 
         public virtual void Initialize(IConfigurationRoot settings, IConfigurationRoot serverWideSettings, ResourceType type, string resourceName)
         {
-            Initialize(key => new SettingValue(settings[key], serverWideSettings?[key]), serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, throwIfThereIsNoSetMethod: true);
+            string GetConfiguration(IConfigurationRoot cfg, string name)
+            {
+                if (cfg == null || name == null)
+                    return null;
+                var val = cfg[name];
+                if (val != null)
+                    return val;
+
+                var sb = new StringBuilder(name);
+
+                int lastPeriod = name.LastIndexOf('.');
+                while (lastPeriod != -1)
+                {
+                    sb[lastPeriod] = ':';
+                    var tmpName = sb.ToString();
+                    val = cfg[tmpName];
+                    if (val != null)
+                        return val;
+                    lastPeriod = name.LastIndexOf('.', 0, lastPeriod);
+                }
+                return null;
+            }
+            
+            Initialize(key => new SettingValue(GetConfiguration(settings,key), GetConfiguration(serverWideSettings,key)), 
+                serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, 
+                throwIfThereIsNoSetMethod: true);
         }
 
         public void Initialize(Func<string, SettingValue> getSetting, string serverDataDir, ResourceType type, string resourceName, bool throwIfThereIsNoSetMethod)

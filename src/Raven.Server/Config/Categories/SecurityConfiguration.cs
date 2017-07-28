@@ -27,7 +27,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Exec")]
         public string CertificateExec { get; set; }
 
-        [Description("The command line arguments for the 'Security.Certificate:Exec' command or executable.")]
+        [Description("The command line arguments for the 'Security.Certificate.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Arguments")]
         public string CertificateExecArguments { get; set; }
@@ -47,7 +47,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.MasterKey.Exec")]
         public string MasterKeyExec { get; set; }
 
-        [Description("The command line arguments for the 'Security.MasterKey:Exec' command or executable.")]
+        [Description("The command line arguments for the 'Security.MasterKey.Exec' command or executable.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.MasterKey.Arguments")]
         public string MasterKeyExecArguments { get; set; }
