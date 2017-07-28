@@ -4,7 +4,7 @@ import document = require("models/database/documents/document");
 import endpoints = require("endpoints");
 import queryCriteria = require("models/database/query/queryCriteria");
 
-class queryIndexCommand extends commandBase {
+class queryCommand extends commandBase {
     constructor(private db: database, private skip: number, private take: number, private criteria: queryCriteria, private disableCache?: boolean) {
         super();
     }
@@ -25,10 +25,8 @@ class queryIndexCommand extends commandBase {
             query: criteria.queryText() || undefined,
             start: this.skip,
             pageSize: this.take,
-            sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
             fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
-            operator: criteria.useAndOperator() ? "AND" : undefined, 
             disableCache: this.disableCache ? Date.now() : undefined
         }) + resultsTransformerUrlFragment;
         return url + urlArgs;
@@ -36,15 +34,17 @@ class queryIndexCommand extends commandBase {
 
     getCsvUrl() {
         const criteria = this.criteria;
-        const url = endpoints.databases.streaming.streamsQueries$ + criteria.selectedIndex();
+
+        const url = endpoints.databases.streaming.streamsQueries
+        /* TODO
+             + criteria.selectedIndex();
+        */;
         const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
 
         const urlArgs = this.urlEncodeArgs({
             query: criteria.queryText() || undefined,
-            sort: criteria.sorts().filter(x => x.fieldName()).map(x => x.toQuerySortString()),
             fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
-            operator: criteria.useAndOperator() ? "AND" : undefined,
             format: "excel",
             download: true
         }) + resultsTransformerUrlFragment;
@@ -53,4 +53,4 @@ class queryIndexCommand extends commandBase {
     }
 }
 
-export = queryIndexCommand;
+export = queryCommand;

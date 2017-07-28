@@ -8,23 +8,7 @@ class recentQueriesStorage {
 
     static getRecentQueriesWithIndexNameCheck(db: database): JQueryPromise<storedQueryDto[]> {
         const recentQueries = this.getRecentQueries(db);
-
-        const task = $.Deferred<storedQueryDto[]>();
-
-        new getIndexNamesCommand(db)
-            .execute()
-            .done((indexNames: string[]) => {
-                const filteredQueries = recentQueries.filter(x => x.indexName.startsWith("dynamic") || _.includes(indexNames, x.indexName));
-
-                if (filteredQueries.length !== recentQueries.length) {
-                    this.saveRecentQueries(db, filteredQueries);
-                }
-
-                task.resolve(filteredQueries);
-            })
-            .fail(response => task.reject());
-
-        return task;
+        return $.when(recentQueries);
     }
 
     static getRecentQueries(db: database): storedQueryDto[] {
@@ -57,17 +41,17 @@ class recentQueriesStorage {
         localStorage.setObject(localStorageName, recentQueries);
     }
 
-    static removeIndexFromRecentQueries(db: database, indexName: string) {
-        recentQueriesStorage.removeIndexFromRecentQueriesByName(db.name, indexName);
+    static removeRecentQueryByQueryText(db: database, queryText: string) {
+        recentQueriesStorage.removeIndexFromRecentQueriesByName(db.name, queryText);
     }
 
-    private static removeIndexFromRecentQueriesByName(dbName: string, indexName: string) {
+    private static removeIndexFromRecentQueriesByName(dbName: string, queryText: string) {
         const localStorageName = recentQueriesStorage.getLocalStorageKey(dbName);
         const recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
         if (recentQueriesFromLocalStorage == null)
             return;
 
-        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.indexName != indexName);
+        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.queryText != queryText);
         localStorage.setObject(localStorageName, newRecentQueries);
     }
 

@@ -11,7 +11,7 @@ import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/
 import deleteDocsMatchingQueryCommand = require("commands/database/documents/deleteDocsMatchingQueryCommand");
 import notificationCenter = require("common/notifications/notificationCenter");
 
-import queryIndexCommand = require("commands/database/query/queryIndexCommand");
+import queryCommand = require("commands/database/query/queryCommand");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
@@ -79,25 +79,6 @@ class query extends viewModelBase {
 
     private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
-    filterSettings = {
-        searchField: ko.observable<string>(),
-        type: ko.observable<filterType>(),
-        value: ko.observable<string>(),
-        searchType: ko.observable<stringSearchType>(),
-        rangeFrom: ko.observable<string>(),
-        rangeTo: ko.observable<string>(),
-        rangeDateFrom: ko.observable<moment.Moment>(),
-        rangeDateTo: ko.observable<moment.Moment>(),
-        rangeSearchType: ko.observable<rangeSearchType>(),
-        inValues: ko.observable<string>(),
-        validationGroup: null as KnockoutValidationGroup,
-    }
-
-    isDateFilter: KnockoutComputed<boolean>;
-    isRangeFilter: KnockoutComputed<boolean>;
-    isInFilter: KnockoutComputed<boolean>;
-    isStringFilter: KnockoutComputed<boolean>;
-
     columnsSelector = new columnsSelector<document>();
 
     uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
@@ -105,29 +86,19 @@ class query extends viewModelBase {
 
     fetcher = ko.observable<fetcherType>();
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
-    requestedIndexForQuery = ko.observable<string>();
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
 
+    isQueriedIndexMapReduce: KnockoutComputed<boolean>;
+    canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
+
     private columnPreview = new columnPreviewPlugin<document>();
 
-    selectedIndexLabel: KnockoutComputed<string>;
-    hasEditableIndex: KnockoutComputed<boolean>;
     queryTextHasFocus = ko.observable<boolean>(false);
-    addFilterVisible = ko.observable<boolean>(false);
-    addFilterEnabled: KnockoutComputed<boolean>;
 
-    editIndexUrl: KnockoutComputed<string>;
-    indexPerformanceUrl: KnockoutComputed<string>;
-    termsUrl: KnockoutComputed<string>;
-    visualizerUrl: KnockoutComputed<string>;
     rawJsonUrl = ko.observable<string>();
     csvUrl = ko.observable<string>();
 
-    isIndexMapReduce: KnockoutComputed<boolean>;
-    isAutoIndex = ko.observable<boolean>(false);
-    isDynamicIndex = ko.observable<boolean>(false);
-    isStaticIndexSelected: KnockoutComputed<boolean>;
     isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
@@ -158,44 +129,15 @@ class query extends viewModelBase {
 
         this.initObservables();
         this.initValidation();
-        this.resetFilterSettings();
 
-        this.bindToCurrentInstance("runRecentQuery", "selectTransformer", "addFilter", "removeSortBy");
+        this.bindToCurrentInstance("runRecentQuery", "selectTransformer");
     }
 
     private initObservables() {
-        this.selectedIndexLabel = ko.pureComputed(() => {
-            const criteria = this.criteria();
-
-            return (!criteria || criteria.selectedIndex() === "dynamic") ? "All Documents" : criteria.selectedIndex();
-        });
-
-        this.hasEditableIndex = ko.pureComputed(() => this.criteria().selectedIndex() ? !this.criteria().selectedIndex().startsWith("dynamic") : false);
-
-        this.addFilterEnabled = ko.pureComputed(() => this.indexFields().length > 0);
-
-        this.editIndexUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forEditIndex(this.criteria().selectedIndex(), this.activeDatabase()) : null);
-        this.indexPerformanceUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.criteria().selectedIndex()) : null);
-        this.termsUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forTerms(this.criteria().selectedIndex(), this.activeDatabase()) : null);
-        this.visualizerUrl = ko.pureComputed(() => this.criteria().selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.criteria().selectedIndex()) : null);
-
-        this.isIndexMapReduce = ko.pureComputed(() => {
-            const currentIndex = this.indexes().find(i => i.name === this.criteria().selectedIndex());
-            return !!currentIndex && currentIndex.isMapReduce;
-        });
-        this.isStaticIndexSelected = ko.pureComputed(() => !this.criteria().selectedIndex().startsWith("dynamic"));
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
 
-        this.isDateFilter = ko.pureComputed(() => this.filterSettings.type() === "range" && this.filterSettings.rangeSearchType() === "Datetime");
-        this.isInFilter = ko.pureComputed(() => this.filterSettings.type() === "in");
-        this.isStringFilter = ko.pureComputed(() => this.filterSettings.type() === "string");
-        this.isRangeFilter = ko.pureComputed(() => this.filterSettings.type() === "range");
-
         const dateToString = (input: moment.Moment) => input ? input.format("YYYY-MM-DDTHH:mm:00.0000000") : "";
-
-        this.filterSettings.rangeDateFrom.subscribe(() => this.filterSettings.rangeFrom(dateToString(this.filterSettings.rangeDateFrom())));
-        this.filterSettings.rangeDateTo.subscribe(() => this.filterSettings.rangeTo(dateToString(this.filterSettings.rangeDateTo())));
 
         this.staleResult = ko.pureComputed(() => {
             //TODO: return false for test index
@@ -207,16 +149,6 @@ class query extends viewModelBase {
             eventsCollector.default.reportEvent("query", "toggle-cache");
         });
 
-        this.addFilterVisible.subscribe(visible => {
-            query.$body.toggleClass('show-add-filter', visible);
-        });
-
-        this.queryTextHasFocus.subscribe(v => {
-            if (v) {
-                this.addFilterVisible(true);
-            }
-        });
-      
         this.isLoading.extend({ rateLimit: 100 });
 
         const criteria = this.criteria();
@@ -224,15 +156,22 @@ class query extends viewModelBase {
         criteria.showFields.subscribe(() => this.runQuery());   
       
         criteria.indexEntries.subscribe((checked) => {
-            if (checked && this.isDynamicIndex()) { 
-                criteria.indexEntries(false);
-            } else {
-                // run index entries option only if not dynamic index
-                this.runQuery();
-            }
+            this.runQuery();
         });  
 
-        criteria.useAndOperator.subscribe(() => this.runQuery());
+        this.isQueriedIndexMapReduce = ko.pureComputed(() => {
+            const stats = this.queryStats();
+            if (!stats || !stats.IndexName)
+                return false;
+
+            const indexes = this.indexes() || [];
+            const indexItem = _.find(indexes, x => x.name == stats.IndexName);
+            return indexItem.isMapReduce;
+        });
+
+        this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
+            return !this.isQueriedIndexMapReduce();
+        });
 
          /* TODO
         this.showSuggestions = ko.computed<boolean>(() => {
@@ -250,48 +189,6 @@ class query extends viewModelBase {
     }
 
     private initValidation() {
-        const filter = this.filterSettings;
-
-        filter.searchField.extend({
-            required: true
-        });
-
-        filter.rangeFrom.extend({
-            number: {
-                onlyIf: () => this.isRangeFilter() && filter.rangeSearchType().startsWith("Numeric")
-            }
-        });
-
-        filter.rangeTo.extend({
-            number: {
-                onlyIf: () => this.isRangeFilter() && filter.rangeSearchType().startsWith("Numeric")
-            }
-        });
-
-        filter.type.subscribe(() => {
-            // clean all messages after changing type
-            filter.validationGroup.errors.showAllMessages(false);
-        });
-
-        filter.value.extend({
-            required: {
-                onlyIf: () => filter.type() === "string"
-            }
-        });
-
-        filter.inValues.extend({
-            required: {
-                onlyIf: () => filter.type() === 'in'
-            }
-        });
-
-        filter.validationGroup = ko.validatedObservable({
-            searchField: filter.searchField,
-            value: filter.value,
-            inValues: filter.inValues,
-            rangeFrom: filter.rangeFrom,
-            rangeTo: filter.rangeTo
-        });
     }
 
     canActivate(args: any) {
@@ -355,6 +252,12 @@ class query extends viewModelBase {
             enableInlinePreview: true
         });
 
+        if (!this.fetcher())
+            this.fetcher(() => $.when({
+                items: [] as document[],
+                totalResultCount: 0
+            }));
+
         this.columnsSelector.init(grid,
             (s, t, c) => this.fetcher()(s, t),
             (w, r) => documentsProvider.findColumns(w, r), (results: pagedResult<document>) => documentBasedColumnsProvider.extractUniquePropertyNames(results));
@@ -417,71 +320,21 @@ class query extends viewModelBase {
             });
     }
 
-    selectInitialQuery(indexNameOrRecentQueryHash: string) {
-        if (!indexNameOrRecentQueryHash) {
-            // if no index exists ==> use the default dynamic/All Documents
-            this.setSelectedIndex("dynamic");
-        } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
-            indexNameOrRecentQueryHash.startsWith("dynamic")) {
-            this.setSelectedIndex(indexNameOrRecentQueryHash);
-        } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
-            const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
+    selectInitialQuery(recentQueryHash: string) {
+        if (!recentQueryHash)
+            return;
+
+        if (recentQueryHash.indexOf("recentquery-") === 0) {
+            const hash = parseInt(recentQueryHash.substr("recentquery-".length), 10);
             const matchingQuery = this.recentQueries().find(q => q.hash === hash);
             if (matchingQuery) {
                 this.runRecentQuery(matchingQuery);
             } else {
                 this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
-        } else if (indexNameOrRecentQueryHash) {
-            messagePublisher.reportError("Could not find " + indexNameOrRecentQueryHash + " index");
-            // fallback to all documents, but show error
-            this.setSelectedIndex("dynamic");
+        } else if (recentQueryHash) {
+            messagePublisher.reportError(`Could not find recent query: ${recentQueryHash}`);
         }
-    }
-
-    setSelectedIndex(indexName: string) {
-        const indexNameLowerCase = indexName.toLowerCase();
-
-        this.isAutoIndex(indexNameLowerCase.startsWith(query.autoPrefix));
-        this.isDynamicIndex(indexNameLowerCase.startsWith("dynamic/") || indexName === "dynamic"); 
-        this.criteria().setSelectedIndex(indexName);
-        this.resetFilterSettings();
-        this.uiTransformer(null);
-        this.uiTransformerParameters([]);
-
-        this.columnsSelector.reset();    
-        
-        if (this.isDynamicIndex() && this.criteria().indexEntries()) {
-            this.criteria().indexEntries(false);
-            this.indexEntrieStateWasTrue = true; // save the state..
-        }
-
-        if ((!this.isDynamicIndex() && this.indexEntrieStateWasTrue)) {
-            this.criteria().indexEntries(true);
-            this.indexEntrieStateWasTrue = false;
-        }
-
-        this.runQuery();
-
-        const indexQuery = query.getIndexUrlPartFromIndexName(indexName);
-        const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
-        this.updateUrl(url);
-
-        queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
-    }
-
-    private resetFilterSettings() {
-        this.filterSettings.searchField(undefined);
-        this.filterSettings.type("string");
-        this.filterSettings.value(undefined);
-        this.filterSettings.searchType("Exact");
-        this.filterSettings.rangeFrom(undefined);
-        this.filterSettings.rangeTo(undefined);
-        this.filterSettings.rangeDateFrom(undefined);
-        this.filterSettings.rangeDateTo(undefined);
-        this.filterSettings.rangeSearchType("Numeric Double");
-        this.filterSettings.inValues(undefined);
-        this.filterSettings.validationGroup.errors.showAllMessages(false);
     }
 
     static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
@@ -494,25 +347,18 @@ class query extends viewModelBase {
 
     private generateQuerySummary() {
         const criteria = this.criteria();
-        const sorts = criteria.sorts().filter(x => x.fieldName());
         const transformer = criteria.transformer();
-
-        const sortPart = sorts.length ? "sorted by " + sorts.map(x => x.toHumanizedString()).join(", ") : "";
         const transformerPart = transformer ? "transformed by " + transformer : "";
-
-        return sortPart + (sortPart && transformerPart ? " and " : "") + transformerPart;
+        return transformerPart;
     }
 
     runQuery() {
         eventsCollector.default.reportEvent("query", "run");
         this.queryTextHasFocus(false);
-        this.closeAddFilter();
         this.querySummary(this.generateQuerySummary());
         const criteria = this.criteria();
-        const selectedIndex = criteria.selectedIndex();
-        this.requestedIndexForQuery(selectedIndex);
 
-        if (selectedIndex) {
+        if (this.criteria().queryText()) {
 
             //TODO: this.isWarning(false);
             this.isLoading(true);
@@ -521,13 +367,13 @@ class query extends viewModelBase {
 
             //TODO: this.currentColumnsParams().enabled(this.showFields() === false && this.indexEntries() === false);
 
-            const queryCommand = new queryIndexCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
+            const queryCmd = new queryCommand(database, 0, 25, this.criteria(), !this.cacheEnabled());
 
-            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCommand.getUrl());
-            this.csvUrl(queryCommand.getCsvUrl());
+            this.rawJsonUrl(appUrl.forDatabaseQuery(database) + queryCmd.getUrl());
+            this.csvUrl(queryCmd.getCsvUrl());
 
             const resultsFetcher = (skip: number, take: number) => {
-                const command = new queryIndexCommand(database, skip, take, this.criteria(), !this.cacheEnabled());
+                const command = new queryCommand(database, skip, take, this.criteria(), !this.cacheEnabled());
                 return command.execute()
                     .always(() => {
                         this.isLoading(false);
@@ -562,7 +408,7 @@ class query extends viewModelBase {
                     })
                     .fail((request: JQueryXHR) => {
                         if (request.status === 404) {
-                            recentQueriesStorage.removeIndexFromRecentQueries(database, selectedIndex);
+                            recentQueriesStorage.removeRecentQueryByQueryText(database, this.criteria().queryText());
                         }
                     });
             };
@@ -576,23 +422,10 @@ class query extends viewModelBase {
         this.gridController().reset(true);
     }
     
-    editSelectedIndex() {
-        eventsCollector.default.reportEvent("query", "edit-selected-index");
-        this.navigate(this.editIndexUrl());
-    }
-
-    closeAddFilter() {
-        this.addFilterVisible(false);
-    }
-
-    openAddFilter() {
-        this.addFilterVisible(true);
-    }
-
     openQueryStats() {
         //TODO: work on explain in dialog
         eventsCollector.default.reportEvent("query", "show-stats");
-        const viewModel = new queryStatsDialog(this.queryStats(), this.requestedIndexForQuery(), this.activeDatabase());
+        const viewModel = new queryStatsDialog(this.queryStats(), this.activeDatabase());
         app.showBootstrapDialog(viewModel);
     }
 
@@ -612,7 +445,6 @@ class query extends viewModelBase {
         const criteria = this.criteria();
 
         criteria.updateUsing(storedQuery);
-        criteria.sorts().forEach(sort => sort.bindOnUpdateAction(() => this.runQuery()));
 
         const matchedTransformer = this.allTransformers().find(t => t.Name === criteria.transformer());
 
@@ -625,7 +457,9 @@ class query extends viewModelBase {
 
         this.runQuery();
 
+        /* TODO
         queryUtil.fetchIndexFields(this.activeDatabase(), storedQuery.indexName, this.indexFields);
+        */
     }
 
     private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {
@@ -694,118 +528,6 @@ class query extends viewModelBase {
         return "";
     }
 
-    addFilter() {
-        const filter = this.filterSettings;
-        if (this.isValid(filter.validationGroup)) {
-
-            switch (filter.type()) {
-                case 'string':
-                    this.addStringFilter();
-                    break;
-                case 'in':
-                    this.addInFilter();
-                    break;
-                case 'range':
-                    this.addRangeFilter();
-                    break;
-            }
-        }
-    }
-
-    private addStringFilter() {
-        const filter = this.filterSettings;
-        eventsCollector.default.reportEvent("query", "field-name-starts-with");
-
-        const escapedTerm = queryUtil.escapeTerm(filter.value());
-        let newQueryPart: string = "";
-
-        if (this.criteria().queryText().trim().length > 0) {
-            newQueryPart += " AND ";
-        }
-        const field = filter.searchField();
-
-        switch (filter.searchType()) {
-            case 'Starts With':
-                newQueryPart += field + ":" + escapedTerm + "*";
-                break;
-            case "Ends With":
-                newQueryPart += field + ":*" + escapedTerm;
-                break;
-            case "Contains":
-                newQueryPart += field + ":*" + escapedTerm + "*";
-                break;
-            case "Exact":
-                newQueryPart += field + ":" + escapedTerm;
-                break;
-        }
-
-        this.criteria().queryText(this.criteria().queryText() + newQueryPart);
-    }
-
-    private addInFilter() {
-        const filter = this.filterSettings;
-        eventsCollector.default.reportEvent("query", "field-value-in");
-
-        const values = filter.inValues().split(",");
-        const escapedValues = values.map(x => queryUtil.escapeTerm(x));
-        const field = filter.searchField();
-
-        let newQueryPart: string = "";
-
-        if (this.criteria().queryText().trim().length > 0) {
-            newQueryPart += " AND ";
-        }
-
-        newQueryPart += " @in<" + field + ">:(" + escapedValues.join() + ")";
-        this.criteria().queryText(this.criteria().queryText() + newQueryPart);
-    }
-
-    private addRangeFilter() {
-        const filter = this.filterSettings;
-        eventsCollector.default.reportEvent("query", "field-value-range");
-
-        const from = filter.rangeFrom() || "*";
-        const to = filter.rangeTo() || "*";
-
-        let newQueryPart: string = "";
-
-        if (this.criteria().queryText().trim().length > 0) {
-            newQueryPart += " AND ";
-        }
-
-        const rangePrefix = this.getRangePrefix(filter.rangeSearchType());
-
-        newQueryPart += filter.searchField() + rangePrefix + ":[" + from + " TO " + to + "]";
-
-        this.criteria().queryText(this.criteria().queryText() + newQueryPart);
-
-    }
-
-    private getRangePrefix(type: rangeSearchType): string {
-        if (type === "Numeric Double") {
-            return "_D_Range";
-        } else if (type === "Numeric Long") {
-            return "_L_Range";
-        }
-        return "";
-    }
-
-    addSortBy() {
-        eventsCollector.default.reportEvent("query", "add-sort-by");
-
-        const newSort = querySort.empty();
-        newSort.bindOnUpdateAction(() => this.runQuery());
-
-        this.criteria().sorts.push(newSort);
-    }
-
-    removeSortBy(sortBy: querySort) {
-        eventsCollector.default.reportEvent("query", "remove-sort-by");
-
-        this.criteria().sorts.remove(sortBy);
-        this.runQuery();
-    }
-
     getRecentQuerySortText(sorts: string[]) {
         if (sorts.length > 0) {
             return sorts
@@ -817,7 +539,10 @@ class query extends viewModelBase {
     }
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        /* TODO
         queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
+        */
+        callback([], []);
     }
 
     deleteDocsMatchingQuery() {
@@ -829,30 +554,26 @@ class query extends viewModelBase {
                 if (results.totalResultCount === 0) {
                     app.showBootstrapMessage("There are no documents matching your query.", "Nothing to do");
                 } else {
-                    const usedIndex = this.queryStats().IndexName; // used to handle deletes on dynamic collections
-                    this.promptDeleteDocsMatchingQuery(results.totalResultCount, usedIndex);
+                    this.promptDeleteDocsMatchingQuery(results.totalResultCount);
                 }
             });
     }
 
-    private promptDeleteDocsMatchingQuery(resultCount: number, index: string) {
+    private promptDeleteDocsMatchingQuery(resultCount: number) {
         const criteria = this.criteria();
-
+        const stats = this.queryStats();
         const db = this.activeDatabase();
-        const viewModel = new deleteDocumentsMatchingQueryConfirm(criteria.selectedIndex(), criteria.queryText(), resultCount, db);
-        app
-            .showBootstrapDialog(viewModel)
-            .done((result) => {
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(stats.IndexName, criteria.queryText(), resultCount, db);
+        app.showBootstrapDialog(viewModel)
+           .done((result) => {
                 if (result) {
-                    new deleteDocsMatchingQueryCommand(index,
-                            criteria.queryText(),
-                            this.activeDatabase())
+                    new deleteDocsMatchingQueryCommand(criteria.queryText(), this.activeDatabase())
                         .execute()
                         .done((operationId: operationIdDto) => {
                             this.monitorDeleteOperation(db, operationId.OperationId);
                         });
                 }
-            });
+           });
     }
 
     private monitorDeleteOperation(db: database, operationId: number) {

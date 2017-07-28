@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/databases/*/streams/queries/$", "HEAD", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/streams/queries", "HEAD", AuthorizationStatus.ValidUser)]
         public Task SteamQueryHead()
         {
             return Task.CompletedTask;
