@@ -120,7 +120,7 @@ namespace Raven.Server.Config.Categories
             {
                 var getHostAddressesTask = Dns.GetHostAddressesAsync(serverUri.DnsSafeHost);
                 if (getHostAddressesTask.Wait(TimeSpan.FromSeconds(30)) == false)
-                    throw new InvalidOperationException($"Could not obtain IP address from DNS {serverUri} for 30 seconds.");
+                    throw new InvalidOperationException($"Could not obtain IP address from DNS {serverUri.DnsSafeHost} for 30 seconds.");
 
                 addresses = getHostAddressesTask.Result;
             }
