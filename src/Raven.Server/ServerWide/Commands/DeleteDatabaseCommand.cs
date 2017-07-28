@@ -36,7 +36,7 @@ namespace Raven.Server.ServerWide.Commands
                     DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{FromNode}' failed.");
                 }
                 record.Topology.RemoveFromTopology(FromNode);
-
+                record.Topology.ReplicationFactor--;
                 record.DeletionInProgress[FromNode] = deletionInProgressStatus;
             }
             else
@@ -49,12 +49,12 @@ namespace Raven.Server.ServerWide.Commands
                 foreach (var node in allNodes)
                     record.DeletionInProgress[node] = deletionInProgressStatus;
 
+                record.Topology.ReplicationFactor = 0;
                 record.Topology = new DatabaseTopology
                 {
                     Stamp = record.Topology.Stamp
                 };
             }
-
             return null;
         }
 

@@ -291,7 +291,7 @@ namespace Raven.Server.Documents
             var val = tree.Read(GlobalChangeVectorSlice);
             if (val == null)
             {
-                return context.GetLazyString(string.Empty);
+                return string.Empty;
             }
             return Encodings.Utf8.GetString(val.Reader.Base, val.Reader.Length);
         }
@@ -306,7 +306,7 @@ namespace Raven.Server.Documents
             return changeVector;
         }
 
-        public void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
+        public static void SetDatabaseChangeVector(DocumentsOperationContext context, string changeVector)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(GlobalTreeSlice);
             using (Slice.From(context.Allocator, changeVector, out var slice))

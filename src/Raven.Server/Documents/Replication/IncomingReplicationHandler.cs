@@ -16,7 +16,6 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Utils;
 using Sparrow.Utils;
@@ -203,6 +202,8 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private Task _prevChangeVectorUpdate;
+
         private void HandleSingleReplicationBatch(
             DocumentsOperationContext documentsContext,
             BlittableJsonReaderObject message,
@@ -253,7 +254,26 @@ namespace Raven.Server.Documents.Replication
                             stats.Complete();
                         }
                     case ReplicationMessageType.Heartbeat:
-                        //nothing to do..
+                        if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
+                        {
+                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector);
+                            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.Status == TaskStatus.RanToCompletion)
+                            {
+                                if (_log.IsInfoEnabled)
+                                {
+                                    _log.Info(
+                                        $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
+                                        $"nevertheless we create an additional task.");
+                                }
+                            }
+                            else
+                            {
+                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).ContinueWith(_ =>
+                                {
+                                    _replicationFromAnotherSource.Set();
+                                });
+                            }
+                        }
                         break;
                     default:
                         throw new ArgumentOutOfRangeException("Unknown message type: " + messageType);
@@ -781,11 +801,30 @@ namespace Raven.Server.Documents.Replication
         protected void OnFailed(Exception exception, IncomingReplicationHandler instance) => Failed?.Invoke(instance, exception);
         protected void OnDocumentsReceived(IncomingReplicationHandler instance) => DocumentsReceived?.Invoke(instance);
 
+        private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
+        {
+            private readonly string _changeVector;
+            public MergedUpdateDatabaseChangeVectorCommand(string chageVector)
+            {
+                _changeVector = chageVector;
+            }
+            public override int Execute(DocumentsOperationContext context)
+            {
+                var current = DocumentsStorage.GetDatabaseChangeVector(context);
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(_changeVector, current);
+                if (conflictStatus == ConflictStatus.Update)
+                {
+                    var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
+                    DocumentsStorage.SetDatabaseChangeVector(context, merged);
+                    return 1;
+                }
+                return 0;
+            }
+        }
+
         private unsafe class MergedDocumentReplicationCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly IncomingReplicationHandler _incoming;
-
-            private ChangeVectorEntry[] _changeVector = new ChangeVectorEntry[0];
 
             private readonly long _lastEtag;
             private readonly byte* _buffer;
@@ -812,7 +851,7 @@ namespace Raven.Server.Documents.Replication
                     var currentDatabaseChangeVector = context.LastDatabaseChangeVector ??
                                (context.LastDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context));
 
-                    var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector.ToString();
+                    var maxReceivedChangeVectorByDatabase = currentDatabaseChangeVector;
 
                     foreach (var item in _incoming._replicatedItems)
                     {

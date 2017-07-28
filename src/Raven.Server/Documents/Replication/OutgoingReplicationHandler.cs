@@ -483,6 +483,7 @@ namespace Raven.Server.Documents.Replication
         internal void SendHeartbeat()
         {
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (documentsContext.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 try
@@ -491,7 +492,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0
+                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0,
+                        [nameof(ReplicationMessageHeader.DatabaseChangeVector)] = DocumentsStorage.GetDatabaseChangeVector(documentsContext)
                     };
                     documentsContext.Write(writer, heartbeat);
                     writer.Flush();

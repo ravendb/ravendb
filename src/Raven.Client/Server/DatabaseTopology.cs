@@ -69,11 +69,14 @@ namespace Raven.Client.Server
     {
         public List<string> Members = new List<string>();
         public List<string> Promotables = new List<string>();
+        public List<string> Rehab = new List<string>();
+
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
         public Dictionary<string, string> PromotablesStatus = new Dictionary<string, string>();
 
         public LeaderStamp Stamp;
         public bool DynamicNodesDistribution = true;
+        public int ReplicationFactor = 1;
 
         public bool RelevantFor(string nodeTag)
         {
@@ -92,7 +95,7 @@ namespace Raven.Client.Server
                     continue;
                 list.Add(clusterTopology.GetUrlFromTag(member));
             }
-            foreach (var promotable in Promotables)
+            foreach (var promotable in Promotables.Concat(Rehab))
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName), isPassive) == nodeTag)
@@ -168,6 +171,7 @@ namespace Raven.Client.Server
             {
                 [nameof(Members)] = new DynamicJsonArray(Members),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
+                [nameof(Rehab)] = new DynamicJsonArray(Rehab),
                 [nameof(Stamp)] = Stamp.ToJson(),
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
@@ -188,6 +192,7 @@ namespace Raven.Client.Server
 
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
+            topology.AddRange(Rehab);
             topology.Sort();
 
             if (topology.Count == 0)

@@ -117,7 +117,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 null, DateTime.MinValue, DateTime.MinValue
                 );
 
-            private DateTime _lastSuccessfulUpdateDateTime;
+            private DateTime _lastSuccessfulNodeUpdateDateTime;
             private bool _isDisposed;
             private readonly string _readStatusUpdateDebugString;
 
@@ -207,7 +207,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                             ClusterNodeStatusReport.ReportStatus.Timeout,
                                             null,
                                             DateTime.UtcNow,
-                                            _lastSuccessfulUpdateDateTime);
+                                            _lastSuccessfulNodeUpdateDateTime);
                                         needToWait = true;
                                         internalTaskCancellationToken.Cancel();
                                         break;
@@ -221,14 +221,14 @@ namespace Raven.Server.ServerWide.Maintenance
                                             var value = (BlittableJsonReaderObject)statusUpdateJson[property];
                                             report.Add(property, JsonDeserializationServer.DatabaseStatusReport(value));
                                         }
-                                        _lastSuccessfulUpdateDateTime = DateTime.Now;
+                                        _lastSuccessfulNodeUpdateDateTime = DateTime.UtcNow;
 
                                         ReceivedReport = new ClusterNodeStatusReport(
                                             report,
                                             ClusterNodeStatusReport.ReportStatus.Ok,
                                             null,
                                             DateTime.UtcNow,
-                                            _lastSuccessfulUpdateDateTime);
+                                            _lastSuccessfulNodeUpdateDateTime);
                                     }
                                 }
                             }
@@ -244,7 +244,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             ClusterNodeStatusReport.ReportStatus.Error,
                             e,
                             DateTime.UtcNow,
-                            _lastSuccessfulUpdateDateTime);
+                            _lastSuccessfulNodeUpdateDateTime);
                         needToWait = true;
                     }
                     finally
