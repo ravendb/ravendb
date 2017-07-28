@@ -29,7 +29,10 @@ namespace Raven.Server.Utils
             var octets = address.GetAddressBytes();
 
             return (AddressRangeIncludes(addressRange, UnsecuredAccessAddressRange.Local) && octets[0] == 127)
-                || (AddressRangeIncludes(addressRange, UnsecuredAccessAddressRange.PrivateNetwork) && (octets[0] == 10 || octets[0] == 192 || octets[0] == 172))
+                || (AddressRangeIncludes(addressRange, UnsecuredAccessAddressRange.PrivateNetwork) && 
+                        (octets[0] == 10 
+                        || (octets[0] == 192 && octets[1] == 168)
+                        || (octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31)))
                 || AddressRangeIncludes(addressRange, UnsecuredAccessAddressRange.PublicNetwork);
         }
 
@@ -49,7 +52,10 @@ namespace Raven.Server.Utils
         private static bool IsPrivateIpv6(byte[] arr)
         {
             return arr[0] == 0xFC // fc00::/7 - https://en.wikipedia.org/wiki/Unique_local_address (similar to IPv4 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16)
-                   || ((arr[10] == 0xFF && arr[11] == 0xFF) && (arr[12] == 192 || arr[12] == 172 || arr[12] == 10)); // ::ffff:0:0/96 - mapped ipv4 private network addresses (Stateless IP/ICMP Translation (SIIT)) 
+                   || ((arr[10] == 0xFF && arr[11] == 0xFF) && 
+                        ((arr[12] == 192 && arr[13] == 168)
+                            || (arr[12] == 172 && arr[13] >= 16 && arr[13] <= 31)
+                            || arr[12] == 10)); // ::ffff:0:0/96 - mapped ipv4 private network addresses (Stateless IP/ICMP Translation (SIIT)) 
         }
 
         private static bool AddressRangeIncludes(
