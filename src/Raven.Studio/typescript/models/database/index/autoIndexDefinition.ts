@@ -7,9 +7,30 @@ class autoIndexField {
     sort = ko.observable<string>();
     operation = ko.observable<string>();
 
+    // fieldStr has form: <Name:Count,Sort:None,Operation:Count>
     constructor(fieldStr: string) {
-        this.fieldName(this.getFieldData(fieldStr, "Name:", ","));
-        this.sort(this.getFieldData(fieldStr,"Sort:", ","));
+        
+        const parsedString = this.parse(fieldStr);
+        this.fieldName(parsedString['Name']);
+        this.sort(parsedString['Sort'] || 'None');
+    }
+
+    protected parse(str: string): dictionary<string> {
+        if (!str.startsWith("<") || !str.endsWith(">")) {
+            throw new Error("Invalid field: " + str);
+        }
+
+
+        str = str.substring(1, str.length - 1);
+
+        const result = {} as dictionary<string>;
+        
+        str.split(",").map(token => {
+            const [key, value] = token.split(":");
+            result[key] = value;
+        });
+
+        return result;
     }
 
     protected getFieldData(fieldStr: string, searchStr: string, endChar: string): string {
@@ -25,11 +46,13 @@ class autoIndexField {
     }
 }
 
-class autoIndexMapField extends autoIndexField{
+class autoIndexMapField extends autoIndexField {
 
     constructor(fieldStr: string) {
         super(fieldStr);
-        this.operation(this.getFieldData(fieldStr, "Operation:", ">"));
+
+        const parsedString = this.parse(fieldStr);
+        this.operation(parsedString['Operation']);
     }
 }
 
@@ -48,16 +71,23 @@ class autoIndexDefinition extends indexDefinition {
 
     private parseMapFields(mapStr: string) {
         const firstColonIdx = mapStr.indexOf(":");
-        this.collection(mapStr.substr(0, firstColonIdx));
-        mapStr = mapStr.substr(mapStr.indexOf("["));
-        const fieldsList = mapStr.split(";");
+        const collection = mapStr.substr(0, firstColonIdx);
+        let fields = mapStr.substring(firstColonIdx + 1);
 
+        this.collection(collection);
+        // trim [ and ]
+        fields = fields.substring(1, fields.length - 1);
+        const fieldsList = fields.split(";");
+        
         this.mapFields(fieldsList.map(x => new autoIndexMapField(x)));
     }
 
     private parseReduceFields(reduceStr: string) {
-        reduceStr = reduceStr.substr(reduceStr.indexOf("["));
-        const fieldsList = reduceStr.split(";");
+        const firstColonIdx = reduceStr.indexOf(":");
+        let fields = reduceStr.substring(firstColonIdx + 1);
+        // trim [ and ]
+        fields = fields.substring(1, fields.length - 1);
+        const fieldsList = fields.split(";");
 
         this.reduceFields(fieldsList.map(x => new autoIndexField(x)));
     }
