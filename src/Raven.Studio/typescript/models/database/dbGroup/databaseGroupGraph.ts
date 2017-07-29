@@ -20,14 +20,23 @@ class databaseNode extends layoutable {
     tag: string;
     type: clusterNodeType;
 
-    constructor(tag: string, type: clusterNodeType) {
+    private constructor() {
         super();
-        this.tag = tag;
-        this.type = type;
     }
 
     getId() {
         return `d_${this.tag}`;
+    }
+
+    static for(dto: Raven.Client.Server.Operations.NodeId, type: clusterNodeType) {
+        const node = new databaseNode();
+        node.updateWith(dto, type);
+        return node;
+    }
+
+    updateWith(dto: Raven.Client.Server.Operations.NodeId, type: clusterNodeType) {
+        this.tag = dto.NodeTag;
+        this.type = type;
     }
 }
 
@@ -38,11 +47,21 @@ class taskNode extends layoutable {
 
     responsibleNode: databaseNode;
 
-    constructor(type: Raven.Client.Server.Operations.OngoingTaskType, taskId: number, name: string, responsibleNode: databaseNode) {
+    private constructor() {
         super();
-        this.type = type;
-        this.taskId = taskId;
-        this.name = name;
+    }
+
+    static for(dto: Raven.Server.Web.System.OngoingTask, responsibleNode: databaseNode) {
+        const node = new taskNode();
+        node.updateWith(dto, responsibleNode);
+        return node;
+    }
+
+    updateWith(dto: Raven.Server.Web.System.OngoingTask, responsibleNode: databaseNode) {
+        this.type = dto.TaskType;
+        this.taskId = dto.TaskId;
+        //TODO: add node status 
+        this.name = dto.TaskName;
         this.responsibleNode = responsibleNode;
     }
 
@@ -60,9 +79,9 @@ class databaseGroupGraph {
     private static readonly minDatabaseGroupDrawRadius = 80;
     private static readonly minDistanceBetweenCirclesInDatabaseGroup = 120;
 
-    private data: {
-        databaseNodes: Array<databaseNode>;
-        tasks: Array<taskNode>;
+    private data = {
+        databaseNodes: [] as Array<databaseNode>,
+        tasks: [] as Array<taskNode>
     }
     
     private $container: JQuery;
@@ -72,23 +91,21 @@ class databaseGroupGraph {
     private zoom: d3.behavior.Zoom<void>;
     private d3cola: cola.D3StyleLayoutAdaptor;
     private colaInitialized = false;
+    private graphInitialized = false;
     private previousDbNodesCount = -1;
+
+    private ongoingTasksCache: Raven.Server.Web.System.OngoingTasksResult;
+    private databaseInfoCache: Raven.Client.Server.Operations.DatabaseInfo;
 
     private edgesContainer: d3.Selection<void>;
     private tasksContainer: d3.Selection<void>;
     private dbNodesContainer: d3.Selection<void>;
-
-    constructor() {
-        _.bindAll(this, ...["addNode", "removeNode"] as Array<keyof this>);
-    }
 
     init(container: JQuery) {
         this.$container = container;
         this.width = container.innerWidth();
         this.height = container.innerHeight();
 
-        this.data = this.getTEMPGraphData(); //TODO: use real data
-        
         this.initGraph();
     }
 
@@ -136,6 +153,9 @@ class databaseGroupGraph {
             this.updateTaskNodes(this.tasksContainer.selectAll(".task-node"));
             this.updateEdges(this.edgesContainer.selectAll(".edge"));
         });
+
+        this.graphInitialized = true;
+        this.draw();
     }
 
     private zoomed() {
@@ -204,6 +224,10 @@ class databaseGroupGraph {
     }
 
     draw() {
+        if (!this.databaseInfoCache || !this.ongoingTasksCache || !this.graphInitialized) {
+            return;
+        }
+
         const links = this.findLinks(this.data.databaseNodes, this.data.tasks);
 
         this.layout(this.data.databaseNodes, this.data.tasks, links, !this.colaInitialized);
@@ -421,88 +445,74 @@ class databaseGroupGraph {
             .attr("y2", x => x.target.y);
     }
 
-    static counter = 1;
-    
-    //TODO: delete me
-    private generateTasks(count: number, responsibleNode: databaseNode) {
-        const tasks = [] as Array<taskNode>;
-
-        const types = ["Backup", "Subscription", "RavenEtl", "SqlEtl", "Replication"] as Array<Raven.Client.Server.Operations.OngoingTaskType>;
-
-        for (let i = 0; i < count; i++) {
-            tasks.push(new taskNode(types[_.random(0, 4)], databaseGroupGraph.counter++, "N" + responsibleNode.tag + "T" + (i + 1), responsibleNode));
-        }
-
-        return tasks;
+    onTasksChanged(taskInfo: Raven.Server.Web.System.OngoingTasksResult) {
+        this.ongoingTasksCache = taskInfo;
+        this.updateData();
+        this.draw();
     }
 
-    //TODO: delete me
-    private getTEMPGraphData() {
+    onDatabaseInfoChanged(dbInfo: Raven.Client.Server.Operations.DatabaseInfo) {
+        this.databaseInfoCache = dbInfo;
+        this.updateData();
+        this.draw();
+    }
 
-        const dbNodes = [
-            new databaseNode("A", "Member"),
-            new databaseNode("B", "Promotable"),
-            new databaseNode("C", "Watcher"),
-            //new databaseNode("D"),
-            //new databaseNode("E"),
-            //new databaseNode("F"),
-            //new databaseNode("G"),
-            //new databaseNode("H"),
-            //new databaseNode("I"),
-            //new databaseNode("J"),
-            //new databaseNode("K")
-        ];
+    updateData() {
+        if (!this.databaseInfoCache || !this.ongoingTasksCache) {
+            return;
+        }
 
-        const tasksCount = [2, 7, 1, 2, 0, 6, 0];
+        this.updateDatabaseNodes();
+        this.updateTasks();
+    }
 
-        tasksCount.length = dbNodes.length;
+    private updateDatabaseNodes() {
+        const newDbTags = [] as Array<string>;
+        
+        const merge = (nodes: Array<Raven.Client.Server.Operations.NodeId>, type: clusterNodeType) => {
+            nodes.forEach(node => {
+                const existing = this.data.databaseNodes.find(x => x.tag === node.NodeTag);
+                if (existing) {
+                    existing.updateWith(node, type);
+                } else {
+                    this.data.databaseNodes.push(databaseNode.for(node, type));
+                }
 
-        const allTasks = [] as Array<taskNode>;
+                newDbTags.push(node.NodeTag);
+            });
+        }
+
+        merge(this.databaseInfoCache.NodesTopology.Members, "Member");
+        merge(this.databaseInfoCache.NodesTopology.Promotables, "Promotable");
+
+        const dbsToDelete = this.data.databaseNodes.filter(x => !_.includes(newDbTags, x.tag));
+
+        _.pullAll(this.data.databaseNodes, dbsToDelete);
+
+        _.sortBy(this.data.databaseNodes, x => x.tag);
+    }
+
+    private updateTasks() {
+        const newTasksIds = this.ongoingTasksCache.OngoingTasksList.map(x => x.TaskId);
+
+        this.ongoingTasksCache.OngoingTasksList.forEach(taskDto => {
+            const responsibleNode = taskDto.ResponsibleNode ? this.data.databaseNodes.find(x => x.tag === taskDto.ResponsibleNode.NodeTag) : null;
+            
+            const existing = this.data.tasks.find(x => x.taskId === taskDto.TaskId);
+            if (existing) {
+                existing.updateWith(taskDto, responsibleNode);
+            } else {
+                this.data.tasks.push(taskNode.for(taskDto, responsibleNode));
+            }
+        });
 
         
-        for (let i = 0; i < dbNodes.length; i++) {
-            const node = dbNodes[i];
-            allTasks.push(...this.generateTasks(tasksCount[i], node));
-        }
-
-        return {
-            databaseNodes: dbNodes,
-            tasks: allTasks
-        }
-    }
-
-    //TODO:delete me!
-    shuffle() {
-        const tasksCount = this.data.tasks.length;
-        const dbCount = this.data.databaseNodes.length;
-
-        const randomTask = this.data.tasks[Math.floor(Math.random() * tasksCount)];
-        const randomDatabase = this.data.databaseNodes[Math.floor(Math.random() * dbCount)];
-
-        randomTask.responsibleNode = randomDatabase;
-    }
-
-    static counter2 = 1;
-
-    addNode() {
-        databaseGroupGraph.counter2++;
-        this.data.databaseNodes.push(new databaseNode("X" + databaseGroupGraph.counter2, "Member"));
-
-        this.draw();
-    }
-
-    removeNode() {
-        const dbCount = this.data.databaseNodes.length;
-
-        const randomDatabase = this.data.databaseNodes[Math.floor(Math.random() * dbCount)];
-
-        const tasksToDelete = this.data.tasks.filter(t => t.responsibleNode === randomDatabase);
+        const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.taskId));
         _.pullAll(this.data.tasks, tasksToDelete);
-
-        _.pull(this.data.databaseNodes, randomDatabase);
-        this.draw();
+        
+        //TODO: process subscripitons - bundled for now
     }
-    
+
 }
 
 export = databaseGroupGraph;

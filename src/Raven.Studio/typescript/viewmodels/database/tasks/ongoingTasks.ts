@@ -19,6 +19,7 @@ import deleteOngoingTaskCommand = require("commands/database/tasks/deleteOngoing
 import toggleOngoingTaskCommand = require("commands/database/tasks/toggleOngoingTaskCommand");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
+import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 
 type TasksNamesInUI = "External Replication" | "RavenDB ETL" | "SQL ETL" | "Backup" | "Subscription";
 
@@ -55,9 +56,14 @@ class ongoingTasks extends viewModelBase {
         this.myNodeTag(this.clusterManager.localNodeTag());
     }
 
-    activate(args: any): JQueryPromise < Raven.Server.Web.System.OngoingTasksResult> {
+    activate(args: any): JQueryPromise<any> {
         super.activate(args);
-        return this.fetchOngoingTasks();
+        
+        this.addNotification(this.changesContext.serverNotifications()
+            .watchDatabaseChange(this.activeDatabase().name, () => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
+
+        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
 
     attached() {
@@ -74,8 +80,18 @@ class ongoingTasks extends viewModelBase {
         super.compositionComplete();
 
         this.graph.init($("#databaseGroupGraphContainer"));
+    }
 
-        this.graph.draw(); //TODO: pass real data!
+    private refresh() {
+        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+    }
+    
+    private fetchDatabaseInfo() {
+        return new getDatabaseCommand(this.activeDatabase().name)
+            .execute()
+            .done(dbInfo => {
+                this.graph.onDatabaseInfoChanged(dbInfo);
+            });
     }
 
     private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
@@ -83,6 +99,7 @@ class ongoingTasks extends viewModelBase {
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
+                this.graph.onTasksChanged(info);
                 return this.processTasksResult(info);
             });
     }
@@ -220,12 +237,6 @@ class ongoingTasks extends viewModelBase {
 
     setSelectedNode(node: string) {
         this.selectedNode(node);
-    }
-
-    shuffle() {
-        this.graph.shuffle();
-
-        this.graph.draw();
     }
 
 }
