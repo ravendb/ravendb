@@ -31,10 +31,10 @@
                         </button>
                         <ul class="dropdown-menu" role="menu">
                             <!-- ko foreach: existingTaskTypes() -->
-                            <li data-bind="click: $root.setSelectedTaskType.bind($root, $data)"><a data-bind="text: $data"></a></li>
+                            <li><a href="#" data-bind="text: $data, click: $root.setSelectedTaskType.bind($root, $data)"></a></li>
                             <!-- /ko -->
                             <li class="divider"></li>
-                            <li data-bind="click: $root.setSelectedTaskType('All tasks')"><a>All tasks</a></li>
+                            <li><a data-bind="click: $root.setSelectedTaskType.bind($root, 'All tasks')" href="#">All tasks</a></li>
                         </ul>
                     </div>
                     <div class="btn-group" data-bind="visible: existingNodes().length > 1">
@@ -45,10 +45,10 @@
                         </button>
                         <ul class="dropdown-menu">
                             <!-- ko foreach: existingNodes() -->
-                            <li data-bind="click: $root.setSelectedNode.bind($root, $data)"><a data-bind="text: $data"></a></li>
+                            <li data-bind="click: $root.setSelectedNode.bind($root, $data)"><a href="#" data-bind="text: $data"></a></li>
                             <!-- /ko -->
                             <li class="divider"></li>
-                            <li data-bind="click: $root.setSelectedNode('All nodes')"><a>All nodes</a></li>
+                            <li data-bind="click: $root.setSelectedNode.bind($root, 'All nodes')"><a href="#">All nodes</a></li>
                         </ul>
                     </div>
                 </div>
@@ -254,9 +254,6 @@
                 <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
                 <div class="flex-separator"></div>
                 <div>
-                    <button class="btn btn-default" data-bind="click: $root.shuffle">Shuffle</button>
-                    <button class="btn btn-default" data-bind="click: $root.graph.addNode">Add </button>
-                    <button class="btn btn-default" data-bind="click: $root.graph.removeNode">Remove</button>
                     <button class="btn btn-info btn-upcoming disabled"><i class="icon-topology"></i> <span>Retrieve live topology</span></button>
                 </div>
                 <div class="btn-group dropdown-right">
