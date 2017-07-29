@@ -62,8 +62,8 @@ namespace Raven.Server.Web.Studio
                     changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
                     totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
                 }
-
-                if (GetStringFromHeaders("If-None-Match") == changeVector)
+                
+                if (changeVector != null && GetStringFromHeaders("If-None-Match") == changeVector)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
