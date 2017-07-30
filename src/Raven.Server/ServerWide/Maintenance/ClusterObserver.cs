@@ -1,14 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Xml;
 using Raven.Client.Http;
 using Raven.Client.Server;
-using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -16,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
+using Voron.Util;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -33,6 +30,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public readonly TimeSpan SupervisorSamplePeriod;
         private readonly ServerStore _server;
         private readonly long _stabilizationTime;
+        private readonly TimeSpan _breakdownTimeout;
 
         public ClusterObserver(
             ServerStore server,
@@ -52,7 +50,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var config = server.Configuration.Cluster;
             SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
-
+            _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
             _observe = Run(_cts.Token);
         }
 
@@ -133,237 +131,285 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private bool _hasLivingNodesFlag;
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous)
         {
-            if (topology.Members.Count > 1)
+            //TODO: RavenDB-7914 - any change here requires generating alerts
+            
+            var modifiedTopology = false;
+            var hasLivingNodes = false;
+            foreach (var member in topology.Members)
             {
-                var hasLivingNode = false;
-                foreach (var member in topology.Members)
+                if (current.TryGetValue(member, out var nodeStats) &&
+                    nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
+                    nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
+                    dbStats.Status == Loaded)
                 {
-                    if (current.TryGetValue(member, out var nodeStats) &&
-                        nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
-                        nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
-                        dbStats.Status == Loaded)
-                    {
-                        hasLivingNode = true;
-                        _hasLivingNodesFlag = true;
-
-                        topology.DemotionReasons.Remove(member);
-                        topology.PromotablesStatus.Remove(member);
-                    }
+                    hasLivingNodes = true;
+                    topology.DemotionReasons.Remove(member);
+                    topology.PromotablesStatus.Remove(member);
+                    continue;
                 }
-
-                if (hasLivingNode == false)
+           
+                if (FailedDatabaseInstanceOrNode(topology, member, dbName, current))
                 {
-                    var alertMsg = $"It appears that all nodes of the {dbName} database are dead, and we can't demote the last member-node left.";
-                    if (_hasLivingNodesFlag)
-                    {
-                        var alert = AlertRaised.Create(
-                            "No living nodes in the database topology",
-                            alertMsg,
-                            AlertType.ClusterTopologyWarning,
-                            NotificationSeverity.Warning
-                        );
-                        _server.NotificationCenter.Add(alert);
-                    }
-                    _hasLivingNodesFlag = false;
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations(alertMsg);
-                    }
-                    return false;
-                }
+                    MoveToRehab(dbName, topology, current, previous, member);
+                    if (TryFindFitNode(member, dbName, current, out var node) == false)
+                        continue;
 
-                foreach (var member in topology.Members)
-                {
-                    if (current.TryGetValue(member, out var nodeStats) == false ||
-                        nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok ||
-                        nodeStats.LastReport.TryGetValue(dbName, out var dbStats) == false ||
-                        dbStats.Status == Faulted)
-                    {
-                        topology.Members.Remove(member);
-                        topology.Promotables.Add(member);
-
-                        if (_logger.IsOperationsEnabled)
-                        {
-                            _logger.Operations($"We demote the database {dbName} on {member}");
-                        }
-
-                        string reason;
-                        if (nodeStats == null)
-                        {
-                            reason = "Demoted because it had no status report in the latest cluster stats";
-                        }
-                        else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
-                        {
-                            reason = $"Demoted because the last report status was \"{nodeStats.LastReportStatus}\" ";
-                        }
-                        else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
-                        {
-                            reason = "Demoted because the DatabaseStatus for this node is Faulted";
-                        }
-                        else
-                        {
-                            reason = "Demoted because it had no DatabaseStatusReport";
-                        }
-
-                        if (nodeStats?.LastError != null)
-                        {
-                            reason += $". {nodeStats.LastError}";
-                        }
-
-                        topology.DemotionReasons[member] = reason;
-                        topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
-
-                        return true;
-                    }
-
-                    if (dbStats.Status == Loading)
-                    {
-                        if (previous.TryGetValue(member, out var prevNodeStats) &&
-                            prevNodeStats.LastReport.TryGetValue(dbName, out var prevDbStats) &&
-                            prevDbStats.Status == Loading)
-                        {
-                            topology.Members.Remove(member);
-                            topology.Promotables.Add(member);
-
-                            if (_logger.IsOperationsEnabled)
-                            {
-                                _logger.Operations($"We demote the database {dbName} on {member}, because it is too long in Loading state.");
-                            }
-                            topology.DemotionReasons[member] = "Demoted because it is too long in Loading state";
-                            topology.PromotablesStatus[member] = "Loading the databse";
-                            return true;
-                        }
-                    }
+                    topology.Members.Remove(member);
+                    topology.Promotables.Add(node);
+                    topology.Rehab.Add(member);
+                    // we only allow a single topology modification per round, so 
+                    // we abort immediately after making this change
+                    modifiedTopology = true;
+                    break;
                 }
             }
 
-            if (topology.Promotables.Count == 0)
-                return false;
+            if (hasLivingNodes == false)
+            {
+                var alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable";
+
+                foreach (var rehab in topology.Rehab)
+                {
+                    //TODO: RavenDB-7911 - Find the most up to date rehab node
+                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current))
+                        continue;
+                    topology.Rehab.Remove(rehab);
+                    topology.Members.Add(rehab);
+                    modifiedTopology = true;
+                    alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable";
+                    break;
+                }
+                
+                var alert = AlertRaised.Create(
+                    "No living nodes in the database topology",
+                    alertMsg,
+                    AlertType.ClusterTopologyWarning,
+                    NotificationSeverity.Warning
+                );
+                
+                _server.NotificationCenter.Add(alert);
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations(alertMsg);
+                }
+                return modifiedTopology;
+            }
+
+            if (modifiedTopology)
+                return true;
 
             foreach (var promotable in topology.Promotables)
             {
-                var url = clusterTopology.GetUrlFromTag(promotable);
-                var task = new PromotableTask(promotable,url, dbName);
-                var mentorNode = topology.WhoseTaskIsIt(task,_server.IsPassive());
-                if (mentorNode == null)
+                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current))
                 {
-                    // We are in passive mode and were kicked out of the cluster.
-                    return false;
-                }
-
-                if (ShouldReassign(topology, promotable, dbName, current, previous))
-                {
-                    var node = FindLeastDbNode(promotable, dbName, current);
-                    if (node == null)
-                    {
-                        if (_logger.IsOperationsEnabled)
-                        {
-                            _logger.Operations($"Somthing is wrong with {dbName} on {promotable}, but we were unable to reassign it.");
-                        }
+                    if (TryFindFitNode(promotable, dbName, current, out var node) == false)
                         continue;
-                    }
-                    if (_logger.IsOperationsEnabled)
-                    {
-                        _logger.Operations($"Somthing is wrong with {dbName} on {promotable}, so we reassign it to {node}.");
-                    }
-                    topology.RemoveFromTopology(promotable);
+
                     topology.Promotables.Add(node);
                     return true;
                 }
 
-                if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
-                    mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
+                if (TryGetMentorNode(dbName, topology, clusterTopology, promotable, out var mentorNode) == false)
                     continue;
 
-                if (current.TryGetValue(promotable, out var promotableClusterStats) == false ||
-                   promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
-                    continue;
-
-                var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
-                if (status == ConflictStatus.AlreadyMerged)
+                if (TryPromote(dbName, topology, current, previous, mentorNode, promotable))
                 {
-                    if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
-                        promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
-                        continue;
+                    RemoveOtherNodesIfNeeded(topology);
+                    return true;
+                }
+            }
 
-                    var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
-                    if (indexesCatchedUp)
+            foreach (var broked in topology.Rehab)
+            {
+                if (FailedDatabaseInstanceOrNode(topology, broked, dbName, current) == false)
+                {
+                    if (TryGetMentorNode(dbName, topology, clusterTopology, broked, out var mentorNode) == false)
+                        return false;
+
+                    if (TryPromote(dbName, topology, current, previous, mentorNode, broked))
                     {
-                        topology.Promotables.Remove(promotable);
-                        topology.Members.Add(promotable);
                         if (_logger.IsOperationsEnabled)
                         {
-                            _logger.Operations($"We promote the database {dbName} on {promotable} to be a full member");
+                            _logger.Operations($"The database {dbName} on {broked} is reachable and update, so we promote it back to member.");
                         }
-                        topology.PromotablesStatus.Remove(promotable);
-                        topology.DemotionReasons.Remove(promotable);
+                        topology.Members.Add(broked);
+                        topology.Rehab.Remove(broked);
+                        RemoveOtherNodesIfNeeded(topology);
                         return true;
                     }
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
-                    }
-
-                    topology.PromotablesStatus[promotable] = "node is not ready to be promoted, because the indexes are not up-to-date";
-
-
-                }
-                else
-                {
-                    if (_logger.IsInfoEnabled)
-                    {
-                        _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
-                                           $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
-                    }
-                    topology.PromotablesStatus[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
-                                                             $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, " +
-                                                             $"node's change vector : {promotableDbStats.LastChangeVector}";
-
                 }
             }
             return false;
         }
 
-        private const DatabaseStatus BadFlags = Faulted | Shutdown;
-        private bool ShouldReassign(
+        private void MoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string member)
+        {
+            DatabaseStatusReport dbStats = null;
+            if (current.TryGetValue(member, out var nodeStats) && 
+                nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
+                nodeStats.LastReport.TryGetValue(dbName, out  dbStats) && 
+                dbStats.Status != Faulted) 
+                return;
+            
+            
+            topology.Members.Remove(member);
+            topology.Rehab.Add(member);
+
+            string reason;
+            if (nodeStats == null)
+            {
+                reason = "In rehabilitation because it had no status report in the latest cluster stats";
+            }
+            else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+            {
+                reason = $"In rehabilitation because the last report status was \"{nodeStats.LastReportStatus}\"";
+            }
+            else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
+            {
+                reason = "In rehabilitation because the DatabaseStatus for this node is Faulted";
+            }
+            else
+            {
+                reason = "In rehabilitation because the node is reachable but had no report about the database";
+            }
+
+            if (nodeStats?.LastError != null)
+            {
+                reason += $". {nodeStats.LastError}";
+            }
+            if (dbStats?.Error != null)
+            {
+                reason += $". {dbStats.Error}";         
+            }
+
+            topology.DemotionReasons[member] = reason;
+            topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
+
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations(reason);
+            }
+        }
+
+        private bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
+        {
+            var url = clusterTopology.GetUrlFromTag(promotable);
+            var task = new PromotableTask(promotable, url, dbName);
+            mentorNode = topology.WhoseTaskIsIt(task, _server.IsPassive());
+
+            if (mentorNode == null)
+            {
+                // We are in passive mode and were kicked out of the cluster.
+                return false;
+            }
+            return true;
+        }
+
+        private bool TryPromote(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string mentorNode, string promotable)
+        {
+            if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
+                mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
+                return false;
+
+            if (current.TryGetValue(promotable, out var promotableClusterStats) == false ||
+                promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
+                return false;
+
+            var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
+            if (status == ConflictStatus.AlreadyMerged)
+            {
+                if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
+                    promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
+                    return false;
+
+                var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
+                if (indexesCatchedUp)
+                {
+                    topology.Promotables.Remove(promotable);
+                    topology.Members.Add(promotable);
+                    if (_logger.IsOperationsEnabled)
+                    {
+                        _logger.Operations($"We promoted the database {dbName} on {promotable} to be a full member");
+                    }
+                    topology.PromotablesStatus.Remove(promotable);
+                    topology.DemotionReasons.Remove(promotable);
+
+                    return true;
+                }
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
+                }
+
+                topology.PromotablesStatus[promotable] = "node is not ready to be promoted, because the indexes are not up-to-date";
+            }
+            else
+            {
+                if (_logger.IsInfoEnabled)
+                {
+                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
+                                 $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
+                }
+                topology.PromotablesStatus[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
+                                                         $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, " +
+                                                         $"node's change vector : {promotableDbStats.LastChangeVector}";
+            }
+            return false;
+        }
+
+        private void RemoveOtherNodesIfNeeded(DatabaseTopology topology)
+        {
+            if (topology.Members.Count != topology.ReplicationFactor) 
+                return;
+
+            if (topology.Promotables.Count  == 0 && 
+                topology.Rehab.Count == 0) 
+                return;
+            
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations($"We reached the replication factor, so we remove all other rehab/promotable nodes {string.Join(", ", topology.Rehab.Concat(topology.Promotables))}");
+            }
+            topology.Promotables.Clear();
+            topology.Rehab.Clear();
+        }
+        
+        private bool FailedDatabaseInstanceOrNode(
             DatabaseTopology topology, string node, string db,
-            Dictionary<string, ClusterNodeStatusReport> current, 
-            Dictionary<string, ClusterNodeStatusReport> previous)
+            Dictionary<string, ClusterNodeStatusReport> current)
         {
             if (topology.DynamicNodesDistribution == false)
                 return false;
 
-            DatabaseStatusReport currentDbStats = null;
-            DatabaseStatusReport prevDbStats = null;
-            var hasCurrent = current.TryGetValue(node, out var currentNodeStats) && currentNodeStats.LastReport.TryGetValue(db, out currentDbStats);
-            var hasPrev = previous.TryGetValue(node, out var prevNodeStats) && prevNodeStats.LastReport.TryGetValue(db, out prevDbStats);
-
-            if (hasCurrent == false && hasPrev == false)
-                return true;
+            var hasCurrent = current.TryGetValue(node, out var currentNodeStats);
 
             // Wait until we have more info
-            if (hasCurrent == false || hasPrev == false)
+            if (hasCurrent == false)
                 return false;
 
-            if (currentNodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok &&
-                prevNodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+            // if server is down we should reassign
+            if (DateTime.UtcNow - currentNodeStats.LastSuccessfulUpdateDateTime > _breakdownTimeout)
                 return true;
 
-            if ((currentDbStats.Status & BadFlags) != 0 && (prevDbStats.Status & BadFlags) != 0)
+            if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
+            {
+                // here we have a problem, the topology says that the db needs to be in the node, but the node
+                // doesn't know that the db is on it, that probably indicate some problem and we'll move it
+                // to another node to resolve it.
                 return true;
+            }
 
-            return false;
+            return DateTime.UtcNow - lastGoodTime > _breakdownTimeout;
         }
 
-        private string FindLeastDbNode(string badNode, string db,
-            Dictionary<string, ClusterNodeStatusReport> current)
+        private bool TryFindFitNode(string badNode, string db,
+            Dictionary<string, ClusterNodeStatusReport> current, out string bestNode)
         {
-            string bestNode = null;
+            bestNode = null;
             var dbCount = int.MaxValue;
             foreach (var report in current)
             {
@@ -377,7 +423,21 @@ namespace Raven.Server.ServerWide.Maintenance
                     bestNode = report.Key;
                 }
             }
-            return bestNode;
+
+            if (bestNode == null)
+            {
+                if (_logger.IsOperationsEnabled)
+                {
+                    _logger.Operations($"The database {db} on {badNode} has not responded for a long time, but there is no free node to reassign it.");
+                }
+                return false;
+            }
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations($"The database {db} on {badNode} has not responded for a long time, so we reassign it to {bestNode}.");
+            }
+
+            return true;
         }
 
         private bool CheckIndexProgress(

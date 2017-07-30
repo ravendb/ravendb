@@ -83,21 +83,51 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public readonly Dictionary<string, DatabaseStatusReport> LastReport;
 
+        public readonly Dictionary<string, DateTime> LastGoodDatabaseStatus;
+
         public readonly ReportStatus LastReportStatus;
 
         public readonly Exception LastError;
 
         public readonly DateTime LastUpdateDateTime;
+        private readonly ClusterNodeStatusReport _lastSuccessfulReport;
 
-        public readonly DateTime LastSuccessfulUpdateDateTime;
+        public DateTime LastSuccessfulUpdateDateTime => _lastSuccessfulReport?.LastUpdateDateTime ?? DateTime.MinValue;
 
-        public ClusterNodeStatusReport(Dictionary<string, DatabaseStatusReport> lastReport, ReportStatus lastReportStatus, Exception lastError, DateTime lastUpdateDateTime, DateTime lastSuccessfulUpdateDateTime)
+        public ClusterNodeStatusReport(
+            Dictionary<string, DatabaseStatusReport> lastReport, 
+            ReportStatus lastReportStatus, 
+            Exception lastError, 
+            DateTime lastUpdateDateTime, 
+            ClusterNodeStatusReport lastSuccessfulReport)
         {
             LastReport = lastReport;
             LastReportStatus = lastReportStatus;
             LastError = lastError;
             LastUpdateDateTime = lastUpdateDateTime;
-            LastSuccessfulUpdateDateTime = lastSuccessfulUpdateDateTime;
+            _lastSuccessfulReport = lastSuccessfulReport;
+            LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
+            foreach (var dbReport in lastReport)
+            {
+                var dbName = dbReport.Key;
+                var dbStatus = dbReport.Value.Status;
+
+                if (lastReportStatus != ReportStatus.Ok)
+                {
+                    LastGoodDatabaseStatus[dbName] = lastSuccessfulReport.LastUpdateDateTime;
+                }
+                else if (dbStatus != DatabaseStatus.Loaded)
+                {
+                    if (lastSuccessfulReport.LastGoodDatabaseStatus.TryGetValue(dbName, out var lastGood))
+                    {
+                        LastGoodDatabaseStatus[dbName] = lastGood;
+                    }
+                    else
+                    {
+                        LastGoodDatabaseStatus[dbName] = DateTime.MinValue;
+                    }
+                }
+            }
         }
 
         public DynamicJsonValue ToJson()
@@ -105,6 +135,7 @@ namespace Raven.Server.ServerWide.Maintenance
             return new DynamicJsonValue
             {
                 [nameof(LastReport)] = DynamicJsonValue.Convert(LastReport),
+                [nameof(LastGoodDatabaseStatus)] = DynamicJsonValue.Convert(LastGoodDatabaseStatus),
                 [nameof(LastReportStatus)] = LastReportStatus,
                 [nameof(LastError)] = LastError,
                 [nameof(LastUpdateDateTime)] = LastUpdateDateTime,
