@@ -69,12 +69,7 @@ interface computedAppUrls {
 
     ioStats: KnockoutComputed<string>;
 
-    statusStorageStats: KnockoutComputed<string>;
-    statusStorageOnDisk: KnockoutComputed<string>;
-    statusStorageBreakdown: KnockoutComputed<string>;
-    statusStorageCollections: KnockoutComputed<string>;
     statusStorageReport: KnockoutComputed<string>;
-
     isAreaActive: (routeRoot: string) => KnockoutComputed<boolean>;
     isActive: (routeTitle: string) => KnockoutComputed<boolean>;
     databasesManagement: KnockoutComputed<string>;
