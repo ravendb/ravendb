@@ -9,6 +9,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Abstractions.Logging;
 
 namespace Rachis.Transport
 {
@@ -25,6 +26,7 @@ namespace Rachis.Transport
         private IDisposable _returnToQueue;
         private readonly NodeConnectionInfo _nodeConnection;
         private bool _isRequestSentToServer;
+        private ILog _log;
 
         public Func<HttpResponseMessage, NodeConnectionInfo, Task<Action<HttpClient>>> UnauthorizedResponseAsyncHandler { get; set; }
 
@@ -32,8 +34,9 @@ namespace Rachis.Transport
 
         public HttpClient HttpClient { get; private set; }
 
-        public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, HttpMethod httpMethod, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken)
+        public HttpRaftRequest(NodeConnectionInfo nodeConnection, string url, HttpMethod httpMethod, Func<NodeConnectionInfo, Tuple<IDisposable, HttpClient>> getConnection, CancellationToken cancellationToken,ILog logger)
         {
+            _log = logger;
             Url = url;
             HttpMethod = httpMethod;
             _getConnection = getConnection;
@@ -54,8 +57,15 @@ namespace Rachis.Transport
             return RunWithAuthRetry(async () =>
             {
                 var requestMessage = getRequestMessage();
-                Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
-
+                try
+                {
+                    Response = await HttpClient.SendAsync(requestMessage, _cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception e)
+                {
+                    _log.ErrorException($"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{requestMessage.Content}\r\n{requestMessage.Headers}",e);
+                    throw;
+                }
                 return CheckForAuthErrors();
             });
         }
