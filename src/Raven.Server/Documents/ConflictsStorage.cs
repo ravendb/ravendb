@@ -671,8 +671,7 @@ namespace Raven.Server.Documents
 
                     ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
 
-                    long etag;
-                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out etag);
+                    var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out long etag);
                     return new DeleteOperationResult
                     {
                         Collection = collectionName,

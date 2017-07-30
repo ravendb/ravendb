@@ -48,8 +48,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             get
             {
-                TreeNodeHeader* node;
-                return _parent.FindPageFor(_nestedValueKey, out node);
+                return _parent.FindPageFor(_nestedValueKey, out TreeNodeHeader* node);
             }
         }
 
@@ -57,8 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             IsModified = true;
 
-            TemporaryPage tmp;
-            using (_env.GetTemporaryPage(_parent.Llt, out tmp))
+            using (_env.GetTemporaryPage(_parent.Llt, out TemporaryPage tmp))
             {
                 var dataPosInTempPage = 0;
                 var readResult = _parent.Read(_nestedValueKey);
@@ -77,8 +75,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                                 readResult = _parent.Read(_nestedValueKey);
                                 break;
                             }
-                            byte* ptr;
-                            using (_parent.DirectAdd(_nestedValueKey, reader.Length,out ptr))
+                            using (_parent.DirectAdd(_nestedValueKey, reader.Length, out byte* ptr))
                             {
                                 var pos = ptr + ((byte*)entry - reader.Base + sizeof(ResultHeader));
                                 Memory.Copy(pos, result.BasePointer, result.Size);
@@ -87,7 +84,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         }
                         entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
                     }
-                    
+
                     if (readResult != null)
                     {
                         Memory.Copy(tmp.TempPagePointer, readResult.Reader.Base, readResult.Reader.Length);
@@ -101,8 +98,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 newEntry->Size = (ushort)result.Size;
                 Memory.Copy(tmp.TempPagePointer + dataPosInTempPage + sizeof(ResultHeader), result.BasePointer, result.Size);
                 dataPosInTempPage += result.Size + sizeof(ResultHeader);
-                byte* destPtr;
-                using (_parent.DirectAdd(_nestedValueKey, dataPosInTempPage,out destPtr))
+                using (_parent.DirectAdd(_nestedValueKey, dataPosInTempPage, out byte* destPtr))
                     Memory.Copy(destPtr, tmp.TempPagePointer, dataPosInTempPage);
 
                 _dataSize += result.Size + sizeof(ResultHeader);
@@ -141,18 +137,16 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var entry = (ResultHeader*)reader.Base;
             var end = reader.Base + reader.Length;
             long currentId;
-            Slice key;
-            using(Slice.External(_parent.Llt.Allocator,(byte*)&currentId, sizeof(long),out key))
-            while (entry < end)
-            {
-                currentId = entry->Id;
+            using (Slice.External(_parent.Llt.Allocator, (byte*)&currentId, sizeof(long), out Slice key))
+                while (entry < end)
+                {
+                    currentId = entry->Id;
 
-                byte* ptr;
-                using (newHome.DirectAdd(key, entry->Size,out ptr))
-                    Memory.Copy(ptr, (byte*)entry + sizeof(ResultHeader), entry->Size);
+                    using (newHome.DirectAdd(key, entry->Size, out byte* ptr))
+                        Memory.Copy(ptr, (byte*)entry + sizeof(ResultHeader), entry->Size);
 
-                entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
-            }
+                    entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
+                }
             _parent.Delete(_nestedValueKey);
         }
 
@@ -198,25 +192,24 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             IsModified = true;
 
-            TemporaryPage tmp;
-            using (_env.GetTemporaryPage(_parent.Llt, out tmp))
+            using (_env.GetTemporaryPage(_parent.Llt, out TemporaryPage tmp))
             {
                 var readResult = _parent.Read(_nestedValueKey);
                 if (readResult == null)
                     return;
                 var reader = readResult.Reader;
-                var entry = (ResultHeader*) reader.Base;
+                var entry = (ResultHeader*)reader.Base;
                 var end = reader.Base + reader.Length;
                 while (entry < end)
                 {
                     if (entry->Id != id)
                     {
-                        entry = (ResultHeader*) ((byte*) entry + sizeof(ResultHeader) + entry->Size);
+                        entry = (ResultHeader*)((byte*)entry + sizeof(ResultHeader) + entry->Size);
                         continue;
                     }
 
-                    var copiedDataStart = (byte*) entry - reader.Base;
-                    var copiedDataEnd = end - ((byte*) entry + sizeof(ResultHeader) + entry->Size);
+                    var copiedDataStart = (byte*)entry - reader.Base;
+                    var copiedDataEnd = end - ((byte*)entry + sizeof(ResultHeader) + entry->Size);
                     if (copiedDataEnd == 0 && copiedDataStart == 0)
                     {
                         _parent.Delete(_nestedValueKey);
@@ -228,8 +221,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         reader.Base + copiedDataStart + sizeof(ResultHeader) + entry->Size, copiedDataEnd);
 
                     var sizeAfterDel = (int)(copiedDataStart + copiedDataEnd);
-                    byte* ptr;
-                    using ( _parent.DirectAdd(_nestedValueKey, sizeAfterDel,out ptr))
+                    using (_parent.DirectAdd(_nestedValueKey, sizeAfterDel, out byte* ptr))
                         Memory.Copy(ptr, tmp.TempPagePointer, sizeAfterDel);
 
                     _dataSize -= reader.Length - sizeAfterDel;

@@ -11,10 +11,7 @@ using System.Net;
 using System.Net.WebSockets;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
-using Raven.Server.Json;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.Handlers
@@ -59,8 +56,7 @@ namespace Raven.Server.Documents.Handlers
 
         private Task GetConflictsByEtag(long etag)
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
@@ -133,8 +129,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/performance", "GET", AuthorizationStatus.ValidUser)]
         public Task Performance()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -252,8 +247,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/active-connections", "GET", AuthorizationStatus.ValidUser)]
         public Task GetReplicationActiveConnections()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var incoming = new DynamicJsonArray();
@@ -290,10 +284,9 @@ namespace Raven.Server.Documents.Handlers
 
         [RavenAction("/databases/*/replication/debug/outgoing-failures", "GET", AuthorizationStatus.ValidUser, 
             IsDebugInformationEndpoint = true)]
-        public Task GetReplicationOugoingFailureStats()
+        public Task GetReplicationOutgoingFailureStats()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
@@ -327,8 +320,7 @@ namespace Raven.Server.Documents.Handlers
             IsDebugInformationEndpoint = true)]
         public Task GetReplicationIncomingActivityTimes()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
@@ -393,8 +385,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/replication/debug/outgoing-reconnect-queue", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task GetReplicationReconnectionQueue()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var data = new DynamicJsonArray();
@@ -420,19 +411,18 @@ namespace Raven.Server.Documents.Handlers
         public Task SuggestConflictResolution()
         {
             var docId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("docId");
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
                 var conflicts = context.DocumentDatabase.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
                 var advisor = new ConflictResolverAdvisor(conflicts.Select(c => c.Doc), context);
-                var resovled = advisor.Resolve();
+                var resolved = advisor.Resolve();
 
                 context.Write(writer, new DynamicJsonValue
                 {
-                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resovled.Document,
-                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resovled.Metadata
+                    [nameof(ConflictResolverAdvisor.MergeResult.Document)] = resolved.Document,
+                    [nameof(ConflictResolverAdvisor.MergeResult.Metadata)] = resolved.Metadata
                 });
 
                 return Task.CompletedTask;

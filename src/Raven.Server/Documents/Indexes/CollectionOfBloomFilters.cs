@@ -290,8 +290,7 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    ulong partitionPtrPosition;
-                    var partition = GetPartition(ptrPosition, out partitionPtrPosition);
+                    var partition = GetPartition(ptrPosition, out ulong partitionPtrPosition);
                     var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
                     if (bitValue)
                         continue;
@@ -324,8 +323,7 @@ namespace Raven.Server.Documents.Indexes
                     var ptrPosition = finalHash / BitVector.BitsPerByte;
                     var bitPosition = (int)(finalHash % BitVector.BitsPerByte);
 
-                    ulong partitionPtrPosition;
-                    var partition = GetPartition(ptrPosition, out partitionPtrPosition);
+                    var partition = GetPartition(ptrPosition, out ulong partitionPtrPosition);
                     var bitValue = GetBit(partition, partitionPtrPosition, bitPosition);
                     if (bitValue == false)
                         return false;
@@ -349,12 +347,10 @@ namespace Raven.Server.Documents.Indexes
 
             private Partition GetPartitionByNumber(ulong number)
             {
-                Partition partition;
-                if (_partitions.TryGetValue(number, out partition))
+                if (_partitions.TryGetValue(number, out Partition partition))
                     return partition;
 
-                Slice partitionKey;
-                Slice.From(_allocator, $"{_key:D5}/{number:D4}", out partitionKey);
+                Slice.From(_allocator, $"{_key:D5}/{number:D4}", out Slice partitionKey);
 
                 var read = _tree.Read(partitionKey);
                 if (read != null)
@@ -384,8 +380,7 @@ namespace Raven.Server.Documents.Indexes
 
                 Debug.Assert(_tree.ShouldGoToOverflowPage(_ptrSize));
 
-                byte* ptr;
-                using (_tree.DirectAdd(partition.Key, Partition.PartitionSize, out ptr))
+                using (_tree.DirectAdd(partition.Key, Partition.PartitionSize, out byte* ptr))
                 {
                     if (partition.IsEmpty == false)
                         UnmanagedMemory.Copy(ptr, partition.Ptr, Partition.PartitionSize);

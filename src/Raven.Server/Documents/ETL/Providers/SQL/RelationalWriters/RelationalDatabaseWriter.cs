@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             var stats = new SqlWriteStats();
 
             var collectCommands = commands != null ? commands.Add : (Action<DbCommand>)null;
-            
+
             if (table.InsertOnlyMode == false && table.Deletes.Count > 0)
             {
                 // first, delete all the rows that might already exist there
@@ -426,14 +426,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         var objectValue = (BlittableJsonReaderObject)column.Value;
                         if (objectValue.Count >= 2)
                         {
-                            object dbType, fieldValue;
-                            if (objectValue.TryGetMember("Type", out dbType) && objectValue.TryGetMember("Value", out fieldValue))
+                            if (objectValue.TryGetMember("Type", out object dbType) && objectValue.TryGetMember("Value", out object fieldValue))
                             {
                                 colParam.DbType = (DbType)Enum.Parse(typeof(DbType), dbType.ToString(), false);
                                 colParam.Value = fieldValue.ToString();
 
-                                object size;
-                                if (objectValue.TryGetMember("Size", out size))
+                                if (objectValue.TryGetMember("Size", out object size))
                                 {
                                     colParam.Size = (int)size;
                                 }
@@ -482,33 +480,39 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
         public List<Func<DbParameter, string, bool>> GenerateStringParsers()
         {
-            return new List<Func<DbParameter, string, bool>> {
-                (colParam, value) => {
-                    if( char.IsDigit( value[ 0 ] ) ) {
-                            DateTime dateTime;
-                            if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out dateTime))
+            return new List<Func<DbParameter, string, bool>>
+            {
+                (colParam, value) =>
+                {
+                    if (char.IsDigit(value[0]))
+                    {
+                        if (DateTime.TryParseExact(value, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime dateTime))
+                        {
+                            switch (_providerFactory.GetType().Name)
                             {
-                                switch(_providerFactory.GetType( ).Name ) {
-                                    case "MySqlClientFactory":
-                                        colParam.Value = dateTime.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
-                                        break;
-                                    default:
-                                        colParam.Value = dateTime;
-                                        break;
-                                }
-                                return true;
+                                case "MySqlClientFactory":
+                                    colParam.Value = dateTime.ToString("yyyy-MM-dd HH:mm:ss.ffffff");
+                                    break;
+                                default:
+                                    colParam.Value = dateTime;
+                                    break;
                             }
+                            return true;
+                        }
                     }
                     return false;
                 },
-                (colParam, value) => {
-                    if( char.IsDigit( value[ 0 ] ) ) {
-                        DateTimeOffset dateTimeOffset;
-                        if( DateTimeOffset.TryParseExact( value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                                                         DateTimeStyles.RoundtripKind, out dateTimeOffset ) ) {
-                            switch( _providerFactory.GetType( ).Name ) {
+                (colParam, value) =>
+                {
+                    if (char.IsDigit(value[0]))
+                    {
+                        if (DateTimeOffset.TryParseExact(value, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
+                            DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
+                        {
+                            switch (_providerFactory.GetType().Name)
+                            {
                                 case "MySqlClientFactory":
-                                    colParam.Value = dateTimeOffset.ToUniversalTime().ToString( "yyyy-MM-dd HH:mm:ss.ffffff" );
+                                    colParam.Value = dateTimeOffset.ToUniversalTime().ToString("yyyy-MM-dd HH:mm:ss.ffffff");
                                     break;
                                 default:
                                     colParam.Value = dateTimeOffset;

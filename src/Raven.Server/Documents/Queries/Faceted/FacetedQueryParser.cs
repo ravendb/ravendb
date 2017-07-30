@@ -102,8 +102,7 @@ namespace Raven.Server.Documents.Queries.Faceted
 
             var unescapedValue = QueryBuilder.Unescape(value);
 
-            DateTime _;
-            if (DateTime.TryParseExact(unescapedValue, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _))
+            if (DateTime.TryParseExact(unescapedValue, Default.OnlyDateTimeFormat, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime _))
                 return unescapedValue;
 
             return value;

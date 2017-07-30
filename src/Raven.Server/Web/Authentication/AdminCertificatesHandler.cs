@@ -130,8 +130,7 @@ namespace Raven.Server.Web.Authentication
 
             // TODO: cert.tostring(), expiration, permissions
 
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 Tuple<string, BlittableJsonReaderObject>[] certificates = null;
@@ -156,7 +155,7 @@ namespace Raven.Server.Web.Authentication
                         };
                     }
 
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))                
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
                         writer.WriteStartObject();
                         writer.WriteArray(context, "Results", certificates, (w, c, cert) =>

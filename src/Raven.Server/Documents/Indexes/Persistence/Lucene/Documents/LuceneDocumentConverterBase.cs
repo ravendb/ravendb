@@ -375,8 +375,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var ldv = value as LazyNumberValue;
                 if (ldv != null)
                 {
-                    LazyStringValue doubleAsString;
-                    if (TryToTrimTrailingZeros(ldv, indexContext, out doubleAsString) == false)
+                    if (TryToTrimTrailingZeros(ldv, indexContext, out LazyStringValue doubleAsString) == false)
                         doubleAsString = ldv.Inner;
 
                     instance.Add(GetOrCreateField(path, null, doubleAsString, null, storage, indexing, termVector));
@@ -558,10 +557,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var numericFieldDouble = GetNumericFieldFromCache(fieldNameDouble, null, storage, termVector, multipleItemsSameFieldCountArray);
             var numericFieldLong = GetNumericFieldFromCache(fieldNameLong, null, storage, termVector, multipleItemsSameFieldCountArray);
 
-            double doubleValue;
-            long longValue;
 
-            switch (BlittableNumber.Parse(value, out doubleValue, out longValue))
+            switch (BlittableNumber.Parse(value, out double doubleValue, out long longValue))
             {
                 case NumberParseResult.Double:
                     yield return numericFieldDouble.SetDoubleValue(doubleValue);

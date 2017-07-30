@@ -986,8 +986,7 @@ namespace Raven.Server.ServerWide
 
                     foreach (var db in databasesToCleanup)
                     {
-                        Task<DocumentDatabase> resourceTask;
-                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out resourceTask) &&
+                        if (DatabasesLandlord.DatabasesCache.TryGetValue(db, out Task<DocumentDatabase> resourceTask) &&
                             resourceTask != null &&
                             resourceTask.Status == TaskStatus.RanToCompletion &&
                             resourceTask.Result.PeriodicBackupRunner != null &&
@@ -1141,8 +1140,7 @@ namespace Raven.Server.ServerWide
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
         {
-            TransactionOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return Cluster.ReadDatabase(context, databaseName, out etag);

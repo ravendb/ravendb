@@ -347,8 +347,7 @@ namespace Raven.Server.Documents.Queries.Parse
             }
             FsaState = StateStack.TopElement();
 
-            int val;
-            if (FsaState.TryGetValue(rule.LeftHandSide, out val))
+            if (FsaState.TryGetValue(rule.LeftHandSide, out int val))
                 FsaState = states[val];
 
             StateStack.Push(FsaState);

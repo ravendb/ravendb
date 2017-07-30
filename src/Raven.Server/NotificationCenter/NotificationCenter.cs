@@ -103,8 +103,7 @@ namespace Raven.Server.NotificationCenter
             if (_watchers.Count == 0)
                 return;
 
-            NotificationTableValue existing;
-            using (_notificationsStorage.Read(notification.Id, out existing))
+            using (_notificationsStorage.Read(notification.Id, out NotificationTableValue existing))
             {
                 if (existing?.PostponedUntil > SystemTime.UtcNow)
                     return;

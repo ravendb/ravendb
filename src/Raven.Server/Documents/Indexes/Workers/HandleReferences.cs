@@ -73,15 +73,13 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             foreach (var collection in _index.Collections)
             {
-                HashSet<CollectionName> referencedCollections;
-                if (_referencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                if (_referencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
 
                 if (lastIndexedEtagsByCollection == null)
                     lastIndexedEtagsByCollection = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase);
 
-                long lastIndexedEtag;
-                if (lastIndexedEtagsByCollection.TryGetValue(collection, out lastIndexedEtag) == false)
+                if (lastIndexedEtagsByCollection.TryGetValue(collection, out long lastIndexedEtag) == false)
                     lastIndexedEtagsByCollection[collection] = lastIndexedEtag = _indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
 
                 if (lastIndexedEtag == 0) // we haven't indexed yet, so we are skipping references for now
@@ -185,9 +183,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
                                     using (var docsEnumerator = _index.GetMapEnumerator(documents, collection, indexContext, collectionStats))
                                     {
-                                        IEnumerable mapResults;
 
-                                        while (docsEnumerator.MoveNext(out mapResults))
+                                        while (docsEnumerator.MoveNext(out IEnumerable mapResults))
                                         {
                                             token.ThrowIfCancellationRequested();
 
@@ -254,10 +251,9 @@ namespace Raven.Server.Documents.Indexes.Workers
 
         public unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer, TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            Slice tombstoneKeySlice;
             var tx = indexContext.Transaction.InnerTransaction;
             var loweredKey = tombstone.LowerId;
-            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out tombstoneKeySlice))
+            using (Slice.External(tx.Allocator, loweredKey.Buffer, loweredKey.Size, out Slice tombstoneKeySlice))
                 _indexStorage.RemoveReferences(tombstoneKeySlice, collection, null, indexContext.Transaction);
         }
 

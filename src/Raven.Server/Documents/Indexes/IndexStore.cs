@@ -348,8 +348,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Index GetIndex(long etag)
         {
-            Index index;
-            if (_indexes.TryGetByEtag(etag, out index) == false)
+            if (_indexes.TryGetByEtag(etag, out Index index) == false)
                 return null;
 
             return index;
@@ -357,8 +356,7 @@ namespace Raven.Server.Documents.Indexes
 
         public Index GetIndex(string name)
         {
-            Index index;
-            if (_indexes.TryGetByName(name, out index) == false)
+            if (_indexes.TryGetByName(name, out Index index) == false)
                 return null;
 
             return index;
@@ -668,8 +666,7 @@ namespace Raven.Server.Documents.Indexes
         {
             lock (_locker)
             {
-                Index _;
-                _indexes.TryRemoveByEtag(index.Etag, out _);
+                _indexes.TryRemoveByEtag(index.Etag, out Index _);
 
                 try
                 {
@@ -1098,12 +1095,10 @@ namespace Raven.Server.Documents.Indexes
                 if (lockTaken == false)
                     return false;
 
-                Index newIndex;
-                if (_indexes.TryGetByName(newIndexName, out newIndex) == false)
+                if (_indexes.TryGetByName(newIndexName, out Index newIndex) == false)
                     return true;
 
-                Index oldIndex;
-                if (_indexes.TryGetByName(oldIndexName, out oldIndex))
+                if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
                 {
                     oldIndexName = oldIndex.Name;
 

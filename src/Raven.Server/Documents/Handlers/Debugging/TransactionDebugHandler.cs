@@ -34,8 +34,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 results.Add(txInfo);
             }
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue

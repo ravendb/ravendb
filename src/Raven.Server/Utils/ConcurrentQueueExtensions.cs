@@ -6,10 +6,9 @@ namespace Raven.Server.Utils
     {
         public static void LimitedSizeEnqueue<T>(this ConcurrentQueue<T> queue, T item, int sizeOfQueue)
         {
-            T dontCare;
             queue.Enqueue(item);
             while (queue.Count > sizeOfQueue)
-                queue.TryDequeue(out dontCare);
+                queue.TryDequeue(out T dontCare);
         }
     }
 }

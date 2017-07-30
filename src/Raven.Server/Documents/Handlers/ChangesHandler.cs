@@ -23,8 +23,7 @@ namespace Raven.Server.Documents.Handlers
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
                 //TODO: select small context size (maybe pool just for them?)
-                JsonOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     try
                     {
@@ -52,8 +51,7 @@ namespace Raven.Server.Documents.Handlers
                                     });
                                 }
 
-                                ArraySegment<byte> bytes;
-                                ms.TryGetBuffer(out bytes);
+                                ms.TryGetBuffer(out ArraySegment<byte> bytes);
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
                             }
                         }
@@ -100,9 +98,8 @@ namespace Raven.Server.Documents.Handlers
             Database.Changes.Connect(connection);
             var sendTask = connection.StartSendingNotifications(throttleConnection);
             var debugTag = "changes/" + connection.Id;
-            JsonOperationContext.ManagedPinnedBuffer segment1,segment2;
-            using (context.GetManagedBuffer(out segment1))
-            using (context.GetManagedBuffer(out segment2))
+            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer segment1))
+            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer segment2))
             {
                 try
                 {
@@ -141,15 +138,13 @@ namespace Raven.Server.Documents.Handlers
 
                                 using (var reader = builder.CreateReader())
                                 {
-                                    string command, commandParameter;
-                                    if (reader.TryGet("Command", out command) == false)
+                                    if (reader.TryGet("Command", out string command) == false)
                                         throw new ArgumentNullException(nameof(command), "Command argument is mandatory");
 
-                                    reader.TryGet("Param", out commandParameter);
+                                    reader.TryGet("Param", out string commandParameter);
                                     connection.HandleCommand(command, commandParameter);
 
-                                    int commandId;
-                                    if (reader.TryGet("CommandId", out commandId))
+                                    if (reader.TryGet("CommandId", out int commandId))
                                     {
                                         connection.Confirm(commandId);
                                     }
@@ -179,8 +174,7 @@ namespace Raven.Server.Documents.Handlers
 
             foreach (var idStr in ids)
             {
-                long id;
-                if (long.TryParse(idStr, NumberStyles.Any, CultureInfo.InvariantCulture, out id) == false)
+                if (long.TryParse(idStr, NumberStyles.Any, CultureInfo.InvariantCulture, out long id) == false)
                     throw new ArgumentException($"Could not parse query string 'id' header as int64, value was: {idStr}");
 
                 Database.Changes.Disconnect(id);

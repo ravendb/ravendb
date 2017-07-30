@@ -114,8 +114,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static void MaybeUpdateReferenceEtags(Dictionary<string, long> referenceEtags, string collection, long etag)
         {
-            long oldEtag;
-            if (referenceEtags.TryGetValue(collection, out oldEtag) == false)
+            if (referenceEtags.TryGetValue(collection, out long oldEtag) == false)
             {
                 referenceEtags[collection] = etag;
                 return;
@@ -132,8 +131,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (ReferenceEtagsByCollection == null)
                 ReferenceEtagsByCollection = new Dictionary<string, Dictionary<string, long>>(StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<string, long> referenceEtags;
-            if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out referenceEtags) == false)
+            if (ReferenceEtagsByCollection.TryGetValue(SourceCollection, out Dictionary<string, long> referenceEtags) == false)
                 ReferenceEtagsByCollection.Add(SourceCollection, referenceEtags = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase));
 
             return referenceEtags;
@@ -145,12 +143,10 @@ namespace Raven.Server.Documents.Indexes.Static
             if (ReferencesByCollection == null)
                 ReferencesByCollection = new Dictionary<string, Dictionary<string, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
 
-            Dictionary<string, HashSet<Slice>> referencesByCollection;
-            if (ReferencesByCollection.TryGetValue(SourceCollection, out referencesByCollection) == false)
+            if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<string, HashSet<Slice>> referencesByCollection) == false)
                 ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<string, HashSet<Slice>>());
 
-            HashSet<Slice> references;
-            if (referencesByCollection.TryGetValue(key, out references) == false)
+            if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
                 referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
 
             return references;

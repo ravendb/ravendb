@@ -13,14 +13,12 @@ namespace Raven.Server.Documents.Handlers.Admin
         public Task CommitNonLazyTx()
         {
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
-            TransactionsMode mode;
-            if (Enum.TryParse(modeStr, true, out mode) == false)
+            if (Enum.TryParse(modeStr, true, out TransactionsMode mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
             var configDuration = Database.Configuration.Storage.TransactionsModeDuration.AsTimeSpan;
             var duration = GetTimeSpanQueryString("duration", required: false) ?? configDuration;
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();

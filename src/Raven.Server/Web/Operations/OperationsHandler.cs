@@ -15,15 +15,14 @@ namespace Raven.Server.Web.Operations
         {
             var nextId = Database.Operations.GetNextOperationId();
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Id");
                     writer.WriteInteger(nextId);
-                    writer.WriteEndObject();                   
+                    writer.WriteEndObject();
                 }
             }
 
@@ -45,8 +44,7 @@ namespace Raven.Server.Web.Operations
         {
             var id = GetLongQueryString("id", required: false);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 IEnumerable<Documents.Operations.Operations.Operation> operations;
                 if (id.HasValue == false)

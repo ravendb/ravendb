@@ -19,8 +19,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 //TODO: When https://github.com/dotnet/corefx/issues/10157 is done, add managed 
                 //TODO: allocations per thread to the stats as well
@@ -47,8 +46,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 var dir = Path.GetDirectoryName(mapping.Key);
 
-                Dictionary<string, ConcurrentDictionary<IntPtr, long>> value;
-                if (fileMappingByDir.TryGetValue(dir, out value) == false)
+                if (fileMappingByDir.TryGetValue(dir, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value) == false)
                 {
                     value = new Dictionary<string, ConcurrentDictionary<IntPtr, long>>();
                     fileMappingByDir[dir] = value;
@@ -56,8 +54,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 value[mapping.Key] = mapping.Value;
                 foreach (var singleMapping in mapping.Value)
                 {
-                    long prevSize;
-                    fileMappingSizesByDir.TryGetValue(dir, out prevSize);
+                    fileMappingSizesByDir.TryGetValue(dir, out long prevSize);
                     fileMappingSizesByDir[dir] = prevSize + singleMapping.Value;
                     totalMapping += singleMapping.Value;
 
@@ -69,8 +66,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var fileMappings = new DynamicJsonArray();
             foreach (var sizes in fileMappingSizesByDir.OrderByDescending(x => x.Value))
             {
-                Dictionary<string, ConcurrentDictionary<IntPtr, long>> value;
-                if (fileMappingByDir.TryGetValue(sizes.Key, out value))
+                if (fileMappingByDir.TryGetValue(sizes.Key, out Dictionary<string, ConcurrentDictionary<IntPtr, long>> value))
                 {
                     var dir = new DynamicJsonValue
                     {
@@ -89,8 +85,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         foreach (var mapping in file.Value)
                         {
                             totalMapped += mapping.Value;
-                            long prev;
-                            dic.TryGetValue(mapping.Value, out prev);
+                            dic.TryGetValue(mapping.Value, out long prev);
                             dic[mapping.Value] = prev + 1;
                         }
                         foreach (var maps in dic)

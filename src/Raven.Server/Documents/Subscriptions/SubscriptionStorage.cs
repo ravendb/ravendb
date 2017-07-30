@@ -142,8 +142,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool DropSubscriptionConnection(long subscriptionId, SubscriptionException ex)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionConnectionState) == false)
+            if (_subscriptionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
             subscriptionConnectionState.Connection.ConnectionException = ex;
@@ -159,8 +158,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public bool RedirectSubscriptionConnection(long subscriptionId, string reason)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (_subscriptionStates.TryGetValue(subscriptionId, out subscriptionConnectionState) == false)
+            if (_subscriptionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
             subscriptionConnectionState.Connection.ConnectionException = new SubscriptionDoesNotBelongToNodeException(reason);
@@ -234,8 +232,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         public SubscriptionGeneralDataAndStats GetRunningSubscription(TransactionOperationContext context, long id, string name, bool history)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (_subscriptionStates.TryGetValue(id, out subscriptionConnectionState) == false)
+            if (_subscriptionStates.TryGetValue(id, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return null;
 
             if (subscriptionConnectionState.Connection == null)
@@ -262,8 +259,7 @@ namespace Raven.Server.Documents.Subscriptions
         }
         public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (!_subscriptionStates.TryGetValue(subscriptionId, out subscriptionConnectionState))
+            if (!_subscriptionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState))
                 return null;
 
             var subscriptionConnection = subscriptionConnectionState.Connection;
@@ -307,8 +303,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         private void GetSubscriptionInternal(SubscriptionGeneralDataAndStats subscriptionData, bool history)
         {
-            SubscriptionConnectionState subscriptionConnectionState;
-            if (_subscriptionStates.TryGetValue(subscriptionData.SubscriptionId, out subscriptionConnectionState))
+            if (_subscriptionStates.TryGetValue(subscriptionData.SubscriptionId, out SubscriptionConnectionState subscriptionConnectionState))
             {
                 subscriptionData.Connection = subscriptionConnectionState.Connection;
 

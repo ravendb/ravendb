@@ -54,8 +54,7 @@ namespace Raven.Server.Documents.Handlers
             var pageSize = GetPageSize();
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 TransformerDefinition[] transformerDefinitions;
@@ -114,8 +113,7 @@ namespace Raven.Server.Documents.Handlers
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
-            TransformerLockMode mode;
-            if (Enum.TryParse(modeStr, out mode) == false)
+            if (Enum.TryParse(modeStr, out TransformerLockMode mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
             foreach (var name in names)

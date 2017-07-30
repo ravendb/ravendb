@@ -307,8 +307,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var nodeUrlsAndTags = databaseRecord.Topology.AllNodes.Select(tag => (clusterTopology.GetUrlFromTag(tag), tag));
                 foreach (var urlAndTag in nodeUrlsAndTags)
                 {
-                    (HashSet<string>, string) databaseNamesWithNodeTag;
-                    if (nodeUrlToDatabaseNames.TryGetValue(urlAndTag.Item1, out databaseNamesWithNodeTag))
+                    if (nodeUrlToDatabaseNames.TryGetValue(urlAndTag.Item1, out (HashSet<string>, string) databaseNamesWithNodeTag))
                     {
                         databaseNamesWithNodeTag.Item1.Add(databaseName);
                     }

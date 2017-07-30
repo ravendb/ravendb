@@ -27,8 +27,7 @@ namespace Raven.Server.Documents.Handlers
             if (string.IsNullOrEmpty(operationString) == false)
                 operation = (TcpConnectionHeaderMessage.OperationTypes)Enum.Parse(typeof(TcpConnectionHeaderMessage.OperationTypes), operationString, ignoreCase: true);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var connections = Database.RunningTcpConnections
                     .Where(connection => connection.CheckMatch(minDuration, maxDuration, ip, operation))

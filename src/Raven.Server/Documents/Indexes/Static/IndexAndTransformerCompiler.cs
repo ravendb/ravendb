@@ -262,8 +262,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             if (string.IsNullOrWhiteSpace(definition.Reduce) == false)
             {
-                string[] groupByFields;
-                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out groupByFields));
+                statements.Add(HandleReduce(definition.Reduce, fieldNamesValidator, methodDetector, out string[] groupByFields));
 
                 var groupByFieldsArray = GetArrayCreationExpression(groupByFields);
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.GroupByFields)).Assign(groupByFieldsArray).AsExpressionStatement());

@@ -233,8 +233,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private static void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            object value;
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, fieldToFetch.Name, out value) == false)
+            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, fieldToFetch.Name, out object value) == false)
                 return;
 
             toFill[fieldToFetch.Name.Value] = value;

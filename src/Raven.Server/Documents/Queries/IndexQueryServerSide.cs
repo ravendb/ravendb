@@ -126,9 +126,7 @@ namespace Raven.Server.Documents.Queries
                 if (mapReduceField.Length != 3)
                     throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {item[i]}");
 
-                FieldMapReduceOperation operation;
-
-                if (Enum.TryParse(mapReduceField[1], out operation) == false)
+                if (Enum.TryParse(mapReduceField[1], out FieldMapReduceOperation operation) == false)
                     throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
 
                 var fieldName = mapReduceField[0];

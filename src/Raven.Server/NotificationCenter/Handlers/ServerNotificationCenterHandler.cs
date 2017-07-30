@@ -17,9 +17,7 @@ namespace Raven.Server.NotificationCenter.Handlers
             {
                 using (var writer = new NotificationCenterWebsocketWriter(webSocket, ServerStore.NotificationCenter, ServerStore.ContextPool, ServerStore.ServerShutdown))
                 {
-                    IEnumerable<NotificationTableValue> storedNotifications;
-
-                    using (ServerStore.NotificationCenter.GetStored(out storedNotifications, postponed: false))
+                    using (ServerStore.NotificationCenter.GetStored(out IEnumerable<NotificationTableValue> storedNotifications, postponed: false))
                     {
                         foreach (var action in storedNotifications)
                         {

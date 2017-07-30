@@ -90,8 +90,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             foreach (var collection in _latest.Collections)
             {
-                DatabaseStatsChanged.ModifiedCollection stats;
-                if (current.Collections.TryGetValue(collection.Key, out stats) == false)
+                if (current.Collections.TryGetValue(collection.Key, out DatabaseStatsChanged.ModifiedCollection stats) == false)
                 {
                     // collection deleted
 

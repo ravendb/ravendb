@@ -81,8 +81,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             if (_analyzerMap.Count == 0)
                 return _defaultAnalyzer;
 
-            Analyzer value;
-            _analyzerMap.TryGetValue(fieldName, out value);
+            _analyzerMap.TryGetValue(fieldName, out Analyzer value);
             return value ?? _defaultAnalyzer;
         }
 

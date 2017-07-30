@@ -80,8 +80,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
 
-                Slice val;
-                using (Slice.From(context.Allocator, stream.ToArray(), out val))
+                using (Slice.From(context.Allocator, stream.ToArray(), out Slice val))
                 {
                     tree.Add(DefinitionSlice, val);
                 }
@@ -269,8 +268,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected static string ReadName(BlittableJsonReaderObject reader)
         {
-            string name;
-            if (reader.TryGet(nameof(Name), out name) == false || String.IsNullOrWhiteSpace(name))
+            if (reader.TryGet(nameof(Name), out string name) == false || String.IsNullOrWhiteSpace(name))
                 throw new InvalidOperationException("No persisted name");
 
             return name;
@@ -278,8 +276,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected static string[] ReadCollections(BlittableJsonReaderObject reader)
         {
-            BlittableJsonReaderArray jsonArray;
-            if (reader.TryGet(nameof(Collections), out jsonArray) == false || jsonArray.Length == 0)
+            if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false || jsonArray.Length == 0)
                 throw new InvalidOperationException("No persisted collections");
 
             var result = new string[jsonArray.Length];
@@ -291,8 +288,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected static IndexLockMode ReadLockMode(BlittableJsonReaderObject reader)
         {
-            int lockModeAsInt;
-            if (reader.TryGet(nameof(LockMode), out lockModeAsInt) == false)
+            if (reader.TryGet(nameof(LockMode), out int lockModeAsInt) == false)
                 throw new InvalidOperationException("No persisted lock mode");
 
             return (IndexLockMode)lockModeAsInt;
@@ -300,8 +296,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected static IndexPriority ReadPriority(BlittableJsonReaderObject reader)
         {
-            int priorityAsInt;
-            if (reader.TryGet(nameof(Priority), out priorityAsInt) == false)
+            if (reader.TryGet(nameof(Priority), out int priorityAsInt) == false)
                 throw new InvalidOperationException("No persisted priority");
 
             return (IndexPriority)priorityAsInt;
@@ -309,8 +304,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected static IndexField[] ReadMapFields(BlittableJsonReaderObject reader)
         {
-            BlittableJsonReaderArray jsonArray;
-            if (reader.TryGet(nameof(MapFields), out jsonArray) == false)
+            if (reader.TryGet(nameof(MapFields), out BlittableJsonReaderArray jsonArray) == false)
                 throw new InvalidOperationException("No persisted lock mode");
 
             var fields = new IndexField[jsonArray.Length];
@@ -318,11 +312,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
-                string name;
-                json.TryGet(nameof(IndexField.Name), out name);
-
-                int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
+                json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
 
                 var field = new IndexField
                 {

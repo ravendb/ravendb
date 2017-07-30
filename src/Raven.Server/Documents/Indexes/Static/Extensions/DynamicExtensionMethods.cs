@@ -12,8 +12,7 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             if (o == null)
                 return DynamicNullObject.Null;
 
-            string value;
-            if (TryGetString(o, out value) == false)
+            if (TryGetString(o, out string value) == false)
                 return DynamicNullObject.Null;
 
             if (value == string.Empty)
@@ -44,12 +43,10 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             if (o == null)
                 return defaultValue;
 
-            string value;
-            if (TryGetString(o, out value) == false)
+            if (TryGetString(o, out string value) == false)
                 return defaultValue;
 
-            int result;
-            return int.TryParse(value, out result) ? result : defaultValue;
+            return int.TryParse(value, out int result) ? result : defaultValue;
         }
 
         public static dynamic ParseDouble(dynamic o)
@@ -62,12 +59,10 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             if (o == null)
                 return defaultValue;
 
-            string value;
-            if (TryGetString(o, out value) == false)
+            if (TryGetString(o, out string value) == false)
                 return defaultValue;
 
-            double result;
-            return double.TryParse(value, out result) ? result : defaultValue;
+            return double.TryParse(value, out double result) ? result : defaultValue;
         }
 
         public static dynamic ParseDecimal(dynamic o)
@@ -80,12 +75,10 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             if (o == null)
                 return defaultValue;
 
-            string value;
-            if (TryGetString(o, out value) == false)
+            if (TryGetString(o, out string value) == false)
                 return defaultValue;
 
-            decimal result;
-            return decimal.TryParse(value, out result) ? result : defaultValue;
+            return decimal.TryParse(value, out decimal result) ? result : defaultValue;
         }
 
         public static dynamic ParseLong(dynamic o)
@@ -98,12 +91,10 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
             if (o == null)
                 return defaultValue;
 
-            string value;
-            if (TryGetString(o, out value) == false)
+            if (TryGetString(o, out string value) == false)
                 return defaultValue;
 
-            long result;
-            return long.TryParse(value, out result) ? result : defaultValue;
+            return long.TryParse(value, out long result) ? result : defaultValue;
         }
 
         private static bool TryGetString(dynamic o, out string value)

@@ -90,7 +90,6 @@ namespace Raven.Server.Web.System
 
             foreach (var key in ServerWideOnlyConfigurationKeys.Value)
             {
-                string _;
                 if (record.Settings != null && record.Settings.TryGetValue(key, out _))
                     throw new InvalidOperationException($"Detected '{key}' key in {nameof(DatabaseRecord.Settings)}. This is a server-wide configuration key and can only be set at server level.");
 

@@ -39,30 +39,28 @@ namespace Raven.Server.Documents.Handlers
                 IDisposable currentCtxReset = null, previousCtxReset = null;
                 try
                 {
-                    JsonOperationContext context;
-                    using (ContextPool.AllocateOperationContext(out context))
+                    using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                     using (var buffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance())
                     {
-                        JsonOperationContext docsCtx;
-                        currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
+                        currentCtxReset = ContextPool.AllocateOperationContext(out JsonOperationContext docsCtx);
                         var requestBodyStream = RequestBodyStream();
 
-                        using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer,token))
+                        using (var parser = new BatchRequestParser.ReadMany(context, requestBodyStream, buffer, token))
                         {
                             await parser.Init();
 
                             var list = new List<BatchRequestParser.CommandData>();
                             long totalSize = 0;
                             while (true)
-                            {                               
+                            {
                                 var task = parser.MoveNext(docsCtx);
                                 if (task == null)
                                     break;
 
                                 token.ThrowIfCancellationRequested();
 
-                                    // if we are going to wait on the network, flush immediately
-                                if ((task.IsCompleted == false && list.Count> 0) || 
+                                // if we are going to wait on the network, flush immediately
+                                if ((task.IsCompleted == false && list.Count > 0) ||
                                     // but don't batch too much anyway
                                     totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
                                 {
@@ -83,7 +81,7 @@ namespace Raven.Server.Documents.Handlers
                                     previousCtxReset?.Dispose();
                                     previousCtxReset = currentCtxReset;
                                     currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
-                                    
+
                                     list.Clear();
                                     totalSize = 0;
                                 }
@@ -94,7 +92,6 @@ namespace Raven.Server.Documents.Handlers
 
                                 totalSize += commandData.Document.Size;
                                 list.Add(commandData);
-                                
                             }
                             if (list.Count > 0)
                             {

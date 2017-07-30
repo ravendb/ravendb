@@ -154,8 +154,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                object result;
-                if (TryGetByName(key, out result) == false)
+                if (TryGetByName(key, out object result) == false)
                     throw new InvalidOperationException($"Could not get '{key}' value of dynamic object");
 
                 return result;

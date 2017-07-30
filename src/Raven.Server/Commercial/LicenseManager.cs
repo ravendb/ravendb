@@ -211,9 +211,7 @@ namespace Raven.Server.Commercial
                 }
 
                 var message = "License was updated";
-                object expiration;
-                if (_licenseStatus.Attributes.TryGetValue("expiration", out expiration) &&
-                    expiration is DateTime)
+                if (_licenseStatus.Attributes.TryGetValue("expiration", out object expiration) && expiration is DateTime)
                 {
                     var expirationDate = ((DateTime)expiration).ToString("yyyy-MMM-dd", CultureInfo.CurrentUICulture);
                     message += $", new expiration date is {expirationDate}";

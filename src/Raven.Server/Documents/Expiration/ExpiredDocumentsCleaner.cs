@@ -92,9 +92,8 @@ namespace Raven.Server.Documents.Expiration
             {
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Trying to find expired documents to delete");
-                
-                DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
                     using (var tx = context.OpenReadTransaction())
                     {
@@ -142,16 +141,13 @@ namespace Raven.Server.Documents.Expiration
                                             }
 
                                             // Validate that the expiration value in metadata is still the same.
-                                            // We have to check this as the user can update this valud.
-                                            string expirationDate;
-                                            BlittableJsonReaderObject metadata;
-                                            if (document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata) == false ||
-                                                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate) == false)
+                                            // We have to check this as the user can update this value.
+                                            if (document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                                                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
                                                 continue;
 
-                                            DateTime date;
                                             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
-                                                    out date) == false)
+                                                    out DateTime date) == false)
                                                 continue;
 
                                             if (currentTime < date)

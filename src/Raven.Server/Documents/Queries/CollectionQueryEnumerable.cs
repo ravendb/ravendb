@@ -113,8 +113,7 @@ namespace Raven.Server.Documents.Queries
                 return SimpleQueryParser.GetTermValuesForField(query, Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     .Select(id =>
                     {
-                        Slice key;
-                        Slice.From(_context.Allocator, id, out key);
+                        Slice.From(_context.Allocator, id, out Slice key);
                         _context.Allocator.ToLowerCase(ref key.Content);
 
                         return key;

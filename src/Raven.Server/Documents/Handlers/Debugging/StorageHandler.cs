@@ -16,8 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/storage/report", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task Report()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -67,8 +66,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var typeAsString = GetStringQueryString("type");
             var details = GetBoolValueQueryString("details", required: false) ?? false;
 
-            StorageEnvironmentWithType.StorageEnvironmentType type;
-            if (Enum.TryParse(typeAsString, out type) == false)
+            if (Enum.TryParse(typeAsString, out StorageEnvironmentWithType.StorageEnvironmentType type) == false)
                 throw new InvalidOperationException("Query string value 'type' is not a valid environment type: " + typeAsString);
 
             var env = Database.GetAllStoragesEnvironment()
@@ -80,8 +78,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 return Task.CompletedTask;
             }
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {

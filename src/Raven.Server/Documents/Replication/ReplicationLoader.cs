@@ -153,8 +153,7 @@ namespace Raven.Server.Documents.Replication
         public void AcceptIncomingConnection(TcpConnectionOptions tcpConnectionOptions)
         {
             ReplicationLatestEtagRequest getLatestEtagMessage;
-            JsonOperationContext context;
-            using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out context))
+            using (tcpConnectionOptions.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var readerObject = context.ParseToMemory(
                 tcpConnectionOptions.Stream,
                 "IncomingReplication/get-last-etag-message read",
@@ -523,8 +522,7 @@ namespace Raven.Server.Documents.Replication
 
         public DatabaseRecord LoadDatabaseRecord()
         {
-            TransactionOperationContext context;
-            using (_server.ContextPool.AllocateOperationContext(out context))
+            using (_server.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 return _server.Cluster.ReadDatabase(context, Database.Name);

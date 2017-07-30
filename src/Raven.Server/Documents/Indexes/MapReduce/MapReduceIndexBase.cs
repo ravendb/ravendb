@@ -56,8 +56,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public override unsafe void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats)
         {
-            Slice docKeyAsSlice;
-            using (Slice.External(indexContext.Allocator, tombstone.LowerId.Buffer, tombstone.LowerId.Length, out docKeyAsSlice))
+            using (Slice.External(indexContext.Allocator, tombstone.LowerId.Buffer, tombstone.LowerId.Length, out Slice docKeyAsSlice))
             {
                 MapReduceWorkContext.DocumentMapEntries.RepurposeInstance(docKeyAsSlice, clone: false);
 
@@ -106,8 +105,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             EnsureValidStats(stats);
 
-            Slice docKeyAsSlice;
-            using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out docKeyAsSlice))
+            using (Slice.External(indexContext.Allocator, documentKey.Buffer, documentKey.Length, out Slice docKeyAsSlice))
             {
                 Queue<MapEntry> existingEntries = null;
 
@@ -166,8 +164,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             {
                                 id = MapReduceWorkContext.NextMapResultId++;
 
-                                Slice val;
-                                using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out val))
+                                using (Slice.External(indexContext.Allocator, (byte*)&reduceKeyHash, sizeof(ulong), out Slice val))
                                     MapReduceWorkContext.DocumentMapEntries.Add(id, val);
                             }
 
@@ -239,10 +236,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public MapReduceResultsStore GetResultsStore(ulong reduceKeyHash, TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
         {
-            MapReduceResultsStore store;
-            if (MapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out store) == false)
+            if (MapReduceWorkContext.StoreByReduceKeyHash.TryGetValue(reduceKeyHash, out MapReduceResultsStore store) == false)
             {
-                MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store = 
+                MapReduceWorkContext.StoreByReduceKeyHash[reduceKeyHash] = store =
                     CreateResultsStore(MapReduceWorkContext.ResultsStoreTypes, reduceKeyHash, indexContext, create, pageLocator);
             }
 
@@ -253,11 +249,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             TransactionOperationContext indexContext, bool create, PageLocator pageLocator = null)
         {
             MapResultsStorageType type;
-            Slice read;
-            using (typePerHash.Read((long) reduceKeyHash, out read))
+            using (typePerHash.Read((long)reduceKeyHash, out Slice read))
             {
                 if (read.HasValue)
-                    type = (MapResultsStorageType) (*read.CreateReader().Base);
+                    type = (MapResultsStorageType)(*read.CreateReader().Base);
                 else
                     type = MapResultsStorageType.Nested;
             }
@@ -270,8 +265,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             base.LoadValues();
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var mapEntries = tx.InnerTransaction.ReadTree(MapPhaseTreeName);
@@ -285,8 +279,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var report = _indexStorage.Environment().GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);

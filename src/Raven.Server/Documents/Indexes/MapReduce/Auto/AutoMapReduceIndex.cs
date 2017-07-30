@@ -119,10 +119,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                 if (item == null)
                                     continue;
 
-                                double doubleValue;
-                                long longValue;
-
-                                switch (BlittableNumber.Parse(item, out doubleValue, out longValue))
+                                switch (BlittableNumber.Parse(item, out double doubleValue, out long longValue))
                                 {
                                     case NumberParseResult.Double:
                                         total += (decimal)doubleValue;
@@ -152,9 +149,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 foreach (var groupByFieldName in Definition.GroupByFields.Keys)
                 {
-                    object result;
-                    StringSegment leftPath;
-                    BlittableJsonTraverser.Default.TryRead(document.Data, groupByFieldName, out result, out leftPath);
+                    BlittableJsonTraverser.Default.TryRead(document.Data, groupByFieldName, out object result, out StringSegment leftPath);
                     // explicitly adding this even if the value isn't there, as a null
                     mappedResult[groupByFieldName] = result;
 

@@ -190,11 +190,10 @@ namespace Raven.Server.Rachis
 
         private LogLengthNegotiation CheckIfValidLeader()
         {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var logLength = _connection.Read<LogLengthNegotiation>(context);
-               
+
                 if (logLength.Term < _engine.CurrentTerm)
                 {
                     _connection.Send(context, new LogLengthNegotiationResponse
@@ -376,16 +375,12 @@ namespace Raven.Server.Rachis
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
-                            Slice valKey;
-                            using (
-                                Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable,
-                                    out valKey))
+                            using (Slice.From(context.Allocator, reader.Buffer, 0, size, ByteStringType.Immutable, out Slice valKey))
                             {
                                 size = reader.ReadInt32();
                                 reader.ReadExactly(size);
 
-                                byte* ptr;
-                                using (tree.DirectAdd(valKey, size, out ptr))
+                                using (tree.DirectAdd(valKey, size, out byte* ptr))
                                 {
                                     fixed (byte* pBuffer = reader.Buffer)
                                     {
@@ -646,8 +641,7 @@ namespace Raven.Server.Rachis
                 {
                     try
                     {
-                        TransactionOperationContext context;
-                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
                             NegotiateWithLeader(context, (LogLengthNegotiation)obj);
                         }
@@ -667,8 +661,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        TransactionOperationContext context;
-                        using (_engine.ContextPool.AllocateOperationContext(out context))
+                        using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         {
                             _connection.Send(context, e);
                         }

@@ -58,9 +58,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public Dictionary<string, FacetResult> FacetedQuery(FacetQuery query, JsonOperationContext context, CancellationToken token)
         {
-            Dictionary<string, Facet> defaultFacets;
-            Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets;
-            var results = FacetedQueryParser.Parse(query.Facets, out defaultFacets, out rangeFacets);
+            var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
             Validate(defaultFacets.Values);
 
@@ -87,9 +85,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName, _state);
 
-                    Dictionary<string, FacetValue> facetValues;
 
-                    if (facetsByName.TryGetValue(facet.DisplayName, out facetValues) == false)
+                    if (facetsByName.TryGetValue(facet.DisplayName, out Dictionary<string, FacetValue> facetValues) == false)
                     {
                         facetsByName[facet.DisplayName] = facetValues = new Dictionary<string, FacetValue>();
                     }
@@ -111,8 +108,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         if (intersectCount == 0)
                             continue;
 
-                        FacetValue facetValue;
-                        if (facetValues.TryGetValue(kvp.Key, out facetValue) == false)
+                        if (facetValues.TryGetValue(kvp.Key, out FacetValue facetValue) == false)
                         {
                             facetValue = new FacetValue
                             {
@@ -222,8 +218,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var values = new List<FacetValue>();
                 List<string> allTerms;
-                Dictionary<string, FacetValue> groups;
-                if (facetsByName.TryGetValue(facet.DisplayName, out groups) == false || groups == null)
+                if (facetsByName.TryGetValue(facet.DisplayName, out Dictionary<string, FacetValue> groups) == false || groups == null)
                     continue;
 
                 switch (facet.TermSortMode)
@@ -249,8 +244,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 foreach (var term in allTerms.Skip(query.Start).TakeWhile(term => values.Count < maxResults))
                 {
-                    FacetValue facetValue;
-                    if (groups.TryGetValue(term, out facetValue) == false || facetValue == null)
+                    if (groups.TryGetValue(term, out FacetValue facetValue) == false || facetValue == null)
                         facetValue = new FacetValue { Range = term };
 
                     values.Add(facetValue);
@@ -258,8 +252,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var previousHits = allTerms.Take(query.Start).Sum(allTerm =>
                 {
-                    FacetValue facetValue;
-                    if (groups.TryGetValue(allTerm, out facetValue) == false || facetValue == null)
+                    if (groups.TryGetValue(allTerm, out FacetValue facetValue) == false || facetValue == null)
                         return 0;
 
                     return facetValue.Hits;

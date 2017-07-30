@@ -132,12 +132,10 @@ namespace Raven.Server.Documents.Queries.Parse
 
         protected override Query GetFieldQuery(string field, string queryText)
         {
-            string value;
-            if (_replacedTokens.TryGetValue(Tuple.Create(field, queryText), out value))
+            if (_replacedTokens.TryGetValue(Tuple.Create(field, queryText), out string value))
                 return new TermQuery(new Term(field, value));
 
-            HashSet<string> set;
-            if (_untokenized.TryGetValue(field, out set))
+            if (_untokenized.TryGetValue(field, out HashSet<string> set))
             {
                 if (set.Contains(queryText))
                     return new TermQuery(new Term(field, queryText));
@@ -211,8 +209,7 @@ namespace Raven.Server.Documents.Queries.Parse
 
         public void SetUntokenized(string field, string value)
         {
-            HashSet<string> set;
-            if (_untokenized.TryGetValue(field, out set) == false)
+            if (_untokenized.TryGetValue(field, out HashSet<string> set) == false)
             {
                 _untokenized[field] = set = new HashSet<string>();
             }

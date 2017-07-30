@@ -23,9 +23,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static long CalculateCapacity(long lastSize, string lastRangeAtStr)
         {
-            DateTime lastRangeAt;
-            if (DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture,
-                DateTimeStyles.RoundtripKind, out lastRangeAt) == false)
+            if (DateTime.TryParseExact(lastRangeAtStr, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime lastRangeAt) == false)
                 return Math.Max(32, lastSize);
 
             var span = DateTime.UtcNow - lastRangeAt;
@@ -46,9 +44,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/hilo/next", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetNextHiLo()
         {
-            DocumentsOperationContext context;
-
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var lastSize = GetLongQueryString("lastBatchSize", false) ?? 0;
@@ -154,8 +150,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser)]
         public async Task HiLoReturn()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
                 var end = GetLongQueryString("end");
@@ -191,10 +186,7 @@ namespace Raven.Server.Documents.Handlers
                 if (document == null)
                     return 1;
 
-                long oldMax;
-
-                document.Data.TryGet("Max", out oldMax);
-
+                document.Data.TryGet("Max", out long oldMax);
                 if (oldMax != End || Last > oldMax)
                     return 1;
 

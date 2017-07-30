@@ -50,8 +50,7 @@ namespace Raven.Server.Documents.Operations
 
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
                 {
-                    Operation value;
-                    _completed.TryRemove(taskAndState.Key, out value);
+                    _completed.TryRemove(taskAndState.Key, out Operation value);
                 }
 
                 var task = state.Task;
@@ -65,10 +64,9 @@ namespace Raven.Server.Documents.Operations
 
         public void KillOperation(long id)
         {
-            Operation operation;
-            if (_active.TryGetValue(id, out operation) == false)
+            if (_active.TryGetValue(id, out Operation operation) == false)
                 throw new ArgumentException($"Operation {id} was not registered");
-      
+
             if (operation?.Token != null && operation.Task.IsCompleted == false)
             {
                 operation.Token.Cancel();
@@ -80,8 +78,7 @@ namespace Raven.Server.Documents.Operations
 
         public Operation GetOperation(long id)
         {
-            Operation operation;
-            if (_active.TryGetValue(id, out operation))
+            if (_active.TryGetValue(id, out Operation operation))
             {
                 return operation;
             }
@@ -174,14 +171,13 @@ namespace Raven.Server.Documents.Operations
                     operationState.Status = OperationStatus.Completed;
                 }
 
-                Operation completed;
-                if (_active.TryGetValue(id, out completed))
+                if (_active.TryGetValue(id, out Operation completed))
                 {
                     // add to completed items before removing from active ones to ensure an operation status is accessible all the time
                     _completed.TryAdd(id, completed);
                     _active.TryRemove(id, out completed);
                 }
-                
+
                 RaiseNotifications(notification, operation);
             });
 
@@ -201,8 +197,7 @@ namespace Raven.Server.Documents.Operations
 
         public void KillRunningOperation(long id)
         {
-            Operation value;
-            if (_active.TryGetValue(id, out value) && value.Task.IsCompleted == false)
+            if (_active.TryGetValue(id, out Operation value) && value.Task.IsCompleted == false)
             {
                 value.Token?.Cancel();
 

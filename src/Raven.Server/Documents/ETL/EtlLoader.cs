@@ -156,8 +156,7 @@ namespace Raven.Server.Documents.ETL
 
         private bool ValidateConfiguration<T>(EtlConfiguration<T> config, HashSet<string> uniqueNames) where T : ConnectionString
         {
-            List<string> errors;
-            if (config.Validate(out errors) == false)
+            if (config.Validate(out List<string> errors) == false)
             {
                 LogConfigurationError(config, errors);
                 return false;

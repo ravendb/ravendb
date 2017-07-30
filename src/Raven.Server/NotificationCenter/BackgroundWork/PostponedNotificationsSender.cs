@@ -60,8 +60,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 var next = notifications.Dequeue();
 
-                NotificationTableValue notification;
-                using (_notificationsStorage.Read(next.Id, out notification))
+                using (_notificationsStorage.Read(next.Id, out NotificationTableValue notification))
                 {
                     if (notification == null) // could be deleted meanwhile
                         continue;
@@ -85,8 +84,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         {
             var next = new Queue<PostponedNotification>();
 
-            IEnumerable<NotificationTableValue> actions;
-            using (_notificationsStorage.ReadPostponedActions(out actions, cutoff))
+            using (_notificationsStorage.ReadPostponedActions(out IEnumerable<NotificationTableValue> actions, cutoff))
             {
                 foreach (var action in actions)
                 {

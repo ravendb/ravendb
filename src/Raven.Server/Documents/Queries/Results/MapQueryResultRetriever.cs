@@ -20,8 +20,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
-            string id;
-            if (TryGetKey(input, state, out id) == false)
+            if (TryGetKey(input, state, out string id) == false)
                 throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
             if (_fieldsToFetch.IsProjection || _fieldsToFetch.IsTransformation)

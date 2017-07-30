@@ -45,8 +45,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
         public AuthenticationHeaderValue CalculateAuthorizationHeaderValue(HttpMethod httpMethod, string url, DateTime date, IDictionary<string, string> httpHeaders)
         {
-            string signedHeaders;
-            var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out signedHeaders);
+            var canonicalRequestHash = CalculateCanonicalRequestHash(httpMethod, url, httpHeaders, out string signedHeaders);
             var signingKey = CalculateSigningKey(date, ServiceName);
 
             using (var hash = new HMACSHA256(signingKey))

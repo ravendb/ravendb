@@ -132,8 +132,7 @@ namespace Raven.Server.Documents
                     return true;
                 }
 
-                bool aboutToReadPropertyName;
-                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
                     return aboutToReadPropertyName;
             }
         }
@@ -165,8 +164,7 @@ namespace Raven.Server.Documents
                     return true;
                 }
 
-                bool aboutToReadPropertyName;
-                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
                     return aboutToReadPropertyName;
             }
         }
@@ -198,8 +196,7 @@ namespace Raven.Server.Documents
                     return true;
                 }
 
-                bool aboutToReadPropertyName;
-                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out aboutToReadPropertyName))
+                if (AboutToReadPropertyNameInMetadataUnlikely(reader, state, out bool aboutToReadPropertyName))
                     return aboutToReadPropertyName;
             }
         }

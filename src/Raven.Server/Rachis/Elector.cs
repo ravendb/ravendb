@@ -24,8 +24,7 @@ namespace Raven.Server.Rachis
             {
                 while (true)
                 {
-                    TransactionOperationContext context;
-                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     {
                         var rv = _connection.Read<RequestVote>(context);
 
@@ -77,7 +76,8 @@ namespace Raven.Server.Rachis
                                 _engine.CurrentState == RachisConsensus.State.Leader ||
                                 _engine.CurrentState == RachisConsensus.State.LeaderElect
                             )
-                        ){
+                        )
+                        {
                             _connection.Send(context, new RequestVoteResponse
                             {
                                 Term = _engine.CurrentTerm,
@@ -126,8 +126,7 @@ namespace Raven.Server.Rachis
 
                         if (rv.IsTrialElection)
                         {
-                            string currentLeader;
-                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out currentLeader) == false)
+                            if (_engine.Timeout.ExpiredLastDeferral(_engine.ElectionTimeout.TotalMilliseconds / 2, out string currentLeader) == false)
                             {
                                 _connection.Send(context, new RequestVoteResponse
                                 {

@@ -141,8 +141,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private SqlTableWithRecords GetOrAdd(string tableName)
         {
-            SqlTableWithRecords table;
-            if (_tables.TryGetValue(tableName, out table) == false)
+            if (_tables.TryGetValue(tableName, out SqlTableWithRecords table) == false)
             {
                 _tables[tableName] =
                     table = new SqlTableWithRecords(_config.SqlTables.Find(x => x.TableName.Equals(tableName, StringComparison.OrdinalIgnoreCase)));

@@ -130,8 +130,7 @@ namespace Raven.Server.Web.Studio
 
             writer.WriteStartObject();
 
-            BlittableJsonReaderObject metadata = null;
-            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
             bool first = true;
 

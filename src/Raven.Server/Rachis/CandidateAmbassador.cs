@@ -78,10 +78,9 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            TransactionOperationContext context;
-                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
-                                _conenctToPeer = _engine.ConnectToPeer(_url, _certificate, context).Result; 
+                                _conenctToPeer = _engine.ConnectToPeer(_url, _certificate, context).Result;
                             }
 
                             if (_candidate.Running == false)
@@ -114,8 +113,7 @@ namespace Raven.Server.Rachis
                             
                             while (_candidate.Running)
                             {
-                                TransactionOperationContext context;
-                                using (_engine.ContextPool.AllocateOperationContext(out context))
+                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     ClusterTopology topology;
                                     long lastLogIndex;
@@ -138,7 +136,7 @@ namespace Raven.Server.Rachis
                                     RequestVoteResponse rvr;
                                     var currentElectionTerm = _candidate.ElectionTerm;
                                     var engineCurrentTerm = _engine.CurrentTerm;
-                                    if (_candidate.IsForcedElection == false || 
+                                    if (_candidate.IsForcedElection == false ||
                                         _candidate.RunRealElectionAtTerm != currentElectionTerm)
                                     {
                                         connection.Send(context, new RequestVote
@@ -194,7 +192,7 @@ namespace Raven.Server.Rachis
                                     });
 
                                     rvr = connection.Read<RequestVoteResponse>(context);
-                                  
+
                                     if (rvr.Term > currentElectionTerm)
                                     {
                                         var message = "Found election term " + rvr.Term + " that is higher than ours " + currentElectionTerm;
