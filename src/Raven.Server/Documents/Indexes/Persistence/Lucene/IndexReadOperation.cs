@@ -289,7 +289,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private Sort GetSort(IndexQueryServerSide query)
+        private static Sort GetSort(IndexQueryServerSide query)
         {
             var orderByFields = query.Metadata.OrderBy;
 
@@ -317,21 +317,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
                 }
 
+                var fieldName = field.Name;
                 var sortOptions = SortOptions.String;
 
                 switch (field.OrderingType)
                 {
                     case OrderByFieldType.AlphaNumeric:
                         var anSort = new AlphaNumericComparatorSource();
-                        sort.Add(new SortField(field.Name, anSort, field.Ascending == false));
+                        sort.Add(new SortField(fieldName, anSort, field.Ascending == false));
                         continue;
                     case OrderByFieldType.Long:
+                        sortOptions = SortOptions.Numeric;
+                        fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
+                        break;
                     case OrderByFieldType.Double:
                         sortOptions = SortOptions.Numeric;
+                        fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                         break;
                 }
 
-                sort.Add(new SortField(field.Name, (int)sortOptions, field.Ascending == false));
+                sort.Add(new SortField(fieldName, (int)sortOptions, field.Ascending == false));
             }
 
             return new Sort(sort.ToArray());
