@@ -19,11 +19,9 @@ class periodicBackupConfiguration {
 
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
-    fullBackupThrottled: KnockoutComputed<string>;
     nextFullBackupOccurrence = ko.observable<string>("N/A");
     incrementalBackupHumanReadable: KnockoutComputed<string>;
     incrementalBackupParsingError = ko.observable<string>();
-    incrementalBackupThrottled: KnockoutComputed<string>;
     nextIncrementalBackupOccurrence = ko.observable<string>("N/A");
 
     validationGroup: KnockoutValidationGroup;
@@ -64,17 +62,13 @@ class periodicBackupConfiguration {
                 this.incrementalBackupParsingError);
         });
 
-        this.fullBackupThrottled = ko.pureComputed(() =>
-            this.fullBackupFrequency()).extend({ throttle: 500 });
-        this.fullBackupThrottled.subscribe((newValue) =>
+        this.fullBackupFrequency.throttle(500).subscribe((newValue) =>
             this.getNextOccurance(
                 newValue,
                 this.nextFullBackupOccurrence,
                 this.fullBackupParsingError));
 
-        this.incrementalBackupThrottled = ko.pureComputed(() =>
-                this.incrementalBackupFrequency()).extend({ throttle: 500 });
-        this.incrementalBackupThrottled.subscribe((newValue) =>
+        this.incrementalBackupFrequency.throttle(500).subscribe((newValue) =>
             this.getNextOccurance(
                 newValue,
                 this.nextIncrementalBackupOccurrence,
