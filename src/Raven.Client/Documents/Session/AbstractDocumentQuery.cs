@@ -1734,12 +1734,8 @@ If you really want to do in memory filtering on the data returned from the query
 
             if (type == typeof(DateTime) || type == typeof(DateTimeOffset))
                 return whereParams.Value;
-
             if (type == typeof(string))
-            {
                 return (string)whereParams.Value;
-            }
-
             if (type == typeof(int))
                 return whereParams.Value;
             if (type == typeof(long))
@@ -1755,6 +1751,8 @@ If you really want to do in memory filtering on the data returned from the query
             if (whereParams.Value is string)
                 return whereParams.Value;
             if (whereParams.Value is bool)
+                return whereParams.Value;
+            if (type.GetTypeInfo().IsEnum)
                 return whereParams.Value;
 
             if (whereParams.Value is ValueType)
