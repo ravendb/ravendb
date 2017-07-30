@@ -92,7 +92,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var @class = CreateClass(cSharpSafeName, definition);
 
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: true);
+            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: true, extentions: definition.AdditionalSources);
             var type = compilationResult.Type;
 
             var index = (StaticIndexBase)Activator.CreateInstance(type);
@@ -101,15 +101,17 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string,string> extentions = null)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
 
             var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
+            var res = GetUsingDirectiveAndSyntaxTrees(extentions);
+
             var compilationUnit = SyntaxFactory.CompilationUnit()
-                .WithUsings(RoslynHelper.CreateUsings(Usings))
+                .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
@@ -123,14 +125,16 @@ namespace Raven.Server.Documents.Indexes.Static
                 File.WriteAllText(sourceFile, formatedCompilationUnit.ToFullString(), Encoding.UTF8);
             }
 
+            var st = EnableDebugging
+                ? SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8)
+                : SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString());
+
+            res.syntaxTrees.Add(st);
+            var syntaxTrees = res.syntaxTrees;
+
             var compilation = CSharpCompilation.Create(
                 assemblyName: name + ".dll",
-                syntaxTrees: new[]
-                {
-                    EnableDebugging ?
-                    SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8) :
-                    SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString())
-                },
+                syntaxTrees: syntaxTrees,
                 references: References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
@@ -182,6 +186,36 @@ namespace Raven.Server.Documents.Indexes.Static
                 Code = code,
                 Type = assembly.GetType($"{(isIndex ? IndexNamespace : TransformerNamespace)}.{cSharpSafeName}")
             };
+        }
+
+        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees) GetUsingDirectiveAndSyntaxTrees(Dictionary<string,string> extentions)
+        {
+            var syntaxTrees = new List<SyntaxTree>();
+            if (extentions == null)
+            {
+                return (Usings, syntaxTrees);
+            }
+            var @using = new HashSet<string>();
+            
+            foreach (var ext in extentions)
+            {
+                var rewrite = MethodDynamicParametersRewriter.Instance.Visit(SyntaxFactory.ParseSyntaxTree(ext.Value).GetRoot());
+                var tree = SyntaxFactory.SyntaxTree(rewrite);
+                syntaxTrees.Add(tree);
+                var ns = rewrite.DescendantNodes().OfType<NamespaceDeclarationSyntax>().FirstOrDefault();
+                if (ns != null)
+                {
+                    @using.Add(ns.Name.ToString());
+                }
+            }
+            if (@using.Count > 0)
+            {
+                //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
+                var newUsing = @using.Select(x=> SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
+                newUsing.AddRange(Usings);
+                return (newUsing.ToArray(), syntaxTrees);
+            }
+            return (Usings, syntaxTrees);
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)

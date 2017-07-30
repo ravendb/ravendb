@@ -255,6 +255,7 @@ namespace Raven.Client.Documents.Indexes
                 SpatialIndexes = SpatialIndexes,
                 SpatialIndexesStrings = SpatialIndexesStrings,
                 OutputReduceToCollection = OutputReduceToCollection,
+                AdditionalSources = AdditionalSources
             }.ToIndexDefinition(Conventions);
 
             var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
@@ -399,5 +400,10 @@ namespace Raven.Client.Documents.Indexes
         {
             throw new NotSupportedException("This is here as a marker only");
         }
+
+        /// <summary>
+        /// Add additional sources to be copiled with the index on the server.
+        /// </summary>
+        public Dictionary<string,string> AdditionalSources { get; set; }
     }
 }

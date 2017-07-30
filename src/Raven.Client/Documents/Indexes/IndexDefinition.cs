@@ -46,6 +46,11 @@ namespace Raven.Client.Documents.Indexes
         public IndexLockMode? LockMode { get; set; }
 
         /// <summary>
+        /// Additional code files to be compiled with this index.
+        /// </summary>
+        public Dictionary<string, string> AdditionalSources { get; set; }
+
+        /// <summary>
         /// All the map functions for this index
         /// </summary>
         public HashSet<string> Maps

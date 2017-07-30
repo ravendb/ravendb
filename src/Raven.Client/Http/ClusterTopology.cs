@@ -24,11 +24,11 @@ namespace Raven.Client.Http
         //Try to avoid using this since it is expensive
         public (bool hasUrl,string nodeTag) TryGetNodeTagByUrl(string nodeUrl)
         {
-            foreach (var memeber in Members)
+            foreach (var member in Members)
             {
-                if (memeber.Value == nodeUrl)
+                if (member.Value == nodeUrl)
                 {
-                    return (true, memeber.Key);
+                    return (true, member.Key);
                 }
             }
             foreach (var promotable in Promotables)
@@ -53,6 +53,19 @@ namespace Raven.Client.Http
             
         }
 
+        public DynamicJsonValue ToSortedJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(TopologyId)] = TopologyId,
+                [nameof(AllNodes)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(AllNodes)),
+                [nameof(Members)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Members)),
+                [nameof(Promotables)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Promotables)),
+                [nameof(Watchers)] = DynamicJsonValue.Convert(new SortedDictionary<string, string>(Watchers)),
+                [nameof(LastNodeId)] = LastNodeId
+            };
+        }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -67,28 +80,19 @@ namespace Raven.Client.Http
 
         public string GetUrlFromTag(string tag)
         {
-            string url;
-            if (Members.TryGetValue(tag, out url))
-            {
+            if (Members.TryGetValue(tag, out string url) ||
+                Promotables.TryGetValue(tag, out url) ||
+                Watchers.TryGetValue(tag, out url))
                 return url;
-            }
-            if (Promotables.TryGetValue(tag, out url))
-            {
-                return url;
-            }
-            if (Watchers.TryGetValue(tag, out url))
-            {
-                return url;
-            }
             return null;
         }
 
-        public static (Dictionary<TKey, TValue> addedValues, Dictionary<TKey, TValue> removedValues) 
-            DictionaryDiff<TKey, TValue>(Dictionary<TKey, TValue> oldDic,Dictionary<TKey, TValue> newDic)
+        public static (Dictionary<TKey, TValue> addedValues, Dictionary<TKey, TValue> removedValues) DictionaryDiff<TKey, TValue>(
+            Dictionary<TKey, TValue> oldDic, Dictionary<TKey, TValue> newDic)
         {
             var addedValues = new Dictionary<TKey, TValue>();
             var removedValues = new Dictionary<TKey, TValue>();
-            var temp = new Dictionary<TKey,TValue>(newDic);
+            var temp = new Dictionary<TKey, TValue>(newDic);
 
             foreach (var kvp in oldDic)
             {
@@ -105,13 +109,11 @@ namespace Raven.Client.Http
                 {
                     removedValues.Add(key, value);
                 }
-                
             }
             foreach (var kvp in temp)
             {
-                addedValues.Add(kvp.Key,kvp.Value);
+                addedValues.Add(kvp.Key, kvp.Value);
             }
-            
             return (addedValues, removedValues);
         }
 

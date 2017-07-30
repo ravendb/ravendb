@@ -94,13 +94,11 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);
 
-            string errorMessage;
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
@@ -379,14 +377,14 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task TestPerioidicBackupCredentials()
+        public async Task TestPeriodicBackupCredentials()
         {
-            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
+            // here we explicitly don't care what db I'm an admin of, since it is just a test endpoint
             
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
-                throw new ArgumentException($"Unkown backup connection: {type}");
+                throw new ArgumentException($"Unknown backup connection: {type}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -404,12 +402,12 @@ namespace Raven.Server.Web.System
                         break;
                     case PeriodicBackupTestConnectionType.Glacier:
                         var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                        using (var galcierClient = new RavenAwsGlacierClient(
+                        using (var glacierClient = new RavenAwsGlacierClient(
                             glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, 
                             glacierSettings.AwsRegionName, glacierSettings.VaultName,
                             cancellationToken: ServerStore.ServerShutdown))
                         {
-                            await galcierClient.TestConnection();
+                            await glacierClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Azure:

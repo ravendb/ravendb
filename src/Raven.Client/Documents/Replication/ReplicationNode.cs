@@ -5,9 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
 using Sparrow;
 using Sparrow.Json.Parsing;
 
@@ -47,9 +44,8 @@ namespace Raven.Client.Documents.Replication
 
         public bool IsEqualTo(ReplicationNode other)
         {
-            return
-                string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
-                string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
+            return string.Equals(Url, other.Url, StringComparison.OrdinalIgnoreCase) &&
+                   string.Equals(Database, other.Database, StringComparison.OrdinalIgnoreCase);
         }
 
         public override bool Equals(object obj)
@@ -86,6 +82,14 @@ namespace Raven.Client.Documents.Replication
             };
 
             return json;
+        }
+
+        public override string ToString()
+        {
+            var str = $"{Url} - {Database}";
+            if (Disabled)
+                str += " - DISABLED";
+            return str;
         }
 
         public abstract string FromString();

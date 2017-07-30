@@ -11,7 +11,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     script = ko.observable<string>();
     fromChangeVector = ko.observable<string>(null); 
-    applyScript = ko.observable<boolean>(true); 
     includeRevisions = ko.observable<boolean>(false);
     areRevisionsDefinedForCollection = ko.observable<boolean>(true);
 
@@ -56,7 +55,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     }
 
     dataFromUI(): subscriptionDataFromUI {
-        const script = this.applyScript() ? this.script() : null;
+        const script = _.trim(this.script()) || null;
 
         return {
             TaskName: this.taskName(),
@@ -74,12 +73,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             required: true
         });
 
-        this.script.extend({
-            required: {
-                onlyIf: () => this.applyScript()
-            }
-        });
-
         this.includeRevisions.extend({
             validation: [
                 {
@@ -94,7 +87,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
         this.validationGroup = ko.validatedObservable({
             collection: this.collection,
-            script: this.script,
             includeRevisions: this.includeRevisions
         });
     }

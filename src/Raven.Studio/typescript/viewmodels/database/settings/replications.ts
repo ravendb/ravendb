@@ -101,7 +101,7 @@ class replications extends viewModelBase {
     }
 
     addScriptHelpPopover() {
-        //TODO: long popover?
+        //TODO: use popoverUtils.longWithHover
         $(".scriptPopover").popover({
             html: true,
             trigger: 'hover',

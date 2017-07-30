@@ -47,6 +47,7 @@ using Microsoft.AspNetCore.Server.Kestrel.Https;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Raven.Client;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Extensions;
 using Raven.Client.Server.Operations.Certificates;
 using Raven.Server.ServerWide.Commands;
@@ -126,10 +127,9 @@ namespace Raven.Server
             try
             {
                 Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
-
-                if (Configuration.Security.CertificatePath != null)
+                bool certificateLoaded = LoadCertificate();
+                if (certificateLoaded)
                 {
-                    ServerCertificateHolder = LoadCertificate(Configuration.Security.CertificatePath, Configuration.Security.CertificatePassword);
                     kestrelOptions += options =>
                     {
                         var filterOptions = new HttpsConnectionFilterOptions
@@ -139,22 +139,16 @@ namespace Raven.Server
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
                             ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
-                                // Here we are explicitly ignoring trust chain issues for client certificates
-                                // this is because we don't actually require trust, we just use the certificate
-                                // as a way to authenticate. The admin are going to tell us which specific certs
-                                // we can trust anyway, so we can ignore such errors.
+                                    // Here we are explicitly ignoring trust chain issues for client certificates
+                                    // this is because we don't actually require trust, we just use the certificate
+                                    // as a way to authenticate. The admin is going to tell us which specific certs
+                                    // we can trust anyway, so we can ignore such errors.
                                     errors == SslPolicyErrors.RemoteCertificateChainErrors ||
                                     errors == SslPolicyErrors.None
                         };
 
                         options.ConnectionFilter = new AuthenticatingFilter(this, new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
                     };
-
-                    // Enforce https in all network activities
-                    if (Configuration.Core.ServerUrl.StartsWith("http:", StringComparison.OrdinalIgnoreCase))
-                        throw new InvalidOperationException(
-                            $"When the `{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}` is specified, the `{RavenConfiguration.GetKey(x => x.Core.ServerUrl)}` must be using https, but was " +
-                            Configuration.Core.ServerUrl);
                 }
 
                 _webHost = new WebHostBuilder()
@@ -202,6 +196,30 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+
+        private bool LoadCertificate()
+        {
+            var certificateLoaded = false;
+            try
+            {
+                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
+                {
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateWithExecutable();
+                    certificateLoaded = true;
+                }
+                else if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
+                {
+                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
+                    certificateLoaded = true;
+                }
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException("Unable to start the server due to  invalid certificate configuration! Admin assistance required.", e);
+            }
+
+            return certificateLoaded;
         }
 
         private async Task ListenToPipe()
@@ -420,74 +438,6 @@ namespace Raven.Server
             public string CertificateForClients;
             public X509Certificate2 Certificate;
             public AsymmetricKeyEntry PrivateKey;
-        }
-
-        public static CertificateHolder LoadCertificate(string certificatePath, string certificatePassword)
-        {
-            try
-            {
-                var rawData = File.ReadAllBytes(certificatePath);
-
-                var loadedCertificate = certificatePassword == null
-                    ? new X509Certificate2(rawData)
-                    : new X509Certificate2(rawData, certificatePassword);
-
-                ValidateExpiration(certificatePath, loadedCertificate);
-
-                ValidatePrivateKey(certificatePath, certificatePassword, rawData, out var privateKey);
-
-                ValidateKeyUsages(certificatePath, loadedCertificate);
-
-                return new CertificateHolder
-                {
-                    Certificate = loadedCertificate,
-                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
-                    PrivateKey = privateKey
-                };
-            }
-            catch (Exception e)
-            {
-                throw new InvalidOperationException($"Could not load certificate file {certificatePath}, please check the path and password", e);
-            }
-        }
-
-        private static void ValidateExpiration(string certificatePath, X509Certificate2 loadedCertificate)
-        {
-            if (loadedCertificate.NotAfter < DateTime.UtcNow)
-                throw new EncryptionException($"The provided certificate {certificatePath} is expired! " + loadedCertificate);
-        }
-
-        private static void ValidatePrivateKey(string certificatePath, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
-        {
-            var store = new Pkcs12Store();
-            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
-            pk = null;
-            foreach (string alias in store.Aliases)
-            {
-                pk = store.GetKey(alias);
-                if (pk != null)
-                    break;
-            }
-
-            if (pk == null)
-                throw new EncryptionException("Unable to find the private key in the provided certificate: " + certificatePath);
-        }
-
-        private static void ValidateKeyUsages(string certificatePath, X509Certificate2 loadedCertificate)
-        {
-            var supported = false;
-            foreach (var extension in loadedCertificate.Extensions)
-            {
-                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
-                    continue;
-
-                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
-
-                supported = extensionString.Contains("1.3.6.1.5.5.7.3.2") && extensionString.Contains("1.3.6.1.5.5.7.3.1"); // Client Authentication & Server Authentication
-            }
-
-            if (supported == false)
-                throw new EncryptionException("Server certificate " + certificatePath + " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
         }
 
         public class TcpListenerStatus
@@ -881,11 +831,9 @@ namespace Raven.Server
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
             msg = null;
-            if (configuration.Security.AuthenticationEnabled == false)
-            {
 
+            if (configuration.Security.AuthenticationEnabled == false)
                 return true;
-            }
 
             if (!(stream is SslStream sslStream))
             {

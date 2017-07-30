@@ -4,14 +4,22 @@ import router = require("plugins/router");
 import saveExternalReplicationTaskCommand = require("commands/database/tasks/saveExternalReplicationTaskCommand");
 import ongoingTaskReplication = require("models/database/tasks/ongoingTaskReplicationModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import jsonUtil = require("common/jsonUtil");
+import eventsCollector = require("common/eventsCollector");
+import testClusterNodeConnectionCommand = require("commands/database/cluster/testClusterNodeConnectionCommand");
 
 class editExternalReplicationTask extends viewModelBase {
 
     editedExternalReplication = ko.observable<ongoingTaskReplication>();
     isAddingNewReplicationTask = ko.observable<boolean>(true);
-    isSaveEnabled: KnockoutComputed<boolean>;
     private taskId: number = null;
+
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+    spinners = { test: ko.observable<boolean>(false) };
+
+    constructor() {
+        super();
+        this.bindToCurrentInstance("testConnection");
+    }
 
     activate(args: any) { 
         super.activate(args);
@@ -42,16 +50,8 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     private initObservables() {
-
-        this.dirtyFlag = new ko.DirtyFlag([
-            this.editedExternalReplication().taskName,
-            this.editedExternalReplication().destinationURL,
-            this.editedExternalReplication().destinationDB,
-        ], false, jsonUtil.newLineNormalizingHashFunction);
-
-        this.isSaveEnabled = ko.pureComputed(() => {
-            return this.dirtyFlag().isDirty();
-        });
+        // Discard test connection result when url has changed
+        this.editedExternalReplication().destinationURL.subscribe(() => this.testConnectionResult(null));
     }
 
     compositionComplete() {
@@ -73,7 +73,6 @@ class editExternalReplicationTask extends viewModelBase {
             .execute()
             .done(() => {
                 this.goToOngoingTasksView();
-                this.dirtyFlag().reset(); 
             });
     }
    
@@ -92,6 +91,19 @@ class editExternalReplicationTask extends viewModelBase {
             valid = false;
 
         return valid;
+    }
+
+    testConnection() {
+        if(this.isValid(this.editedExternalReplication().destinationURL)) {
+            eventsCollector.default.reportEvent("external-replication", "test-connection");
+
+            this.spinners.test(true);
+
+            new testClusterNodeConnectionCommand(this.editedExternalReplication().destinationURL())
+                .execute()
+                .done(result => this.testConnectionResult(result))
+                .always(() => this.spinners.test(false));
+        }
     }
 }
 

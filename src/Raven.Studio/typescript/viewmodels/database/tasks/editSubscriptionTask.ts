@@ -3,12 +3,10 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import router = require("plugins/router");
 import ongoingTaskSubscriptionEdit = require("models/database/tasks/ongoingTaskSubscriptionEditModel");
 import ongoingTaskInfoCommand = require("commands/database/tasks/getOngoingTaskInfoCommand");
-import collection = require("models/database/documents/collection");
 import saveSubscriptionTaskCommand = require("commands/database/tasks/saveSubscriptionTaskCommand");
 import testSubscriptionTaskCommand = require("commands/database/tasks/testSubscriptionTaskCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import popoverUtils = require("common/popoverUtils");
-import jsonUtil = require("common/jsonUtil");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
@@ -22,7 +20,6 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 class editSubscriptionTask extends viewModelBase {
 
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
-    isSaveEnabled: KnockoutComputed<boolean>;
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
     enableTestArea = ko.observable<boolean>(false);
@@ -75,24 +72,8 @@ class editSubscriptionTask extends viewModelBase {
             this.editedSubscription(ongoingTaskSubscriptionEdit.empty());
             deferred.resolve();
         }
-
-        deferred.always(() => this.initObservables());
+        
         return deferred;
-    }
-
-    private initObservables() {
-
-        this.dirtyFlag = new ko.DirtyFlag([
-            this.editedSubscription().taskName,
-            this.editedSubscription().collection,
-            this.editedSubscription().includeRevisions,
-            this.editedSubscription().script,
-            this.editedSubscription().startingPointType
-        ], false, jsonUtil.newLineNormalizingHashFunction); 
-
-        this.isSaveEnabled = ko.pureComputed(() => {
-            return this.dirtyFlag().isDirty();
-        });   
     }
 
     attached() {
@@ -111,18 +92,15 @@ class editSubscriptionTask extends viewModelBase {
             "   }\r\n" + 
             "};",
             (Prism.languages as any).javascript);
-            
-         $("#scriptInfo").popover({
-            html: true,
-            trigger: "hover",
-            container: "body",
-            template: popoverUtils.longPopoverTemplate,
-            content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
+
+        popoverUtils.longWithHover($("#scriptInfo"),
+            {
+                content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
                 + `<p>You can use following functions in your patch script:</p>`
                 + `<ul>`
                 + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
                 + `</ul>`
-        });
+            });
     }
 
     compositionComplete() {
@@ -143,7 +121,6 @@ class editSubscriptionTask extends viewModelBase {
             .execute()
             .done(() => {
                 this.goToOngoingTasksView();
-                this.dirtyFlag().reset(); 
             });
     }
 

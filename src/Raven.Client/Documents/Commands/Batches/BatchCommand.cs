@@ -106,12 +106,11 @@ namespace Raven.Client.Documents.Commands.Batches
             if (_options.WaitForReplicas)
             {
                 sb.Append("&waitForReplicasTimeout=").Append(_options.WaitForReplicasTimeout);
-                if (_options.ThrowOnTimeoutInWaitForReplicas)
-                {
-                    sb.Append("&throwOnTimeoutInWaitForReplicas=true");
-                }
-                sb.Append("&numberOfReplicasToWaitFor=");
 
+                if (_options.ThrowOnTimeoutInWaitForReplicas)
+                    sb.Append("&throwOnTimeoutInWaitForReplicas=true");
+
+                sb.Append("&numberOfReplicasToWaitFor=");
                 sb.Append(_options.Majority
                     ? "majority"
                     : _options.NumberOfReplicasToWaitFor.ToString());

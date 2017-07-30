@@ -47,21 +47,18 @@ namespace Raven.Server.Documents.Transformers
 
         public void HandleDatabaseRecordChange(DatabaseRecord record)
         {
+            if (record == null)
+                return;
+
             try
             {
-                if (record == null)
-                    return;
-
-                lock (_locker)
-                {
-                    HandleDeletes(record);
-                    HandleChanges(record);
-                }
+                HandleDeletes(record);
+                HandleChanges(record);
             }
             catch (Exception e)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info("Could not proccess database change for TransformerStore",e);
+                    _log.Info("Could not process database change for TransformerStore", e);
             }
         }
 
@@ -139,7 +136,7 @@ namespace Raven.Server.Documents.Transformers
 
                 _initialized = true;
 
-                return Task.Factory.StartNew(() => OpenTransformers(record), TaskCreationOptions.LongRunning);
+                return Task.Run(() => OpenTransformers(record));
             }
         }
 

@@ -68,17 +68,14 @@ namespace Raven.Server.Documents.Indexes
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record,long etag)
+        public void HandleDatabaseRecordChange(DatabaseRecord record, long etag)
         {
             if (record == null)
                 return;
 
-            lock (_locker)
-            {
-                HandleDeletes(record);
-                HandleChangesForStaticIndexes(record, etag);
-                HandleChangesForAutoIndexes(record);
-            }
+            HandleDeletes(record);
+            HandleChangesForStaticIndexes(record, etag);
+            HandleChangesForAutoIndexes(record);
         }
 
         private void HandleChangesForAutoIndexes(DatabaseRecord record)
@@ -312,7 +309,6 @@ namespace Raven.Server.Documents.Indexes
                 if (indexNormalizedName.StartsWith(Constants.Documents.Indexing.SideBySideIndexNamePrefix))
                 {
                     indexNormalizedName = indexNormalizedName.Remove(0, Constants.Documents.Indexing.SideBySideIndexNamePrefix.Length);
-
                 }
                 if (record.Indexes.ContainsKey(indexNormalizedName) || record.AutoIndexes.ContainsKey(indexNormalizedName))
                     continue;
@@ -329,7 +325,7 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public Task InitializeAsync(DatabaseRecord record, long index)
+        public Task InitializeAsync(DatabaseRecord record)
         {
             if (_initialized)
                 throw new InvalidOperationException($"{nameof(IndexStore)} was already initialized.");
@@ -347,7 +343,6 @@ namespace Raven.Server.Documents.Indexes
             return Task.Run(() =>
             {
                 OpenIndexes(record);
-                HandleDatabaseRecordChange(record, index);
             });
         }
 
@@ -871,34 +866,14 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-
-
-
-
         private void OpenIndexesFromRecord(PathSetting path, DatabaseRecord record)
         {
             if (_logger.IsInfoEnabled)
-                _logger.Info($"Starting to load indexes from record");
-
-            Dictionary<string, string> indexesCustomPaths;
-
-            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var customPathsDoc = _documentDatabase.DocumentsStorage.Get(context, "Raven/CustomPaths");
-                if (customPathsDoc != null)
-                {
-                    var customPaths = JsonDeserializationServer.CustomIndexPaths(customPathsDoc.Data);
-                    indexesCustomPaths = customPaths.Paths;
-                }
-                else
-                    indexesCustomPaths = new Dictionary<string, string>();
-            }
+                _logger.Info("Starting to load indexes from record");
 
             List<Exception> exceptions = null;
             if (_documentDatabase.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)
                 exceptions = new List<Exception>();
-
 
             // delete all unrecognized index directories
             //foreach (var indexDirectory in new DirectoryInfo(path.FullPath).GetDirectories().Concat(indexesCustomPaths.Values.SelectMany(x => new DirectoryInfo(x).GetDirectories())))

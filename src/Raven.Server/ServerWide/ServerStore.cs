@@ -74,6 +74,8 @@ namespace Raven.Server.ServerWide
         public readonly NotificationCenter.NotificationCenter NotificationCenter;
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
+        public readonly SecretProtection Secrets;
+        
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -102,6 +104,8 @@ namespace Raven.Server.ServerWide
             FeedbackSender = new FeedbackSender();
 
             DatabaseInfoCache = new DatabaseInfoCache();
+
+            Secrets = new SecretProtection(configuration.Security);
 
             _frequencyToCheckForIdleDatabases = Configuration.Databases.FrequencyToCheckForIdle.AsTimeSpan;
 
@@ -255,7 +259,7 @@ namespace Raven.Server.ServerWide
 
                     try
                     {
-                        options.MasterKey = SecretProtection.Unprotect(secret, entropy);
+                        options.MasterKey = Secrets.Unprotect(secret, entropy);
                     }
                     catch (Exception e)
                     {
@@ -572,8 +576,8 @@ namespace Raven.Server.ServerWide
             bool cloneKey = false)
         {
             Debug.Assert(context.Transaction != null);
-            if (secretKey.Length != 256 / 8 && secretKey.Length != 512 / 8)
-                throw new ArgumentException($"Key size must be 256 bits or 512 bits, but was {secretKey.Length * 8}", nameof(secretKey));
+            if (secretKey.Length != 256 / 8)
+                throw new ArgumentException($"Key size must be 256 bits, but was {secretKey.Length * 8}", nameof(secretKey));
 
             byte[] key;
             if (cloneKey)
@@ -631,7 +635,7 @@ namespace Raven.Server.ServerWide
 
                     var entropy = Sodium.GenerateRandomBuffer(256);
 
-                    var protectedData = SecretProtection.Protect(hash, entropy);
+                    var protectedData = Secrets.Protect(hash, entropy);
 
                     var ms = new MemoryStream();
                     ms.Write(entropy, 0, entropy.Length);
@@ -649,7 +653,7 @@ namespace Raven.Server.ServerWide
         }
 
 
-        public static unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
+        public unsafe byte[] GetSecretKey(TransactionOperationContext context, string name)
         {
             Debug.Assert(context.Transaction != null);
 
@@ -666,7 +670,7 @@ namespace Raven.Server.ServerWide
             var protectedData = new byte[reader.Length - entropy.Length];
             reader.Read(protectedData, 0, protectedData.Length);
 
-            var data = SecretProtection.Unprotect(protectedData, entropy);
+            var data = Secrets.Unprotect(protectedData, entropy);
 
             var hashLen = Sodium.crypto_generichash_bytes_max();
 

@@ -6,11 +6,15 @@ import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import addNodeToDatabaseGroupCommand = require("commands/database/dbGroup/addNodeToDatabaseGroupCommand");
 import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
+import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
+import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
     currentDatabaseInfo = ko.observable<databaseInfo>();
     selectedClusterNode = ko.observable<string>();
+
+    private graph = new databaseGroupGraph();
 
     nodeTag = clusterTopologyManager.default.localNodeTag;
     nodes: KnockoutComputed<databaseGroupNode[]>;
@@ -52,26 +56,43 @@ class manageDatabaseGroup extends viewModelBase {
         super.activate(args);
 
         this.addNotification(this.changesContext.serverNotifications()
-            .watchAllDatabaseChanges((e: Raven.Server.NotificationCenter.Notifications.Server.DatabaseChanged) => this.fetchDatabaseInfo()));
-        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.fetchDatabaseInfo()));
+            .watchAllDatabaseChanges(() => this.refresh()));
+        this.addNotification(this.changesContext.serverNotifications().watchReconnect(() => this.refresh()));
 
-        return this.fetchDatabaseInfo();
+        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
 
+    compositionComplete(): void {
+        super.compositionComplete();
+
+        this.graph.init($("#databaseGroupGraphContainer"));
+    }
+
+    refresh() {
+        return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
+    }
+    
     private fetchDatabaseInfo() {
         return new getDatabaseCommand(this.activeDatabase().name)
             .execute()
-            .done(dbInfo => this.onDatabaseInfoFetched(dbInfo));
+            .done(dbInfo => {
+                this.graph.onDatabaseInfoChanged(dbInfo);
+                this.onDatabaseInfoFetched(dbInfo);
+            });
+    }
+
+    private fetchOngoingTasks(): JQueryPromise<Raven.Server.Web.System.OngoingTasksResult> {
+        const db = this.activeDatabase();
+        return new ongoingTasksCommand(db)
+            .execute()
+            .done((info) => {
+                this.graph.onTasksChanged(info);
+            });
     }
 
     private onDatabaseInfoFetched(dbInfoDto: Raven.Client.Server.Operations.DatabaseInfo) {
         const dbInfo = new databaseInfo(dbInfoDto);
         this.currentDatabaseInfo(dbInfo);
-    }
-
-    //TODO: remove in future - use live view instead
-    refresh() {
-        this.fetchDatabaseInfo();
     }
 
     addNode() {

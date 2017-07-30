@@ -74,7 +74,7 @@ class editSqlReplication extends viewModelBase {
 
             //TODO: long popover?
         };
-        $('body').popover(popOverSettings);
+        $('body').popover(popOverSettings); //TODO: use popoverUtils.longWithHover
         $('form :input[name="ravenEntityName"]').on("keypress", (e) => e.which != 13);
     }
 

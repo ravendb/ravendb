@@ -28,7 +28,7 @@ using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
-    public class DatabasesHandler : RequestHandler
+    public sealed class DatabasesHandler : RequestHandler
     {
         [RavenAction("/databases", "GET", AuthorizationStatus.ValidUser)]
         public Task Databases()
@@ -88,7 +88,6 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 using (var dbBlit = ServerStore.Cluster.Read(context, dbId, out long _))
                 {
-
                     if (TryGetAllowedDbs(name, out var _, requireAdmin:false) == false)
                         return Task.CompletedTask;
                     

@@ -3,6 +3,7 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import eventsCollector = require("common/eventsCollector");
+import popoverUtils = require("common/popoverUtils");
 
 class statusDebugIndexFields extends viewModelBase {
     editor: AceAjax.Editor;
@@ -21,13 +22,11 @@ class statusDebugIndexFields extends viewModelBase {
 
     attached() {
         super.attached();
-        $("#indexDefLabel").popover({
-            //TODO: long popover?
-            html: true,
-            trigger: 'hover',
-            container: '.form-horizontal',
-            content: 'Enter index definition and click <kbd>Show index fields</kbd>.<br /> Example:<pre><span class="token keyword">from</span> doc <span class="token keyword">in</span> docs <span class="toekn keyword">select new</span> { Id = doc.Id }</pre>',
-        });
+        popoverUtils.longWithHover($("#indexDefLabel"),
+            {
+                container: '.form-horizontal',
+                content: 'Enter index definition and click <kbd>Show index fields</kbd>.<br /> Example:<pre><span class="token keyword">from</span> doc <span class="token keyword">in</span> docs <span class="toekn keyword">select new</span> { Id = doc.Id }</pre>',
+            });
     }
 
     compositionComplete() {

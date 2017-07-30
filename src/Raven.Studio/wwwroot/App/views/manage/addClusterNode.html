@@ -10,10 +10,16 @@
             <div class="panel">
                 <div class="flex-form">
                     <div class="panel-body" data-bind="with: model">
-                        <div class="form-group" data-bind="validationElement: serverUrl">
+                        <div class="form-group">
                             <label for="url" class="control-label">URL</label>
                             <div class="flex-grow">
-                                <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url">
+                                <div data-bind="validationElement: serverUrl">
+                                    <input autocomplete="off" type="text" class="form-control" data-bind="textInput: serverUrl" id="url" placeholder="Enter server url"> 
+                                </div>
+                                <div class="toggle">
+                                    <input id="toggleWatcher" type="checkbox" data-bind="checked: addAsWatcher"/> 
+                                    <label for="toggleWatcher"><small>Add node as Watcher</small></label>
+                                </div>
                             </div>
                         </div>
                         <div class="flex-horizontal">

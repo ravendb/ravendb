@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.Config;
+using Raven.Server.Config.Categories;
 using Raven.Server.ServerWide;
 using Xunit;
 
@@ -7,10 +8,13 @@ namespace FastTests.Issues
 {
     public class RavenDB_7329 : NoDisposalNeeded
     {
+        private const string FakeCertPath = "C:\\fake\\cert\\path.crt";
+
         [Fact]
         public void GivenZerosInServerUrlShouldUseMachineNameForNodeUrl()
         {
-            var config = GetConfiguration(serverUrl: "http://0.0.0.0:8080");
+            var config = GetConfiguration(serverUrl: "http://0.0.0.0:8080",
+                unsecuredAccessAddressRange: nameof(UnsecuredAccessAddressRange.PublicNetwork));
             var result = config.Core.GetNodeHttpServerUrl("http://localhost:8080");
             Assert.Equal($"http://{Environment.MachineName}:8080".ToLowerInvariant(), result);
         }
@@ -28,7 +32,8 @@ namespace FastTests.Issues
         {
             var config = GetConfiguration(
                 serverUrl: "http://0.0.0.0:8080",
-                publicServerUrl: "http://live-test.ravendb.net:80");
+                publicServerUrl: "http://live-test.ravendb.net:80",
+                unsecuredAccessAddressRange: nameof(UnsecuredAccessAddressRange.PublicNetwork));
             var result = config.Core.GetNodeHttpServerUrl("http://localhost:8080");
             Assert.Equal($"http://live-test.ravendb.net:80".ToLowerInvariant(), result);
         }
@@ -36,7 +41,9 @@ namespace FastTests.Issues
         [Fact]
         public void GivenPortZeroInTcpServerUrlShouldTakeItFromArg()
         {
-            var config = GetConfiguration(serverUrl: "http://0.0.0.0:8080");
+            var config = GetConfiguration(
+                serverUrl: "http://0.0.0.0:8080", 
+                unsecuredAccessAddressRange: nameof(UnsecuredAccessAddressRange.PublicNetwork));
             var result = config.Core.GetNodeTcpServerUrl("http://localhost:8080", 38888);
             Assert.Equal($"tcp://{Environment.MachineName}:38888".ToLowerInvariant(), result);
         }
@@ -60,6 +67,23 @@ namespace FastTests.Issues
             catch (ArgumentException argException)
             {
                 Assert.Equal($"Invalid host value in {RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)} configuration option: 0.0.0.0", argException.Message);
+            }
+        }
+
+        [Fact]
+        public void PublicUrlShouldHaveSameSchemeAsBindingOne()
+        {
+            try
+            {
+                GetConfiguration(
+                    publicServerUrl: "http://localhost:8080", 
+                    serverUrl: "https://localhost:8080", 
+                    certPath: FakeCertPath);
+                throw new Exception("Configuration should have been validated.");
+            }
+            catch (ArgumentException argException)
+            {
+                Assert.Contains( "ServerUrl and PublicServerUrl schemes do not match:", argException.Message);
             }
         }
 
@@ -109,12 +133,12 @@ namespace FastTests.Issues
         [Fact]
         public void UrlSchemeShouldPassThrough()
         {
-            var config = GetConfiguration(serverUrl: "https://localhost:8080");
+            var config = GetConfiguration(serverUrl: "https://localhost:8080", certPath: FakeCertPath);
             var result = config.Core.GetNodeHttpServerUrl("https://localhost:8080");
             Assert.Equal($"https://localhost:8080".ToLowerInvariant(), result);
         }
 
-        public RavenConfiguration GetConfiguration(string publicServerUrl = null, string publicTcpServerUrl = null, string serverUrl = null, string tcpServerUrl = null)
+        public RavenConfiguration GetConfiguration(string publicServerUrl = null, string publicTcpServerUrl = null, string serverUrl = null, string tcpServerUrl = null, string certPath = null, string unsecuredAccessAddressRange = nameof(UnsecuredAccessAddressRange.Local))
         {
             var configuration = new RavenConfiguration(null, ResourceType.Server);
             configuration.SetSetting(
@@ -125,6 +149,10 @@ namespace FastTests.Issues
                 RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl), publicTcpServerUrl);
             configuration.SetSetting(
                 RavenConfiguration.GetKey(x => x.Core.TcpServerUrl), tcpServerUrl);
+            configuration.SetSetting(
+                RavenConfiguration.GetKey(x => x.Security.CertificatePath), certPath);
+            configuration.SetSetting(
+                RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed), unsecuredAccessAddressRange);
             configuration.Initialize();
 
             return configuration;

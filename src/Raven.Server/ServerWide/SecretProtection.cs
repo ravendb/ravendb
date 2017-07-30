@@ -3,26 +3,61 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
+using System.Security.Cryptography.X509Certificates;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
+using Raven.Client;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collation.Cultures;
+using Raven.Server.Exceptions;
 using Sparrow;
+using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Voron.Platform.Posix;
+using OpenFlags = Voron.Platform.Posix.OpenFlags;
 
 namespace Raven.Server.ServerWide
 {
-    public static unsafe class SecretProtection
+    public unsafe class SecretProtection
     {
-        private static readonly Lazy<byte[]> PosixMasterKey = new Lazy<byte[]>(() =>
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Secrets");
+        private readonly Lazy<byte[]> _serverMasterKey;
+        private readonly SecurityConfiguration _config;
+        private const int KeySize = 512; // sector size
+
+        public SecretProtection(SecurityConfiguration config)
         {
-            var dirpath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".ravendb");
-            dirpath = Path.GetFullPath(dirpath);
-            var filepath = Path.Combine(dirpath, "secret.key");
-            const int keySize = 512; // sector size
-            var buffer = new byte[keySize];
-            fixed (byte* pBuf = buffer)
+            _config = config;
+            _serverMasterKey = new Lazy<byte[]>(LoadMasterKey);
+        }
+
+        private byte[] LoadMasterKey()
+        {
+            var debug = "<unknown>";
+            try
             {
-                try
+                if (_config.MasterKeyExec != null)
+                {
+                    debug = _config.CertificateExec + " " + _config.CertificateExecArguments;
+                    return LoadMasterKeyWithExecutable();
+                }
+
+                if (_config.MasterKeyPath != null)
+                {
+                    debug = _config.MasterKeyPath;
+                    return LoadMasterKeyFromPath();
+                }
+
+                if (PlatformDetails.RunningOnPosix == false)
+                    return null;
+
+                var dirpath = Path.Combine(Environment.GetEnvironmentVariable("HOME"), ".ravendb");
+                dirpath = Path.GetFullPath(dirpath);
+                var filepath = Path.Combine(dirpath, "secret.key");
+                debug = filepath;
+                var buffer = new byte[KeySize];
+                fixed (byte* pBuf = buffer)
                 {
                     if (Directory.Exists(dirpath) == false)
                         Directory.CreateDirectory(dirpath);
@@ -51,13 +86,13 @@ namespace Raven.Server.ServerWide
                             Syscall.ThrowLastError(err, $"could not get size of {filepath}");
                         }
 
-                        if (size == keySize)
+                        if (size == KeySize)
                         {
                             byte* pos = pBuf;
                             long amountRead = 0;
-                            while (amountRead < keySize)
+                            while (amountRead < KeySize)
                             {
-                                var read = Syscall.pread(fd, pos, (ulong)(keySize - amountRead), amountRead);
+                                var read = Syscall.pread(fd, pos, (ulong)(KeySize - amountRead), amountRead);
                                 pos += read;
                                 if (read < 0)
                                 {
@@ -68,13 +103,13 @@ namespace Raven.Server.ServerWide
                                     break;
                                 amountRead += read;
                             }
-                            if (amountRead != keySize)
-                                throw new FileLoadException($"Failed to read the full key size from {filepath}, expected to read {keySize} but go only {amountRead}");
+                            if (amountRead != KeySize)
+                                throw new FileLoadException($"Failed to read the full key size from {filepath}, expected to read {KeySize} but go only {amountRead}");
                         }
                         else // we assume that if the size isn't a key size, then it was never valid and regenerate the key
                         {
-                            Sodium.randombytes_buf(pBuf, (UIntPtr)keySize);
-                          
+                            Sodium.randombytes_buf(pBuf, (UIntPtr)KeySize);
+
                             if (Syscall.ftruncate(fd, IntPtr.Zero) != 0)
                             {
                                 var err = Marshal.GetLastWin32Error();
@@ -87,8 +122,8 @@ namespace Raven.Server.ServerWide
                                 Syscall.ThrowLastError(err, $"Failed to seek to beginning of {filepath}");
                             }
 
-                            var writeAmount = Syscall.write(fd, pBuf, keySize);
-                            if (writeAmount != keySize)
+                            var writeAmount = Syscall.write(fd, pBuf, KeySize);
+                            if (writeAmount != KeySize)
                             {
                                 var err = Marshal.GetLastWin32Error();
                                 Syscall.ThrowLastError(err, $"Failed to write {buffer.Length} bytes into {filepath}, only wrote {writeAmount}");
@@ -113,23 +148,22 @@ namespace Raven.Server.ServerWide
                     }
                     return buffer;
                 }
-                catch (Exception e)
-                {
-                    throw new CryptographicException(
-                        $"Unable to open the master secret key at {filepath}, won't proceed because losing this key will lose access to all user encrypted information. Admin assistance required.",
-                        e);
-                }
             }
+            catch (Exception e)
+            {
+                throw new CryptographicException(
+                    $"Unable to open the master secret key ({debug}), won't proceed because losing this key will lose access to all user encrypted information. Admin assistance required.",
+                    e);
+            }
+        }
 
-        });
-
-        public static byte[] Protect(byte[] secret, byte[] entropy)
+        public byte[] Protect(byte[] secret, byte[] entropy)
         {
-            if (PlatformDetails.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
                 return ProtectedData.Protect(secret, entropy, DataProtectionScope.CurrentUser);
 
             var protectedData = new byte[secret.Length + Sodium.crypto_aead_chacha20poly1305_ABYTES()];
-            var key = PosixMasterKey.Value;
+            var key = _serverMasterKey.Value;
 
             if (entropy.Length < 8)
                 throw new InvalidOperationException($"The provided entropy is too small. Should be at least 8 bytes but was {entropy.Length} bytes");
@@ -160,12 +194,13 @@ namespace Raven.Server.ServerWide
             return protectedData;
         }
 
-        public static byte[] Unprotect(byte[] secret, byte[] entropy)
+        public byte[] Unprotect(byte[] secret, byte[] entropy)
         {
-            if (PlatformDetails.RunningOnPosix == false)
+            if (PlatformDetails.RunningOnPosix == false && _config.MasterKeyExec == null && _config.MasterKeyPath == null)
                 return ProtectedData.Unprotect(secret, entropy, DataProtectionScope.CurrentUser);
+
             var unprotectedData = new byte[secret.Length - Sodium.crypto_aead_chacha20poly1305_ABYTES()];
-            var key = PosixMasterKey.Value;
+            var key = _serverMasterKey.Value;
 
             if (entropy.Length < 8)
                 throw new InvalidOperationException($"The provided entropy is too small. Should be at least 8 bytes but was {entropy.Length} bytes");
@@ -194,6 +229,280 @@ namespace Raven.Server.ServerWide
                     throw new InvalidOperationException($"Unable to unprotect secret, rc={rc}");
             }
             return unprotectedData;
+        }
+
+        public RavenServer.CertificateHolder LoadCertificateWithExecutable()
+        {
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _config.CertificateExec,
+                    Arguments = _config.CertificateExecArguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                process.Start();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}. Failed to start process.", e);
+            }
+
+            var ms = new MemoryStream();
+            var readErrors = process.StandardError.ReadToEndAsync();
+            var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+
+            string GetStdError()
+            {
+                try
+                {
+                    return readErrors.Result;
+                }
+                catch 
+                {
+                    return "Unable to get stderr";
+                }
+            }
+            
+            if (process.WaitForExit(_config.CertificateExecTimeout) == false)
+            {
+                process.Kill();
+                throw new InvalidOperationException($"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+            }
+            try
+            {
+                readStdOut.Wait(_config.CertificateExecTimeout);
+                readErrors.Wait(_config.CertificateExecTimeout);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}",
+                    e);
+
+            }
+
+            if (Logger.IsOperationsEnabled)
+            {
+                var errors = GetStdError();
+                Logger.Operations(string.Format($"Executing {_config.CertificateExec} {_config.CertificateExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms"));
+                if (!string.IsNullOrWhiteSpace(errors))
+                    Logger.Operations(string.Format($"Executing {_config.CertificateExec} {_config.CertificateExecArguments} finished with exit code: {process.ExitCode}. Errors: {errors}"));
+            }
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to get certificate by executing {_config.CertificateExec} {_config.CertificateExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+            }
+
+            var rawData = ms.ToArray();
+            X509Certificate2 loadedCertificate;
+            AsymmetricKeyEntry privateKey;
+            try
+            {
+                loadedCertificate = new X509Certificate2(rawData);
+                ValidateExpiration(_config.CertificateExec, loadedCertificate);
+                ValidatePrivateKey(_config.CertificateExec, null, rawData, out  privateKey);
+                ValidateKeyUsages(_config.CertificateExec, loadedCertificate);
+
+            }
+            catch (Exception e)
+            {         
+                throw new InvalidOperationException($"Got invalid certificate via {_config.CertificateExec} {_config.CertificateExecArguments}", e);
+            }
+        
+            return new RavenServer.CertificateHolder
+            {
+                Certificate = loadedCertificate,
+                CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                PrivateKey = privateKey
+            };
+        }
+
+        private byte[] LoadMasterKeyWithExecutable()
+        {
+            const int keySize = 512;
+
+            var process = new Process
+            {
+                StartInfo = new ProcessStartInfo
+                {
+                    FileName = _config.MasterKeyExec,
+                    Arguments = _config.MasterKeyExecArguments,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true
+                }
+            };
+
+            var sw = Stopwatch.StartNew();
+
+            try
+            {
+                process.Start();
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}. Failed to start process.", e);
+            }
+
+            var ms = new MemoryStream();
+            var readErrors = process.StandardError.ReadToEndAsync();
+            var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+
+            string GetStdError()
+            {
+                try
+                {
+                   return readErrors.Result;
+                }
+                catch
+                {
+                    return "Unable to get stdout";
+                }
+            }
+            
+            if (process.WaitForExit(_config.MasterKeyExecTimeout) == false)
+            {
+                process.Kill();
+               
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+            }
+            try
+            {
+                readStdOut.Wait(_config.MasterKeyExecTimeout);
+                readErrors.Wait(_config.MasterKeyExecTimeout);
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, waited for {_config.MasterKeyExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
+            }
+
+            if (Logger.IsOperationsEnabled)
+            {
+                var errors = GetStdError();
+                Logger.Operations(string.Format($"Executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments} took {sw.ElapsedMilliseconds:#,#;;0} ms. Stderr: {errors}"));
+            }
+
+            if (process.ExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Unable to get master key by executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the exit code was {process.ExitCode}. Stderr: {GetStdError()}");
+            }
+
+            var rawData = ms.ToArray();
+
+            if (rawData.Length * 8 != keySize)
+            {
+                throw new InvalidOperationException(
+                    $"Got wrong master key after executing {_config.MasterKeyExec} {_config.MasterKeyExecArguments}, the size of the key must be {keySize} bits, but was {rawData.Length * 8} bits.");
+            }
+
+            return rawData;
+        }
+
+        public RavenServer.CertificateHolder LoadCertificateFromPath(string certificatePath = null, string certificatePassword = null)
+        {
+            var path = certificatePath ?? _config.CertificatePath;
+            var password = certificatePassword ?? _config.CertificatePassword;
+            try
+            {
+                var rawData = File.ReadAllBytes(path);
+
+                var loadedCertificate = password == null
+                    ? new X509Certificate2(rawData)
+                    : new X509Certificate2(rawData, password);
+
+                ValidateExpiration(path, loadedCertificate);
+
+                ValidatePrivateKey(path, password, rawData, out var privateKey);
+
+                ValidateKeyUsages(path, loadedCertificate);
+
+                return new RavenServer.CertificateHolder
+                {
+                    Certificate = loadedCertificate,
+                    CertificateForClients = Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)),
+                    PrivateKey = privateKey
+                };
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Could not load certificate file {path}", e);
+            }
+        }
+
+        public byte[] LoadMasterKeyFromPath()
+        {
+            try
+            {
+                var key = File.ReadAllBytes(_config.MasterKeyPath);
+
+                if (key.Length * 8 != KeySize)
+                {
+                    throw new InvalidOperationException(
+                        $"The size of the key must be {KeySize} bits, but was {key.Length * 8} bits.");
+                }
+                return key;
+            }
+            catch (Exception e)
+            {
+                throw new CryptographicException(
+                    $"Unable to open the master secret key at {_config.MasterKeyPath}, won't proceed because losing this key will lose access to all user encrypted information. Admin assistance required.",
+                    e);
+            }
+        }
+
+        private static void ValidateExpiration(string source, X509Certificate2 loadedCertificate)
+        {
+            if (loadedCertificate.NotAfter < DateTime.UtcNow)
+                throw new EncryptionException($"The provided certificate {loadedCertificate.FriendlyName} from {source} is expired! " + loadedCertificate);
+        }
+
+        private static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk)
+        {
+            var store = new Pkcs12Store();
+            store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
+            pk = null;
+            foreach (string alias in store.Aliases)
+            {
+                pk = store.GetKey(alias);
+                if (pk != null)
+                    break;
+            }
+
+            if (pk == null)
+                throw new EncryptionException("Unable to find the private key in the provided certificate from " + source);
+        }
+
+        private static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate)
+        {
+            var supported = false;
+            foreach (var extension in loadedCertificate.Extensions)
+            {
+                if (extension.Oid.Value != "2.5.29.37") //Enhanced Key Usage extension
+                    continue;
+
+                var extensionString = new AsnEncodedData(extension.Oid, extension.RawData).Format(false);
+
+                supported = extensionString.Contains("1.3.6.1.5.5.7.3.2") &&
+                            extensionString.Contains("1.3.6.1.5.5.7.3.1"); // Client Authentication & Server Authentication
+            }
+
+            if (supported == false)
+                throw new EncryptionException("Server certificate " + loadedCertificate.FriendlyName + "from " + source +
+                                              " must be defined with the following 'Enhanced Key Usages': Client Authentication (Oid 1.3.6.1.5.5.7.3.2) & Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
         }
     }
 }

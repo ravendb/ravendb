@@ -5,8 +5,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Revisions;
 using Raven.Server.NotificationCenter.Notifications;
@@ -728,6 +726,18 @@ namespace Raven.Server.Documents.Revisions
 
             deletedRevisionKey = new Slice(SliceOptions.Key, keyMem);
             return scope;
+        }
+
+        public Document GetRevision(DocumentsOperationContext context, string changeVector)
+        {
+            var table = new Table(DocsSchema, context.Transaction.InnerTransaction);
+
+            using (Slice.From(context.Allocator, changeVector, out var cv))
+            {
+                if (table.ReadByKey(cv, out TableValueReader tvr) == false)
+                    return null;
+                return TableValueToRevision(context, ref tvr);
+            }
         }
 
         public IEnumerable<Document> GetRevisionsFrom(DocumentsOperationContext context, long etag, int take)

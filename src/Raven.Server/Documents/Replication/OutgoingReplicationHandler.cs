@@ -545,8 +545,7 @@ namespace Raven.Server.Documents.Replication
                         ThrowConnectionClosed();
                     }
 
-                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document,
-                        allowNotify: false);
+                    var replicationBatchReply = HandleServerResponse(replicationBatchReplyMessage.Document, allowNotify: false);
                     if (replicationBatchReply == null)
                         continue;
 

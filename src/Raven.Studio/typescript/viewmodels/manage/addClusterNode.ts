@@ -1,11 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import addNodeToClusterCommand = require("commands/database/cluster/addNodeToClusterCommand");
-import removeNodeFromClusterCommand = require("commands/database/cluster/removeNodeFromClusterCommand");
-import leaderStepDownCommand = require("commands/database/cluster/leaderStepDownCommand");
-
-import clusterNode = require("models/database/cluster/clusterNode");
-import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import router = require("plugins/router");
 import appUrl = require("common/appUrl");
 import addClusterNodeModel = require("models/database/cluster/addClusterNodeModel");
@@ -37,7 +32,7 @@ class addClusterNode extends viewModelBase {
 
             this.spinners.save(true);
 
-            new addNodeToClusterCommand(this.model.serverUrl())
+            new addNodeToClusterCommand(this.model.serverUrl(), this.model.addAsWatcher())
                 .execute()
                 .done(() => this.goToClusterView())
                 .always(() => this.spinners.save(false));

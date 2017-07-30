@@ -17,12 +17,12 @@ class getOngoingTaskInfoCommand extends commandBase {
 
     private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult | Raven.Client.Documents.Subscriptions.SubscriptionState> {
 
-        const url = endpoints.global.ongoingTasks.task;
+        const url = endpoints.databases.ongoingTasks.task;
      
-        const args = this.taskName ? { name: this.db.name, key: this.taskId, type: this.taskType, taskName: this.taskName } :
-                                     { name: this.db.name, key: this.taskId, type: this.taskType };
+        const args = this.taskName ? { key: this.taskId, type: this.taskType, taskName: this.taskName } :
+                                     { key: this.taskId, type: this.taskType };
      
-        return this.query<any>(url, args);
+        return this.query<any>(url, args, this.db);
     }
 }
 

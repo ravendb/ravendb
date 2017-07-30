@@ -14,7 +14,12 @@ class testClusterNodeConnectionCommand extends commandBase {
         const url = endpoints.global.testConnection.adminTestConnection + this.urlEncodeArgs(args);
 
         return this.post(url, null)
-            .fail((response: JQueryXHR) => this.reportError(`Failed to test connection`, response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError(`Failed to test connection`, response.responseText, response.statusText))
+            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+                if (!result.Success) {
+                    this.reportError(`Failed to test connection`, result.Error);
+                }
+            });
     }
 }
 

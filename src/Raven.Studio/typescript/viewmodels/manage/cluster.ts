@@ -117,7 +117,7 @@ class cluster extends viewModelBase {
     }
 
     deleteNode(node: clusterNode) {
-        this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Delete"])
+        this.confirmationMessage("Are you sure?", `Do you want to remove ${node.serverUrl()} from cluster?`, ["Cancel", "Remove"])
             .done(result => {
                 if (result.can) {
                     this.spinners.delete.push(node.tag());

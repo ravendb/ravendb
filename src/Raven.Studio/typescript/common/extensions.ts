@@ -44,13 +44,13 @@ class extensions {
 
     private static configureValidation() {
 
-        //Validate that url is in the following format: http(s)://hostName:portNumber (e.g. http://localhost:8081)
+        //Validate that url is in the following format: http(s)://hostName (e.g. http://localhost)
         (ko.validation.rules as any)['validUrl'] = {
             validator: (url: string) => {
-                const urlRegex = /^(https?:\/\/)([^\s]+)\:([0-9]{1,5})$/; // allow any char, exclude white space
+                const urlRegex = /^(https?:\/\/)([^\s]+)$/; // allow any char, exclude white space
                 return (urlRegex.test(url));
             },
-            message: "Url format expected: 'http(s)://hostName:portNumber'"
+            message: "Url format expected: 'http(s)://hostName'"
         };  
 
         (ko.validation.rules as any)['validDatabaseName'] = {
