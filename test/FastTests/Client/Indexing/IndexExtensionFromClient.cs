@@ -11,7 +11,7 @@ namespace FastTests.Client.Indexing
     public class IndexExtensionFromClient : RavenTestBase
     {
         [Fact]
-        public async Task CanCompileIndexWithExtensions()
+        public void CanCompileIndexWithExtensions()
         {
             using (var store = GetDocumentStore())
             {

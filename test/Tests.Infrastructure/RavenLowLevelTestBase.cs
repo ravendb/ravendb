@@ -72,9 +72,16 @@ namespace FastTests
                 var doc = MultiDatabase.CreateDatabaseDocument(name);
                 doc.Settings = configuration;
 
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
+                var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
 
-                return AsyncHelpers.RunSync(() => GetDatabase(name));
+                try
+                {
+                    return AsyncHelpers.RunSync(() => GetDatabase(name));
+                }
+                catch (Exception e)
+                {
+                    throw new InvalidOperationException("Database record was created with " + result.RaftCommandIndex + " " + result.Key, e);
+                }
             }
         }
 

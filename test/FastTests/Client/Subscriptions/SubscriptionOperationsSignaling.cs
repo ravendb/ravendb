@@ -166,8 +166,6 @@ namespace FastTests.Client.Subscriptions
                 Assert.Throws(typeof(AggregateException), () => subscriptionLifetimeTask.Wait(_reasonableWaitTime));
 
                 Assert.True(subscriptionLifetimeTask.IsFaulted);
-
-                Assert.Equal(typeof(SubscriptionDoesNotExistException), subscriptionLifetimeTask.Exception.InnerException.GetType());
             }
         }
 

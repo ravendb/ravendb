@@ -1,6 +1,7 @@
 using System;
 using SlowTests.Server.Replication;
 using Sparrow.Logging;
+using System.Threading.Tasks;
 
 namespace Tryouts
 {
@@ -17,21 +18,24 @@ namespace Tryouts
                 Console.WriteLine(i);
                 Logger.Info("Program: " + i);
 
-                using (var test = new SlowTests.Server.Replication.ReplicationSpecialCases())
+                Parallel.For(0, 10, a =>
                 {
-                    try
+                    using (var test = new FastTests.Client.Subscriptions.SubscriptionOperationsSignaling())
                     {
-                        test.NonIdenticalContentConflict().Wait();
+                        try
+                        {
+                            test.WaitOnSubscriptionTaskWhenSubscriptionIsDeleted();
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                            Console.Beep();
+                            Console.Beep();
+                            Console.Beep();
+                            return;
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.Beep();
-                        Console.Beep();
-                        Console.Beep();
-                        return;
-                    }
-                }
+                });
             }
         }
     }
