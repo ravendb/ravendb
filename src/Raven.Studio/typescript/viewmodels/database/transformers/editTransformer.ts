@@ -162,14 +162,11 @@ class editTransformer extends viewModelBase {
     }
 
     private addTransformerHelpPopover() {
-        $("#transform-title small").popover({
-            html: true,
-            container: "body",
-            template: popoverUtils.longPopoverTemplate,
-            trigger: "hover",
-            content: 'The Transform function allows you to change the shape<br /> of individual result documents before the server returns them. <br />It uses C# LINQ query syntax. <br />' +
+        popoverUtils.longWithHover($("#transform-title small"),
+            {
+                content: 'The Transform function allows you to change the shape<br /> of individual result documents before the server returns them. <br />It uses C# LINQ query syntax. <br />' +
                 'Example: <pre><span class="token keyword">from</span> result <span class="token keyword">in</span> results <br/> <span class="token keyword">let</span> category = LoadDocument(result.Category) <br/> <span class="token keyword">select new</span> { <br/>    result.Name, <br/>    result.PricePerUnit, <br/>    Category = category.Name, <br/>    CategoryDescription = category.Description <br/>}</pre>',
-        });
+            });
     }
 
     private editExistingTransformer(transformerName: string): JQueryPromise<Raven.Client.Documents.Transformers.TransformerDefinition> {

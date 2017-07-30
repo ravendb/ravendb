@@ -436,27 +436,20 @@ class patch extends viewModelBase {
             "});",
             (Prism.languages as any).javascript);
 
-        $(".query-label small").popover({
-            html: true,
-            trigger: "hover",
-            template: popoverUtils.longPopoverTemplate,
-            container: 'body',
+        popoverUtils.longWithHover($(".query-label small"), {
             content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
 
-        $(".patch-title small").popover({
-            html: true,
-            trigger: "hover",
-            container: "body",
-            template: popoverUtils.longPopoverTemplate,
-            content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>` 
-            + `<p>You can use following functions in your patch script:</p>`
-            + `<ul>`
-            + `<li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>`
-            + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
-            + `<li><code>output(message)</code> - allows to output debug info when testing patches</li>`
-            + `</ul>`
-        });
+        popoverUtils.longWithHover($(".patch-title small"),
+            {
+                content: `<p>Patch Scripts are written in JavaScript. <br />Examples: <pre>${jsCode}</pre></p>`
+                + `<p>You can use following functions in your patch script:</p>`
+                + `<ul>`
+                + `<li><code>PutDocument(documentId, document)</code> - puts document with given name and data</li>`
+                + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
+                + `<li><code>output(message)</code> - allows to output debug info when testing patches</li>`
+                + `</ul>`
+            });
     }
 
     compositionComplete() {

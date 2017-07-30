@@ -53,17 +53,14 @@ class editPeriodicBackupTask extends viewModelBase {
     }
 
     addS3Popover() {
-        $("#s3-info").popover({
-            html: true,
-            trigger: 'hover',
-            template: popoverUtils.longPopoverTemplate,
-            container: "body",
-            content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/>' +
+        popoverUtils.longWithHover($("#s3-info"),
+            {
+                content: 'Maps project the fields to search on or to group by. It uses LINQ query syntax.<br/>' +
                 'Example:</br><pre><span class="token keyword">from</span> order <span class="token keyword">in</span>' +
                 ' docs.Orders<br/><span class="token keyword">where</span> order.IsShipped<br/>' +
                 '<span class="token keyword">select new</span><br/>{</br>   order.Date, <br/>   order.Amount,<br/>' +
                 '   RegionId = order.Region.Id <br />}</pre>Each map function should project the same set of fields.'
-        });
+            });
     }
 
     savePeriodicBackup() {

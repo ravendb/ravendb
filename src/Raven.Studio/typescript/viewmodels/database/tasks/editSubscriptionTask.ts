@@ -92,18 +92,15 @@ class editSubscriptionTask extends viewModelBase {
             "   }\r\n" + 
             "};",
             (Prism.languages as any).javascript);
-            
-         $("#scriptInfo").popover({
-            html: true,
-            trigger: "hover",
-            container: "body",
-            template: popoverUtils.longPopoverTemplate,
-            content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
+
+        popoverUtils.longWithHover($("#scriptInfo"),
+            {
+                content: `<p>Subscription Scripts are written in JavaScript. <br />Example: <pre>${jsCode}</pre></p>`
                 + `<p>You can use following functions in your patch script:</p>`
                 + `<ul>`
                 + `<li><code>LoadDocument(documentIdToLoad)</code> - loads document by id`
                 + `</ul>`
-        });
+            });
     }
 
     compositionComplete() {

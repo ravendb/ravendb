@@ -121,20 +121,19 @@ class importDatabase extends viewModelBase {
 
     attached() {
         super.attached();
-        $(".scriptPopover").popover({
-            html: true,
-            trigger: "hover",
-            template: popoverUtils.longPopoverTemplate,
-            container: "body",
-            content:
-            "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
-            "<pre><span class=\"token keyword\">function </span>transform(doc) " +
-            "{<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-            "<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
-            "<span class=\"token keyword\">return null</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
-            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
-            "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
-        });
+
+        popoverUtils.longWithHover($(".scriptPopover"),
+            {
+                content:
+                "<div class=\"text-center\">Transform scripts are written in JavaScript </div>" +
+                "<pre><span class=\"token keyword\">function </span>transform(doc) " +
+                "{<br/>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">var</span> id = doc['@metadata']['@id'];<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+                "<span class=\"token keyword\">if</span> (id === 'orders/999')<br />&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" +
+                "<span class=\"token keyword\">return null</span>; <span class=\"token comment\">// filter-out</span><br /><br />" +
+                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">this</span>.Freight = <span class=\"token number\">15.3</span>;<br />" +
+                "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class=\"token keyword\">return</span> doc;<br />}</pre>"
+            });
+        
         this.updateHelpLink("YD9M1R");
     }
 

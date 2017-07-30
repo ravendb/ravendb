@@ -44,13 +44,11 @@ class customFunctionsEditor extends viewModelBase {
 
     attached() {
         super.attached();
-        $("#customFunctionsExample").popover({
-            html: true,
-            template: popoverUtils.longPopoverTemplate,
-            trigger: "click",
-            content: "Custom functions can be used in:" +
+        popoverUtils.longWithHover($("#customFunctionsExample"),
+            {
+                content: "Custom functions can be used in:" +
                 "<ul><li>patches</li><li>custom column bindings on document grids</li> </ul><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
-        });
+            });
     }
 
     detached() {
