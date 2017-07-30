@@ -17,33 +17,6 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.statusStorageReport
         }),
         /* TODO
-        new intermediateMenuItem('Storage', [
-            new leafMenuItem({
-                route: 'databases/status/storage',
-                moduleId: 'viewmodels/database/status/storage/statusStorageOnDisk',
-                title: 'On disk',
-                tooltip: "Shows disk usage for active database",
-                nav: accessHelper.isGlobalAdmin(),
-                dynamicHash: appUrls.statusStorageOnDisk
-            }),
-            new leafMenuItem({
-                route: 'databases/status/storage/storageBreakdown',
-                moduleId: 'viewmodels/database/status/storage/statusStorageBreakdown',
-                title: 'Internal storage Breakdown',
-                tooltip: "Shows detailed information about internal storage breakdown",
-                nav: accessHelper.isGlobalAdmin(),
-                dynamicHash: appUrls.statusStorageBreakdown
-            }),
-            new leafMenuItem({
-                route: 'databases/status/storage/collections',
-                moduleId: 'viewmodels/database/status/storage/statusStorageCollections',
-                title: 'Collections storage',
-                tooltip: "Shows document counts (VERY SLOW)",
-                nav: true,
-                dynamicHash: appUrls.statusStorageCollections
-            })
-        ], 'icon-plus'),*/
-        /* TODO
         new intermediateMenuItem('Debug', [
             new leafMenuItem({
                 route: 'databases/status/debug',
@@ -240,15 +213,8 @@ function getStatsMenuItem(appUrls: computedAppUrls) {
             nav: false,
             css: 'icon-debug',
             dynamicHash: appUrls.statusDebug
-        }),
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/status/storage*details',
-            moduleId: 'viewmodels/database/status/storage/statusStorage',
-            title: 'Storage',
-            nav: false,
-            dynamicHash: appUrls.statusStorageOnDisk
-        }),*/
+        })
+       
     ];
 
     return new intermediateMenuItem("Stats", items, "icon-stats");

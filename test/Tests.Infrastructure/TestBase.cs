@@ -28,6 +28,8 @@ namespace FastTests
 {
     public abstract class TestBase : LinuxRaceConditionWorkAround, IDisposable, IAsyncLifetime
     {
+        private static int _counter;
+
         private const string XunitConfigurationFile = "xunit.runner.json";
 
         private const string ServerName = "Raven.Tests.Core.Server";
@@ -93,6 +95,15 @@ namespace FastTests
             ConcurrentTestsSemaphore = new SemaphoreSlim(maxNumberOfConcurrentTests, maxNumberOfConcurrentTests);
         }
 
+        protected string GetDatabaseName([CallerMemberName] string caller = null)
+        {
+            //if (caller != null && caller.Contains(".ctor"))
+            //    throw new InvalidOperationException($"Usage of '{nameof(GetDocumentStore)}' without explicit '{nameof(caller)}' parameter is forbidden from inside constructor.");
+
+            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
+            return name;
+        }
+
         public void DoNotReuseServer(IDictionary<string, string> customSettings = null)
         {
             _customServerSettings = customSettings;
@@ -127,6 +138,7 @@ namespace FastTests
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
             if (database == null)
             {
+                // Throw and get more info why database is null
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 {
                     context.OpenReadTransaction();

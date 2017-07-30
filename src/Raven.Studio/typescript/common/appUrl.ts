@@ -99,12 +99,7 @@ class appUrl {
 
         subscriptions: ko.pureComputed(() => appUrl.forSubscriptions(appUrl.currentDatabase())),
 
-        statusStorageStats: ko.pureComputed(() => appUrl.forStatusStorageStats(appUrl.currentDatabase())),
-        statusStorageOnDisk: ko.pureComputed(() => appUrl.forStatusStorageOnDisk(appUrl.currentDatabase())),
-        statusStorageBreakdown: ko.pureComputed(() => appUrl.forStatusStorageBreakdown(appUrl.currentDatabase())),
-        statusStorageCollections: ko.pureComputed(() => appUrl.forStatusStorageCollections(appUrl.currentDatabase())),
         statusStorageReport: ko.pureComputed(() => appUrl.forStatusStorageReport(appUrl.currentDatabase())),
-
         isAreaActive: (routeRoot: string) => ko.pureComputed(() => appUrl.checkIsAreaActive(routeRoot)),
         isActive: (routeTitle: string) => ko.pureComputed(() => router.navigationModel().find(m => m.isActive() && m.title === routeTitle) != null),
         databasesManagement: ko.pureComputed(() => appUrl.forDatabases()),
@@ -335,22 +330,6 @@ class appUrl {
 
     static forSubscriptions(db: database | databaseInfo): string {
         return '#databases/status/subscriptions?' + appUrl.getEncodedDbPart(db); 
-    }
-
-    static forStatusStorageOnDisk(db: database | databaseInfo): string {
-        return '#databases/status/storage?' + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusStorageStats(db: database | databaseInfo): string {
-        return '#databases/status/storage/stats?' + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusStorageBreakdown(db: database | databaseInfo): string {
-        return '#databases/status/storage/storageBreakdown?' + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusStorageCollections(db: database | databaseInfo): string {
-        return '#databases/status/storage/collections?' + appUrl.getEncodedDbPart(db);
     }
 
     static forStatusStorageReport(db: database | databaseInfo): string {

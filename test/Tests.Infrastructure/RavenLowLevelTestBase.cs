@@ -31,8 +31,6 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
-        private static int _counter;
-
         protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db)
         {
             var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory);
@@ -46,7 +44,7 @@ namespace FastTests
 
         protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory2 = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
-            var name = caller != null ? $"{caller}_{Interlocked.Increment(ref _counter)}" : Guid.NewGuid().ToString("N");
+            var name = GetDatabaseName(caller);
 
             _databases.Add(name);
 

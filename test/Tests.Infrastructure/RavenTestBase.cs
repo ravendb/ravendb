@@ -35,8 +35,6 @@ namespace FastTests
 {
     public class RavenTestBase : TestBase
     {
-        private static int _counter;
-
         protected readonly ConcurrentSet<DocumentStore> CreatedStores = new ConcurrentSet<DocumentStore>();
 
         protected virtual Task<DocumentDatabase> GetDocumentDatabaseInstanceFor(IDocumentStore store)
@@ -101,15 +99,11 @@ namespace FastTests
         {
             try
             {
-                if (caller != null && caller.Contains(".ctor"))
-                    throw new InvalidOperationException($"Usage of '{nameof(GetDocumentStore)}' without explicit '{nameof(caller)}' parameter is forbidden from inside constructor.");
 
                 lock (_getDocumentStoreSync)
                 {
                     defaultServer = defaultServer ?? Server;
-                    var name = caller != null
-                        ? $"{caller}_{Interlocked.Increment(ref _counter)}"
-                        : Guid.NewGuid().ToString("N");
+                    var name = GetDatabaseName(caller);
 
                     if (dbSuffixIdentifier != null)
                         name = $"{name}_{dbSuffixIdentifier}";
@@ -534,11 +528,6 @@ namespace FastTests
                 DoNotReuseServer(customSettings);
 
             return serverCertPath;
-        }
-
-        protected string GetDatabaseName([CallerMemberName]string name = null)
-        {
-            return name + "_" + Interlocked.Increment(ref _counter);
         }
     }
 }
