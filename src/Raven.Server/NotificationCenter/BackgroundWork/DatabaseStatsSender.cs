@@ -62,6 +62,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
                 current = new Stats
                 {
+                    CountOfConflicts = _database.DocumentsStorage.ConflictsStorage.GetCountOfDocumentsConflicts(context),
                     CountOfDocuments = _database.DocumentsStorage.GetNumberOfDocuments(context),
                     CountOfIndexes = indexes.Count,
                     CountOfStaleIndexes = staleIndexes,
@@ -78,7 +79,7 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
             var modifiedCollections = _latest == null ? current.Collections.Values.ToList() : ExtractModifiedCollections(current);
 
-            _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfDocuments, current.CountOfIndexes,
+            _notificationCenter.Add(DatabaseStatsChanged.Create(current.CountOfConflicts, current.CountOfDocuments, current.CountOfIndexes,
                 current.CountOfStaleIndexes, current.GlobalChangeVector, current.LastEtag, current.CountOfIndexingErrors, lastIndexingErrorTime, modifiedCollections));
 
             _latest = current;
@@ -117,6 +118,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
 
         private class Stats
         {
+            public long CountOfConflicts;
+
             public long CountOfDocuments;
 
             public long LastEtag;
@@ -135,7 +138,8 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
             {
                 if (ReferenceEquals(null, other)) return false;
                 if (ReferenceEquals(this, other)) return true;
-                return CountOfDocuments == other.CountOfDocuments &&
+                return CountOfConflicts == other.CountOfConflicts &&
+                       CountOfDocuments == other.CountOfDocuments &&
                        CountOfIndexes == other.CountOfIndexes &&
                        CountOfIndexingErrors == other.CountOfIndexingErrors &&
                        LastEtag == other.LastEtag &&

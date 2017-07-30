@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Documents;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications
@@ -15,6 +14,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         public override string Id { get; } = string.Empty;
 
         public long CountOfDocuments { get; private set; }
+
+        public long CountOfConflicts { get; private set; }
 
         public long CountOfIndexes { get; private set; }
 
@@ -34,6 +35,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         {
             var json = base.ToJson();
 
+            json[nameof(CountOfConflicts)] = CountOfConflicts;
             json[nameof(CountOfDocuments)] = CountOfDocuments;
             json[nameof(CountOfIndexes)] = CountOfIndexes;
             json[nameof(CountOfStaleIndexes)] = CountOfStaleIndexes;
@@ -46,9 +48,8 @@ namespace Raven.Server.NotificationCenter.Notifications
             return json;
         }
 
-        public static DatabaseStatsChanged Create(long countOfDocs, int countOfIndexes, int countOfStaleIndexes, string globalChangeVector,
-            long lastEtag, long countOfIndexingErrors, DateTime? lastIndexingErrorTime, 
-            List<ModifiedCollection> modifiedCollections)
+        public static DatabaseStatsChanged Create(long countOfConflicts, long countOfDocs, int countOfIndexes, int countOfStaleIndexes, string globalChangeVector,
+            long lastEtag, long countOfIndexingErrors, DateTime? lastIndexingErrorTime, List<ModifiedCollection> modifiedCollections)
         {
             return new DatabaseStatsChanged
             {
@@ -57,6 +58,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 Message = null,
                 Severity = NotificationSeverity.Info,
                 CountOfDocuments = countOfDocs,
+                CountOfConflicts = countOfConflicts,
                 LastEtag = lastEtag,
                 GlobalChangeVector = globalChangeVector,
                 CountOfIndexingErrors = countOfIndexingErrors,
