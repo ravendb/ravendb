@@ -44,13 +44,11 @@ class databaseNode extends layoutable {
 class taskNode extends layoutable {
     static readonly maxWidth = 250;
     static readonly minWidth = 130;
-    static readonly charWidthApproximation = 7; //TODO: use measure text!
     static readonly textLeftPadding = 45;
     
     type: Raven.Client.Server.Operations.OngoingTaskType;
     taskId: number;
     name: string;
-    nameOnUI: string;
     state: Raven.Client.Server.Operations.OngoingTaskState;
 
     responsibleNode: databaseNode;
@@ -70,19 +68,17 @@ class taskNode extends layoutable {
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
         this.name = dto.TaskName;
-        this.nameOnUI = viewHelpers.maybeTrim(this.name, taskNode.maxWidth - taskNode.textLeftPadding, taskNode.charWidthApproximation);
         this.responsibleNode = responsibleNode;
-    }
-
-    computeIdealWidth() {
-        const widthWoConstraints = taskNode.textLeftPadding + taskNode.charWidthApproximation * this.nameOnUI.length;
-        return _.clamp(widthWoConstraints, taskNode.minWidth, taskNode.maxWidth);
     }
 
     getId() {
         return `t_${this.type}_${this.taskId}`;
     }
     
+}
+
+interface taskNodeWithCache extends taskNode {
+    trimmedName: string;
 }
 
 //TODO: introduce taskgroupnode
@@ -204,7 +200,6 @@ class databaseGroupGraph {
                 n.x = n.responsibleNode.x * 2;
                 n.y = n.responsibleNode.y * 2;
             }
-            n.width = n.computeIdealWidth();
             n.height = 40;
             n.number = idx + dbNodes.length;
         });
@@ -294,6 +289,9 @@ class databaseGroupGraph {
             .attr("opacity", 1);
 
         enteringTaskNodes
+            .append("title");
+        
+        enteringTaskNodes
             .append("rect")
             .attr("class", "node-bg")
             .call(this.d3cola.drag); 
@@ -336,6 +334,20 @@ class databaseGroupGraph {
 
         const nodes = ([] as cola.Node[]).concat(this.data.databaseNodes, this.data.tasks);
 
+        this.tasksContainer
+            .selectAll(".task-node")
+            .select(".task-name")
+            .text(x => x.name)
+            .call(selection => {
+                selection.each(function (x: taskNodeWithCache) {
+// ReSharper disable once SuspiciousThisUsage
+                    const textNode = this as SVGTextElement;
+                    const trimmed = graphHelper.trimText(x.name, l => textNode.getSubStringLength(0, l), taskNode.minWidth - taskNode.textLeftPadding, taskNode.maxWidth - taskNode.textLeftPadding, 10);
+                    x.width = trimmed.containerWidth + taskNode.textLeftPadding; // add some extra padding
+                    x.trimmedName = trimmed.text;
+                });
+            });
+        
         this.d3cola
             .nodes(nodes)
             .linkDistance(x => x.length)
@@ -443,7 +455,7 @@ class databaseGroupGraph {
 
     private updateTaskNodes(selection: d3.Selection<taskNode>) {
         selection
-            .attr("class", x => "task-node " + x.type);
+            .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
             switch (node.type) {
@@ -461,7 +473,9 @@ class databaseGroupGraph {
             return "";
         };
 
-        //TODO: state
+        selection
+            .select("title")
+            .text(x => x.name);
         
         selection
             .select(".node-bg")
@@ -469,12 +483,12 @@ class databaseGroupGraph {
             .attr("height", x => x.height);
 
         selection
-            .select(".task-name")
-            .text(x => x.nameOnUI);
-
-        selection
             .select(".task-desc")
             .text(x => x.type);
+
+        selection
+            .select(".task-name")
+            .text((x: taskNodeWithCache) => x.trimmedName);
         
         selection
             .select(".task-icon")
@@ -485,7 +499,8 @@ class databaseGroupGraph {
     }
 
     private updateEdges(selection: d3.Selection<cola.Link<cola.Node>>) {
-        //TODO: update type - up/down etc.
+        selection.attr("class", x => "edge " + ((x.target instanceof taskNode) ? x.target.state : " "));
+        
         selection
             .attr("x1", x => x.source.x)
             .attr("y1", x => x.source.y)

@@ -45,7 +45,7 @@ class sqlReplications extends viewModelBase {
             return true;
         });
 
-        this.searchText.extend({ throttle: 200 }).subscribe(() => this.filterSqlReplications());
+        this.searchText.throttle(200).subscribe(() => this.filterSqlReplications());
 
         this.summary = ko.computed(() => {
             var summary = "";

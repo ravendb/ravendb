@@ -5,17 +5,6 @@ import confirmationDialog = require("viewmodels/common/confirmationDialog");
 
 class viewHelpers {
 
-    static maybeTrim(input: string, maxWidth: number, charApproxWidth: number) {
-        const totalApproxWidth = input.length * charApproxWidth;
-        if (totalApproxWidth < maxWidth) {
-            return input;
-        }
-
-        const charactersToTake = Math.floor(maxWidth / charApproxWidth) - 3;
-        return input.substring(0, charactersToTake) + "...";
-        
-    }
-    
     static confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
 

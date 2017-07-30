@@ -29,6 +29,47 @@ class graphHelper {
         return input.substr(0, approxCharactersToTake);
     }
 
+    static trimText(input: string, lengthProvider: (numberOfCharacters: number) => number, minWidth: number, maxWidth: number, extraPadding: number = 0): { text: string, containerWidth: number } {
+        const totalWidth = lengthProvider(input.length);
+        if (totalWidth + extraPadding < minWidth) {
+            return {
+                containerWidth: minWidth,
+                text: input
+            };
+        }
+
+        if (totalWidth + extraPadding < maxWidth) {
+            return {
+                containerWidth: totalWidth + extraPadding,
+                text: input
+            };
+        }
+
+        // text is too long - we have to trim
+
+        const ellipsisWidthApprox = lengthProvider(3);
+        let lengthToFit = input.length;
+
+        while (lengthToFit > 0) {
+            lengthToFit--;
+
+            const trimmedLength = lengthProvider(lengthToFit);
+            const containerWidth = trimmedLength + ellipsisWidthApprox + extraPadding;
+            if (containerWidth < maxWidth) {
+                return {
+                    text: input.substring(0, lengthToFit) + "...",
+                    containerWidth: containerWidth
+                }
+            }
+        }
+
+        // fallback
+        return {
+            containerWidth: minWidth,
+            text: ""
+        };
+    }
+    
     static drawScroll(ctx: CanvasRenderingContext2D, scrollLocation: { left: number, top: number }, topScrollOffset: number, visibleHeight: number, totalHeight: number) {
         if (visibleHeight > totalHeight) {
             // don't draw scrollbar
@@ -302,6 +343,8 @@ class graphHelper {
         }
         
     }
+
+    
 }
 
 export = graphHelper;
