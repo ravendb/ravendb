@@ -27,7 +27,6 @@ namespace RachisTests
         {
             var clusterSize = 3;
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
-            CreateDatabaseResult databaseResult;
             var replicationFactor = 2;
             var databaseName = "test";
             using (var store = new DocumentStore()
@@ -37,7 +36,7 @@ namespace RachisTests
             }.Initialize())
             {
                 var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-                databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
+                var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 int numberOfInstances = 0;
                 await AssertNumberOfNodesContainingDatabase(databaseResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);

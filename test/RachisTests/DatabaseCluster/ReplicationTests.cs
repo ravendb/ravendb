@@ -38,8 +38,8 @@ namespace RachisTests.DatabaseCluster
                 }, defaultServer: leader);
             }
 
-            CreateDatabaseResult databaseResult;
-            using (var store = new DocumentStore()
+            DatabasePutResult databaseResult;
+            using (var store = new DocumentStore
             {
                 Urls = leader.WebUrls,
                 Database = databaseName,

@@ -155,7 +155,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
-                        [nameof(DatabasePutResult.Key)] = name,
+                        [nameof(DatabasePutResult.Name)] = name,
                         [nameof(DatabasePutResult.Topology)] = databaseRecord.Topology.ToJson()
                     });
                     writer.Flush();
@@ -231,7 +231,7 @@ namespace Raven.Server.Web.System
                     context.Write(writer, new DynamicJsonValue
                     {
                         [nameof(DatabasePutResult.RaftCommandIndex)] = newIndex,
-                        [nameof(DatabasePutResult.Key)] = name,
+                        [nameof(DatabasePutResult.Name)] = name,
                         [nameof(DatabasePutResult.Topology)] = topology.ToJson(),
                         [nameof(DatabasePutResult.NodesAddedTo)] = nodeUrlsAddedTo
                     });

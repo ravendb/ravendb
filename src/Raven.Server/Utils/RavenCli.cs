@@ -643,7 +643,7 @@ namespace Raven.Server.Utils
                 var doc = MultiDatabase.CreateDatabaseDocument(args[0]);
                 doc.Settings["DataDir"] = args[1];
                 var res = store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc)).Result;
-                WriteText("Database creation results = " + res.Key, TextColor, cli);
+                WriteText("Database creation results = " + res.Name, TextColor, cli);
             }
             return true;
         }

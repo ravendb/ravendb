@@ -78,7 +78,7 @@ namespace FastTests
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException("Database record was created with " + result.RaftCommandIndex + " " + result.Key, e);
+                    throw new InvalidOperationException("Database record was created with " + result.RaftCommandIndex + " " + result.Name, e);
                 }
             }
         }

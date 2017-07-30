@@ -67,7 +67,7 @@ namespace Tests.Infrastructure
             await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(5));
         }
 
-        protected static CreateDatabaseResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
+        protected static DatabasePutResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
             var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
             var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
@@ -451,7 +451,7 @@ namespace Tests.Infrastructure
 
         public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(DatabaseRecord record, int replicationFactor, string leadersUrl)
         {
-            CreateDatabaseResult databaseResult;
+            DatabasePutResult databaseResult;
             using (var store = new DocumentStore()
             {
                 Urls = new[] { leadersUrl },

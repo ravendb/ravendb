@@ -155,7 +155,7 @@ namespace FastTests
                             }
                         }
 
-                        CreateDatabaseResult result;
+                        DatabasePutResult result;
 
                         if (userCertificate != null)
                         {
@@ -175,7 +175,7 @@ namespace FastTests
                         }
 
                         Assert.True(result.RaftCommandIndex > 0); //sanity check             
-                        store.Urls = result.NodesAddedTo;
+                        store.Urls = result.NodesAddedTo.ToArray();
                         var timeout = TimeSpan.FromMinutes(Debugger.IsAttached ? 5 : 1);
                         var task = WaitForRaftIndexToBeAppliedInCluster(result.RaftCommandIndex, timeout);
                         task.ConfigureAwait(false).GetAwaiter().GetResult();

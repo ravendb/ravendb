@@ -9,7 +9,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class CreateDatabaseOperation : IServerOperation<CreateDatabaseResult>
+    public class CreateDatabaseOperation : IServerOperation<DatabasePutResult>
     {
         private readonly DatabaseRecord _databaseRecord;
         private readonly int _replicationFactor;
@@ -21,12 +21,12 @@ namespace Raven.Client.Server.Operations
             _replicationFactor = replicationFactor;
         }
 
-        public RavenCommand<CreateDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new CreateDatabaseCommand(conventions, context, _databaseRecord, this);
         }
 
-        private class CreateDatabaseCommand : RavenCommand<CreateDatabaseResult>
+        private class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
         {
             private readonly JsonOperationContext _context;
             private readonly CreateDatabaseOperation _createDatabaseOperation;
@@ -70,7 +70,7 @@ namespace Raven.Client.Server.Operations
                 if (response == null)
                     ThrowInvalidResponse();
 
-                Result = JsonDeserializationClient.CreateDatabaseResult(response);
+                Result = JsonDeserializationClient.DatabasePutResult(response);
             }
 
             public override bool IsReadRequest => false;
