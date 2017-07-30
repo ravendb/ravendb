@@ -7,7 +7,6 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Server.Operations.Certificates;
-using Raven.Server.Config;
 using Sparrow.Json;
 using Xunit;
 
