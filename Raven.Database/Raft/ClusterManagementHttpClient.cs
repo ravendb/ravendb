@@ -59,7 +59,8 @@ namespace Raven.Database.Raft
                 var dispose = (IDisposable)GetConnection(info, out client);
                 return Tuple.Create(dispose, client);
             },
-            CancellationToken.None)
+            CancellationToken.None,
+                raftEngine.GetLogger())
             {
                 UnauthorizedResponseAsyncHandler = HandleUnauthorizedResponseAsync,
                 ForbiddenResponseAsyncHandler = HandleForbiddenResponseAsync

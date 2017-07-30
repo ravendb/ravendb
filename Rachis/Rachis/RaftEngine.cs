@@ -1003,6 +1003,11 @@ namespace Rachis
                 StateMachine.Danger__SetLastApplied(postion);
             }
         }
+
+        public ILog GetLogger()
+        {
+            return _log;
+        }
     }
 
     public class ProposingCandidacyResult : EventArgs
