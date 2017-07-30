@@ -229,7 +229,8 @@ namespace Raven.Server.Documents
                         var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
                         try
                         {
-                                result = ExecutePendingOperationsInTransaction(pendingOps, context, null, ref transactionMeter);
+                            result = ExecutePendingOperationsInTransaction(pendingOps, context, null, ref transactionMeter);
+                            UpdateGlobalReplicationInfoBeforeCommit(context);
                         }
                         finally
                         {
@@ -255,7 +256,6 @@ namespace Raven.Server.Documents
                         case PendingOperations.ModifiedSystemDocuments:
                             try
                             {
-                                UpdateGlobalReplicationInfoBeforeCommit(context);
                                 tx.Commit();
                                 tx.Dispose();
                             }
@@ -385,7 +385,6 @@ namespace Raven.Server.Documents
                             case PendingOperations.ModifiedSystemDocuments:
                                 try
                                 {
-                                    UpdateGlobalReplicationInfoBeforeCommit(context);
                                     context.Transaction.Commit();
                                     context.Transaction.Dispose();
                                 }
@@ -420,7 +419,7 @@ namespace Raven.Server.Documents
                 previous.Dispose();
             }
         }
-       
+
         private void CompletePreviousTransaction(
             RavenTransaction previous,
             ref List<MergedTransactionCommand> previousPendingOps,
@@ -477,7 +476,7 @@ namespace Raven.Server.Documents
                 MergedTransactionCommand op;
                 if (TryGetNextOperation(previousOperation, out op, ref meter) == false)
                     break;
-             
+
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));
@@ -574,13 +573,13 @@ namespace Raven.Server.Documents
         private PendingOperations GetPendingOperationsStatus(DocumentsOperationContext context, bool forceCompletion = false)
         {
             // this optimization is disabled for 32 bits
-            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager) 
+            if (sizeof(int) == IntPtr.Size || _parent.Configuration.Storage.ForceUsing32BitsPager)
                 return PendingOperations.CompletedAll;
 
             // This optimization is disabled when encryption is on	
-            if (context.Environment.Options.EncryptionEnabled) 
+            if (context.Environment.Options.EncryptionEnabled)
                 return PendingOperations.CompletedAll;
-                
+
             if (context.Transaction.ModifiedSystemDocuments)
                 // a transaction that modified system documents may cause us to 
                 // do certain actions (for example, initialize trees for versioning)
