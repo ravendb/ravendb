@@ -3,6 +3,7 @@
 import d3 = require("d3");
 import graphHelper = require("common/helpers/graph/graphHelper");
 import cola = require("cola");
+import viewHelpers = require("common/helpers/view/viewHelpers");
 
 
 abstract class layoutable {
@@ -41,9 +42,14 @@ class databaseNode extends layoutable {
 }
 
 class taskNode extends layoutable {
+    static readonly maxWidth = 250;
+    static readonly minWidth = 130;
+    static readonly textLeftPadding = 45;
+    
     type: Raven.Client.Server.Operations.OngoingTaskType;
     taskId: number;
     name: string;
+    state: Raven.Client.Server.Operations.OngoingTaskState;
 
     responsibleNode: databaseNode;
 
@@ -60,7 +66,7 @@ class taskNode extends layoutable {
     updateWith(dto: Raven.Server.Web.System.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
-        //TODO: add node status 
+        this.state = dto.TaskState;
         this.name = dto.TaskName;
         this.responsibleNode = responsibleNode;
     }
@@ -69,6 +75,10 @@ class taskNode extends layoutable {
         return `t_${this.type}_${this.taskId}`;
     }
     
+}
+
+interface taskNodeWithCache extends taskNode {
+    trimmedName: string;
 }
 
 //TODO: introduce taskgroupnode
@@ -132,7 +142,6 @@ class databaseGroupGraph {
             .style("pointer-events", "all")
             .call(this.zoom);
 
-        //TODO: update scale after initial draw
         const tranform = this.svg.append("g")
             .attr("class", "zoom")
             .attr("transform", "translate(" + (this.width / 2) + "," + (this.height / 2) + ")scale(1)");
@@ -171,8 +180,6 @@ class databaseGroupGraph {
 
     private layout(dbNodes: Array<databaseNode>, tasks: Array<taskNode>, links: Array<cola.Link<databaseNode | taskNode>>, canUpdatePositions: boolean) {
 
-        //TODO: review which items should be updated during small redraw
-        
         dbNodes.forEach((n, idx) => {
             n.width = 2 * databaseGroupGraph.circleRadius;
             n.height = 2 * databaseGroupGraph.circleRadius;
@@ -193,7 +200,6 @@ class databaseGroupGraph {
                 n.x = n.responsibleNode.x * 2;
                 n.y = n.responsibleNode.y * 2;
             }
-            n.width = 160; //TOOO dynamic  - approx. based on text length + ellipsis
             n.height = 40;
             n.number = idx + dbNodes.length;
         });
@@ -203,8 +209,10 @@ class databaseGroupGraph {
         links.forEach(link => {
             if (link.source instanceof databaseNode) {
                 if (link.target instanceof databaseNode) {
-                    //TODO: this doesn't respect min circle size
-                    link.length = databaseGroupGraph.minDistanceBetweenCirclesInDatabaseGroup;
+                    // formula for size length (a) based on circumscribed circle diameter (R)
+                    // for regular polygon edges count (n)
+                    // a = 2 * R * sin (Pi / n)
+                    link.length = 2 * radius * Math.sin(Math.PI / dbNodes.length);
                 } else {
                     const cacheKey = link.source.getId();
                     let currentValue = distanceCache.get(cacheKey) || 0;
@@ -232,8 +240,6 @@ class databaseGroupGraph {
 
         this.layout(this.data.databaseNodes, this.data.tasks, links, !this.colaInitialized);
 
-        //TODO instead of fixing positions of nodes try to set equality constraints
-        
         const dbNodes = this.dbNodesContainer
             .selectAll(".db-node")
             .data(this.data.databaseNodes, x => x.getId());
@@ -283,16 +289,17 @@ class databaseGroupGraph {
             .attr("opacity", 1);
 
         enteringTaskNodes
+            .append("title");
+        
+        enteringTaskNodes
             .append("rect")
             .attr("class", "node-bg")
-            .attr("width", x => x.width) //TODO: move to update ? 
-            .attr("height", x => x.height)
             .call(this.d3cola.drag); 
 
         enteringTaskNodes
             .append("text")
             .attr("class", "task-desc")
-            .attr("x", 47)
+            .attr("x", taskNode.textLeftPadding + 2)
             .attr("y", 35);
         
         enteringTaskNodes
@@ -303,9 +310,8 @@ class databaseGroupGraph {
 
         enteringTaskNodes.append("text")
             .attr("class", "task-name")
-            .text(x => x.name)
             .attr("y", 18)
-            .attr("x", 45);
+            .attr("x", taskNode.textLeftPadding);
 
         const edgeNodes = this.edgesContainer
             .selectAll(".edge")
@@ -328,12 +334,26 @@ class databaseGroupGraph {
 
         const nodes = ([] as cola.Node[]).concat(this.data.databaseNodes, this.data.tasks);
 
+        this.tasksContainer
+            .selectAll(".task-node")
+            .select(".task-name")
+            .text(x => x.name)
+            .call(selection => {
+                selection.each(function (x: taskNodeWithCache) {
+// ReSharper disable once SuspiciousThisUsage
+                    const textNode = this as SVGTextElement;
+                    const trimmed = graphHelper.trimText(x.name, l => textNode.getSubStringLength(0, l), taskNode.minWidth - taskNode.textLeftPadding, taskNode.maxWidth - taskNode.textLeftPadding, 10);
+                    x.width = trimmed.containerWidth + taskNode.textLeftPadding; // add some extra padding
+                    x.trimmedName = trimmed.text;
+                });
+            });
+        
         this.d3cola
             .nodes(nodes)
             .linkDistance(x => x.length)
             .links(links)
             .avoidOverlaps(false);
-        
+
         if (this.colaInitialized) {
             this.d3cola.start(0, 0, 0, 0, true);
             this.d3cola.alpha(2);
@@ -341,7 +361,6 @@ class databaseGroupGraph {
         } else {
             this.d3cola
                 .start(0, 0, 30, 0, true);
-            this.colaInitialized = true;
         }
 
         enteringDbNodes
@@ -352,6 +371,42 @@ class databaseGroupGraph {
 
         enteringLines
             .call(selection => this.updateEdges(selection));
+
+        if (!this.colaInitialized) {
+
+            this.zoom
+                .scale(this.calculateInitialScale());
+
+            this.svg
+                .select(".zoom")
+                .call(this.zoom.event);
+            this.colaInitialized = true;
+        }
+
+    }
+
+    private calculateInitialScale() {
+        const bbox = (this.svg
+            .select(".zoom")
+            .node() as SVGGraphicsElement)
+            .getBBox();
+
+        let scale = 1;
+        const percentagePadding = 0.1;
+
+        const maybeReduceScale = (actualSize: number, maxSize: number) => {
+            const maxSizeWithPadding = maxSize * (1.0 - percentagePadding);
+            if (Math.abs(actualSize) > maxSizeWithPadding) {
+                scale = Math.min(scale, maxSizeWithPadding / Math.abs(actualSize));
+            }
+        }
+
+        maybeReduceScale(bbox.x, this.width / 2);
+        maybeReduceScale(bbox.x + bbox.width, this.width / 2);
+        maybeReduceScale(bbox.y, this.height / 2);
+        maybeReduceScale(bbox.y + bbox.height, this.height / 2);
+        
+        return scale;
     }
 
     private findLinks(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
@@ -399,10 +454,8 @@ class databaseGroupGraph {
     }
 
     private updateTaskNodes(selection: d3.Selection<taskNode>) {
-
-        //TODO: update type  + width + state
         selection
-            .attr("class", x => "task-node " + x.type);
+            .attr("class", x => "task-node " + x.type + " " + x.state);
 
         const taskIcon = (node: taskNode) => {
             switch (node.type) {
@@ -421,12 +474,21 @@ class databaseGroupGraph {
         };
 
         selection
-            .select(".task-name")
-            .text(x => x.name); //TODO: maybe trim
+            .select("title")
+            .text(x => x.name);
+        
+        selection
+            .select(".node-bg")
+            .attr("width", x => x.width)
+            .attr("height", x => x.height);
 
         selection
             .select(".task-desc")
             .text(x => x.type);
+
+        selection
+            .select(".task-name")
+            .text((x: taskNodeWithCache) => x.trimmedName);
         
         selection
             .select(".task-icon")
@@ -437,7 +499,8 @@ class databaseGroupGraph {
     }
 
     private updateEdges(selection: d3.Selection<cola.Link<cola.Node>>) {
-        //TODO: update type - up/down etc.
+        selection.attr("class", x => "edge " + ((x.target instanceof taskNode) ? x.target.state : " "));
+        
         selection
             .attr("x1", x => x.source.x)
             .attr("y1", x => x.source.y)

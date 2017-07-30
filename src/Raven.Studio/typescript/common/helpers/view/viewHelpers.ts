@@ -4,6 +4,7 @@ import app = require("durandal/app");
 import confirmationDialog = require("viewmodels/common/confirmationDialog");
 
 class viewHelpers {
+
     static confirmationMessage(title: string, confirmationMessage: string, options: string[] = ["No", "Yes"], forceRejectWithResolve: boolean = false): JQueryPromise<confirmDialogResult> {
         const viewTask = $.Deferred<confirmDialogResult>();
 
