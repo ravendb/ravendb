@@ -334,15 +334,12 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("alt+c", () => this.focusOnQuery(), query.containerSelector);
         this.createKeyboardShortcut("alt+r", () => this.runQuery(), query.containerSelector); // Using keyboard shortcut here, rather than HTML's accesskey, so that we don't steal focus from the editor.
         */
-       
-        $(".query-title small").popover({
-            html: true,
-            trigger: "hover",
-            template: popoverUtils.longPopoverTemplate,
-            container: "body",
-            content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
-        });
 
+        popoverUtils.longWithHover($(".query-title small"),
+            {
+                content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
+            });
+       
         this.registerDisposableHandler($(window), "storage", () => this.loadRecentQueries());
     }
 
