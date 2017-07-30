@@ -1,6 +1,7 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import collectionMenuItem = require("common/shell/menu/collectionMenuItem");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 
 export = getDocumentsMenuItem;
 
@@ -49,7 +50,8 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
             route: "databases/documents/conflicts",
             moduleId: "viewmodels/database/conflicts/conflicts",
             css: 'icon-conflicts',
-            dynamicHash: appUrls.conflicts
+            dynamicHash: appUrls.conflicts,
+            badgeData: collectionsTracker.default.conflictsCount
         }),
         new leafMenuItem({
             route: "databases/edit",

@@ -14,6 +14,8 @@ class collectionsTracker {
 
     revisionsBin = ko.observable<collection>();
 
+    conflictsCount = ko.observable<number>();
+
     private db: database;
 
     private events = {
@@ -49,6 +51,8 @@ class collectionsTracker {
         //TODO: starred
         const allDocsCollection = collection.createAllDocumentsCollection(db, collectionsStats.numberOfDocuments());
         this.collections([allDocsCollection].concat(collections));
+
+        this.conflictsCount(collectionsStats.numberOfConflicts || null);
     }
 
     onDatabaseStatsChanged(notification: Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged, db: database) {
@@ -75,6 +79,8 @@ class collectionsTracker {
                 this.onCollectionCreated(c, db);
             }
         });
+        
+        this.conflictsCount(notification.CountOfConflicts || null);
     }
 
     getCollectionNames() {
