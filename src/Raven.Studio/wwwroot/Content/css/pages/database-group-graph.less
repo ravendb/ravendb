@@ -31,12 +31,13 @@
         .node-bg {
             fill: @db-group-task-node-bg;
             cursor: move;
+            stroke: #2b2b2b;
         }
 
         .task-desc {
             font-size: 12px;
             pointer-events: none;
-        } 
+        }
 
         .task-name {
             fill: @db-group-task-name-color;
@@ -67,12 +68,28 @@
         &.Subscription {
             fill: @subscription-color;
         }
+
+        &.Disabled {
+            .task-icon {
+                fill: grey;
+            }
+
+            .task-desc {
+                fill: grey;
+            }
+        }
     }
 
     .edges {
         line {
             stroke-width: 2px;
             stroke: @db-group-task-node-bg;
+            transition: .2s stroke ease-in-out;
+
+            &.Disabled {
+                stroke: @brand-warning;
+                stroke-dasharray: 3,3;
+            }
         }
     }
 }

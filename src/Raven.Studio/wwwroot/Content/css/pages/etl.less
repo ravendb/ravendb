@@ -130,16 +130,36 @@
             color: cyan;
         }
 
+        .task-rect {
+            width: 12px;
+            height: 12px;
+            margin-right: 10px;
+            display: inline-block;
+            vertical-align: middle;
+        }
+
         .external-replication {
             color: @external-replication-color;
+        }
+
+        .task-external-replication {
+            background-color: @external-replication-color;
         }
 
         .sql-etl {
             color: @sql-etl-color;
         }
 
+        .task-sql-etl {
+            background-color: @sql-etl-color;
+        }
+
         .subscriptions {
             color: @subscription-color;
+        }
+
+        .task-subscriptions {
+            background-color: @subscription-color;
         }
 
         .db-group-node {
@@ -149,8 +169,16 @@
             color: @ravendb-etl-color;
         }
 
+        .task-ravendb-etl {
+            background-color: @ravendb-etl-color;
+        }
+
         .periodic-backup {
             color: @backup-color;
+        }
+
+        .task-periodic-backup {
+            background-color: @backup-color;
         }
     }
 
@@ -244,6 +272,7 @@
             i {
                 top: 0;
             }
+
             position: relative;
         }
     }

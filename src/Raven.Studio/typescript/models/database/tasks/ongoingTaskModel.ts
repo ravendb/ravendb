@@ -20,7 +20,7 @@ abstract class ongoingTaskModel {
             }
 
             if (this.taskState() === "Disabled") {
-                return "state-danger";
+                return "state-warning";
             }
 
             if (this.taskState() === "PartiallyEnabled") {
