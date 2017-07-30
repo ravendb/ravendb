@@ -96,8 +96,7 @@ namespace Raven.Server.Documents
             {
                 // 2. Retrieve/Take meter items per environment file from the collection in dictionary
                 var listOfMeterItems = new List<IoMeterBuffer.MeterItem>();
-                IoMeterBuffer.MeterItem newItem;
-                while (envFile.Value.TryTake(out newItem))
+                while (envFile.Value.TryTake(out IoMeterBuffer.MeterItem newItem))
                 {
                     listOfMeterItems.Add(newItem);
                 }

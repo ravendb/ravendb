@@ -23,8 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         public object GetValue(string name, object target)
         {
-            Accessor accessor;
-            if (Properties.TryGetValue(name, out accessor))
+            if (Properties.TryGetValue(name, out Accessor accessor))
                 return accessor.GetValue(target);
 
             throw new InvalidOperationException(string.Format("The {0} property was not found", name));

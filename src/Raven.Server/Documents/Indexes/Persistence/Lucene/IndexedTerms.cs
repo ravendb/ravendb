@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     foreach (var reference in Keys)
                     {
-                        IndexReader target;
-                        if (reference.TryGetTarget(out target))
+                        if (reference.TryGetTarget(out IndexReader target))
                             TermsCachePerReader.Remove(target);
                     }
 
@@ -58,8 +57,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(indexName));
 
-            FieldCacheInfo info;
-            if (termsCachePerField.Results.TryGetValue(field, out info) && info.Done)
+            if (termsCachePerField.Results.TryGetValue(field, out FieldCacheInfo info) && info.Done)
                 return info.Results;
 
             info = termsCachePerField.Results.GetOrAdd(field, new FieldCacheInfo());

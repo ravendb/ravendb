@@ -6,8 +6,7 @@ namespace Raven.Server.Extensions
     {
         public static TVal GetOrAdd<TKey, TVal>(this IDictionary<TKey, TVal> self, TKey key) where TVal : new()
         {
-            TVal value;
-            if (self.TryGetValue(key, out value))
+            if (self.TryGetValue(key, out TVal value))
                 return value;
 
             value = new TVal();
@@ -17,8 +16,7 @@ namespace Raven.Server.Extensions
 
         public static TVal GetOrDefault<TKey, TVal>(this IDictionary<TKey, TVal> self, TKey key)
         {
-            TVal value;
-            self.TryGetValue(key, out value);
+            self.TryGetValue(key, out TVal value);
             return value;
         }
 
@@ -32,8 +30,7 @@ namespace Raven.Server.Extensions
 
             foreach (var v in x)
             {
-                TValue value;
-                if (y.TryGetValue(v.Key, out value) == false)
+                if (y.TryGetValue(v.Key, out TValue value) == false)
                     return false;
 
                 if (Equals(value, v.Value) == false)

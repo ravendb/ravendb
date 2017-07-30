@@ -97,8 +97,7 @@ namespace Raven.Server.Documents
                                 break;
                             }
 
-                            long v;
-                            if (tombstones.TryGetValue(tombstone.Key, out v) == false)
+                            if (tombstones.TryGetValue(tombstone.Key, out long v) == false)
                                 tombstones[tombstone.Key] = tombstone.Value;
                             else
                                 tombstones[tombstone.Key] = Math.Min(tombstone.Value, v);

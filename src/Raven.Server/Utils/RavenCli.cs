@@ -981,8 +981,7 @@ namespace Raven.Server.Utils
 
             Command cmd = Command.UnknownCommand;
             var txt = fromWord.ToLower();
-            Command outText;
-            if (Enum.TryParse(fromWord, true, out outText))
+            if (Enum.TryParse(fromWord, true, out Command outText))
                 return outText;
 
             switch (txt)

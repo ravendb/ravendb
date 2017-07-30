@@ -100,8 +100,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         var scoreDoc = search.ScoreDocs[position];
                         var document = _searcher.Doc(scoreDoc.Doc, _state);
 
-                        string key;
-                        if (retriever.TryGetKey(document, _state, out key) && scope.WillProbablyIncludeInResults(key) == false)
+                        if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                         {
                             skippedResults.Value++;
                             continue;
@@ -195,8 +194,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     var indexResult = intersectResults[i];
                     var document = _searcher.Doc(indexResult.LuceneId, _state);
 
-                    string key;
-                    if (retriever.TryGetKey(document, _state, out key) && scope.WillProbablyIncludeInResults(key) == false)
+                    if (retriever.TryGetKey(document, _state, out string key) && scope.WillProbablyIncludeInResults(key) == false)
                     {
                         skippedResults.Value++;
                         skippedResultsInCurrentLoop++;

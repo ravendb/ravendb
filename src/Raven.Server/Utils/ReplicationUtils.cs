@@ -13,9 +13,8 @@ namespace Raven.Server.Utils
     {
         public static TcpConnectionInfo GetTcpInfo(string url, string databaseName, string tag, X509Certificate2 certificate)
         {
-            JsonOperationContext context;
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate))
-            using (requestExecutor.ContextPool.AllocateOperationContext(out context))
+            using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var getTcpInfoCommand = new GetTcpInfoCommand(tag + "/" + databaseName);
                 requestExecutor.Execute(getTcpInfoCommand, context);

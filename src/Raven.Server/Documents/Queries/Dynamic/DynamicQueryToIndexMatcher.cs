@@ -70,8 +70,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     .GroupBy(x => x.MatchType)
                     .ToDictionary(x => x.Key, x => x.ToArray());
 
-            DynamicQueryMatchResult[] matchResults;
-            if (results.TryGetValue(DynamicQueryMatchType.Complete, out matchResults) && matchResults.Length > 0)
+            if (results.TryGetValue(DynamicQueryMatchType.Complete, out DynamicQueryMatchResult[] matchResults) && matchResults.Length > 0)
             {
                 var prioritizedResults = matchResults
                     .OrderByDescending(x => x.LastMappedEtag)
@@ -135,8 +134,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in query.MapFields)
             {
-                IndexField indexField;
-                if (definition.TryGetField(index.Type.IsAuto() ? field.Name : field.NormalizedName, out indexField))
+                if (definition.TryGetField(index.Type.IsAuto() ? field.Name : field.NormalizedName, out IndexField indexField))
                 {
                     if (string.IsNullOrWhiteSpace(indexField.Analyzer) == false)
                     {

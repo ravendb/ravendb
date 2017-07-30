@@ -37,8 +37,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                 if (Logger.IsInfoEnabled)
                     Logger.Info("Error occurred during sql replication connection test", ex);
 
-                JsonOperationContext context;
-                using (ContextPool.AllocateOperationContext(out context))
+                using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
@@ -57,8 +56,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
         [RavenAction("/databases/*/admin/etl/sql/simulate", "POST", AuthorizationStatus.DatabaseAdmin)]
         public Task PostSimulateSqlReplication()
         {
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 context.OpenReadTransaction();
 

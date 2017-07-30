@@ -122,8 +122,7 @@ namespace Raven.Server.Documents
 
         protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
         {
-            long totalCount;
-            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out totalCount);
+            Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount);
             return totalCount;
         }
 

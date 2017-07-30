@@ -92,8 +92,7 @@ namespace Raven.Server.Documents.Subscriptions
             return new DisposableAction(() => {
                 while (_recentConnections.Count > 10)
                 {
-                    SubscriptionConnection options;
-                    _recentConnections.TryDequeue(out options);
+                    _recentConnections.TryDequeue(out SubscriptionConnection options);
                 }
                 _recentConnections.Enqueue(incomingConnection);
                 ConnectionInUse.Set();
@@ -108,8 +107,7 @@ namespace Raven.Server.Documents.Subscriptions
 
             while (_rejectedConnections.Count > 10)
             {
-                SubscriptionConnection options;
-                _rejectedConnections.TryDequeue(out options);
+                _rejectedConnections.TryDequeue(out SubscriptionConnection options);
             }
             _rejectedConnections.Enqueue(connection);
         }

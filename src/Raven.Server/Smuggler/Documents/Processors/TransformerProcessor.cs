@@ -31,12 +31,10 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
         private static TransformerDefinition ReadLegacyTransformerDefinition(BlittableJsonReaderObject reader)
         {
-            string name;
-            if (reader.TryGet("name", out name) == false)
+            if (reader.TryGet("name", out string name) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
-            BlittableJsonReaderObject definition;
-            if (reader.TryGet("definition", out definition) == false)
+            if (reader.TryGet("definition", out BlittableJsonReaderObject definition) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
             var transformerDefinition = JsonDeserializationServer.TransformerDefinition(definition);

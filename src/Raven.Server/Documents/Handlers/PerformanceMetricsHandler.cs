@@ -31,8 +31,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/debug/perf-metrics", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task IoMetrics()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var result = GetPerformanceMetricsResponse(Database);

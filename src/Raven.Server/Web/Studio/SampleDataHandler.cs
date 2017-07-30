@@ -16,8 +16,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/sample-data", "POST", AuthorizationStatus.ValidUser)]
         public Task PostCreateSampleData()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 using (context.OpenReadTransaction())
                 {

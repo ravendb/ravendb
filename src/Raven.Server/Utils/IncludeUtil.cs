@@ -48,9 +48,7 @@ namespace Raven.Server.Utils
                 pathSegment = includePath;
             }
 
-            object value;
-            StringSegment leftPath;
-            if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out value, out leftPath) == false)
+            if (BlittableJsonTraverser.Default.TryRead(docReader, pathSegment, out object value, out StringSegment leftPath) == false)
             {
                 var json = value as BlittableJsonReaderObject;
                 if (json != null)

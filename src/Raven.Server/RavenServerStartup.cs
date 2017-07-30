@@ -98,8 +98,7 @@ namespace Raven.Server
             }
 
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-            JsonOperationContext ctx;
-            using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+            using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             using (var writer = new BlittableJsonTextWriter(ctx, context.Response.Body))
             {
                 writer.WriteStartObject();
@@ -200,8 +199,7 @@ namespace Raven.Server
 
                 MaybeSetExceptionStatusCode(response, e);
 
-                JsonOperationContext ctx;
-                using (_server.ServerStore.ContextPool.AllocateOperationContext(out ctx))
+                using (_server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 {
                     var djv = new DynamicJsonValue
                     {

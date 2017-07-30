@@ -38,8 +38,7 @@ namespace Raven.Server.Utils.Stats
             if (Scopes == null)
                 Scopes = new List<KeyValuePair<string, TStatsScope>>();
 
-            TStatsScope scope;
-            if (_scopes.TryGetValue(name, out scope) == false)
+            if (_scopes.TryGetValue(name, out TStatsScope scope) == false)
             {
                 var kvp = new KeyValuePair<string, TStatsScope>(name, OpenNewScope(_stats, start));
                 Scopes.Add(kvp);

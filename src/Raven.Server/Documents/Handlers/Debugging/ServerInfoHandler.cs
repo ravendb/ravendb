@@ -11,9 +11,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/debug/server-id", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task ServerId()
         {
-            JsonOperationContext context;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue

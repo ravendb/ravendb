@@ -46,8 +46,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public void Update(string action, string queryString, int numberOfResults, int pageSize, TimeSpan duration, DateTime occurrence)
         {
-            Queue<ActionDetails> details;
-            if (Actions.TryGetValue(action, out details) == false)
+            if (Actions.TryGetValue(action, out Queue<ActionDetails> details) == false)
                 Actions[action] = details = new Queue<ActionDetails>();
 
             details.Enqueue(new ActionDetails { Duration = duration, Occurrence = occurrence, NumberOfResults = numberOfResults, PageSize = pageSize, QueryString = queryString });

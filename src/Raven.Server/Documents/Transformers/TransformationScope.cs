@@ -55,8 +55,7 @@ namespace Raven.Server.Documents.Transformers
             {
                 var docsEnumerator = new TransformedDocsEnumerator(documents, _transformer.TransformResults);
 
-                IEnumerable transformedResults;
-                while (docsEnumerator.MoveNext(out transformedResults))
+                while (docsEnumerator.MoveNext(out IEnumerable transformedResults))
                 {
                     if (docsEnumerator.Current == null)
                     {

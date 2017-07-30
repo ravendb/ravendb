@@ -80,8 +80,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                             {
                                 while (true)
                                 {
-                                    IEnumerable mapResults;
-                                    if (docsEnumerator.MoveNext(out mapResults) == false)
+                                    if (docsEnumerator.MoveNext(out IEnumerable mapResults) == false)
                                     {
                                         collectionStats.RecordMapCompletedReason("No more documents to index");
                                         keepRunning = false;

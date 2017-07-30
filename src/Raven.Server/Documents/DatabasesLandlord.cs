@@ -101,8 +101,7 @@ namespace Raven.Server.Documents
                         // from this node so we can also remove its secret key from this node.
                         if (record.Encrypted)
                         {
-                            TransactionOperationContext context;
-                            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+                            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             using (var tx = context.OpenWriteTransaction())
                             {
                                 _serverStore.DeleteSecretKey(context, t.dbName);
@@ -404,8 +403,7 @@ namespace Raven.Server.Documents
                 // Note that we return the faulted task anyway, because we need the user to look at the error
                 if (e.Data.Contains("Raven/KeepInResourceStore") == false)
                 {
-                    Task<DocumentDatabase> val;
-                    DatabasesCache.TryRemove(databaseName, out val);
+                    DatabasesCache.TryRemove(databaseName, out _);
                 }
 
                 if (_logger.IsInfoEnabled && e.InnerException is UnauthorizedAccessException)

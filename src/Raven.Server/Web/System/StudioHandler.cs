@@ -65,8 +65,7 @@ namespace Raven.Server.Web.System
         private static FileInfo TryGetFileName(string basePath, string fileName)
         {
             // this is expected to run concurrently
-            FileInfo value;
-            if (_fileNamesCaseInsensitive.TryGetValue(fileName, out value))
+            if (_fileNamesCaseInsensitive.TryGetValue(fileName, out FileInfo value))
                 return value;
 
             if ((SystemTime.UtcNow - _lastFileNamesUpdate).TotalSeconds < 3)
@@ -200,17 +199,15 @@ namespace Raven.Server.Web.System
 
         private static string GetContentType(string fileExtension)
         {
-            string contentType;
-            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out contentType)
-                ? contentType
-                : "text/plain";
+            return FileExtensionToContentTypeMapping.TryGetValue(fileExtension, out string contentType)
+    ? contentType
+    : "text/plain";
         }
 
         public string GetHeader(string key)
         {
-            StringValues values;
             var requestHeaders = HttpContext.Request.Headers;
-            if (requestHeaders.TryGetValue(key, out values))
+            if (requestHeaders.TryGetValue(key, out StringValues values))
                 return values.FirstOrDefault();
             return null;
         }

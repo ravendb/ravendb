@@ -124,13 +124,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 var directory = new LuceneVoronDirectory(tx, environment, $"Suggestions-{field.Key}");
                 _suggestionsDirectories[field.Key] = directory;
-                
-                IState state;
-                using (directory.SetTransaction(tx, out state))
+
+                using (directory.SetTransaction(tx, out IState state))
                 {
                     CreateIndexStructure(directory, state);
                     RecreateSuggestionsSearcher(tx, field.Key);
-                }                
+                }
             }            
         }
 
@@ -138,8 +137,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             _directory = new LuceneVoronDirectory(tx, environment);
 
-            IState state;
-            using (_directory.SetTransaction(tx, out state))
+            using (_directory.SetTransaction(tx, out IState state))
             {
                 CreateIndexStructure(_directory, state);
                 RecreateSearcher(tx);

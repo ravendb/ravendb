@@ -27,8 +27,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
         public async Task ApplyCommand()
         {
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var commandJson = await context.ReadForMemoryAsync(RequestBodyStream(), "external/rachis/command");
 
@@ -84,8 +83,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/cluster/topology", "GET", AuthorizationStatus.ValidUser)]
         public Task GetClusterTopology()
         {
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var topology = ServerStore.GetClusterTopology(context);

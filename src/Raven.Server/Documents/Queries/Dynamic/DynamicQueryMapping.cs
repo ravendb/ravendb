@@ -202,8 +202,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (InvariantCompare.IsPrefix(key, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
                         continue;
 
-                    string name;
-                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(key, out name);
+                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(key, out string name);
 
                     sortInfo.Add(new DynamicSortInfo
                     {

@@ -192,8 +192,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
                 return (null, collection); // use collection query
 
-            Index index;
-            if (TryMatchExistingIndexToQuery(map, out index) == false)
+            if (TryMatchExistingIndexToQuery(map, out Index index) == false)
             {
                 if (createAutoIndexIfNoMatchIsFound == false)
                     throw new IndexDoesNotExistException("Could not find index for a given query.");

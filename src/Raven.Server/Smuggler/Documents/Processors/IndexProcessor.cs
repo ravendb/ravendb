@@ -47,9 +47,8 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
         public static void Import(BlittableJsonReaderObject indexDefinitionDoc, DocumentDatabase database, BuildVersionType buildType, bool removeAnalyzers)
         {
-            IndexType indexType;
-            var definition = ReadIndexDefinition(indexDefinitionDoc, buildType, out indexType);
-            
+            var definition = ReadIndexDefinition(indexDefinitionDoc, buildType, out IndexType indexType);
+
             switch (indexType)
             {
                 case IndexType.AutoMap:
@@ -109,8 +108,7 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
         private static IndexType ReadIndexType(BlittableJsonReaderObject reader, out BlittableJsonReaderObject indexDef)
         {
-            string typeAsString;
-            if (reader.TryGet(nameof(IndexDefinition.Type), out typeAsString) == false)
+            if (reader.TryGet(nameof(IndexDefinition.Type), out string typeAsString) == false)
                 throw new InvalidOperationException("Could not read index type.");
 
             if (reader.TryGet(nameof(IndexDefinition), out indexDef) == false)
@@ -122,12 +120,10 @@ namespace Raven.Server.Smuggler.Documents.Processors
 
         private static IndexDefinition ReadLegacyIndexDefinition(BlittableJsonReaderObject reader)
         {
-            string name;
-            if (reader.TryGet("name", out name) == false)
+            if (reader.TryGet("name", out string name) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
-            BlittableJsonReaderObject definition;
-            if (reader.TryGet("definition", out definition) == false)
+            if (reader.TryGet("definition", out BlittableJsonReaderObject definition) == false)
                 throw new InvalidOperationException("Could not read legacy index definition.");
 
             var legacyIndexDefinition = JsonDeserializationServer.LegacyIndexDefinition(definition);

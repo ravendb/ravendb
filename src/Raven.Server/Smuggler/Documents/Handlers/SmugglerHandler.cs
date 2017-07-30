@@ -40,8 +40,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/validate-options", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostValidateOptions()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var blittableJson = await context.ReadForMemoryAsync(RequestBodyStream(), "");
@@ -82,8 +81,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/export", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostExport()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var operationId = GetLongQueryString("operationId", true);
 
@@ -207,9 +205,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             }
 
             await Task.WhenAll(tasks);
-            
-            SmugglerResult importResult;
-            while (results.TryDequeue(out importResult))
+
+            while (results.TryDequeue(out SmugglerResult importResult))
             {
                 finalResult.Documents.SkippedCount += importResult.Documents.SkippedCount;
                 finalResult.Documents.ReadCount += importResult.Documents.ReadCount;
@@ -235,8 +232,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     finalResult.AddMessage(message);
             }
 
-            DocumentsOperationContext finalContext;
-            using (ContextPool.AllocateOperationContext(out finalContext))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext finalContext))
             {
                 var memoryStream = new MemoryStream();
                 WriteImportResult(finalContext, finalResult, memoryStream);
@@ -271,8 +267,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostImport()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, context);
 
@@ -294,8 +289,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
         [RavenAction("/databases/*/smuggler/import/async", "POST", AuthorizationStatus.ValidUser)]
         public async Task PostImportAsync()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 if (HttpContext.Request.HasFormContentType == false)
                 {
@@ -315,7 +309,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 var token = CreateOperationToken();
 
                 var result = new SmugglerResult();
-                await Database.Operations.AddOperation(Database,"Import to: " + Database.Name,
+                await Database.Operations.AddOperation(Database, "Import to: " + Database.Name,
                     Operations.OperationType.DatabaseImport,
                     onProgress =>
                     {

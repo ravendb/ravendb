@@ -131,15 +131,14 @@ namespace Raven.Server.Extensions
 
             protected override Expression VisitMember(MemberExpression node)
             {
-                string propertyName;
-                if (IsDictionaryProperty(node, out propertyName))
+                if (IsDictionaryProperty(node, out string propertyName))
                 {
                     if (string.IsNullOrEmpty(propertyName) == false)
                     {
                         Results.Push(propertySeparator);
                         Results.Push("$" + node.Member.Name);
                     }
-                    
+
                     return base.VisitMember(node);
                 }
 

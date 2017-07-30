@@ -33,16 +33,14 @@ namespace Raven.Server.Documents.Indexes
 
             _indexesByName.AddOrUpdate(name, oldIndex, (key, oldValue) => newIndex);
 
-            Index _;
-            _indexesByName.TryRemove(newIndex.Name, out _);
+            _indexesByName.TryRemove(newIndex.Name, out Index _);
 
             if (oldIndex == null)
                 return;
 
             foreach (var collection in oldIndex.Definition.Collections)
             {
-                ConcurrentSet<Index> indexes;
-                if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
+                if (_indexesByCollection.TryGetValue(collection, out ConcurrentSet<Index> indexes) == false)
                     continue;
 
                 indexes.TryRemove(oldIndex);
@@ -78,8 +76,7 @@ namespace Raven.Server.Documents.Indexes
 
             foreach (var collection in index.Definition.Collections)
             {
-                ConcurrentSet<Index> indexes;
-                if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
+                if (_indexesByCollection.TryGetValue(collection, out ConcurrentSet<Index> indexes) == false)
                     continue;
 
                 indexes.TryRemove(index);
@@ -90,9 +87,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IEnumerable<Index> GetForCollection(string collection)
         {
-            ConcurrentSet<Index> indexes;
 
-            if (_indexesByCollection.TryGetValue(collection, out indexes) == false)
+            if (_indexesByCollection.TryGetValue(collection, out ConcurrentSet<Index> indexes) == false)
                 return Enumerable.Empty<Index>();
 
             return indexes;

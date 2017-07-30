@@ -27,8 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static IndexField[] GetFields(IndexDefinition definition, string[] outputFields)
         {
-            IndexFieldOptions allFields;
-            definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out allFields);
+            definition.Fields.TryGetValue(Constants.Documents.Indexing.Fields.AllFields, out IndexFieldOptions allFields);
 
             var result = definition.Fields
                 .Where(x => x.Key != Constants.Documents.Indexing.Fields.AllFields)
@@ -99,8 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static IndexDefinition ReadIndexDefinition(BlittableJsonReaderObject reader)
         {
-            BlittableJsonReaderObject jsonObject;
-            if (reader.TryGet(nameof(IndexDefinition), out jsonObject) == false || jsonObject == null)
+            if (reader.TryGet(nameof(IndexDefinition), out BlittableJsonReaderObject jsonObject) == false || jsonObject == null)
                 throw new InvalidOperationException("No persisted definition");
 
             return JsonDeserializationServer.IndexDefinition(jsonObject);

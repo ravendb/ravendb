@@ -86,8 +86,7 @@ namespace Raven.Server.Documents
 
         public void Disconnect(long id)
         {
-            ChangesClientConnection connection;
-            if (Connections.TryRemove(id, out connection))
+            if (Connections.TryRemove(id, out ChangesClientConnection connection))
                 connection.Dispose();
         }
     }

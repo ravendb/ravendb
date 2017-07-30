@@ -63,10 +63,9 @@ namespace Raven.Server.Documents.Handlers
         {
             var indexName = RouteMatch.Url.Substring(RouteMatch.MatchLength);
 
-            DocumentsOperationContext context;
             using (TrackRequestTime())
             using (var token = CreateTimeLimitedOperationToken())
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var debug = GetStringQueryString("debug", required: false);
                 if (string.IsNullOrWhiteSpace(debug) == false)
@@ -94,7 +93,7 @@ namespace Raven.Server.Documents.Handlers
                     return;
 
                 }
-                
+
                 await Query(context, indexName, token, HttpMethod.Get).ConfigureAwait(false);
             }
         }
@@ -192,9 +191,8 @@ namespace Raven.Server.Documents.Handlers
 
             if (method == HttpMethod.Post && string.IsNullOrWhiteSpace(indexQuery.Query))
             {
-                string queryString;
                 var request = context.Read(RequestBodyStream(), "QueryInPostBody");
-                if (request.TryGet("Query", out queryString) == false)
+                if (request.TryGet("Query", out string queryString) == false)
                     throw new InvalidDataException("Missing 'Query' property in the POST request body");
                 indexQuery.Query = queryString;
             }
@@ -272,8 +270,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries/$", "DELETE", AuthorizationStatus.ValidUser)]
         public Task Delete()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             ExecuteQueryOperation((runner, indexName, query, options, onProgress, token) => runner.ExecuteDeleteQuery(indexName, query, options, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
@@ -284,8 +281,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/queries/$", "PATCH", AuthorizationStatus.ValidUser)]
         public Task Patch()
         {
-            DocumentsOperationContext context;
-            var returnContextToPool = ContextPool.AllocateOperationContext(out context); // we don't dispose this as operation is async
+            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             var reader = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
             var patch = PatchRequest.Parse(reader);

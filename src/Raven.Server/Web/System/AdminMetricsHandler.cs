@@ -16,8 +16,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/metrics", "GET", AuthorizationStatus.ServerAdmin)]
         public Task GetRootStats()
         {
-            JsonOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, Server.Metrics.CreateMetricsStatsJsonValue());

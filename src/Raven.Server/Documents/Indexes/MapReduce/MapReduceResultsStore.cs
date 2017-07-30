@@ -114,8 +114,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                     
                     using (Slice.External(_indexContext.Allocator, (byte*) &id, sizeof(long), out entrySlice))
                     {
-                        byte* ptr;
-                        using (Tree.DirectAdd(entrySlice, result.Size,out ptr))
+                        using (Tree.DirectAdd(entrySlice, result.Size, out byte* ptr))
                             result.CopyTo(ptr);
                     }
 
@@ -170,8 +169,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
             var byteType = (byte)Type;
 
-            Slice val;
-            using (Slice.External(_indexContext.Allocator, &byteType, sizeof(byte), out val))
+            using (Slice.External(_indexContext.Allocator, &byteType, sizeof(byte), out Slice val))
                 _mapReduceContext.ResultsStoreTypes.Add((long)_reduceKeyHash, val);
             InitializeTree(create: true);
 

@@ -36,8 +36,7 @@ namespace Raven.Server.Commercial
             _environment = environment;
             _contextPool = contextPool;
 
-            TransactionOperationContext context;
-            using (contextPool.AllocateOperationContext(out context))
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
                 _licenseStorageSchema.Create(tx, LicenseInfoSchema.LicenseTree, 16);
@@ -53,8 +52,7 @@ namespace Raven.Server.Commercial
                 [FirstServerStartDateKey] = date
             };
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
@@ -63,8 +61,7 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(firstServerStartDate, "DatabaseInfo",
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    TableValueBuilder tvb;
-                    using (table.Allocate(out tvb))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(id.Buffer, id.Size);
                         tvb.Add(json.BasePointer, json.Size);
@@ -78,15 +75,13 @@ namespace Raven.Server.Commercial
 
         public DateTime? GetFirstServerStartDate()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
-                Slice keyAsSlice;
                 TableValueReader infoTvr;
-                using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out keyAsSlice))
+                using (Slice.From(tx.InnerTransaction.Allocator, FirstServerStartDateKey, out Slice keyAsSlice))
                 {
                     //It seems like the database was shutdown rudely and never wrote it stats onto the disk
                     if (table.ReadByKey(keyAsSlice, out infoTvr) == false)
@@ -95,8 +90,7 @@ namespace Raven.Server.Commercial
 
                 using (var firstServerStartDateJson = Read(context, ref infoTvr))
                 {
-                    DateTime result;
-                    if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out result))
+                    if (firstServerStartDateJson.TryGet(FirstServerStartDateKey, out DateTime result))
                         return result;
                 }
 
@@ -107,15 +101,13 @@ namespace Raven.Server.Commercial
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
-            int size;
-            var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out size);
+            var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);
         }
 
         public unsafe void SaveLicense(License license)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
@@ -124,8 +116,7 @@ namespace Raven.Server.Commercial
                 using (var json = context.ReadObject(license.ToJson(), LicenseStoargeKey,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    TableValueBuilder tvb;
-                    using (table.Allocate(out tvb))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(id.Buffer, id.Size);
                         tvb.Add(json.BasePointer, json.Size);
@@ -139,15 +130,13 @@ namespace Raven.Server.Commercial
 
         public License LoadLicense()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
 
                 TableValueReader reader;
-                Slice key;
-                using (Slice.From(context.Allocator, LicenseStoargeKey, out key))
+                using (Slice.From(context.Allocator, LicenseStoargeKey, out Slice key))
                 {
                     if (table.ReadByKey(key, out reader) == false)
                         return null;

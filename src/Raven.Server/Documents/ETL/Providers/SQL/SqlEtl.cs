@@ -153,13 +153,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             simulateSqlEtl.Configuration.Initialize(connectionString);
 
-            List<string> errors;
-            if (simulateSqlEtl.Configuration.Validate(out errors) == false)
+            if (simulateSqlEtl.Configuration.Validate(out List<string> errors) == false)
             {
                 throw new InvalidOperationException($"Invalid ETL configuration for '{simulateSqlEtl.Configuration.Name}'. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");
             }
-            
+
             // TODO arek - those constraints can be changed later on
 
             if (simulateSqlEtl.Configuration.Transforms.Count != 1)

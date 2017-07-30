@@ -55,14 +55,13 @@ namespace Raven.Server.Documents.Handlers
                             writer.WriteComma();
                         writer.WriteStartObject();
 
-                        string method, url, query;
-                        if (request.TryGet("Url", out url) == false || request.TryGet("Query", out query) == false)
+                        if (request.TryGet("Url", out string url) == false || request.TryGet("Query", out string query) == false)
                         {
                             writer.WriteEndObject();
                             continue;
                         }
 
-                        if (request.TryGet("Method", out method) == false || string.IsNullOrEmpty(method))
+                        if (request.TryGet("Method", out string method) == false || string.IsNullOrEmpty(method))
                             method = HttpMethod.Get.Method;
 
                         httpContext.Request.Method = method;
@@ -92,8 +91,7 @@ namespace Raven.Server.Documents.Handlers
                         {
                             foreach (var header in headers.GetPropertyNames())
                             {
-                                string value;
-                                if (headers.TryGet(header, out value) == false)
+                                if (headers.TryGet(header, out string value) == false)
                                     continue;
 
                                 if (string.IsNullOrWhiteSpace(value))

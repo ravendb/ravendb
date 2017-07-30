@@ -39,10 +39,8 @@ namespace Raven.Server.Documents
             if (modified == null)
                 return DocumentCompareResult.NotEqual;
 
-            BlittableJsonReaderObject currentMetadata;
-            BlittableJsonReaderObject objMetadata;
-            current.TryGet(Constants.Documents.Metadata.Key, out currentMetadata);
-            modified.TryGet(Constants.Documents.Metadata.Key, out objMetadata);
+            current.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject currentMetadata);
+            modified.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject objMetadata);
 
             if (currentMetadata == null && objMetadata == null)
                 return DocumentCompareResult.Equal;

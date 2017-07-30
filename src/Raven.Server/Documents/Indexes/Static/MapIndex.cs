@@ -146,8 +146,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -158,15 +157,13 @@ namespace Raven.Server.Documents.Indexes.Static
 
                     foreach (var collection in Collections)
                     {
-                        HashSet<CollectionName> referencedCollections;
-                        if (_compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                        if (_compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                             throw new InvalidOperationException("Should not happen ever!");
 
                         foreach (var referencedCollection in referencedCollections)
                         {
                             var etag = _indexStorage.ReadLastProcessedReferenceTombstoneEtag(tx, collection, referencedCollection);
-                            long currentEtag;
-                            if (etags.TryGetValue(referencedCollection.Name, out currentEtag) == false || etag < currentEtag)
+                            if (etags.TryGetValue(referencedCollection.Name, out long currentEtag) == false || etag < currentEtag)
                                 etags[referencedCollection.Name] = etag;
                         }
                     }

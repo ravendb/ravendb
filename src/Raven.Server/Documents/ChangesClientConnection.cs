@@ -343,8 +343,7 @@ namespace Raven.Server.Documents
 
         public async Task StartSendingNotifications(bool throttleConnection)
         {
-            JsonOperationContext context;
-            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (_documentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var ms = new MemoryStream())
                 {
@@ -386,8 +385,7 @@ namespace Raven.Server.Documents
                         if (_disposeToken.IsCancellationRequested)
                             break;
 
-                        ArraySegment<byte> bytes;
-                        ms.TryGetBuffer(out bytes);
+                        ms.TryGetBuffer(out ArraySegment<byte> bytes);
                         await _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _disposeToken);
                     }
                 }
@@ -453,8 +451,7 @@ namespace Raven.Server.Documents
 
         public void HandleCommand(string command, string commandParameter)
         {
-            long commandParameterAsLong;
-            long.TryParse(commandParameter, out commandParameterAsLong);
+            long.TryParse(commandParameter, out long commandParameterAsLong);
 
             if (Match(command, "watch-index"))
             {

@@ -93,8 +93,7 @@ namespace Raven.Server.Documents.Queries
                     return result;
                 }
 
-                IndexField value;
-                var extract = indexDefinition.TryGetField(fieldToFetch, out value) && value.Storage == FieldStorage.Yes;
+                var extract = indexDefinition.TryGetField(fieldToFetch, out IndexField value) && value.Storage == FieldStorage.Yes;
                 if (extract)
                     anyExtractableFromIndex = true;
 

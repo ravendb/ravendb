@@ -104,8 +104,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             var s = value as string;
             if (s != null)
             {
-                Slice str;
-                using(Slice.From(context,s,out str))
+                using (Slice.From(context, s, out Slice str))
                 {
                     switch (_mode)
                     {

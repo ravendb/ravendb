@@ -227,8 +227,7 @@ namespace Raven.Server.Documents.Transformers
 
         public Transformer GetTransformer(int id)
         {
-            Transformer transformer;
-            if (_transformers.TryGetByEtag(id, out transformer) == false)
+            if (_transformers.TryGetByEtag(id, out Transformer transformer) == false)
                 return null;
 
             return transformer;
@@ -236,8 +235,7 @@ namespace Raven.Server.Documents.Transformers
 
         public Transformer GetTransformer(string name)
         {
-            Transformer transformer;
-            if (_transformers.TryGetByName(name, out transformer) == false)
+            if (_transformers.TryGetByName(name, out Transformer transformer) == false)
                 return null;
 
             return transformer;
@@ -350,8 +348,7 @@ namespace Raven.Server.Documents.Transformers
         {
             lock (_locker)
             {
-                Transformer _;
-                _transformers.TryRemoveByEtag(transformer.Etag, out _);
+                _transformers.TryRemoveByEtag(transformer.Etag, out Transformer _);
 
                 _documentDatabase.Changes.RaiseNotifications(new TransformerChange
                 {

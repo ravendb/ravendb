@@ -38,8 +38,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
             using (var scope = new DisposeableScope())
             {
-                TransactionOperationContext indexContext;
-                scope.EnsureDispose(self._contextPool.AllocateOperationContext(out indexContext));
+                scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
@@ -104,8 +103,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         private static bool SetupPrefix(IIterator it, string prefix, TransactionOperationContext context,
             out ByteStringContext.InternalScope? scope)
         {
-            Slice prefixSlice;
-            scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out prefixSlice);
+            scope = Slice.From(context.Transaction.InnerTransaction.Allocator, prefix, out Slice prefixSlice);
 
             it.SetRequiredPrefix(prefixSlice);
 
@@ -161,8 +159,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             using (var scope = new DisposeableScope())
             {
-                TransactionOperationContext indexContext;
-                scope.EnsureDispose(self._contextPool.AllocateOperationContext(out indexContext));
+                scope.EnsureDispose(self._contextPool.AllocateOperationContext(out TransactionOperationContext indexContext));
 
                 RavenTransaction tx;
                 scope.EnsureDispose(tx = indexContext.OpenReadTransaction());
@@ -300,13 +297,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
                         var valueReader = TreeNodeHeader.Reader(tx, page.GetNode(i));
                         entry.Data = new BlittableJsonReaderObject(valueReader.Base, valueReader.Length, context);
 
-                        Slice s;
-                        using (page.GetNodeKey(tx, i, out s))
+                        using (page.GetNodeKey(tx, i, out Slice s))
                         {
                             var mapEntryId = Bits.SwapBytes(*(long*)s.Content.Ptr);
 
-                            string docId;
-                            if (idToDocIdHash.TryGetValue(mapEntryId, out docId)) 
+                            if (idToDocIdHash.TryGetValue(mapEntryId, out string docId))
                                 entry.Source = docId;
                         }
 
@@ -360,14 +355,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             var tmp = Bits.SwapBytes(pageNumber);
 
-            Slice pageNumberSlice;
-            using (Slice.External(context.Allocator, (byte*)&tmp, sizeof(long), out pageNumberSlice))
+            using (Slice.External(context.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
             {
-                TableValueReader tvr;
-                table.ReadByKey(pageNumberSlice, out tvr);
+                table.ReadByKey(pageNumberSlice, out TableValueReader tvr);
 
-                int size;
-                return new BlittableJsonReaderObject(tvr.Read(3, out size), size, context);
+                return new BlittableJsonReaderObject(tvr.Read(3, out int size), size, context);
             }
         }
 
@@ -390,8 +382,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 var id = Bits.SwapBytes(item.Key);
 
-                string docId;
-                if (idToDocIdHash.TryGetValue(id, out docId))
+                if (idToDocIdHash.TryGetValue(id, out string docId))
                     entry.Source = docId;
 
                 root.Entries.Add(entry);

@@ -46,13 +46,11 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var dbId = Constants.Documents.Prefix + name;
-                long etag;
                 using (context.OpenReadTransaction())
-                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out etag))
+                using (var dbDoc = ServerStore.Cluster.Read(context, dbId, out long etag))
                 {
                     if (dbDoc == null)
                     {
@@ -453,8 +451,7 @@ namespace Raven.Server.Web.System
         public async Task RestoreDatabase()
         {
             // we don't dispose this as operation is async
-            TransactionOperationContext context;
-            var returnContextToPool = ServerStore.ContextPool.AllocateOperationContext(out context);
+            var returnContextToPool = ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context);
 
             try
             {
@@ -465,8 +462,7 @@ namespace Raven.Server.Web.System
                 if (string.IsNullOrWhiteSpace(databaseName))
                     throw new ArgumentException("Database name can't be null or empty");
 
-                string errorMessage;
-                if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
+                if (ResourceNameValidator.IsValidResourceName(databaseName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                     throw new BadRequestException(errorMessage);
 
                 using (context.OpenReadTransaction())

@@ -13,8 +13,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/footer/stats", "GET", AuthorizationStatus.ValidUser)]
         public Task FooterStats()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
