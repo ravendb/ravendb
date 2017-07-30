@@ -1979,7 +1979,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public FieldToFetch(string name, string alias)
         {
             Name = name;
-            Alias = alias;
+            Alias = name != alias ? alias : null;
         }
 
         public string Name { get; }
@@ -2002,7 +2002,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
         {
             unchecked
             {
-                return ((Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) * 397) ^ (Alias != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Alias) : 0);
+                return ((Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0) * 397) ^ (Alias != null ? StringComparer.Ordinal.GetHashCode(Alias) : 0);
             }
         }
     }

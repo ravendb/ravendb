@@ -17,10 +17,15 @@ namespace SlowTests.Tests.Bugs.Vlko
                 {
                     var query = s.Query<User>()
                         .Where(x => x.Id == "1" || x.Id == "2" || x.Id == "3")
-                        .Where(x => x.Age == 19)
-                        .ToString();
+                        .Where(x => x.Age == 19);
 
-                    Assert.Equal("((__document_id:1 OR __document_id:2) OR __document_id:3) AND (Age:19)", query);
+                    var iq = RavenTestHelper.GetIndexQuery(query);
+
+                    Assert.Equal("FROM Users WHERE ((__document_id = :p0 OR __document_id = :p1) OR __document_id = :p2) AND (Age = :p3)", iq.Query);
+                    Assert.Equal("1", iq.QueryParameters["p0"]);
+                    Assert.Equal("2", iq.QueryParameters["p1"]);
+                    Assert.Equal("3", iq.QueryParameters["p2"]);
+                    Assert.Equal(19, iq.QueryParameters["p3"]);
                 }
             }
         }

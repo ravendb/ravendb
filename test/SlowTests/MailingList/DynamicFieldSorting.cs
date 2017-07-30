@@ -10,6 +10,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -101,7 +102,7 @@ namespace SlowTests.MailingList
                 {
                     var items = s.Advanced.DocumentQuery<WithDynamicIndex.ProjectionItem, WithDynamicIndex>()
                         .WaitForNonStaleResults()
-                        .OrderBy("+TixP|N1_Range")
+                        .OrderBy("TixP|N1", OrderingType.Double)
                         .SelectFields<WithDynamicIndex.ProjectionItem>("SongId", "NumericAttributes")
                         .Take(128)
                         .ToList();

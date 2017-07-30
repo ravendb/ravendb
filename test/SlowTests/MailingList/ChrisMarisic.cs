@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
                         .Take(1024);
 
                     var deserializer = session.Advanced.DocumentStore.Conventions.CreateSerializer();
-                    var indexQuery = new IndexQuery() { Query = query.ToString(), PageSize = 1024, };
+                    var indexQuery = RavenTestHelper.GetIndexQuery(query);
 
                     using (var commands = documentStore.Commands())
                     {
