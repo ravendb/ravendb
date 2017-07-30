@@ -430,19 +430,19 @@ namespace Raven.Server.Documents
         public string GetMergedConflictChangeVectorsAndDeleteConflicts(DocumentsOperationContext context, Slice lowerId, long newEtag, string existingChangeVector = null)
         {
             if (ConflictsCount == 0)
-                return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
+                return MergeVectorsWithoutConflicts(newEtag, existingChangeVector);
 
             var conflictChangeVectors = DeleteConflictsFor(context, lowerId, null).ChangeVectors;
             if (conflictChangeVectors == null ||
                 conflictChangeVectors.Count == 0)
-                return MergeVectorsWithoutConflicts(context, newEtag, existingChangeVector);
+                return MergeVectorsWithoutConflicts(newEtag, existingChangeVector);
 
             var newChangeVector = ChangeVectorUtils.NewChangeVector(_documentDatabase.ServerStore.NodeTag, newEtag, _documentsStorage.Environment.DbId);
             conflictChangeVectors.Add(newChangeVector);
             return ChangeVectorUtils.MergeVectors(conflictChangeVectors);
         }
 
-        private string MergeVectorsWithoutConflicts(DocumentsOperationContext context, long newEtag, string existing)
+        private string MergeVectorsWithoutConflicts(long newEtag, string existing)
         {
             if (existing != null)
             {

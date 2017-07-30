@@ -155,12 +155,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (FailedDatabaseInstanceOrNode(topology, member, dbName, current))
                 {
                     MoveToRehab(dbName, topology, current, previous, member);
-                    if (TryFindFitNode(member, dbName, current, out var node) == false)
-                        continue;
+                    if (TryFindFitNode(member, dbName, current, out var node))
+                        topology.Promotables.Add(node);
 
-                    topology.Members.Remove(member);
-                    topology.Promotables.Add(node);
-                    topology.Rehab.Add(member);
                     // we only allow a single topology modification per round, so 
                     // we abort immediately after making this change
                     modifiedTopology = true;

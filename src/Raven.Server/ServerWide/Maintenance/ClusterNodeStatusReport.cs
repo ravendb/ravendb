@@ -118,14 +118,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 else if (dbStatus != DatabaseStatus.Loaded)
                 {
-                    if (lastSuccessfulReport.LastGoodDatabaseStatus.TryGetValue(dbName, out var lastGood))
-                    {
-                        LastGoodDatabaseStatus[dbName] = lastGood;
-                    }
-                    else
-                    {
-                        LastGoodDatabaseStatus[dbName] = DateTime.MinValue;
-                    }
+                    DateTime lastGood = DateTime.MinValue;
+                    lastSuccessfulReport?.LastGoodDatabaseStatus.TryGetValue(dbName, out lastGood);
+                    LastGoodDatabaseStatus[dbName] = lastGood;
                 }
             }
         }
