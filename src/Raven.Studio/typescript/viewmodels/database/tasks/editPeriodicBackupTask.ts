@@ -108,6 +108,26 @@ class editPeriodicBackupTask extends viewModelBase {
                     "</span></pre><br/>" +
                     "For more information see: <a href='http://www.quartz-scheduler.org/documentation/quartz-2.x/tutorials/crontrigger.html' target='_blank'>CronTrigger Tutorial</a></div>"
             });
+
+        popoverUtils.longWithHover($("#bucket-info"),
+            {
+                content: this.textForPopover("Bucket")
+            });
+
+        popoverUtils.longWithHover($("#storage-container-info"),
+            {
+                content: this.textForPopover("Storage container")
+            });
+
+        popoverUtils.longWithHover($("#vault-info"),
+            {
+                content: this.textForPopover("Vault")   
+            });
+    }
+
+    private textForPopover(storageName: string): string {
+        return `${storageName} should be created manually in order for this backup to work.<br> ` +
+            "You can use the 'Test credentials' button to verify its existance.";
     }
 
     savePeriodicBackup() {
