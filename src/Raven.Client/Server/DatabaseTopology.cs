@@ -81,6 +81,7 @@ namespace Raven.Client.Server
         public bool RelevantFor(string nodeTag)
         {
             return Members.Contains(nodeTag) ||
+                   Rehab.Contains(nodeTag) ||
                    Promotables.Contains(nodeTag);
         }
         
@@ -158,6 +159,10 @@ namespace Raven.Client.Server
                 {
                     yield return member;
                 }
+                foreach (var rehab in Rehab)
+                {
+                    yield return rehab;
+                }
                 foreach (var promotable in Promotables)
                 {
                     yield return promotable;
@@ -183,6 +188,7 @@ namespace Raven.Client.Server
         {
             Members.RemoveAll(m => m == delDbFromNode);
             Promotables.RemoveAll(p => p == delDbFromNode);
+            Rehab.RemoveAll(p => p == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task, bool inPassiveState)
@@ -207,6 +213,9 @@ namespace Raven.Client.Server
                     return entry;
 
                 topology.RemoveAt(index);
+                if (topology.Count == 0)
+                    return null; // all nodes in the topology are probably in rehab
+
 
                 // rehash so it will likely go to a different member in the cluster
                 key = Hashing.Mix(key);
