@@ -908,8 +908,8 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }));
-            var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }));
+            var fromParameterName = AddQueryParameter(start == null ? "*" : TransformValue(new WhereParams { Value = start, FieldName = fieldName }, forRange: true));
+            var toParameterName = AddQueryParameter(end == null ? "NULL" : TransformValue(new WhereParams { Value = end, FieldName = fieldName }, forRange: true));
 
             WhereTokens.AddLast(WhereToken.Between(fieldName, fromParameterName, toParameterName, exact));
         }
@@ -926,7 +926,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
+            WhereTokens.AddLast(WhereToken.GreaterThan(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -941,7 +941,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
+            WhereTokens.AddLast(WhereToken.GreaterThanOrEqual(fieldName, AddQueryParameter(value == null ? "*" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -956,7 +956,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
+            WhereTokens.AddLast(WhereToken.LessThan(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -969,7 +969,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName })), exact));
+            WhereTokens.AddLast(WhereToken.LessThanOrEqual(fieldName, AddQueryParameter(value == null ? "NULL" : TransformValue(new WhereParams { Value = value, FieldName = fieldName }, forRange: true)), exact));
         }
 
         /// <summary>
@@ -1615,7 +1615,7 @@ If you really want to do in memory filtering on the data returned from the query
                 tokens.AddLast(DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or);
         }
 
-        private IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
+        private static IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
         {
             foreach (var value in values)
             {
@@ -1723,7 +1723,7 @@ If you really want to do in memory filtering on the data returned from the query
             return func;
         }
 
-        private object TransformValue(WhereParams whereParams)
+        private static object TransformValue(WhereParams whereParams, bool forRange = false)
         {
             if (whereParams.Value == null)
                 return null;
@@ -1745,7 +1745,12 @@ If you really want to do in memory filtering on the data returned from the query
             if (type == typeof(double))
                 return whereParams.Value;
             if (whereParams.Value is TimeSpan)
+            {
+                if (forRange)
+                    return ((TimeSpan)whereParams.Value).Ticks;
+
                 return whereParams.Value;
+            }
             if (whereParams.Value is float)
                 return whereParams.Value;
             if (whereParams.Value is string)
