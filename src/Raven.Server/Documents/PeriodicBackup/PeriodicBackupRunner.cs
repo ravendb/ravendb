@@ -16,7 +16,6 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
-using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
@@ -68,13 +67,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             Directory.CreateDirectory(_tempBackupPath.FullPath);
         }
 
-        private class NextBackup
-        {
-            public TimeSpan TimeSpan { get; set; }
-
-            public bool IsFull { get; set; }
-        }
-
         private Timer GetTimer(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus)
@@ -100,6 +92,16 @@ namespace Raven.Server.Documents.PeriodicBackup
                 new Timer(LongPeriodTimerCallback, backupTaskDetails, MaxTimerTimeout, Timeout.InfiniteTimeSpan);
 
             return timer;
+        }
+
+        public NextBackup GetNextBackupDetails(
+            DatabaseRecord databaseRecord,
+            PeriodicBackupConfiguration configuration,
+            PeriodicBackupStatus backupStatus)
+        {
+            var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
+            return taskStatus == TaskStatus.Disabled ? null : 
+                GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
         private NextBackup GetNextBackupDetails(
@@ -689,10 +691,13 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (string.IsNullOrWhiteSpace(configuration.Name) == false)
                         message += $", backup name: {configuration.Name}";
 
+                    message += $", error: {e.Message}";
+
                     if (_logger.IsInfoEnabled)
                         _logger.Info(message);
 
-                    _database.NotificationCenter.Add(AlertRaised.Create("Backup frequency parsing error",
+                    _database.NotificationCenter.Add(AlertRaised.Create(
+                        "Backup frequency parsing error",
                         message,
                         AlertType.PeriodicBackup,
                         NotificationSeverity.Error,
@@ -805,6 +810,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             var databaseRecord = GetDatabaseRecord();
             var taskStatus = GetTaskStatus(databaseRecord, periodicBackup.Configuration);
             return taskStatus == TaskStatus.ActiveByCurrentNode;
+        }
+
+        public PeriodicBackupStatus GetBackupStatus(long taskId)
+        {
+            PeriodicBackupStatus inMemoryBackupStatus = null;
+            if (_periodicBackups.TryGetValue(taskId, out PeriodicBackup periodicBackup))
+                inMemoryBackupStatus = periodicBackup.BackupStatus;
+
+            return GetBackupStatus(taskId, inMemoryBackupStatus);
         }
 
         private PeriodicBackupStatus GetBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
@@ -964,7 +978,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private TaskStatus GetTaskStatus(
             DatabaseRecord databaseRecord,
-            PeriodicBackupConfiguration configuration)
+            PeriodicBackupConfiguration configuration,
+            bool skipErrorLog = false)
         {
             if (configuration.Disabled)
                 return TaskStatus.Disabled;
@@ -974,12 +989,15 @@ namespace Raven.Server.Documents.PeriodicBackup
                 CanBackupUsing(configuration.GlacierSettings) == false &&
                 CanBackupUsing(configuration.AzureSettings) == false)
             {
-                var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
-                _database.NotificationCenter.Add(AlertRaised.Create(
-                    "Periodic Backup",
-                    message,
-                    AlertType.PeriodicBackup,
-                    NotificationSeverity.Info));
+                if (skipErrorLog == false)
+                {
+                    var message = $"All backup destinations are disabled for backup task id: {configuration.TaskId}";
+                    _database.NotificationCenter.Add(AlertRaised.Create(
+                        "Periodic Backup",
+                        message,
+                        AlertType.PeriodicBackup,
+                        NotificationSeverity.Info));
+                }
 
                 return TaskStatus.Disabled;
             }

@@ -317,8 +317,10 @@ namespace Raven.Server.Web.System
                         nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency), 
                         out string incrementalBackupFrequency);
 
-                    if (CrontabSchedule.TryParse(fullBackupFrequency) == null &&
-                        CrontabSchedule.TryParse(incrementalBackupFrequency) == null)
+                    var parsedFullBackupFrequency = VerifyBackupFrequency(fullBackupFrequency);
+                    var parsedIncrementalBackupFrequency = VerifyBackupFrequency(incrementalBackupFrequency);
+                    if (parsedFullBackupFrequency == null &&
+                        parsedIncrementalBackupFrequency == null)
                     {
                         throw new ArgumentException("Couldn't parse the cron expressions for both full and incremental backups. " +
                                                     $"full backup cron expression: {fullBackupFrequency}, " +
@@ -367,7 +369,15 @@ namespace Raven.Server.Web.System
                     json[taskIdName] = taskId;
                 });
         }
-        
+
+        private static CrontabSchedule VerifyBackupFrequency(string backupFrequency)
+        {
+            if (string.IsNullOrWhiteSpace(backupFrequency))
+                return null;
+
+            return CrontabSchedule.Parse(backupFrequency);
+        }
+
         [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task TestPeriodicBackupCredentials()
         {

@@ -10,9 +10,13 @@ class ongoingTaskBackupModel extends ongoingTask {
 
     backupType = ko.observable<Raven.Client.Server.PeriodicBackup.BackupType>();
     backupDestinations = ko.observableArray<string>();
+    nextBackup = ko.observable<string>();
+    lastFullBackup = ko.observable<string>();
+    lastIncrementalBackup = ko.observable<string>();
 
     constructor(dto: Raven.Server.Web.System.OngoingTaskBackup) {
         super();
+
         this.update(dto);
         this.initializeObservables();
     }
@@ -26,8 +30,33 @@ class ongoingTaskBackupModel extends ongoingTask {
 
     update(dto: Raven.Server.Web.System.OngoingTaskBackup) {
         super.update(dto);
+
         this.backupType(dto.BackupType);
         this.backupDestinations(dto.BackupDestinations.length === 0 ? ["No destinations"] : dto.BackupDestinations);
+
+        const dateFormat = "YYYY MMMM Do, h:mm A";
+
+        if (dto.LastFullBackup) {
+            const lastFullBackup = moment.utc(dto.LastFullBackup).local().format(dateFormat);
+            this.lastFullBackup(lastFullBackup);
+        }
+
+        if (dto.LastIncrementalBackup) {
+            const lastIncrementalBackup = moment
+                .utc(dto.LastIncrementalBackup)
+                .local()
+                .format(dateFormat);
+            this.lastIncrementalBackup(lastIncrementalBackup);
+        }
+
+        if (dto.NextBackup) {
+            const now = moment();
+            const timeSpan = moment.duration(dto.NextBackup.TimeSpan);
+            const nextBackupDateTime = now.add(timeSpan).format(dateFormat);
+            this.nextBackup(`${nextBackupDateTime} (${dto.NextBackup.IsFull ? "Full" : "Incremental"})`);
+        } else {
+            this.nextBackup("N/A");
+        }
     }
 
     editTask() {

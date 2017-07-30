@@ -1,4 +1,4 @@
-<form class="content-margin" data-bind="with: configuration">
+<form class="content-margin edit-backup" data-bind="with: configuration">
     <div class="toolbar" data-bind="with: $root">
         <button data-bind="click: savePeriodicBackup" type="submit" class="btn btn-primary">
             <i class="icon-save"></i> <span>Save</span>
@@ -16,7 +16,7 @@
                 </div>
             </div>
             <div class="row flex-row margin-bottom">
-                <label class="control-label col-sm-4 col-lg-2">Backup type <i class="icon-info text-info"></i></label>
+                <label class="control-label col-sm-4 col-lg-2">Backup type <i id="backup-info" class="icon-info text-info"></i></label>
                 <div class="col-sm-4 col-lg-4" data-bind="validationElement: backupType, validationOptions: { insertMessages: false }">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
@@ -32,7 +32,7 @@
             </div>
         </div>
     </div>
-    <h3>Schedule <i class="icon-info text-info"></i></h3>
+    <h3>Schedule <i id="schedule-info" class="icon-info text-info"></i></h3>
     <div class="panel">
         <div class="padding">
             <div class="row flex-row margin-bottom">
@@ -49,9 +49,12 @@
                             </li>
                         </ul>
                     </div>
-                </div>
-                <div class="col-xs-4 col-sm-4">
-                    <span data-bind="text: fullBackupHumanReadable"></span>
+                    <div>
+                        <span>Description:</span>
+                        <strong data-bind="text: fullBackupHumanReadable"></strong><br/>
+                        <span>Next estimated backup: </span> 
+                        <strong data-bind="text: nextFullBackupOccurrence"></strong>
+                    </div>
                 </div>
             </div>
             <div class="row flex-row margin-bottom">
@@ -68,14 +71,17 @@
                             </li>
                         </ul>
                     </div>
-                </div>
-                <div class="col-xs-6 col-sm-4">
-                    <span data-bind="text: incrementalBackupHumanReadable"></span>
+                    <div>
+                        <span>Description:</span>
+                        <strong data-bind="text: incrementalBackupHumanReadable"></strong><br/>
+                        <span>Next estimated backup: </span> 
+                        <strong data-bind="text: nextIncrementalBackupOccurrence"></strong>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <h3>Destination <i class="icon-info text-info"></i></h3>
+    <h3>Destination</h3>
 
     <div class="panel" data-bind="with: localSettings">
         <div class="padding">
@@ -108,8 +114,7 @@
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">
-                            Bucket name
-                            <span id="s3-info"><i class="icon-info text-info"></i></span>
+                            Bucket name <i id="bucket-info" class="icon-info text-info"></i>
                         </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: bucketName">
                             <input data-bind="textInput: bucketName" type="text" class="form-control" />
@@ -122,7 +127,7 @@
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region<i class="icon-info text-info"></i></label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -172,7 +177,9 @@
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Storage container</label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Storage container <i id="storage-container-info" class="icon-info text-info"></i>
+                        </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: storageContainer">
                             <input data-bind="textInput: storageContainer" type="text" class="form-control" />
                         </div>
@@ -216,13 +223,15 @@
             <div class="row" data-bind="collapse: enabled">
                 <div class="col-sm-8 col-lg-6 margin-top">
                     <div class="row flex-row margin-bottom">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Vault name <i class="icon-info text-info"></i></label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Vault name <i id="vault-info" class="icon-info text-info"></i>
+                        </label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: vaultName">
                             <input data-bind="textInput: vaultName" type="text" class="form-control" />
                         </div>
                     </div>
                     <div class="row flex-row margin-bottom">
-                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region name <i class="icon-info text-info"></i></label>
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
                         <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"

@@ -67,7 +67,7 @@ abstract class amazonSettings extends backupSettings {
                             return false;
 
                         const foundRegion = this.availableAwsRegionEndpoints.find(x =>
-                            this.getDisplayRegionName(x).toLowerCase() === awsRegionName);
+                            this.getDisplayRegionName(x).toLowerCase() === awsRegionName.toLowerCase());
                         if (foundRegion)
                             return true;
 

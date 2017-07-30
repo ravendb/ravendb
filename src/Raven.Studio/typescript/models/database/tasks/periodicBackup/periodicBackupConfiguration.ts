@@ -3,6 +3,7 @@ import localSettings = require("models/database/tasks/periodicBackup/localSettin
 import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
+import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
@@ -18,17 +19,20 @@ class periodicBackupConfiguration {
 
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
+    nextFullBackupOccurrence = ko.observable<string>("N/A");
     incrementalBackupHumanReadable: KnockoutComputed<string>;
     incrementalBackupParsingError = ko.observable<string>();
+    nextIncrementalBackupOccurrence = ko.observable<string>("N/A");
+
     validationGroup: KnockoutValidationGroup;
     backupOptions = ["Backup", "Snapshot"];
 
     allBackupFrequencyOptions = [
+        { label: "At 02:00 AM (every day)", value: "0 2 * * *", full: true, incremental: false },
         { label: "Every 3 days at 03:00 AM", value: "0 3 */3 * *", full: true, incremental: false },
-        { label: "At 08:05 on Sunday", value: "5 8 * * Sun", full: true, incremental: false },
+        { label: "At 08:05 on Sunday (every week)", value: "5 8 * * Sun", full: true, incremental: false },
         { label: "At 11:00 PM, Monday through Friday", value: "0 23 ? * MON-FRI", full: true, incremental: false },
         { label: "At 03:30 AM, on the last day of the month", value: "30 3 L * ?", full: true, incremental: false },
-        { label: "At 10:15 AM, on the last Saturday of the month", value: "15 10 ? * 6L", full: true, incremental: false },
         { label: "Every 10 minutes", value: "*/10 * * * *", full: false, incremental: true },
         { label: "Every 6 hours", value: "0 */6 * * *", full: false, incremental: true },
         { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
@@ -58,6 +62,32 @@ class periodicBackupConfiguration {
                 this.incrementalBackupParsingError);
         });
 
+        this.fullBackupFrequency.throttle(500).subscribe((newValue) =>
+            this.getNextOccurance(
+                newValue,
+                this.nextFullBackupOccurrence,
+                this.fullBackupParsingError));
+
+        this.incrementalBackupFrequency.throttle(500).subscribe((newValue) =>
+            this.getNextOccurance(
+                newValue,
+                this.nextIncrementalBackupOccurrence,
+                this.incrementalBackupParsingError));
+
+        if (this.fullBackupFrequency()) {
+            this.getNextOccurance(
+                this.fullBackupFrequency(),
+                this.nextFullBackupOccurrence,
+                this.fullBackupParsingError);
+        }
+
+        if (this.incrementalBackupFrequency()) {
+            this.getNextOccurance(
+                this.incrementalBackupFrequency(),
+                this.nextIncrementalBackupOccurrence,
+                this.incrementalBackupParsingError);
+        }
+
         this.initValidation();
     }
 
@@ -66,7 +96,7 @@ class periodicBackupConfiguration {
         const currentBackupFrequency = backupFrequency();
         if (!currentBackupFrequency) {
             backupParsingError(null);
-            return null;
+            return "N/A";
         }
 
         const backupFrequencySplitted = currentBackupFrequency.trim().replace(/ +(?= )/g, "").split(" ");
@@ -74,27 +104,27 @@ class periodicBackupConfiguration {
             backupParsingError(`Expression has only ${backupFrequencySplitted.length} part` +
                 `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` + 
                 "Exactly 5 parts are required!");
-            return null;
+            return "N/A";
         }
         else if (backupFrequencySplitted.length > 5) {
             backupParsingError(`Expression has ${backupFrequencySplitted.length} part` +
                 `${backupFrequencySplitted.length === 1 ? "" : "s"}. ` +
                 "Exactly 5 parts are required!");
-            return null;
+            return "N/A";
         }
 
         try {
             const result = cronstrue.toString(currentBackupFrequency.toUpperCase());
             if (result.includes("undefined")) {
                 backupParsingError("Invalid cron expression!");
-                return null;
+                return "N/A";
             }
 
             backupParsingError(null);
             return result;
         } catch (error) {
             backupParsingError(error);
-            return null;
+            return "N/A";
         }
     }
 
@@ -177,6 +207,30 @@ class periodicBackupConfiguration {
             this.fullBackupFrequency :
             this.incrementalBackupFrequency;
         selectedOptionObservable(option.value);
+    }
+
+    getNextOccurance(backupFrequency: string,
+        nextBackupOccurance: KnockoutObservable<string>,
+        parsingError: KnockoutObservable<string>) {
+        if (parsingError())
+            return;
+
+        if (!backupFrequency)
+            return;
+
+        const now = moment();
+        const dateFormat = "YYYY MMMM Do, h:mm A";
+        new getNextBackupOccurrenceCommand(now.format(), backupFrequency)
+            .execute()
+            .done((result: Raven.Server.Web.System.NextBackupOccurrence) => {
+                const nextBackup = moment(result.DateTime).format(dateFormat);
+                nextBackupOccurance(nextBackup);
+                parsingError(null);
+            })
+            .fail((response: JQueryXHR) => {
+                nextBackupOccurance("N/A");
+                parsingError(response.responseText);
+            });
     }
 
     toDto(): Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration {

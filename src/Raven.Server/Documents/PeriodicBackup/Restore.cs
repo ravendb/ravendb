@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        private static string TryExtractDateFromFileName(string fileName, string filePath)
+        private static DateTime TryExtractDateFromFileName(string fileName, string filePath)
         {
             DateTime result;
             if (DateTime.TryParseExact(
@@ -72,10 +72,10 @@ namespace Raven.Server.Documents.PeriodicBackup
                     DateTimeStyles.None,
                     out result) == false)
             {
-                result = File.GetLastWriteTime(filePath).ToUniversalTime();
+                result = File.GetLastWriteTimeUtc(filePath);
             }
 
-            return result.ToString("yyyy/MM/dd HH:mm");
+            return result;
         }
     }
 }

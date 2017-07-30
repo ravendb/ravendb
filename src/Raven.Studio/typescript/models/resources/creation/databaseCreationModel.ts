@@ -123,11 +123,19 @@ class databaseCreationModel {
                 this.backupDirectory() === this.lastFailedBackupDirectory)
                 return;
 
+            if (!this.backupDirectory())
+                return;
+
             this.spinners.fetchingRestorePoints(true);
             new getRestorePointsCommand(this.backupDirectory())
                 .execute()
                 .done((restorePoints: Raven.Server.Documents.PeriodicBackup.RestorePoints) => {
-                    this.restorePoints(restorePoints.List);
+                    this.restorePoints(restorePoints.List.map(x => {
+                        var date = x.Key;
+                        const dateFormat = "YYYY MMMM Do, h:mm A";
+                        x.Key = moment.utc(date).local().format(dateFormat);
+                        return x;
+                    }));
                     this.selectedRestorePoint(null);
                     this.backupLocation(null);
                     this.lastFileNameToRestore(null);

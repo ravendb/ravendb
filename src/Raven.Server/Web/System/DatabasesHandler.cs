@@ -1,9 +1,13 @@
 ﻿using System;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client;
+using NCrontab.Advanced;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
@@ -20,6 +24,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
@@ -160,6 +165,34 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
+        [RavenAction("/periodic-backup", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetPeriodicBackup()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (TryGetAllowedDbs(name, out var _, requireAdmin: false) == false)
+                return Task.CompletedTask;
+
+            var taskId = GetLongQueryString("taskId", required: true);
+            if (taskId == 0)
+                throw new ArgumentException("Task ID cannot be 0");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out _);
+                var periodicBackup = databaseRecord.PeriodicBackups.FirstOrDefault(x => x.TaskId == taskId);
+                if (periodicBackup == null)
+                    throw new InvalidOperationException($"Periodic backup task ID: {taskId} doesn't exist");
+
+                var databaseRecordBlittable = EntityToBlittable.ConvertEntityToBlittable(periodicBackup, DocumentConventions.Default, context);
+                context.Write(writer, databaseRecordBlittable);
+                writer.Flush();
+            }
+
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/periodic-backup/status", "GET", AuthorizationStatus.ValidUser)]
         public Task GetPeriodicBackupStatus()
         {
@@ -221,6 +254,47 @@ namespace Raven.Server.Web.System
                     context.Write(writer, result.ToJson());
                     writer.Flush();
                 }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/periodic-backup/next-backup-occurrence", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetNextBackupOccurrence()
+        {
+            var dateAsString = GetQueryStringValueAndAssertIfSingleAndNotEmpty("date");
+            if (DateTime.TryParse(dateAsString, out DateTime date) == false)
+                throw new ArgumentException("Date");
+
+            var backupFrequency = GetQueryStringValueAndAssertIfSingleAndNotEmpty("backupFrequency");
+
+            CrontabSchedule crontabSchedule;
+            try
+            {
+                // will throw if the backup frequency is invalid
+                crontabSchedule = CrontabSchedule.Parse(backupFrequency);
+            }
+            catch (Exception e)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                using (var streamWriter = new StreamWriter(ResponseBodyStream()))
+                {
+                    streamWriter.Write(e.Message);
+                    streamWriter.Flush();
+                }
+                return Task.CompletedTask;
+            }
+
+            var nextOccurrence = crontabSchedule.GetNextOccurrence(date);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(NextBackupOccurrence.DateTime));
+                writer.WriteDateTime(nextOccurrence, false);
+                writer.WriteEndObject();
+                writer.Flush();
             }
 
             return Task.CompletedTask;
@@ -415,5 +489,10 @@ namespace Raven.Server.Web.System
 
             return nodeId;
         }
+    }
+
+    public class NextBackupOccurrence
+    {
+        public DateTime DateTime { get; set; }
     }
 }
