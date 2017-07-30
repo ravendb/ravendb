@@ -81,17 +81,17 @@ namespace Raven.Client.Http
 
             for (int i = index; i < state.Failures.Length; i++)
             {
-                if (state.Failures[i] == 0)
+                if (state.Failures[i] == 0 || state.Nodes[i].FailoverOnly == false)
                     return (i, state.Nodes[i]);
             }
 
             for (int i = 0; i < index; i++)
             {
-                if (state.Failures[i] == 0)
+                if (state.Failures[i] == 0 || state.Nodes[i].FailoverOnly == false)
                     return (i, state.Nodes[i]);
             }
             
-            return UnlikelyEveryoneFaultedChoice(state);
+            return GetPreferredNode();
         }
 
         public void RestoreNodeIndex(int nodeIndex)

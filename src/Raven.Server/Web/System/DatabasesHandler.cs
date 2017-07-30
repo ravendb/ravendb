@@ -112,8 +112,17 @@ namespace Raven.Server.Web.System
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.FailoverOnly)] = false,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
+                                .Concat(dbRecord.Topology.Rehab.Select(x => new DynamicJsonValue
+                                {
+                                    [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
+                                    [nameof(ServerNode.ClusterTag)] = x,
+                                    [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
+                                    [nameof(ServerNode.FailoverOnly)] = false,
+                                })
+                                )
                             ),
                             [nameof(Topology.Etag)] = dbRecord.Topology.Stamp.Index,
                         });

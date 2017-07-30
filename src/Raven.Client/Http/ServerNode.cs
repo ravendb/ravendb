@@ -7,6 +7,7 @@ namespace Raven.Client.Http
         public string Url;
         public string Database;
         public string ClusterTag;
+        public bool FailoverOnly;
 
         private readonly EWMA _ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
         private const double SwitchBackRatio = 0.75;
