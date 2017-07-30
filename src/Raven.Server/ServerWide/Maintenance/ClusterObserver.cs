@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
-using Raven.Client.Server.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -14,7 +13,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Utils;
-using Voron.Util;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -90,7 +88,6 @@ namespace Raven.Server.ServerWide.Maintenance
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateCommands = new List<UpdateTopologyCommand>();
-
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = _server.GetClusterTopology(context);
@@ -114,9 +111,6 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                             continue;
                         }
-
-                        if(IsDeletionInProgress(database))
-                            continue;
 
                         if (UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats))
                         {
@@ -144,6 +138,12 @@ namespace Raven.Server.ServerWide.Maintenance
                         // it and run the logic again on the next round
                     }
                 }
+
+                foreach (var command in _deletionCommands)
+                {
+                    await Delete(command);
+                }
+                _deletionCommands.Clear();
             }
         }
 
@@ -158,8 +158,8 @@ namespace Raven.Server.ServerWide.Maintenance
             foreach (var member in topology.Members)
             {
                 if (current.TryGetValue(member, out var nodeStats) &&
-                    nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
-                    nodeStats.LastReport.TryGetValue(dbName, out var dbStats) &&
+                    nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
+                    nodeStats.Report.TryGetValue(dbName, out var dbStats) &&
                     dbStats.Status == Loaded)
                 {
                     hasLivingNodes = true;
@@ -168,10 +168,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
                 }
            
-                if (FailedDatabaseInstanceOrNode(topology, member, dbName, current))
+                if (FailedDatabaseInstanceOrNode(topology, member, dbName, current) == DatabaseHealth.Bad)
                 {
-                    MoveToRehab(dbName, topology, current, previous, member);
-                    if (TryFindFitNode(member, dbName, current, out var node))
+                    if (TryMoveToRehab(dbName, topology, current, member) == false)
+                        continue;
+                    
+                    if (TryFindFitNode(member, dbName, topology, clusterTopology, current,  out var node))
                         topology.Promotables.Add(node);
 
                     // we only allow a single topology modification per round, so 
@@ -185,12 +187,12 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 var alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable";
 
-                foreach (var rehab in topology.Rehab)
+                foreach (var rehab in topology.Rehabs)
                 {
                     //TODO: RavenDB-7911 - Find the most up to date rehab node
-                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current))
+                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current) != DatabaseHealth.Good)
                         continue;
-                    topology.Rehab.Remove(rehab);
+                    topology.Rehabs.Remove(rehab);
                     topology.Members.Add(rehab);
                     modifiedTopology = true;
                     alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable";
@@ -217,12 +219,23 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current))
+                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
-                    if (TryFindFitNode(promotable, dbName, current, out var node) == false)
+                    if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
                         continue;
 
+                    //replace the bad promotable otherwise we will continute to add more and more nodes.
                     topology.Promotables.Add(node);
+                    var deletionCmd = new DeleteDatabaseCommand
+                    {
+                        ErrorOnDatabaseDoesNotExists = false,
+                        DatabaseName = dbName,
+                        FromNodes = new []{promotable},
+                        HardDelete = true,
+                        UpdateReplicationFactor = false
+                    };
+
+                    _deletionCommands.Add(deletionCmd);
                     return true;
                 }
 
@@ -230,18 +243,15 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
 
                 if (TryPromote(dbName, topology, current, previous, mentorNode, promotable))
-                {
-                    RemoveOtherNodesIfNeeded(dbName, topology);
                     return true;
-                }
             }
 
-            foreach (var rehab in topology.Rehab)
+            foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current) == false)
+                if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current) == DatabaseHealth.Good)
                 {
                     if (TryGetMentorNode(dbName, topology, clusterTopology, rehab, out var mentorNode) == false)
-                        return false;
+                        continue;
 
                     if (TryPromote(dbName, topology, current, previous, mentorNode, rehab))
                     {
@@ -250,38 +260,37 @@ namespace Raven.Server.ServerWide.Maintenance
                             _logger.Operations($"The database {dbName} on {rehab} is reachable and update, so we promote it back to member.");
                         }
                         topology.Members.Add(rehab);
-                        topology.Rehab.Remove(rehab);
-                        RemoveOtherNodesIfNeeded(dbName, topology);
+                        topology.Rehabs.Remove(rehab);
                         return true;
                     }
                 }
             }
+
+            RemoveOtherNodesIfNeeded(dbName, topology);
             return false;
         }
 
-        private void MoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string member)
+        private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
         {
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) && 
-                nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
-                nodeStats.LastReport.TryGetValue(dbName, out  dbStats) && 
-                dbStats.Status != Faulted) 
-                return;
-            
+                nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
+                nodeStats.Report.TryGetValue(dbName, out  dbStats) && dbStats.Status != Faulted) 
+                return false;
             
             topology.Members.Remove(member);
-            topology.Rehab.Add(member);
+            topology.Rehabs.Add(member);
 
             string reason;
             if (nodeStats == null)
             {
                 reason = "In rehabilitation because it had no status report in the latest cluster stats";
             }
-            else if (nodeStats.LastReportStatus != ClusterNodeStatusReport.ReportStatus.Ok)
+            else if (nodeStats.Status != ClusterNodeStatusReport.ReportStatus.Ok)
             {
-                reason = $"In rehabilitation because the last report status was \"{nodeStats.LastReportStatus}\"";
+                reason = $"In rehabilitation because the last report status was \"{nodeStats.Status}\"";
             }
-            else if (nodeStats.LastReport.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
+            else if (nodeStats.Report.TryGetValue(dbName, out var stats) && stats.Status == Faulted)
             {
                 reason = "In rehabilitation because the DatabaseStatus for this node is Faulted";
             }
@@ -290,9 +299,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 reason = "In rehabilitation because the node is reachable but had no report about the database";
             }
 
-            if (nodeStats?.LastError != null)
+            if (nodeStats?.Error != null)
             {
-                reason += $". {nodeStats.LastError}";
+                reason += $". {nodeStats.Error}";
             }
             if (dbStats?.Error != null)
             {
@@ -300,12 +309,14 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = nodeStats?.LastReportStatus.ToString();
+            topology.PromotablesStatus[member] = nodeStats?.Status.ToString();
 
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(reason);
             }
+
+            return true;
         }
 
         private bool TryGetMentorNode(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology, string promotable, out string mentorNode)
@@ -325,18 +336,18 @@ namespace Raven.Server.ServerWide.Maintenance
         private bool TryPromote(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string mentorNode, string promotable)
         {
             if (previous.TryGetValue(mentorNode, out var mentorPrevClusterStats) == false ||
-                mentorPrevClusterStats.LastReport.TryGetValue(dbName, out var mentorPrevDbStats) == false)
+                mentorPrevClusterStats.Report.TryGetValue(dbName, out var mentorPrevDbStats) == false)
                 return false;
 
             if (current.TryGetValue(promotable, out var promotableClusterStats) == false ||
-                promotableClusterStats.LastReport.TryGetValue(dbName, out var promotableDbStats) == false)
+                promotableClusterStats.Report.TryGetValue(dbName, out var promotableDbStats) == false)
                 return false;
 
             var status = ChangeVectorUtils.GetConflictStatus(mentorPrevDbStats.LastChangeVector, promotableDbStats.LastChangeVector);
             if (status == ConflictStatus.AlreadyMerged)
             {
                 if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
-                    promotablePrevClusterStats.LastReport.TryGetValue(dbName, out var promotablePrevDbStats) == false)
+                    promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)
                     return false;
 
                 var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
@@ -374,100 +385,100 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
-        private readonly Dictionary<string,Task> _deletionDictionaryTask = new Dictionary<string, Task>();
-
-        private bool IsDeletionInProgress(string db)
-        {
-            if (_deletionDictionaryTask.ContainsKey(db) == false)
-                return false;
-            var deletionTask = _deletionDictionaryTask[db];
-            if (deletionTask.Status == TaskStatus.Canceled || deletionTask.Status == TaskStatus.Faulted)
-            {
-                // error! not sure how to handle this
-                _deletionDictionaryTask.Remove(db);
-                return false;
-            }
-
-            if (deletionTask.Status != TaskStatus.RanToCompletion)
-            {
-                _deletionDictionaryTask.Remove(db);
-                return false;
-            }
-            return true;
-        }
+        private readonly List<DeleteDatabaseCommand> _deletionCommands = new List<DeleteDatabaseCommand>();
 
         private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology)
         {
-            if (IsDeletionInProgress(dbName))
-                return;
-
 			if (topology.Members.Count != topology.ReplicationFactor) 
                 return;
 
             if (topology.Promotables.Count  == 0 && 
-                topology.Rehab.Count == 0) 
+                topology.Rehabs.Count == 0) 
                 return;
-           
+
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations("We reached the replication factor, so we remove all other rehab/promotable nodes.");
             }
                     
-            var nodesToDelete = topology.Promotables.Concat(topology.Rehab);
-            var deletionTask = _server.PutCommandAsync(new DeleteDatabaseCommand
+            var nodesToDelete = topology.Promotables.Concat(topology.Rehabs);
+            var deletionCmd = new DeleteDatabaseCommand
             {
                 ErrorOnDatabaseDoesNotExists = false,
                 DatabaseName = dbName,
                 FromNodes = nodesToDelete.ToArray(),
-                HardDelete = true
-            });
-                    
-            _deletionDictionaryTask.Add(dbName, deletionTask);
+                HardDelete = true,
+                UpdateReplicationFactor = false
+            };
+
+            _deletionCommands.Add(deletionCmd);
         }
-        
-        private bool FailedDatabaseInstanceOrNode(
+
+        private enum DatabaseHealth
+        {
+            DontCare,
+            NotEnoughInfo,
+            Bad,
+            Good,
+        }
+
+        private DatabaseHealth FailedDatabaseInstanceOrNode(
             DatabaseTopology topology, string node, string db,
             Dictionary<string, ClusterNodeStatusReport> current)
         {
             if (topology.DynamicNodesDistribution == false)
-                return false;
+                return DatabaseHealth.DontCare;
 
             var hasCurrent = current.TryGetValue(node, out var currentNodeStats);
 
             // Wait until we have more info
-            if (hasCurrent == false)
-                return false;
+            if (hasCurrent == false || currentNodeStats.LastSuccessfulUpdateDateTime == DateTime.MinValue)
+                return DatabaseHealth.NotEnoughInfo;
 
             // if server is down we should reassign
             if (DateTime.UtcNow - currentNodeStats.LastSuccessfulUpdateDateTime > _breakdownTimeout)
-                return true;
+                return DatabaseHealth.Bad;
 
             if (currentNodeStats.LastGoodDatabaseStatus.TryGetValue(db, out var lastGoodTime) == false)
             {
                 // here we have a problem, the topology says that the db needs to be in the node, but the node
                 // doesn't know that the db is on it, that probably indicate some problem and we'll move it
                 // to another node to resolve it.
-                return true;
+                return DatabaseHealth.NotEnoughInfo;
             }
+            if (lastGoodTime == default(DateTime) || lastGoodTime == DateTime.MinValue)
+                return DatabaseHealth.NotEnoughInfo;
 
-            return DateTime.UtcNow - lastGoodTime > _breakdownTimeout;
+            return DateTime.UtcNow - lastGoodTime > _breakdownTimeout ? DatabaseHealth.Bad : DatabaseHealth.Good;
         }
 
-        private bool TryFindFitNode(string badNode, string db,
+        private bool TryFindFitNode(string badNode, string db, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current, out string bestNode)
         {
             bestNode = null;
             var dbCount = int.MaxValue;
-            foreach (var report in current)
+            var databaseNodes = topology.AllNodes.ToList();
+
+            if (topology.Members.Count == 0) // no one can be used as mentor
+                return false;
+
+            foreach (var node in clusterTopology.AllNodes.Keys)
             {
-                if(report.Key == badNode)
+                
+                if (databaseNodes.Contains(node))
                     continue;
-                if(report.Value.LastReport.ContainsKey(db))
-                    continue;
-                if (dbCount > report.Value.LastReport.Count)
+
+                if (current.TryGetValue(node, out var nodeReport) == false)
                 {
-                    dbCount = report.Value.LastReport.Count;
-                    bestNode = report.Key;
+                    if (bestNode == null)
+                        bestNode = node;
+                    continue;
+                }
+
+                if (dbCount > nodeReport.Report.Count)
+                {
+                    dbCount = nodeReport.Report.Count;
+                    bestNode = node;
                 }
             }
 
@@ -529,6 +540,15 @@ namespace Raven.Server.ServerWide.Maintenance
             if (_engine.LeaderTag != _server.NodeTag)
             {
                 throw new NotLeadingException("This node is no longer the leader, so we abort updating the database topology");
+            }
+            return _engine.PutAsync(cmd);
+        }
+
+        private Task<(long Etag, object Result)> Delete(DeleteDatabaseCommand cmd)
+        {
+            if (_engine.LeaderTag != _server.NodeTag)
+            {
+                throw new NotLeadingException("This node is no longer the leader, so we abort the delection command");
             }
             return _engine.PutAsync(cmd);
         }

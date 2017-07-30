@@ -266,7 +266,7 @@ namespace Raven.Server.Documents.Replication
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
                             var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector);
-                            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.Status == TaskStatus.RanToCompletion)
+                            if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                             {
                                 if (_log.IsInfoEnabled)
                                 {
@@ -550,7 +550,8 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string SourceFormatted => $"{ConnectionInfo.SourceUrl}/databases/{ConnectionInfo.SourceDatabaseName} ({ConnectionInfo.SourceDatabaseId})";
-        public string FromToString => $"from {ConnectionInfo.SourceDatabaseName} at {ConnectionInfo.SourceUrl} (into database {_database.Name})";
+        public string FromToString => $"from {ConnectionInfo.SourceTag}-{ConnectionInfo.SourceDatabaseName} @ {ConnectionInfo.SourceUrl} " +
+                                      $"into database {_database.ServerStore.NodeTag}-{_database.Name} @ {_database.ServerStore.NodeTcpServerUrl}";
         public IncomingConnectionInfo ConnectionInfo { get; }
         
         private readonly List<ReplicationItem> _replicatedItems = new List<ReplicationItem>();

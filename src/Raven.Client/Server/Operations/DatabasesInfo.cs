@@ -50,6 +50,7 @@ namespace Raven.Client.Server.Operations
         public IndexRunningStatus IndexingStatus { get; set; }
 
         public NodesTopology NodesTopology { get; set; }
+        public int ReplicationFactor { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -77,7 +78,8 @@ namespace Raven.Client.Server.Operations
                 [nameof(IndexesCount)] = IndexesCount,
                 [nameof(IndexingStatus)] = IndexingStatus.ToString(),
 
-                [nameof(NodesTopology)] = NodesTopology?.ToJson()
+                [nameof(NodesTopology)] = NodesTopology?.ToJson(),
+                [nameof(ReplicationFactor)] = ReplicationFactor
             };
         }
     }
@@ -86,12 +88,14 @@ namespace Raven.Client.Server.Operations
     {
         public List<NodeId> Members { get; set; }
         public List<NodeId> Promotables { get; set; }
+        public List<NodeId> Rehabs { get; set; }
         public Dictionary<string, DbGroupNodeStatus> Status { get; set; }
 
         public NodesTopology()
         {
             Members = new List<NodeId>();
             Promotables = new List<NodeId>();
+            Rehabs = new List<NodeId>();
             Status = new Dictionary<string, DbGroupNodeStatus>();
         }
 
@@ -101,6 +105,7 @@ namespace Raven.Client.Server.Operations
             {
                 [nameof(Members)] = new DynamicJsonArray(Members.Select(x => x.ToJson())),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables.Select(x => x.ToJson())),
+                [nameof(Rehabs)] = new DynamicJsonArray(Rehabs.Select(x => x.ToJson())),
                 [nameof(Status)] = DynamicJsonValue.Convert(Status)
             };
         }

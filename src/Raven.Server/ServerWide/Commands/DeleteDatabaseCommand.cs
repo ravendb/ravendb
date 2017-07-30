@@ -10,6 +10,7 @@ namespace Raven.Server.ServerWide.Commands
     {
         public bool HardDelete;
         public string[] FromNodes;
+        public bool UpdateReplicationFactor = true;
 
         public DeleteDatabaseCommand() : base(null)
         {
@@ -29,7 +30,7 @@ namespace Raven.Server.ServerWide.Commands
             {
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
             }
-            if (FromNodes.Length > 0)
+            if (FromNodes != null && FromNodes.Length > 0) 
             {
                 foreach (var node in FromNodes)
                 {
@@ -38,17 +39,19 @@ namespace Raven.Server.ServerWide.Commands
                         DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
                     }
                     record.Topology.RemoveFromTopology(node);
-                    record.Topology.ReplicationFactor--;
+                    if (UpdateReplicationFactor)
+                    {
+                        record.Topology.ReplicationFactor--;
+                    }
                     record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
             else
             {
                 var allNodes = record.Topology.Members.Select(m => m)
-                    .Concat(record.Topology.Promotables.Select(p => p));
-                    // TODO: we need to delete databases from watchers too but watcher nodeTag seems to be null
-                    //.Concat(record.Topology.Watchers.Select(w => w.NodeTag));
-
+                    .Concat(record.Topology.Promotables.Select(p => p))
+                    .Concat(record.Topology.Rehabs.Select(r => r));
+                  
                 foreach (var node in allNodes)
                     record.DeletionInProgress[node] = deletionInProgressStatus;
 
@@ -64,8 +67,12 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(HardDelete)] = HardDelete;
-            json[nameof(FromNodes)] = FromNodes;
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
+            json[nameof(UpdateReplicationFactor)] = UpdateReplicationFactor;
+            if (FromNodes != null)
+            {
+              json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
+            }
         }
     }
 }

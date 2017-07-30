@@ -120,7 +120,7 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.FailoverOnly)] = false,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
                                 })
-                                .Concat(dbRecord.Topology.Rehab.Select(x => new DynamicJsonValue
+                                .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
@@ -379,28 +379,21 @@ namespace Raven.Server.Web.System
                     nodesTopology.Members.Add(GetNodeId(node));
                     nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = "Ok" };
                 }
+
                 foreach (var promotable in topology.Promotables)
                 {
-                    var url = clusterTopology.GetUrlFromTag(promotable);
-                    var node = new InternalReplication
-                    {
-                        Database = databaseName,
-                        NodeTag = promotable,
-                        Url = url
-                    };
-                    var promotableTask = new PromotableTask(promotable, url, databaseName);
-                    nodesTopology.Promotables.Add(GetNodeId(node, topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive())));
+                    var node = GetNode(databaseName, clusterTopology, promotable, out var promotableTask);
+                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
+                    nodesTopology.Promotables.Add(GetNodeId(node, mentor));
+                    SetNodeStatus(topology, promotable, nodesTopology);
+                }
 
-                    var nodeStatus = new DbGroupNodeStatus();
-                    if (topology.PromotablesStatus.TryGetValue(promotable, out var status))
-                    {
-                        nodeStatus.LastStatus = status;
-                    }
-                    if (topology.DemotionReasons.TryGetValue(promotable, out var reason))
-                    {
-                        nodeStatus.LastError = reason;
-                    }
-                    nodesTopology.Status[promotable] = nodeStatus;
+                foreach (var rehab in topology.Rehabs)
+                {
+                    var node = GetNode(databaseName, clusterTopology, rehab, out var promotableTask);
+                    var mentor = topology.WhoseTaskIsIt(promotableTask, ServerStore.IsPassive());
+                    nodesTopology.Rehabs.Add(GetNodeId(node, mentor));
+                    SetNodeStatus(topology, rehab, nodesTopology);
                 }
             }
 
@@ -438,11 +431,39 @@ namespace Raven.Server.Web.System
                 IndexesCount = db?.IndexStore.GetIndexes().Count() ?? 0,
                 IndexingStatus = indexingStatus,
 
-                NodesTopology = nodesTopology
+                NodesTopology = nodesTopology,
+                ReplicationFactor = topology?.ReplicationFactor ?? -1
             };
 
             var doc = databaseInfo.ToJson();
             context.Write(writer, doc);
+        }
+
+        private static void SetNodeStatus(DatabaseTopology topology, string rehab, NodesTopology nodesTopology)
+        {
+            var nodeStatus = new DbGroupNodeStatus();
+            if (topology.PromotablesStatus.TryGetValue(rehab, out var status))
+            {
+                nodeStatus.LastStatus = status;
+            }
+            if (topology.DemotionReasons.TryGetValue(rehab, out var reason))
+            {
+                nodeStatus.LastError = reason;
+            }
+            nodesTopology.Status[rehab] = nodeStatus;
+        }
+
+        private static InternalReplication GetNode(string databaseName, ClusterTopology clusterTopology, string rehab, out PromotableTask promotableTask)
+        {
+            var url = clusterTopology.GetUrlFromTag(rehab);
+            var node = new InternalReplication
+            {
+                Database = databaseName,
+                NodeTag = rehab,
+                Url = url
+            };
+            promotableTask = new PromotableTask(rehab, url, databaseName);
+            return node;
         }
 
         private void WriteFaultedDatabaseInfo(TransactionOperationContext context, BlittableJsonTextWriter writer, Task<DocumentDatabase> dbTask, string databaseName)

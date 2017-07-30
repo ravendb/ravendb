@@ -256,14 +256,16 @@ namespace RachisTests.DatabaseCluster
                 newTopology.Members.Add("A");
                 newTopology.Members.Add("C");
                 Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
+                var members = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2, 30_000);
+                Assert.Equal(2, members);
             }
         }
 
         [Fact]
-        public async Task RedistrebuteDatabaseOnCascadeFailure()
+        public async Task RedistrebuteDatabaseOnMultiFailure()
         {
             var clusterSize = 5;
-            var dbGroupSize = 2;
+            var dbGroupSize = 3;
             var databaseName = "RedistrebuteDatabaseOnCascadeFailure";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
 
@@ -277,10 +279,10 @@ namespace RachisTests.DatabaseCluster
                 doc.Topology = new DatabaseTopology();
                 doc.Topology.Members.Add("A");
                 doc.Topology.Members.Add("B");
+                doc.Topology.Members.Add("C");
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
                 Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
-
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new IndexMerging.User { Name = "Karmel" }, "users/1");
@@ -288,12 +290,17 @@ namespace RachisTests.DatabaseCluster
                 }
                 Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                WaitForUserToContinueTheTest((DocumentStore)store);
+                DisposeServerAndWaitForFinishOfDisposal(Servers[2]);
 
-                // the db should move from node B to node C
+                // the db should move to D & E
                 var newTopology = new DatabaseTopology();
                 newTopology.Members.Add("A");
-                newTopology.Members.Add("C");
+                newTopology.Members.Add("D");
+                newTopology.Members.Add("E");
                 Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
+                var members  = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
+                Assert.Equal(3, members);
             }
         }
 
