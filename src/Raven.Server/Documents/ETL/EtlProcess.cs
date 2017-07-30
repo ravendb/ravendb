@@ -282,9 +282,8 @@ namespace Raven.Server.Documents.ETL
 
             if (_threadAllocations.Allocations > _currentMaximumAllowedMemory.GetValue(SizeUnit.Bytes))
             {
-                ProcessMemoryUsage memoryUsage;
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out memoryUsage) == false)
+                        Database.DocumentsStorage.Environment.Options.RunningOn32Bits, Logger, out ProcessMemoryUsage memoryUsage) == false)
                 {
                     var reason = $"Stopping the batch because cannot budget additional memory. Current budget: {_threadAllocations.Allocations}. Current memory usage: " +
                                  $"{nameof(memoryUsage.WorkingSet)} = {memoryUsage.WorkingSet}," +

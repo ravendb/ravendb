@@ -25,8 +25,7 @@ namespace Raven.Server.TrafficWatch
         {
             using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
             {
-                JsonOperationContext context;
-                using (ServerStore.ContextPool.AllocateOperationContext(out context))
+                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     try
                     {
@@ -57,8 +56,7 @@ namespace Raven.Server.TrafficWatch
                                     });
                                 }
 
-                                ArraySegment<byte> bytes;
-                                ms.TryGetBuffer(out bytes);
+                                ms.TryGetBuffer(out ArraySegment<byte> bytes);
                                 await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, ServerStore.ServerShutdown);
                             }
                         }

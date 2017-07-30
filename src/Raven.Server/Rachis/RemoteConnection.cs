@@ -354,8 +354,7 @@ namespace Raven.Server.Rachis
 
         private static void ValidateMessage(string expectedType, BlittableJsonReaderObject json)
         {
-            string type;
-            if (json.TryGet("Type", out type) == false || type != expectedType)
+            if (json.TryGet("Type", out string type) == false || type != expectedType)
                 ThrowUnexpectedMessage(type, expectedType, json);
         }
 

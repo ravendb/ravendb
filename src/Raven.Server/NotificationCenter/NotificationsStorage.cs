@@ -62,8 +62,7 @@ namespace Raven.Server.NotificationCenter
             _environment = environment;
             _contextPool = contextPool;
 
-            TransactionOperationContext context;
-            using (contextPool.AllocateOperationContext(out context))
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
                 _actionsSchema.Create(tx, NotificationsSchema.NotificationsTree, 16);
@@ -77,8 +76,7 @@ namespace Raven.Server.NotificationCenter
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Saving notification '{notification.Id}'.");
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 // if previous notification had postponed until value pass this value to newly saved notification
@@ -115,8 +113,7 @@ namespace Raven.Server.NotificationCenter
                 ? Bits.SwapBytes(postponedUntil.Value.Ticks)
                 : _postponeDateNotSpecified;
 
-            TableValueBuilder tvb;
-            using (table.Allocate(out tvb))
+            using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(id.Buffer, id.Size);
                 tvb.Add((byte*)&createdAtTicks, sizeof(long));
@@ -129,8 +126,7 @@ namespace Raven.Server.NotificationCenter
 
         internal static bool TryReadDate(BlittableJsonReaderObject action, string fieldName, out DateTime date)
         {
-            object dateString;
-            if (action.TryGetMember(fieldName, out dateString) == false || dateString == null)
+            if (action.TryGetMember(fieldName, out object dateString) == false || dateString == null)
             {
                 date = default(DateTime);
                 return false;
@@ -138,8 +134,7 @@ namespace Raven.Server.NotificationCenter
 
             var lazyStringDate = (LazyStringValue)dateString;
 
-            DateTimeOffset _;
-            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out date, out _);
+            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out date, out DateTimeOffset _);
 
             switch (parsedType)
             {
@@ -156,9 +151,7 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposeableScope())
             {
-                TransactionOperationContext context;
-
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
                 actions = ReadActionsByCreatedAtIndex(context);
@@ -171,10 +164,9 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposeableScope())
             {
-                TransactionOperationContext context;
                 RavenTransaction tx;
 
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(tx = context.OpenReadTransaction());
 
                 value = Get(id, context, tx);
@@ -197,9 +189,8 @@ namespace Raven.Server.NotificationCenter
         {
             using (var scope = new DisposeableScope())
             {
-                TransactionOperationContext context;
 
-                scope.EnsureDispose(_contextPool.AllocateOperationContext(out context));
+                scope.EnsureDispose(_contextPool.AllocateOperationContext(out TransactionOperationContext context));
                 scope.EnsureDispose(context.OpenReadTransaction());
 
                 actions = ReadPostponedActionsByPostponedUntilIndex(context, cutoff);
@@ -233,11 +224,9 @@ namespace Raven.Server.NotificationCenter
         {
             var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
 
-            Slice slice;
-            using (Slice.From(tx.InnerTransaction.Allocator, id, out slice))
+            using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice slice))
             {
-                TableValueReader tvr;
-                if (table.ReadByKey(slice, out tvr) == false)
+                if (table.ReadByKey(slice, out TableValueReader tvr) == false)
                     return null;
 
                 return Read(context, ref tvr);
@@ -251,14 +240,12 @@ namespace Raven.Server.NotificationCenter
 
             bool deleteResult;
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
 
-                Slice alertSlice;
-                using (Slice.From(tx.InnerTransaction.Allocator, id, out alertSlice))
+                using (Slice.From(tx.InnerTransaction.Allocator, id, out Slice alertSlice))
                 {
                     deleteResult = table.DeleteByKey(alertSlice);
                 }
@@ -273,14 +260,12 @@ namespace Raven.Server.NotificationCenter
         {
             var count = 0;
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 foreach (var action in ReadActionsByCreatedAtIndex(context))
                 {
-                    object type;
-                    if (action.Json.TryGetMember(nameof(Notification.Type), out type) == false)
+                    if (action.Json.TryGetMember(nameof(Notification.Type), out object type) == false)
                         throw new InvalidOperationException($"Could not find notification type. Notification: {action}");
 
                     var typeLsv = (LazyStringValue)type;
@@ -295,9 +280,8 @@ namespace Raven.Server.NotificationCenter
 
         private NotificationTableValue Read(JsonOperationContext context, ref TableValueReader reader)
         {
-            int size;
 
-            var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(NotificationsSchema.NotificationsTable.CreatedAtIndex, out size)));
+            var createdAt = new DateTime(Bits.SwapBytes(*(long*)reader.Read(NotificationsSchema.NotificationsTable.CreatedAtIndex, out int size)));
 
             var postponeUntilTicks = *(long*)reader.Read(NotificationsSchema.NotificationsTable.PostponedUntilIndex, out size);
 
@@ -317,8 +301,7 @@ namespace Raven.Server.NotificationCenter
 
         public void ChangePostponeDate(string id, DateTime? postponeUntil)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var item = Get(id, context, tx);

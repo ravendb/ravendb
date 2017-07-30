@@ -410,8 +410,7 @@ namespace Raven.Server.Documents.Indexes
                         if (_cts.IsCancellationRequested)
                             return true;
 
-                        DocumentsOperationContext documentsContext;
-                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+                        using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
                         using (documentsContext.OpenReadTransaction())
                         {
                             return IsStale(documentsContext);
@@ -437,8 +436,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected virtual void LoadValues()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 State = _indexStorage.ReadState(tx);
@@ -619,8 +617,7 @@ namespace Raven.Server.Documents.Indexes
             if (Type == IndexType.Faulty)
                 return true;
 
-            TransactionOperationContext indexContext;
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
             {
                 return IsStale(databaseContext, indexContext, cutoff);
@@ -644,8 +641,7 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 return (true, (long)IndexProgressStatus.Compacting);
 
-            TransactionOperationContext indexContext;
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
             {
                 var isStale = IsStale(databaseContext, indexContext);
@@ -705,8 +701,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetLastMappedEtagFor(string collection)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -721,8 +716,7 @@ namespace Raven.Server.Documents.Indexes
         /// TODO iftah, change visibility of function back to internal when finished with new client
         public Dictionary<string, long> GetLastMappedEtagsForDebug()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -1124,11 +1118,9 @@ namespace Raven.Server.Documents.Indexes
             _threadAllocations = NativeMemory.ThreadAllocations.Value;
 
             bool mightBeMore = false;
-            DocumentsOperationContext databaseContext;
-            TransactionOperationContext indexContext;
             using (CultureHelper.EnsureInvariantCulture())
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out databaseContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext databaseContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 indexContext.PersistentContext.LongLivedTransactions = true;
                 databaseContext.PersistentContext.LongLivedTransactions = true;
@@ -1170,8 +1162,7 @@ namespace Raven.Server.Documents.Indexes
 
                     using (stats.For(IndexingOperation.Storage.Commit))
                     {
-                        CommitStats commitStats;
-                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out commitStats);
+                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
 
                         tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                         {
@@ -1413,8 +1404,7 @@ namespace Raven.Server.Documents.Indexes
             if (documentsContext.Transaction == null)
                 throw new InvalidOperationException("Cannot calculate index progress without valid transaction.");
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var progress = new IndexProgress
@@ -1439,10 +1429,8 @@ namespace Raven.Server.Documents.Indexes
                         LastProcessedTombstoneEtag = collectionStats.LastProcessedTombstoneEtag
                     };
 
-                    long totalCount;
-                    progressStats.NumberOfDocumentsToProcess =
-                        DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, collection,
-                            progressStats.LastProcessedDocumentEtag, out totalCount);
+                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, 
+                        collection, progressStats.LastProcessedDocumentEtag, out long totalCount);
                     progressStats.TotalNumberOfDocuments = totalCount;
 
                     progressStats.NumberOfTombstonesToProcess =
@@ -1471,8 +1459,7 @@ namespace Raven.Server.Documents.Indexes
             if (_contextPool == null)
                 throw new ObjectDisposedException("Index " + Name);
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             using (var reader = IndexPersistence.OpenIndexReader(tx.InnerTransaction))
             {
@@ -1654,8 +1641,7 @@ namespace Raven.Server.Documents.Indexes
                     // query the index again. This is important because of: 
                     // http://issues.hibernatingrhinos.com/issue/RavenDB-5576
                     var frozenAwaiter = GetIndexingBatchAwaiter();
-                    TransactionOperationContext indexContext;
-                    using (_contextPool.AllocateOperationContext(out indexContext))
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         documentsContext.OpenReadTransaction();
@@ -1781,11 +1767,10 @@ namespace Raven.Server.Documents.Indexes
 
                 while (true)
                 {
-                    TransactionOperationContext indexContext;
                     AssertIndexState();
                     marker.HoldLock();
 
-                    using (_contextPool.AllocateOperationContext(out indexContext))
+                    using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     {
                         // we take the awaiter _before_ the indexing transaction happens, 
                         // so if there are any changes, it will already happen to it, and we'll 
@@ -1841,8 +1826,7 @@ namespace Raven.Server.Documents.Indexes
         {
             AssertIndexState();
 
-            TransactionOperationContext indexContext;
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (var tx = indexContext.OpenReadTransaction())
             {
                 var result = new TermsQueryResultServerSide
@@ -1870,19 +1854,18 @@ namespace Raven.Server.Documents.Indexes
                 AssertIndexState();
                 marker.HoldLock();
 
-                TransactionOperationContext indexContext;
-                using (_contextPool.AllocateOperationContext(out indexContext))
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (var tx = indexContext.OpenReadTransaction())
                 {
                     var result = new SuggestionQueryResultServerSide();
 
                     var isStale = IsStale(documentsContext, indexContext);
 
-                    FillSuggestionQueryResult(result, isStale, documentsContext, indexContext);                                            
+                    FillSuggestionQueryResult(result, isStale, documentsContext, indexContext);
 
                     using (var reader = IndexPersistence.OpenSuggestionIndexReader(tx.InnerTransaction, query.Field))
                     {
-                        result.Suggestions = reader.Suggestions(query, token.Token);                                      
+                        result.Suggestions = reader.Suggestions(query, token.Token);
                     }
 
                     return result;
@@ -1910,8 +1893,7 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException("Stop words document " + query.StopWordsDocumentId +
                                                         " could not be found");
 
-                BlittableJsonReaderArray value;
-                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out value) && value != null)
+                if (stopWordsDoc.Data.TryGet(nameof(StopWordsSetup.StopWords), out BlittableJsonReaderArray value) && value != null)
                 {
                     stopWords = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                     for (var i = 0; i < value.Length; i++)
@@ -1924,8 +1906,7 @@ namespace Raven.Server.Documents.Indexes
                 AssertIndexState();
                 marker.HoldLock();
 
-                TransactionOperationContext indexContext;
-                using (_contextPool.AllocateOperationContext(out indexContext))
+                using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                 using (var tx = indexContext.OpenReadTransaction())
                 {
 
@@ -1982,9 +1963,8 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query, query.SortedFields);
 
-            TransactionOperationContext indexContext;
             using (var marker = MarkQueryAsRunning(query, token))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (var indexTx = indexContext.OpenReadTransaction())
             using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
             {
@@ -2214,11 +2194,8 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 return -1;
 
-            DocumentsOperationContext documentsContext;
-            TransactionOperationContext indexContext;
-
-            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
-            using (_contextPool.AllocateOperationContext(out indexContext))
+            using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
                 using (indexContext.OpenReadTransaction())
                 using (documentsContext.OpenReadTransaction())
@@ -2230,8 +2207,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
                 {
@@ -2354,10 +2330,9 @@ namespace Raven.Server.Documents.Indexes
             if (_threadAllocations.Allocations > currentBudget)
             {
                 var canContinue = true;
-                ProcessMemoryUsage memoryUsage;
 
                 if (MemoryUsageGuard.TryIncreasingMemoryUsageForThread(_threadAllocations, ref _currentMaximumAllowedMemory,
-                        _environment.Options.RunningOn32Bits, _logger, out memoryUsage) == false)
+                        _environment.Options.RunningOn32Bits, _logger, out ProcessMemoryUsage memoryUsage) == false)
                 {
                     _allocationCleanupNeeded = true;
 
@@ -2481,8 +2456,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual DetailedStorageReport GenerateStorageReport(bool calculateExactSizes)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 return _environment.GenerateDetailedReport(tx.InnerTransaction, calculateExactSizes);

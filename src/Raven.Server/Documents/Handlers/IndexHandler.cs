@@ -125,8 +125,7 @@ namespace Raven.Server.Documents.Handlers
             if (string.IsNullOrWhiteSpace(source))
                 throw new InvalidOperationException("Could not retrieve source for given index.");
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 context.Write(writer, new DynamicJsonValue
@@ -142,8 +141,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/has-changed", "POST", AuthorizationStatus.ValidUser)]
         public Task HasChanged()
         {
-            JsonOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var json = context.ReadForMemory(RequestBodyStream(), "index/definition"))
             {
                 var indexDefinition = JsonDeserializationServer.IndexDefinition(json);
@@ -179,8 +177,7 @@ namespace Raven.Server.Documents.Handlers
 
             var operation = GetStringQueryString("op");
 
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 if (string.Equals(operation, "map-reduce-tree", StringComparison.OrdinalIgnoreCase))
@@ -209,8 +206,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (string.Equals(operation, "source-doc-ids", StringComparison.OrdinalIgnoreCase))
                 {
-                    IEnumerable<string> ids;
-                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out ids))
+                    using (index.GetIdentifiersOfMappedDocuments(GetStringQueryString("startsWith", required: false), GetStart(), GetPageSize(), out IEnumerable<string> ids))
                     {
                         writer.WriteArrayOfResultsAndCount(ids);
                     }
@@ -242,8 +238,7 @@ namespace Raven.Server.Documents.Handlers
             var pageSize = GetPageSize();
             var namesOnly = GetBoolValueQueryString("namesOnly", required: false) ?? false;
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 IndexDefinition[] indexDefinitions;
@@ -291,8 +286,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetStringQueryString("name", required: false);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 IndexStats[] indexStats;
@@ -335,8 +329,7 @@ namespace Raven.Server.Documents.Handlers
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             using (context.OpenReadTransaction())
             {
@@ -358,8 +351,7 @@ namespace Raven.Server.Documents.Handlers
 
             var newIndexId = Database.IndexStore.ResetIndex(name);
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -409,8 +401,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/indexes/status", "GET", AuthorizationStatus.ValidUser)]
         public Task Status()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -456,8 +447,7 @@ namespace Raven.Server.Documents.Handlers
             var names = GetStringValuesQueryString("name");
             var modeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("mode");
 
-            IndexLockMode mode;
-            if (Enum.TryParse(modeStr, out mode) == false)
+            if (Enum.TryParse(modeStr, out IndexLockMode mode) == false)
                 throw new InvalidOperationException("Query string value 'mode' is not a valid mode: " + modeStr);
 
             foreach (var name in names)
@@ -474,8 +464,7 @@ namespace Raven.Server.Documents.Handlers
             var names = GetStringValuesQueryString("name");
             var priorityStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("priority");
 
-            IndexPriority priority;
-            if (Enum.TryParse(priorityStr, out priority) == false)
+            if (Enum.TryParse(priorityStr, out IndexPriority priority) == false)
                 throw new InvalidOperationException("Query string value 'priority' is not a valid priority: " + priorityStr);
 
             foreach (var name in names)
@@ -581,8 +570,7 @@ namespace Raven.Server.Documents.Handlers
         public Task TotalTime()
         {
             var indexes = GetIndexesToReportOn();
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var dja = new DynamicJsonArray();

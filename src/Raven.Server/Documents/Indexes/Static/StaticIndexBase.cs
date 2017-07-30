@@ -30,8 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void AddMap(string collection, IndexingFunc map)
         {
-            List<IndexingFunc> funcs;
-            if (Maps.TryGetValue(collection, out funcs) == false)
+            if (Maps.TryGetValue(collection, out List<IndexingFunc> funcs) == false)
                 Maps[collection] = funcs = new List<IndexingFunc>();
 
             funcs.Add(map);
@@ -39,12 +38,10 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public void AddReferencedCollection(string collection, string referencedCollection)
         {
-            CollectionName referencedCollectionName;
-            if (_collectionsCache.TryGetValue(referencedCollection, out referencedCollectionName) == false)
+            if (_collectionsCache.TryGetValue(referencedCollection, out CollectionName referencedCollectionName) == false)
                 _collectionsCache[referencedCollection] = referencedCollectionName = new CollectionName(referencedCollection);
 
-            HashSet<CollectionName> set;
-            if (ReferencedCollections.TryGetValue(collection, out set) == false)
+            if (ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> set) == false)
                 ReferencedCollections[collection] = set = new HashSet<CollectionName>();
 
             set.Add(referencedCollectionName);

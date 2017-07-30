@@ -141,8 +141,7 @@ namespace Raven.Server.Documents
                 // there
                 for (int i = 0; i < 3; i++)
                 {
-                    MergedTransactionCommand result;
-                    while (_operations.TryDequeue(out result))
+                    while (_operations.TryDequeue(out MergedTransactionCommand result))
                     {
                         result.Exception = e;
                         NotifyOnThreadPool(result);
@@ -162,8 +161,7 @@ namespace Raven.Server.Documents
 
         private List<MergedTransactionCommand> GetBufferForPendingOps()
         {
-            List<MergedTransactionCommand> pendingOps;
-            if (_opsBuffers.TryDequeue(out pendingOps) == false)
+            if (_opsBuffers.TryDequeue(out List<MergedTransactionCommand> pendingOps) == false)
             {
                 return new List<MergedTransactionCommand>();
             }
@@ -202,8 +200,7 @@ namespace Raven.Server.Documents
         private void MergeTransactionsOnce()
         {
             var pendingOps = GetBufferForPendingOps();
-            DocumentsOperationContext context;
-            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 DocumentsTransaction tx = null;
                 try
@@ -214,8 +211,7 @@ namespace Raven.Server.Documents
                     }
                     catch (Exception e)
                     {
-                        MergedTransactionCommand command;
-                        if (_operations.TryDequeue(out command))
+                        if (_operations.TryDequeue(out MergedTransactionCommand command))
                         {
                             command.Exception = e;
                             DoCommandNotification(command);
@@ -229,7 +225,7 @@ namespace Raven.Server.Documents
                         var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
                         try
                         {
-                                result = ExecutePendingOperationsInTransaction(pendingOps, context, null, ref transactionMeter);
+                            result = ExecutePendingOperationsInTransaction(pendingOps, context, null, ref transactionMeter);
                         }
                         finally
                         {
@@ -474,10 +470,9 @@ namespace Raven.Server.Documents
                 // overly large replication batches.
                 context.TransactionMarkerOffset++;
 
-                MergedTransactionCommand op;
-                if (TryGetNextOperation(previousOperation, out op, ref meter) == false)
+                if (TryGetNextOperation(previousOperation, out MergedTransactionCommand op, ref meter) == false)
                     break;
-             
+
                 pendingOps.Add(op);
                 meter.IncrementCounter(1);
                 meter.IncreamentCommands(op.Execute(context));
@@ -617,8 +612,7 @@ namespace Raven.Server.Documents
                 {
                     try
                     {
-                        DocumentsOperationContext context;
-                        using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                        using (_parent.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         {
                             using (var tx = context.OpenWriteTransaction())
                             {
@@ -671,8 +665,7 @@ namespace Raven.Server.Documents
                 }
             }
 
-            MergedTransactionCommand result;
-            while (_operations.TryDequeue(out result))
+            while (_operations.TryDequeue(out MergedTransactionCommand result))
             {
                 result.TaskCompletionSource.TrySetCanceled();
             }

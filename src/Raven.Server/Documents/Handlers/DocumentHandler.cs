@@ -76,8 +76,7 @@ namespace Raven.Server.Documents.Handlers
                     TransformerDoesNotExistException.ThrowFor(transformerName);
             }
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 if (ids.Count > 0)
@@ -472,15 +471,13 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
-
-                BlittableJsonReaderObject patchCmd, patchIfMissingCmd;
-                if (request.TryGet("Patch", out patchCmd) == false || patchCmd == null)
+                if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 
                 var patch = PatchRequest.Parse(patchCmd);
 
                 PatchRequest patchIfMissing = null;
-                if (request.TryGet("PatchIfMissing", out patchIfMissingCmd) && patchIfMissingCmd != null)
+                if (request.TryGet("PatchIfMissing", out BlittableJsonReaderObject patchIfMissingCmd) && patchIfMissingCmd != null)
                     patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
@@ -560,8 +557,7 @@ namespace Raven.Server.Documents.Handlers
             var lang = (GetStringQueryString("lang", required: false) ?? "csharp")
                 .Trim().ToLowerInvariant();
 
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var document = Database.DocumentsStorage.Get(context, id);

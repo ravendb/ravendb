@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Globalization;
 using Raven.Client;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -90,16 +88,12 @@ namespace Raven.Server.Documents
 
         public bool Expired(DateTime currentDate)
         {
-            string expirationDate;
-            BlittableJsonReaderObject metadata;
-            if (Data.TryGet(Constants.Documents.Metadata.Key, out metadata) &&
-                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out expirationDate))
-            {
-                var expirationDateTime = DateTime.ParseExact(expirationDate, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
-                if (expirationDateTime < currentDate)
-                    return true;
-            }
-            return false;
+            if (Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false || 
+                metadata.TryGet(Constants.Documents.Expiration.ExpirationDate, out string expirationDate) == false)
+                return false;
+
+            var expirationDateTime = DateTime.ParseExact(expirationDate, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
+            return expirationDateTime < currentDate;
         }
     }
 }

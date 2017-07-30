@@ -109,8 +109,7 @@ namespace Raven.Server.Rachis
                     {
                         try
                         {
-                            TransactionOperationContext context;
-                            using (_engine.ContextPool.AllocateOperationContext(out context))
+                            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                             {
                                 stream = _engine.ConnectToPeer(_url, _certificate, context).Result;
                             }
@@ -153,8 +152,7 @@ namespace Raven.Server.Rachis
 
                                 // TODO: how to close
                                 entries.Clear();
-                                TransactionOperationContext context;
-                                using (_engine.ContextPool.AllocateOperationContext(out context))
+                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 {
                                     AppendEntries appendEntries;
                                     using (context.OpenReadTransaction())
@@ -162,8 +160,7 @@ namespace Raven.Server.Rachis
                                         var table = context.Transaction.InnerTransaction.OpenTable(RachisConsensus.LogsTable, RachisConsensus.EntriesSlice);
 
                                         var reveredNextIndex = Bits.SwapBytes(_followerMatchIndex + 1);
-                                        Slice key;
-                                        using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out key))
+                                        using (Slice.External(context.Allocator, (byte*)&reveredNextIndex, sizeof(long), out Slice key))
                                         {
                                             long totalSize = 0;
                                             foreach (var value in table.SeekByPrimaryKey(key, 0))
@@ -205,7 +202,6 @@ namespace Raven.Server.Rachis
                                     }
                                     _connection.Send(context, appendEntries, entries);
                                     var aer = _connection.Read<AppendEntriesResponse>(context);
-                                   
                                     if (aer.Success == false)
                                     {
                                         // shouldn't happen, the connection should be aborted if this is the case, but still
@@ -221,8 +217,9 @@ namespace Raven.Server.Rachis
                                     Debug.Assert(aer.CurrentTerm == _engine.CurrentTerm);
                                     UpdateLastMatchFromFollower(aer.LastLogIndex);
                                 }
+
                                 var task = _leader.WaitForNewEntries();
-                                using (_engine.ContextPool.AllocateOperationContext(out context))
+                                using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                                 using (context.OpenReadTransaction())
                                 {
                                     if (_engine.GetLastEntryIndex(context) != _followerMatchIndex)
@@ -292,8 +289,7 @@ namespace Raven.Server.Rachis
 
         private void SendSnapshot(Stream stream)
         {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var earliestIndexEtry = _engine.GetFirstEntryIndex(context);
@@ -318,9 +314,7 @@ namespace Raven.Server.Rachis
                 }
                 else
                 {
-                    long index;
-                    long term;
-                    _engine.GetLastCommitIndex(context, out index, out term);
+                    _engine.GetLastCommitIndex(context, out long index, out long term);
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"FollowerAmbassador {_engine.Tag}:sending snapshot to {_tag} with index={index} term={term}");
@@ -343,7 +337,6 @@ namespace Raven.Server.Rachis
                 while (true)
                 {
                     var aer = _connection.Read<InstallSnapshotResponse>(context);
-                   
                     if (aer.Done)
                     {
                         UpdateLastMatchFromFollower(aer.LastLogIndex);
@@ -503,8 +496,7 @@ namespace Raven.Server.Rachis
 
                 writer.WritePropertyName(nameof(RachisEntry.Index));
 
-                int size;
-                var index = Bits.SwapBytes(*(long*)value.Reader.Read(0, out size));
+                var index = Bits.SwapBytes(*(long*)value.Reader.Read(0, out int size));
                 Debug.Assert(size == sizeof(long));
                 writer.WriteValue(index);
 
@@ -533,8 +525,7 @@ namespace Raven.Server.Rachis
         private long InitialNegotiationWithFollower()
         {
             UpdateLastMatchFromFollower(0);
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 ClusterTopology clusterTopology;
                 LogLengthNegotiation lln;

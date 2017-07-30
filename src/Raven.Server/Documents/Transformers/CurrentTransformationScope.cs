@@ -122,8 +122,7 @@ namespace Raven.Server.Documents.Transformers
 
         public TransformerParameter Parameter(string key)
         {
-            TransformerParameter parameter;
-            if (TryGetParameter(key, out parameter) == false)
+            if (TryGetParameter(key, out TransformerParameter parameter) == false)
                 throw new InvalidOperationException("Transformer parameter " + key + " was accessed, but it wasn't provided.");
 
             return parameter;
@@ -131,8 +130,7 @@ namespace Raven.Server.Documents.Transformers
 
         public TransformerParameter ParameterOrDefault(string key, object val)
         {
-            TransformerParameter parameter;
-            if (TryGetParameter(key, out parameter) == false)
+            if (TryGetParameter(key, out TransformerParameter parameter) == false)
                 return new TransformerParameter(val);
 
             return parameter;
@@ -146,8 +144,7 @@ namespace Raven.Server.Documents.Transformers
                 return false;
             }
 
-            object value;
-            if (_parameters.TryGetMember(key, out value) == false)
+            if (_parameters.TryGetMember(key, out object value) == false)
             {
                 parameter = null;
                 return false;

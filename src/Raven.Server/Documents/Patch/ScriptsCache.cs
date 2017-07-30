@@ -57,9 +57,8 @@ namespace Raven.Server.Documents.Patch
 
         public Engine GetEngine(Func<PatchRequest, Engine> createEngine, PatchRequest request, string customFunctions)
         {
-            CachedResult value;
             var patchRequestAndCustomFunctionsTuple = new ScriptedPatchRequestAndCustomFunctionsToken(request, customFunctions);
-            if (_cache.TryGetValue(patchRequestAndCustomFunctionsTuple, out value))
+            if (_cache.TryGetValue(patchRequestAndCustomFunctionsTuple, out CachedResult value))
             {
                 value.Usage++;
                 return value.Engine;

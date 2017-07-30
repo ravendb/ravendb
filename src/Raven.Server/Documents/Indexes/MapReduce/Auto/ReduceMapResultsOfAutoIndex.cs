@@ -32,10 +32,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                     foreach (var propertyName in obj.GetPropertyNames())
                     {
-                        string stringValue;
-
-                        IndexField indexField;
-                        if (_indexDefinition.TryGetField(propertyName, out indexField))
+                        if (_indexDefinition.TryGetField(propertyName, out IndexField indexField))
                         {
                             switch (indexField.MapReduceOperation)
                             {
@@ -50,7 +47,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                     long longValue;
 
                                     var numberType = BlittableNumber.Parse(value, out doubleValue, out longValue);
-                                    
                                     var aggregate = new PropertyResult(numberType);
 
                                     switch (numberType)
@@ -72,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                     throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.MapReduceOperation}' to aggregate on");
                             }
                         }
-                        else if (obj.TryGet(propertyName, out stringValue))
+                        else if (obj.TryGet(propertyName, out string stringValue))
                         {
                             aggregatedResult[propertyName] = new PropertyResult
                             {
@@ -93,8 +89,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                     var reduceKey = indexContext.ReadObject(obj, "reduce key");
 
-                    Dictionary<string, PropertyResult> existingAggregate;
-                    if (aggregatedResultsByReduceKey.TryGetValue(reduceKey, out existingAggregate) == false)
+                    if (aggregatedResultsByReduceKey.TryGetValue(reduceKey, out Dictionary<string, PropertyResult> existingAggregate) == false)
                     {
                         aggregatedResultsByReduceKey.Add(reduceKey, aggregatedResult);
                     }

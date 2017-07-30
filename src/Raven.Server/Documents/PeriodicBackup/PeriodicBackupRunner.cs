@@ -180,8 +180,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                DocumentsOperationContext context;
-                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 using (var tx = context.OpenReadTransaction())
                 {
                     var backupToLocalFolder = CanBackupUsing(configuration.LocalSettings);
@@ -200,14 +199,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                         status.BackupType != configuration.BackupType || // backup type has changed
                         status.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && DirectoryContainsFullBackupOrSnapshot(status.LocalBackup.BackupDirectory, configuration.BackupType) == false)
-                        // the local folder has a missing full backup
+                    // the local folder has a missing full backup
                     {
                         isFullBackup = true;
 
                         folderName = $"{now}.ravendb-{_database.Name}-{_serverStore.NodeTag}-{configuration.BackupType.ToString().ToLower()}";
-                        
+
                         backupDirectory = backupToLocalFolder ?
-                            new PathSetting(configuration.LocalSettings.FolderPath).Combine(folderName) : 
+                            new PathSetting(configuration.LocalSettings.FolderPath).Combine(folderName) :
                             _tempBackupPath;
 
                         if (Directory.Exists(backupDirectory.FullPath) == false)
@@ -725,8 +724,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var backupDetails = (BackupTaskDetails)backupTaskDetails;
 
-            PeriodicBackup periodicBackup;
-            if (ShouldRunBackupAfterTimerCallback(backupDetails, out periodicBackup) == false)
+            if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
                 return;
 
             CreateBackupTask(periodicBackup, backupDetails);
@@ -771,8 +769,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             var backupDetails = (BackupTaskDetails)backupTaskDetails;
 
-            PeriodicBackup periodicBackup;
-            if (ShouldRunBackupAfterTimerCallback(backupDetails, out periodicBackup) == false)
+            if (ShouldRunBackupAfterTimerCallback(backupDetails, out PeriodicBackup periodicBackup) == false)
                 return;
 
             var remainingInterval = backupDetails.NextBackup - MaxTimerTimeout;
@@ -830,8 +827,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private PeriodicBackupStatus GetBackupStatusFromCluster(long taskId)
         {
-            TransactionOperationContext context;
-            using (_serverStore.ContextPool.AllocateOperationContext(out context))
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 var statusBlittable = _serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(_database.Name, taskId));
@@ -876,8 +872,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             var deletedBackupTaskIds = _periodicBackups.Keys.Except(allBackupTaskIds).ToList();
             foreach (var deletedBackupId in deletedBackupTaskIds)
             {
-                PeriodicBackup deletedBackup;
-                if (_periodicBackups.TryRemove(deletedBackupId, out deletedBackup) == false)
+                if (_periodicBackups.TryRemove(deletedBackupId, out PeriodicBackup deletedBackup) == false)
                     continue;
 
                 // stopping any future backups
@@ -914,8 +909,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Debug.Assert(taskId == newConfiguration.TaskId);
 
             var backupStatus = GetBackupStatus(taskId, inMemoryBackupStatus: null);
-            PeriodicBackup existingBackupState;
-            if (_periodicBackups.TryGetValue(taskId, out existingBackupState) == false)
+            if (_periodicBackups.TryGetValue(taskId, out PeriodicBackup existingBackupState) == false)
             {
                 var newPeriodicBackup = new PeriodicBackup
                 {

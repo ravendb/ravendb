@@ -442,8 +442,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 .OrderBy(x => x.Key);
 
             var contentLength = string.Empty;
-            IEnumerable<string> values;
-            if (httpHeaders.TryGetValues("Content-Length", out values))
+            if (httpHeaders.TryGetValues("Content-Length", out IEnumerable<string> values))
                 contentLength = values.First();
 
             var contentType = string.Empty;

@@ -62,8 +62,7 @@ namespace Raven.Server.Web
             if (HttpContext.Request.HasFormContentType == false)
                 return null;
 
-            StringValues value;
-            if (HttpContext.Request.Form.TryGetValue(itemName, out value) == false)
+            if (HttpContext.Request.Form.TryGetValue(itemName, out StringValues value) == false)
                 return null;
 
             if (value.Count == 0)
@@ -214,8 +213,7 @@ namespace Raven.Server.Web
             if (intAsString == null)
                 return null;
 
-            int result;
-            if (int.TryParse(intAsString, out result) == false)
+            if (int.TryParse(intAsString, out int result) == false)
                 ThrowInvalidInteger(name, intAsString);
 
             return result;
@@ -232,8 +230,7 @@ namespace Raven.Server.Web
             if (longAsString == null)
                 return null;
 
-            long result;
-            if (long.TryParse(longAsString, out result) == false)
+            if (long.TryParse(longAsString, out long result) == false)
                 ThrowInvalidInteger(name, longAsString, "long");
 
             return result;
@@ -300,8 +297,7 @@ namespace Raven.Server.Web
             if (boolAsString == null)
                 return null;
 
-            bool result;
-            if (bool.TryParse(boolAsString, out result) == false)
+            if (bool.TryParse(boolAsString, out bool result) == false)
                 ThrowInvalidBoolean(name, boolAsString);
 
             return result;
@@ -320,8 +316,7 @@ namespace Raven.Server.Web
 
             dataAsString = Uri.UnescapeDataString(dataAsString);
 
-            DateTime result;
-            if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out result))
+            if (DateTime.TryParseExact(dataAsString, "o", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime result))
                 return result;
 
             ThrowInvalidDateTime(name, dataAsString);
@@ -341,8 +336,7 @@ namespace Raven.Server.Web
 
             timeSpanAsString = Uri.UnescapeDataString(timeSpanAsString);
 
-            TimeSpan result;
-            if (TimeSpan.TryParse(timeSpanAsString, out result))
+            if (TimeSpan.TryParse(timeSpanAsString, out TimeSpan result))
                 return result;
 
             ThrowInvalidTimeSpan(name, timeSpanAsString);

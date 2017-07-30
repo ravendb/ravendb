@@ -42,8 +42,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
             var key = document.Get(Constants.Documents.Indexing.Fields.DocumentIdFieldName, state) ?? document.Get(Constants.Documents.Indexing.Fields.ReduceKeyFieldName, state);
             var currentScore = _currentScorer.Score(state);
 
-            SubQueryResult value;
-            if (_results.TryGetValue(key, out value) == false)
+            if (_results.TryGetValue(key, out SubQueryResult value) == false)
                 return;
 
             value.Count++;

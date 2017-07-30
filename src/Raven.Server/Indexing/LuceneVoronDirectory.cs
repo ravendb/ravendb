@@ -67,8 +67,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            Slice str;
-            using (Slice.From(state.Transaction.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out Slice str))
             {
                 var info = filesTree.GetStreamInfo(str, writable: false);
                 if (info == null)
@@ -88,10 +87,9 @@ namespace Raven.Server.Indexing
             if (readResult == null)
                 throw new FileNotFoundException("Could not find file", name);
 
-            Slice str;
-            using (Slice.From(state.Transaction.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out Slice str))
             {
-                if(filesTree.TouchStream(str) == 0)
+                if (filesTree.TouchStream(str) == 0)
                     throw new FileNotFoundException(name);
             }
         }
@@ -103,8 +101,7 @@ namespace Raven.Server.Indexing
                 throw new ArgumentNullException(nameof(s));
 
             var filesTree = state.Transaction.ReadTree(_name);
-            Slice str;
-            using (Slice.From(state.Transaction.Allocator, name, out str))
+            using (Slice.From(state.Transaction.Allocator, name, out Slice str))
             {
                 var info = filesTree.GetStreamInfo(str, writable: false);
                 if (info == null)

@@ -200,8 +200,7 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleHiloConflict(DocumentsOperationContext context, string id, BlittableJsonReaderObject doc, string changeVector)
         {
-            long highestMax;
-            if (!doc.TryGet("Max", out highestMax))
+            if (!doc.TryGet("Max", out long highestMax))
                 throw new InvalidDataException("Tried to resolve HiLo document conflict but failed. Missing property name'Max'");
 
             var conflicts = _database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, id);
@@ -212,8 +211,7 @@ namespace Raven.Server.Documents.Replication
             {
                 //conflict with another existing document
                 var localHiloDoc = _database.DocumentsStorage.Get(context, id);
-                double max;
-                if (localHiloDoc.Data.TryGet("Max", out max) && max > highestMax)
+                if (localHiloDoc.Data.TryGet("Max", out double max) && max > highestMax)
                     resolvedHiLoDoc = localHiloDoc.Data;
                 mergedChangeVector = ChangeVectorUtils.MergeVectors(changeVector, localHiloDoc.ChangeVector);
             }
@@ -221,8 +219,7 @@ namespace Raven.Server.Documents.Replication
             {
                 foreach (var conflict in conflicts)
                 {
-                    long tmpMax;
-                    if (conflict.Doc.TryGet("Max", out tmpMax) && tmpMax > highestMax)
+                    if (conflict.Doc.TryGet("Max", out long tmpMax) && tmpMax > highestMax)
                     {
                         highestMax = tmpMax;
                         resolvedHiLoDoc = conflict.Doc;

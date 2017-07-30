@@ -22,8 +22,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/subscriptions/try", "POST", AuthorizationStatus.ValidUser)]
         public async Task Try()
         {
-            DocumentsOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var tryout = JsonDeserializationServer.SubscriptionTryout(json);
@@ -31,15 +30,15 @@ namespace Raven.Server.Documents.Handlers
                 SubscriptionPatchDocument patch = null;
                 if (string.IsNullOrEmpty(tryout.Script) == false)
                 {
-                    patch = new SubscriptionPatchDocument(Database,tryout.Script);
+                    patch = new SubscriptionPatchDocument(Database, tryout.Script);
                 }
 
-                if(tryout.Collection == null)
+                if (tryout.Collection == null)
                     throw new ArgumentException("Collection must be specified");
 
                 var pageSize = GetIntValueQueryString("pageSize", required: true) ?? 1;
 
-                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42, 
+                var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
 
                 var state = new SubscriptionState
@@ -135,8 +134,7 @@ namespace Raven.Server.Documents.Handlers
             var id = GetLongQueryString("id", required: false);
             var name = GetStringQueryString("name", required: false);
 
-            TransactionOperationContext context;
-            using (ServerStore.ContextPool.AllocateOperationContext(out context))                
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
                 IEnumerable<Subscriptions.SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;

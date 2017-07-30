@@ -68,8 +68,7 @@ namespace Raven.Server.Documents.Indexes
                 Name = IndexSchema.ErrorTimestampsSlice
             });
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 _errorsSchema.Create(tx.InnerTransaction, "Errors", 16);
@@ -77,14 +76,13 @@ namespace Raven.Server.Documents.Indexes
                 var typeInt = (int)_index.Type;
 
                 var statsTree = tx.InnerTransaction.CreateTree(IndexSchema.StatsTree);
-                Slice tmpSlice;
-                using (Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int), out tmpSlice))
+                using (Slice.External(context.Allocator, (byte*)&typeInt, sizeof(int), out Slice tmpSlice))
                     statsTree.Add(IndexSchema.TypeSlice, tmpSlice);
 
                 if (statsTree.Read(IndexSchema.CreatedTimestampSlice) == null)
                 {
                     var binaryDate = SystemTime.UtcNow.ToBinary();
-                    using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out tmpSlice))
+                    using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice tmpSlice))
                         statsTree.Add(IndexSchema.CreatedTimestampSlice, tmpSlice);
                 }
 
@@ -100,8 +98,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteDefinition(IndexDefinitionBase indexDefinition)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 indexDefinition.Persist(context, _environment.Options);
@@ -112,8 +109,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WritePriority(IndexPriority priority)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var oldPriority = _index.Definition.Priority;
@@ -134,14 +130,12 @@ namespace Raven.Server.Documents.Indexes
 
         public unsafe void WriteState(IndexState state)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
                 var stateInt = (int)state;
-                Slice stateSlice;
-                using (Slice.External(context.Allocator, (byte*)&stateInt, sizeof(int), out stateSlice))
+                using (Slice.External(context.Allocator, (byte*)&stateInt, sizeof(int), out Slice stateSlice))
                     statsTree.Add(IndexSchema.StateSlice, stateSlice);
 
                 tx.Commit();
@@ -160,8 +154,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteLock(IndexLockMode mode)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var oldLockMode = _index.Definition.LockMode;
@@ -184,22 +177,20 @@ namespace Raven.Server.Documents.Indexes
         {
             var errors = new List<IndexingError>();
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
 
                 foreach (var tvr in table.SeekForwardFrom(_errorsSchema.Indexes[IndexSchema.ErrorTimestampsSlice], Slices.BeforeAllKeys, 0))
                 {
-                    int size;
                     var error = new IndexingError();
 
-                    var ptr = tvr.Result.Reader.Read(0, out size);
+                    var ptr = tvr.Result.Reader.Read(0, out int size);
                     error.Timestamp = new DateTime(Bits.SwapBytes(*(long*)ptr), DateTimeKind.Utc);
 
                     ptr = tvr.Result.Reader.Read(1, out size);
-                    if(size != 0)
+                    if (size != 0)
                         error.Document = context.AllocateStringValue(null, ptr, size);
 
                     ptr = tvr.Result.Reader.Read(2, out size);
@@ -217,8 +208,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadErrorsCount()
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_errorsSchema, "Errors");
@@ -299,8 +289,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastProcessedTombstoneEtag(RavenTransaction tx, string collection)
         {
-            Slice collectionSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out collectionSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 return ReadLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice);
             }
@@ -330,8 +319,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long ReadLastIndexedEtag(RavenTransaction tx, string collection)
         {
-            Slice collectionSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out collectionSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 return ReadLastEtag(tx, IndexSchema.EtagsTree, collectionSlice);
             }
@@ -340,10 +328,8 @@ namespace Raven.Server.Documents.Indexes
         public unsafe void WriteLastReferenceTombstoneEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
         {
             var tree = tx.InnerTransaction.CreateTree("%" + collection);
-            Slice collectionSlice;
-            Slice etagSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out collectionSlice))
-            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
             {
                 tree.Add(collectionSlice, etagSlice);
             }
@@ -351,8 +337,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteLastTombstoneEtag(RavenTransaction tx, string collection, long etag)
         {
-            Slice collectionSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out collectionSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 WriteLastEtag(tx, IndexSchema.EtagsTombstoneTree, collectionSlice, etag);
             }
@@ -361,10 +346,8 @@ namespace Raven.Server.Documents.Indexes
         public unsafe void WriteLastReferenceEtag(RavenTransaction tx, string collection, CollectionName referencedCollection, long etag)
         {
             var tree = tx.InnerTransaction.CreateTree("$" + collection);
-            Slice collectionSlice;
-            Slice etagSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out collectionSlice))
-            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, referencedCollection.Name, ByteStringType.Immutable, out Slice collectionSlice))
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
             {
                 tree.Add(collectionSlice, etagSlice);
             }
@@ -372,8 +355,7 @@ namespace Raven.Server.Documents.Indexes
 
         public void WriteLastIndexedEtag(RavenTransaction tx, string collection, long etag)
         {
-            Slice collectionSlice;
-            using (Slice.From(tx.InnerTransaction.Allocator, collection, out collectionSlice))
+            using (Slice.From(tx.InnerTransaction.Allocator, collection, out Slice collectionSlice))
             {
                 WriteLastEtag(tx, IndexSchema.EtagsTree, collectionSlice, etag);
             }
@@ -388,8 +370,7 @@ namespace Raven.Server.Documents.Indexes
                 _logger.Info($"Writing last etag for '{_index.Name} ({_index.Etag})'. Tree: {tree}. Collection: {collection}. Etag: {etag}.");
 
             var statsTree = tx.InnerTransaction.CreateTree(tree);
-            Slice etagSlice;
-            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
                 statsTree.Add(collection, etagSlice);
         }
 
@@ -416,8 +397,7 @@ namespace Raven.Server.Documents.Indexes
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Updating statistics for '{_index.Name} ({_index.Etag})'. Stats: {stats}.");
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var result = new IndexFailureInformation
@@ -436,8 +416,7 @@ namespace Raven.Server.Documents.Indexes
 
                 var currentMaxNumberOfOutputs = statsTree.Read(IndexSchema.MaxNumberOfOutputsPerDocument)?.Reader.ReadLittleEndianInt32();
 
-                byte* ptr;
-                using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int), out ptr))
+                using (statsTree.DirectAdd(IndexSchema.MaxNumberOfOutputsPerDocument, sizeof(int), out byte* ptr))
                 {
                     *(int*)ptr = currentMaxNumberOfOutputs > stats.MaxNumberOfOutputsPerDocument
                         ? currentMaxNumberOfOutputs.Value
@@ -452,8 +431,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var binaryDate = indexingTime.ToBinary();
-                Slice binaryDateslice;
-                using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out binaryDateslice))
+                using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice binaryDateslice))
                     statsTree.Add(IndexSchema.LastIndexingTimeSlice, binaryDateslice);
 
                 if (stats.Errors != null)
@@ -556,8 +534,7 @@ namespace Raven.Server.Documents.Indexes
 
                     foreach (var keys in collections.Value)
                     {
-                        Slice key;
-                        using (Slice.From(tx.InnerTransaction.Allocator, keys.Key, ByteStringType.Immutable, out key))
+                        using (Slice.From(tx.InnerTransaction.Allocator, keys.Key, ByteStringType.Immutable, out Slice key))
                         {
                             foreach (var referenceKey in keys.Value)
                             {
@@ -578,14 +555,11 @@ namespace Raven.Server.Documents.Indexes
                     var collectionEtagTree = tx.InnerTransaction.CreateTree("$" + kvp.Key); // $collection
                     foreach (var collections in kvp.Value)
                     {
-                        CollectionName collectionName;
-                        if (_referencedCollections.TryGetValue(collections.Key, out collectionName) == false)
+                        if (_referencedCollections.TryGetValue(collections.Key, out CollectionName collectionName) == false)
                             throw new InvalidOperationException(
                                 $"Could not find collection {collections.Key} in the index storage collections. Should not happen ever!");
 
-                        Slice collectionKey;
-                        using (Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable,
-                                out collectionKey))
+                        using (Slice.From(tx.InnerTransaction.Allocator, collectionName.Name, ByteStringType.Immutable, out Slice collectionKey))
                         {
                             var etag = collections.Value;
 
@@ -594,8 +568,7 @@ namespace Raven.Server.Documents.Indexes
                             if (oldEtag >= etag)
                                 continue;
 
-                            Slice etagSlice;
-                            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out etagSlice))
+                            using (Slice.External(tx.InnerTransaction.Allocator, (byte*)&etag, sizeof(long), out Slice etagSlice))
                                 collectionEtagTree.Add(collectionKey, etagSlice);
                         }
                     }
@@ -640,8 +613,7 @@ namespace Raven.Server.Documents.Indexes
             if (_index.Definition.Name == name)
                 return;
 
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 _index.Definition.Rename(name, context, _environment.Options);

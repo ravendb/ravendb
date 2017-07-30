@@ -29,11 +29,10 @@ namespace Raven.Server.Extensions
 
         public static IList<Process> GetProcessesUsingFile(string filePath)
         {
-            uint sessionHandle;
             var processes = new List<Process>();
 
             // Create a restart manager session
-            int rv = RmStartSession(out sessionHandle, 0, Guid.NewGuid().ToString());
+            int rv = RmStartSession(out uint sessionHandle, 0, Guid.NewGuid().ToString());
             if (rv != 0)
                 throw new Win32Exception(Marshal.GetLastWin32Error(), "Failed to RmStartSession");
             try
@@ -49,10 +48,9 @@ namespace Raven.Server.Extensions
                 // Ask the restart manager what other applications 
                 // are using those files
                 const int ERROR_MORE_DATA = 234;
-                uint pnProcInfoNeeded = 0,
-                     pnProcInfo = 0,
+                uint pnProcInfo = 0,
                      lpdwRebootReasons = RmRebootReasonNone;
-                rv = RmGetList(sessionHandle, out pnProcInfoNeeded,
+                rv = RmGetList(sessionHandle, out uint pnProcInfoNeeded,
                                ref pnProcInfo, null, ref lpdwRebootReasons);
                 if (rv == ERROR_MORE_DATA)
                 {

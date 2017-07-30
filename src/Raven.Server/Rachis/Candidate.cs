@@ -43,9 +43,8 @@ namespace Raven.Server.Rachis
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
                     }
-                    TransactionOperationContext context;
                     ClusterTopology clusterTopology;
-                    using (_engine.ContextPool.AllocateOperationContext(out context))
+                    using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (var tx = context.OpenReadTransaction())
                     {
                         ElectionTerm = _engine.CurrentTerm + 1;
@@ -161,8 +160,7 @@ namespace Raven.Server.Rachis
 
         private void CastVoteForSelf()
         {
-            TransactionOperationContext context;
-            using (_engine.ContextPool.AllocateOperationContext(out context))
+            using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 ElectionTerm = _engine.CurrentTerm + 1;

@@ -61,8 +61,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 using (doc.Data)
                 {
-                    BlittableJsonReaderObject transformResult;
-                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out transformResult, out var exception) == false)
+                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                     {
                         if (exception != null)
                         {
@@ -81,7 +80,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return (doc,null);
+                                yield return (doc, null);
                                 continue;
                             }
 
@@ -92,7 +91,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Data = transformResult,
                                 LowerId = doc.LowerId,
                                 ChangeVector = doc.ChangeVector
-                            },null);
+                            }, null);
                         }
                     }
                 }

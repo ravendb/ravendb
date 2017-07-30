@@ -269,8 +269,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var num = v.AsNumber();
 
-                KeyValuePair<object, JsValue> property;
-                if (_propertiesByValue.TryGetValue(propertyKey, out property))
+                if (_propertiesByValue.TryGetValue(propertyKey, out KeyValuePair<object, JsValue> property))
                 {
                     var originalValue = property.Key;
                     if (originalValue is float || originalValue is int)

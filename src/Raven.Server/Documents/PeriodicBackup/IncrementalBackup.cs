@@ -17,8 +17,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 using (var reader = context.ReadForMemory(fileStream, IncrementalBackupStateFile))
                 {
-                    long lastDocsEtag;
-                    if (reader.TryGet("LastEtag", out lastDocsEtag) == false)
+                    if (reader.TryGet("LastEtag", out long lastDocsEtag) == false)
                         return null;
 
                     return lastDocsEtag;

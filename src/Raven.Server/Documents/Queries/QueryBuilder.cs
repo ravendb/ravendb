@@ -191,9 +191,8 @@ namespace Raven.Server.Documents.Queries
 
         internal static Query HandleMethodsForQueryAndTerm(Query query, Term term)
         {
-            Func<string, List<string>, Query> value;
             var field = term.Field;
-            if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false)
+            if (TryHandlingMethodForQueryAndTerm(ref field, out Func<string, List<string>, Query> value) == false)
                 return query;
 
             var parts = _unescapedSplitter.Split(term.Text);
@@ -207,9 +206,8 @@ namespace Raven.Server.Documents.Queries
 
         internal static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
         {
-            Func<string, List<string>, Query> value;
             var field = terms[0].Field;
-            if (TryHandlingMethodForQueryAndTerm(ref field, out value) == false)
+            if (TryHandlingMethodForQueryAndTerm(ref field, out Func<string, List<string>, Query> value) == false)
                 return query;
 
             return value(field, terms.Select(x => x.Text).ToList());

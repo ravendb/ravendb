@@ -68,10 +68,9 @@ namespace Raven.Server.Utils
                 if (i == index)
                     continue;
 
-                BlittableJsonReaderObject token;
                 if (_docs[i] == null)
                     continue;
-                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out token) == false)
+                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out BlittableJsonReaderObject token) == false)
                     return false;
                 if (token == null)
                     continue;
@@ -95,8 +94,7 @@ namespace Raven.Server.Utils
                 if (i == index)
                     continue;
 
-                BlittableJsonReaderArray token;
-                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out token) == false)
+                if (_docs[i].TryGetWithoutThrowingOnError(prop.Key, out BlittableJsonReaderArray token) == false)
                     return false;
                 if (token == null)
                     continue;

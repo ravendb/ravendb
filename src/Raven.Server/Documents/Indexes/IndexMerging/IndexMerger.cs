@@ -174,9 +174,8 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 
             foreach (string kvp in names)
             {
-                T v1, v2;
-                found1 = dataDict1.TryGetValue(kvp, out v1);
-                found2 = dataDict2.TryGetValue(kvp, out v2);
+                found1 = dataDict1.TryGetValue(kvp, out T v1);
+                found2 = dataDict2.TryGetValue(kvp, out T v2);
 
                 if (found1 && found2 && Equals(v1, v2) == false)
                     return false;

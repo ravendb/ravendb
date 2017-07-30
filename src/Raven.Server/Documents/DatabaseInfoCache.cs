@@ -36,11 +36,10 @@ namespace Raven.Server.Documents
             _environment = environment;
             _contextPool = contextPool;
 
-            TransactionOperationContext context;
-            using (contextPool.AllocateOperationContext(out context))
+            using (contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = _environment.WriteTransaction(context.PersistentContext))
             {
-                _databaseInfoSchema.Create(tx, DatabaseInfoSchema.DatabaseInfoTree,16);
+                _databaseInfoSchema.Create(tx, DatabaseInfoSchema.DatabaseInfoTree, 16);
 
                 tx.Commit();
             }
@@ -48,18 +47,16 @@ namespace Raven.Server.Documents
 
         public unsafe void InsertDatabaseInfo(DynamicJsonValue databaseInfo, string databaseName)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
 
 
                 using (var id = context.GetLazyString(databaseName.ToLowerInvariant()))
-                using ( var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var json = context.ReadObject(databaseInfo, "DatabaseInfo", BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    TableValueBuilder tvb;
-                    using (table.Allocate(out tvb))
+                    using (table.Allocate(out TableValueBuilder tvb))
                     {
                         tvb.Add(id.Buffer, id.Size);
                         tvb.Add(json.BasePointer, json.Size);
@@ -73,15 +70,13 @@ namespace Raven.Server.Documents
 
         public unsafe bool TryWriteOfflineDatabaseStatusToRequest(TransactionOperationContext ctx, BlittableJsonTextWriter writer, string databaseName, bool disabled, IndexRunningStatus indexingStatus, NodesTopology topology)
         {
-            TransactionOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenReadTransaction())
             {
                 var table = tx.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
 
-                Slice databaseNameAsSlice;
                 TableValueReader infoTvr;
-                using (Slice.From(tx.InnerTransaction.Allocator, databaseName.ToLowerInvariant(), out databaseNameAsSlice))
+                using (Slice.From(tx.InnerTransaction.Allocator, databaseName.ToLowerInvariant(), out Slice databaseNameAsSlice))
                 {
                     if (table.ReadByKey(databaseNameAsSlice, out infoTvr) == false)
                         return false;
@@ -108,8 +103,7 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
-            int size;
-            var ptr = reader.Read(DatabaseInfoSchema.DatabaseInfoTable.JsonIndex, out size);
+            var ptr = reader.Read(DatabaseInfoSchema.DatabaseInfoTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);
         }
 
@@ -129,11 +123,9 @@ namespace Raven.Server.Documents
 
         public void Delete(string databaseName)
         {
-            TransactionOperationContext ctx;
-            Slice key;
-            using (_contextPool.AllocateOperationContext(out ctx))
-            using(var tx = ctx.OpenWriteTransaction())
-            using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out key))
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var tx = ctx.OpenWriteTransaction())
+            using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out Slice key))
             {
                 DeleteInternal(ctx, key);
                 tx.Commit();

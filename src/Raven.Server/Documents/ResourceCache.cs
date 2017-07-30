@@ -44,8 +44,7 @@ namespace Raven.Server.Documents
             lock (this)
             {
                 //we have a case insensitive match, let us optimize that
-                ConcurrentSet<StringSegment> mappingsForResource;
-                if (_mappings.TryGetValue(resourceName, out mappingsForResource))
+                if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappingsForResource))
                 {
                     mappingsForResource.Add(resourceName);
                     _caseSensitive.TryAdd(resourceName, resourceTask);
@@ -62,13 +61,11 @@ namespace Raven.Server.Documents
 
             lock (this)
             {
-                ConcurrentSet<StringSegment> mappings;
-                if (_mappings.TryGetValue(resourceName, out mappings))
+                if (_mappings.TryGetValue(resourceName, out ConcurrentSet<StringSegment> mappings))
                 {
                     foreach (var mapping in mappings)
                     {
-                        Task<TResource> _;
-                        _caseSensitive.TryRemove(mapping, out _);
+                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
                     }
                 }
             }
@@ -88,8 +85,7 @@ namespace Raven.Server.Documents
 
         public Task<TResource> GetOrAdd(StringSegment databaseName, Task<TResource> task)
         {
-            Task<TResource> value;
-            if (_caseSensitive.TryGetValue(databaseName, out value))
+            if (_caseSensitive.TryGetValue(databaseName, out Task<TResource> value))
                 return value;
 
             if (_caseInsensitive.TryGetValue(databaseName, out value))

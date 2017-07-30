@@ -181,8 +181,7 @@ namespace Raven.Server.Documents
 
                 foreach (KeyValuePair<TKey, TValue> kvp in dict1)
                 {
-                    TValue value2;
-                    if (!dict2.TryGetValue(kvp.Key, out value2))
+                    if (!dict2.TryGetValue(kvp.Key, out TValue value2))
                         return false;
 
                     if (!comparer.Equals(kvp.Value, value2))
@@ -206,8 +205,7 @@ namespace Raven.Server.Documents
             if (document == null)
                 throw new ArgumentNullException("document");
 
-            BlittableJsonReaderObject metadata;
-            document.Data.TryGet(Constants.Documents.Metadata.Key, out metadata);
+            document.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata);
 
             var @class = "Class";
             var @namespace = "Unknown";
@@ -216,8 +214,7 @@ namespace Raven.Server.Documents
                 // retrieve the class and metadata if available.
                 // "Raven-Clr-Type": "Namespace.ClassName, AssemblyName"
 
-                LazyStringValue lazyStringValue;
-                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out lazyStringValue))
+                if (metadata.TryGet(Constants.Documents.Metadata.RavenClrType, out LazyStringValue lazyStringValue))
                 {
                     var values = lazyStringValue.ToString().Split(',');
                     if (values.Length == 2)
@@ -374,9 +371,8 @@ namespace Raven.Server.Documents
         {
             var key = clazz.Name;
 
-            ClassType dummy;
             var i = 1;
-            while (_generatedTypes.TryGetValue(key, out dummy))
+            while (_generatedTypes.TryGetValue(key, out ClassType dummy))
             {
                 key = clazz.Name + i;
                 i++;

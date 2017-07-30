@@ -72,8 +72,7 @@ namespace Raven.Server.NotificationCenter
         {
             _ms.SetLength(0);
 
-            JsonOperationContext context;
-            using (_contextPool.AllocateOperationContext(out context))
+            using (_contextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, _ms))
             {
                 var notificationType = notification.GetType();
@@ -86,8 +85,7 @@ namespace Raven.Server.NotificationCenter
                     ThrowNotSupportedType(notification);
             }
 
-            ArraySegment<byte> bytes;
-            _ms.TryGetBuffer(out bytes);
+            _ms.TryGetBuffer(out ArraySegment<byte> bytes);
 
             return _webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, _resourceShutdown);
         }

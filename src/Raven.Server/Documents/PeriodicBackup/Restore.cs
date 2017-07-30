@@ -64,13 +64,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private static string TryExtractDateFromFileName(string fileName, string filePath)
         {
-            DateTime result;
             if (DateTime.TryParseExact(
                     fileName,
                     PeriodicBackupRunner.DateTimeFormat,
                     CultureInfo.InvariantCulture,
                     DateTimeStyles.None,
-                    out result) == false)
+                    out DateTime result) == false)
             {
                 result = File.GetLastWriteTime(filePath).ToUniversalTime();
             }

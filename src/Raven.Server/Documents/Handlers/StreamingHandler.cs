@@ -40,8 +40,7 @@ namespace Raven.Server.Documents.Handlers
                     TransformerDoesNotExistException.ThrowFor(transformerName);
             }
 
-            DocumentsOperationContext context;
-            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out context))
+            using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 IEnumerable<Document> documents;

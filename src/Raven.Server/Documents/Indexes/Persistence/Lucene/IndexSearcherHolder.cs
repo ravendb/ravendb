@@ -173,8 +173,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var key = Tuple.Create(docId, fieldsHash);
 
-                StringCollectionValue value;
-                if (_docsCache.TryGetValue(key, out value))
+                if (_docsCache.TryGetValue(key, out StringCollectionValue value))
                     return value;
 
                 return _docsCache.GetOrAdd(key, _ =>

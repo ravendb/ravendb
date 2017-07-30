@@ -118,8 +118,7 @@ namespace Raven.Server.Utils
                 return true;
             }
 
-            bool result = false;
-            bool.TryParse(val, out result);
+            bool.TryParse(val, out bool result);
             return result;
         }
     }

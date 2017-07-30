@@ -11,8 +11,7 @@ namespace Raven.Server.Json
     {
         public static bool TryRead(BlittableJsonTraverser blittableJsonTraverser, Document document, StringSegment path, out object value)
         {
-            StringSegment leftPath;
-            if (blittableJsonTraverser.TryRead(document.Data, path, out value, out leftPath) == false)
+            if (blittableJsonTraverser.TryRead(document.Data, path, out value, out StringSegment leftPath) == false)
             {
                 value = TypeConverter.ConvertForIndexing(value);
 
@@ -86,7 +85,7 @@ namespace Raven.Server.Json
 
                         value = values;
                         return true;
-                    } 
+                    }
                 }
 
                 if (value is DateTime || value is DateTimeOffset || value is TimeSpan)

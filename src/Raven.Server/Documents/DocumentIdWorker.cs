@@ -213,13 +213,12 @@ namespace Raven.Server.Documents
             int strLength = str.Length;
             int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str);
 
-            ByteString buffer;
             var scope = context.Allocator.Allocate(
                 sizeof(char) * strLength // for the lower calls
                 + byteCount // lower ID
                 + maxIdLenSize // the size of var int for the len of the ID
                 + byteCount // actual ID
-                + escapePositionsSize, out buffer);
+                + escapePositionsSize, out ByteString buffer);
 
             fixed (char* pChars = str)
             {

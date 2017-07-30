@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in index.Collections)
             {
-                HashSet<CollectionName> referencedCollections;
-                if (compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
 
                 var lastIndexedEtag = index._indexStorage.ReadLastIndexedEtag(indexContext.Transaction, collection);
@@ -95,8 +94,7 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var collection in index.Collections)
             {
-                HashSet<CollectionName> referencedCollections;
-                if (compiled.ReferencedCollections.TryGetValue(collection, out referencedCollections) == false)
+                if (compiled.ReferencedCollections.TryGetValue(collection, out HashSet<CollectionName> referencedCollections) == false)
                     continue;
 
                 foreach (var referencedCollection in referencedCollections)

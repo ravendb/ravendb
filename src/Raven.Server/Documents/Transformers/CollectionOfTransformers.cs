@@ -52,8 +52,7 @@ namespace Raven.Server.Documents.Transformers
         public void RenameTransformer(Transformer transformer, string oldName, string newName)
         {
             _transformersByName.AddOrUpdate(newName, transformer, (key, oldValue) => transformer);
-            Transformer _;
-            _transformersByName.TryRemove(oldName, out _);
+            _transformersByName.TryRemove(oldName, out Transformer _);
         }
     }
 }

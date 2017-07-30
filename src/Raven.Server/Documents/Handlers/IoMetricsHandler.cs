@@ -21,8 +21,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/debug/io-metrics", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public Task IoMetrics()
         {
-            JsonOperationContext context;
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 var result = GetIoMetricsResponse(Database);
@@ -73,16 +72,14 @@ namespace Raven.Server.Documents.Handlers
 
             // New info, Send data 
             ms.SetLength(0);
-            JsonOperationContext context;
 
-            using (ContextPool.AllocateOperationContext(out context))
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ms))
             {
                 context.Write(writer, tuple.Item2.ToJson());
             }
 
-            ArraySegment<byte> bytes;
-            ms.TryGetBuffer(out bytes);
+            ms.TryGetBuffer(out ArraySegment<byte> bytes);
             await webSocket.SendAsync(bytes, WebSocketMessageType.Text, true, Database.DatabaseShutdown);
 
             return true;

@@ -170,8 +170,7 @@ namespace Raven.Server.Utils
             var blittableJsonObject = value as BlittableJsonReaderObject;
             if (blittableJsonObject != null)
             {
-                string type;
-                if (blittableJsonObject.TryGet(TypePropertyName, out type) == false)
+                if (blittableJsonObject.TryGet(TypePropertyName, out string type) == false)
                     return blittableJsonObject;
 
                 if (type == null)
@@ -182,8 +181,7 @@ namespace Raven.Server.Utils
 
                 // TODO [ppekrol] probably we will have to support many more cases here
 
-                BlittableJsonReaderArray values;
-                if (blittableJsonObject.TryGet(ValuesPropertyName, out values))
+                if (blittableJsonObject.TryGet(ValuesPropertyName, out BlittableJsonReaderArray values))
                     return values;
 
                 throw new NotSupportedException($"Detected list type '{type}' but could not extract '{values}'.");
@@ -199,17 +197,13 @@ namespace Raven.Server.Utils
 
             if (lazyString != null)
             {
-                DateTime dt;
-                DateTimeOffset dto;
-
-                var result = LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out dt, out dto);
+                var result = LazyStringParser.TryParseDateTime(lazyString.Buffer, lazyString.Size, out DateTime dt, out DateTimeOffset dto);
                 if (result == LazyStringParser.Result.DateTime)
                     return dt;
                 if (result == LazyStringParser.Result.DateTimeOffset)
                     return dto;
 
-                TimeSpan ts;
-                if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out ts))
+                if (LazyStringParser.TryParseTimeSpan(lazyString.Buffer, lazyString.Size, out TimeSpan ts))
                     return ts;
 
                 return lazyString; // ensure that the decompressed lazy string value is returned
@@ -265,9 +259,8 @@ namespace Raven.Server.Utils
 
                 if (s != null)
                 {
-                    DateTime dateTime;
                     if (DateTime.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out dateTime))
+                        DateTimeStyles.RoundtripKind, out DateTime dateTime))
                         return (T)(object)dateTime;
 
                     dateTime = RavenDateTimeExtensions.ParseDateMicrosoft(s);
@@ -281,9 +274,8 @@ namespace Raven.Server.Utils
 
                 if (s != null)
                 {
-                    DateTimeOffset dateTimeOffset;
                     if (DateTimeOffset.TryParseExact(s, Default.DateTimeFormatsToRead, CultureInfo.InvariantCulture,
-                        DateTimeStyles.RoundtripKind, out dateTimeOffset))
+                        DateTimeStyles.RoundtripKind, out DateTimeOffset dateTimeOffset))
                         return (T)(object)dateTimeOffset;
 
                     return default(T);

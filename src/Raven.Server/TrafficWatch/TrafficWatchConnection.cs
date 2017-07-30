@@ -57,8 +57,7 @@ namespace Raven.Server.TrafficWatch
 
                     _manualResetEvent.Reset();
 
-                    TrafficWatchChange message;
-                    while (_msgs.TryDequeue(out message))
+                    while (_msgs.TryDequeue(out TrafficWatchChange message))
                     {
                         if (_cancellationTokenSource.IsCancellationRequested)
                             break;
@@ -105,15 +104,13 @@ namespace Raven.Server.TrafficWatch
             };
 
             _bufferStream.SetLength(0);
-            JsonOperationContext context;
-            using (_jsonContextPool.AllocateOperationContext(out context))
+            using (_jsonContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, _bufferStream))
             {
                 context.Write(writer, json);
                 writer.Flush();
 
-                ArraySegment<byte> bytes;
-                _bufferStream.TryGetBuffer(out bytes);
+                _bufferStream.TryGetBuffer(out ArraySegment<byte> bytes);
                 return bytes;
             }
         }

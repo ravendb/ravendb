@@ -144,9 +144,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             var lockMode = ReadLockMode(reader);
             var priority = ReadPriority(reader);
-            BlittableJsonReaderArray jsonArray;
 
-            if(reader.TryGet(nameof(Collections), out jsonArray) == false)
+            if (reader.TryGet(nameof(Collections), out BlittableJsonReaderArray jsonArray) == false)
                 throw new InvalidOperationException("No persisted collections");
 
             var collection = jsonArray.GetStringByIndex(0);
@@ -160,14 +159,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
-                string name;
-                json.TryGet(nameof(IndexField.Name), out name);
-
-                int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
-
-                int mapReduceOperationAsInt;
-                json.TryGet(nameof(IndexField.MapReduceOperation), out mapReduceOperationAsInt);
+                json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
+                json.TryGet(nameof(IndexField.MapReduceOperation), out int mapReduceOperationAsInt);
 
                 var field = new IndexField
                 {
@@ -190,11 +184,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             {
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
-                string name;
-                json.TryGet(nameof(IndexField.Name), out name);
-
-                int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
+                json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
 
                 var field = new IndexField
                 {

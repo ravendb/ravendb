@@ -52,8 +52,7 @@ namespace Raven.Server.Utils
         public static Process GetParentProcess(IntPtr handle)
         {
             ParentProcessUtilities pbi = new ParentProcessUtilities();
-            int returnLength;
-            int status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out returnLength);
+            int status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out int returnLength);
             if (status != 0)
                 return null;
 

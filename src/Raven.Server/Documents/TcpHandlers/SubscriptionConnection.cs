@@ -71,8 +71,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task ParseSubscriptionOptionsAsync()
         {
-            TransactionOperationContext context;
-            using (TcpConnection.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out context))
+            using (TcpConnection.DocumentDatabase.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var subscriptionCommandOptions = await context.ParseToMemoryAsync(
                 TcpConnection.Stream,
                 "subscription options",
@@ -162,8 +161,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task FlushBufferToNetwork()
         {
-            ArraySegment<byte> bytes;
-            _buffer.TryGetBuffer(out bytes);
+            _buffer.TryGetBuffer(out ArraySegment<byte> bytes);
             await TcpConnection.Stream.WriteAsync(bytes.Array, bytes.Offset, bytes.Count);
             await TcpConnection.Stream.FlushAsync();
             TcpConnection.RegisterBytesSent(bytes.Count);
@@ -375,17 +373,16 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         var docsToFlush = 0;
 
-                        JsonOperationContext context;
-                        using (TcpConnection.ContextPool.AllocateOperationContext(out context))
+                        using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                         using (var writer = new BlittableJsonTextWriter(context, _buffer))
                         {
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector) ? 
+                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector) ?
                                     result.Doc.ChangeVector :
                                     ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
-                                
+
                                 if (result.Doc.Data == null)
                                 {
                                     if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -393,22 +390,22 @@ namespace Raven.Server.Documents.TcpHandlers
                                         await SendHeartBeat();
                                         sendingCurrentBatchStopwatch.Restart();
                                     }
-                                        
+
                                     continue;
                                 }
-                                
+
                                 anyDocumentsSentInCurrentIteration = true;
                                 writer.WriteStartObject();
-                                
+
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(TypeSegment));
                                 writer.WriteValue(BlittableJsonToken.String, context.GetLazyStringForFieldWithCaching(DataSegment));
                                 writer.WriteComma();
                                 writer.WritePropertyName(context.GetLazyStringForFieldWithCaching(DataSegment));
                                 result.Doc.EnsureMetadata();
-                                
+
                                 if (result.Exception != null)
                                 {
-                                    writer.WriteValue(BlittableJsonToken.StartObject, 
+                                    writer.WriteValue(BlittableJsonToken.StartObject,
                                         docsContext.ReadObject(new DynamicJsonValue()
                                         {
                                             [Raven.Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
@@ -444,13 +441,13 @@ namespace Raven.Server.Documents.TcpHandlers
                             }
 
                             if (anyDocumentsSentInCurrentIteration)
-                            {                                
+                            {
                                 context.Write(writer, new DynamicJsonValue
                                 {
                                     [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
                                 });
 
-                                await FlushDocsToClient(writer, docsToFlush, true);                                
+                                await FlushDocsToClient(writer, docsToFlush, true);
                             }
                         }
 

@@ -43,8 +43,7 @@ namespace Raven.Server.Documents.Queries.Faceted
             if (type == null)
                 return RangeType.None;
 
-            RangeType rangeType;
-            if (NumericalTypes.TryGetValue(type, out rangeType) == false)
+            if (NumericalTypes.TryGetValue(type, out RangeType rangeType) == false)
                 return RangeType.None;
 
             return rangeType;
@@ -78,8 +77,7 @@ namespace Raven.Server.Documents.Queries.Faceted
         {
             field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
 
-            IndexField value;
-            if (fields.TryGetValue(field, out value) == false || value.Sort.HasValue == false)
+            if (fields.TryGetValue(field, out IndexField value) == false || value.Sort.HasValue == false)
                 return SortOptions.None;
 
             return value.Sort.Value;

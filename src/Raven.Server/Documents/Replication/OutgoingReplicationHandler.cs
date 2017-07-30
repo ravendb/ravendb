@@ -295,8 +295,7 @@ namespace Raven.Server.Documents.Replication
 
         private void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
         {
-            TransactionOperationContext configurationContext;
-            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out configurationContext))
+            using (_database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationContext))
             using (var txw = configurationContext.OpenWriteTransaction())
             {
                 _database.NotificationCenter.AddAfterTransactionCommit(
@@ -309,8 +308,7 @@ namespace Raven.Server.Documents.Replication
 
         private void WriteHeaderToRemotePeer()
         {
-            DocumentsOperationContext documentsContext;
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out documentsContext))
+            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 documentsContext.Write(writer, new DynamicJsonValue

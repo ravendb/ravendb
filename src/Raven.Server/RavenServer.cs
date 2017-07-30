@@ -456,8 +456,7 @@ namespace Raven.Server
                 host = new Uri(Configuration.Core.ServerUrl).DnsSafeHost;
                 if (string.IsNullOrWhiteSpace(Configuration.Core.TcpServerUrl) == false)
                 {
-                    ushort shortPort;
-                    if (ushort.TryParse(Configuration.Core.TcpServerUrl, out shortPort))
+                    if (ushort.TryParse(Configuration.Core.TcpServerUrl, out ushort shortPort))
                     {
                         port = shortPort;
                     }

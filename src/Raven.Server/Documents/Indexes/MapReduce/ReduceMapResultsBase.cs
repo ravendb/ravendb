@@ -253,8 +253,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                         writer.DeleteReduceResult(reduceKeyHash, stats);
 
                         var emptyPageNumber = Bits.SwapBytes(leafPage.PageNumber);
-                        Slice pageNumSlice;
-                        using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out pageNumSlice))
+                        using (Slice.External(indexContext.Allocator, (byte*)&emptyPageNumber, sizeof(long), out Slice pageNumSlice))
                             table.DeleteByKey(pageNumSlice);
 
                         continue;
@@ -308,8 +307,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
             }
 
             long tmp = 0;
-            Slice pageNumberSlice;
-            using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out pageNumberSlice))
+            using (Slice.External(indexContext.Allocator, (byte*)&tmp, sizeof(long), out Slice pageNumberSlice))
             {
                 foreach (var freedPage in modifiedStore.FreedPages)
                 {
@@ -417,11 +415,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 {
                     var pageNumber = page.GetNode(i)->PageNumber;
                     var childPageNumber = Bits.SwapBytes(pageNumber);
-                    Slice childPageNumberSlice;
-                    TableValueReader tvr;
-                    using (Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long), out childPageNumberSlice))
+                    using (Slice.External(indexContext.Allocator, (byte*)&childPageNumber, sizeof(long), out Slice childPageNumberSlice))
                     {
-                        if (table.ReadByKey(childPageNumberSlice, out tvr) == false)
+                        if (table.ReadByKey(childPageNumberSlice, out TableValueReader tvr) == false)
                         {
                             if (remainingBranchesToAggregate.Contains(pageNumber))
                             {
@@ -448,8 +444,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                             }
                         }
 
-                        int size;
-                        var numberOfResults = *(int*)tvr.Read(2, out size);
+                        var numberOfResults = *(int*)tvr.Read(2, out int size);
 
                         for (int j = 0; j < numberOfResults; j++)
                         {
@@ -485,8 +480,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
                 var pageNumber = Bits.SwapBytes(modifiedPage);
                 var numberOfOutputs = result.Count;
 
-                TableValueBuilder tvb;
-                using (table.Allocate(out tvb))
+                using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(pageNumber);
                     tvb.Add(aggregatedEntries);
