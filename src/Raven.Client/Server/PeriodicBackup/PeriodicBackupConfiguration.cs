@@ -8,7 +8,7 @@ using System.Diagnostics;
 
 namespace Raven.Client.Server.PeriodicBackup
 {
-    public class PeriodicBackupConfiguration: IDatabaseTask
+    public class PeriodicBackupConfiguration : IDatabaseTask
     {
         public long TaskId { get; set; }
 
@@ -36,7 +36,7 @@ namespace Raven.Client.Server.PeriodicBackup
         public GlacierSettings GlacierSettings { get; set; }
 
         public AzureSettings AzureSettings { get; set; }
-        
+
         public ulong GetTaskKey()
         {
             Debug.Assert(TaskId != 0);
@@ -49,25 +49,25 @@ namespace Raven.Client.Server.PeriodicBackup
             if (other == null)
                 return false;
 
-            if (other.FullBackupFrequency.Equals(FullBackupFrequency) == false)
+            if (Equals(other.FullBackupFrequency, FullBackupFrequency) == false)
                 return false;
 
-            if (other.IncrementalBackupFrequency.Equals(IncrementalBackupFrequency) == false)
+            if (Equals(other.IncrementalBackupFrequency, IncrementalBackupFrequency) == false)
                 return false;
 
             if (other.BackupType.Equals(BackupType) == false)
                 return false;
 
-            if (other.LocalSettings != null && other.LocalSettings.Equals(LocalSettings) == false)
+            if (Equals(other.LocalSettings, LocalSettings) == false)
                 return false;
 
-            if (other.S3Settings != null && other.S3Settings.Equals(S3Settings) == false)
+            if (Equals(other.S3Settings, S3Settings) == false)
                 return false;
 
-            if (other.GlacierSettings != null && other.GlacierSettings.Equals(GlacierSettings) == false)
+            if (Equals(other.GlacierSettings, GlacierSettings) == false)
                 return false;
 
-            if (other.AzureSettings != null && other.AzureSettings.Equals(AzureSettings) == false)
+            if (Equals(other.AzureSettings, AzureSettings) == false)
                 return false;
 
             return true;

@@ -17,25 +17,21 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 Logger.Info("Program: " + i);
-
-                Parallel.For(0, 10, a =>
+                using (var test = new SlowTests.Server.Documents.PeriodicBackup.PeriodicBackupTestsSlow())
                 {
-                    using (var test = new FastTests.Client.Subscriptions.SubscriptionOperationsSignaling())
+                    try
                     {
-                        try
-                        {
-                            test.WaitOnSubscriptionTaskWhenSubscriptionIsDeleted();
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            Console.Beep();
-                            Console.Beep();
-                            Console.Beep();
-                            return;
-                        }
+                        test.can_backup_to_directory_multiple_backups().Wait();
                     }
-                });
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        Console.Beep();
+                        Console.Beep();
+                        Console.Beep();
+                        return;
+                    }
+                }
             }
         }
     }
