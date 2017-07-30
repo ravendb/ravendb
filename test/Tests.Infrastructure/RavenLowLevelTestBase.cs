@@ -123,7 +123,7 @@ namespace FastTests
                         {
                             try
                             {
-                                await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNode: Server.ServerStore.NodeTag);
+                                await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNodes: new[]{Server.ServerStore.NodeTag});
                             }
                             catch (DatabaseDoesNotExistException)
                             {

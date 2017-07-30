@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
@@ -72,7 +73,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     using (var session = dbStore.OpenAsyncSession())
                     {
-                        await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
+                        await session.StoreAsync(new IndexMerging.User { Name = "Karmel" }, "users/1");
                         await session.SaveChangesAsync();
                     }
                 }
@@ -81,7 +82,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
-                await WaitForDocumentInClusterAsync<User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
+                await WaitForDocumentInClusterAsync<IndexMerging.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
 
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);
@@ -141,7 +142,7 @@ namespace RachisTests.DatabaseCluster
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User());
+                    await session.StoreAsync(new IndexMerging.User());
                     await session.SaveChangesAsync();
                 }
                 var urls = Servers[1].WebUrls;
@@ -180,7 +181,7 @@ namespace RachisTests.DatabaseCluster
                 await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User());
+                    await session.StoreAsync(new IndexMerging.User());
                     await session.SaveChangesAsync();
                 }
                 var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
@@ -244,17 +245,55 @@ namespace RachisTests.DatabaseCluster
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.StoreAsync(new IndexMerging.User {Name = "Karmel"}, "users/1");
                     await session.SaveChangesAsync();
                 }
-                Assert.True(await WaitForDocumentInClusterAsync<User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
+                Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
 
                 // the db should move from node B to node C
                 var newTopology = new DatabaseTopology();
                 newTopology.Members.Add("A");
                 newTopology.Members.Add("C");
-                Assert.True(await WaitForDocumentInClusterAsync<User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
+                Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
+            }
+        }
+
+        [Fact]
+        public async Task RedistrebuteDatabaseOnCascadeFailure()
+        {
+            var clusterSize = 5;
+            var dbGroupSize = 2;
+            var databaseName = "RedistrebuteDatabaseOnCascadeFailure";
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                doc.Topology = new DatabaseTopology();
+                doc.Topology.Members.Add("A");
+                doc.Topology.Members.Add("B");
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, dbGroupSize));
+                Assert.Equal(dbGroupSize, databaseResult.Topology.Members.Count);
+                await WaitForRaftIndexToBeAppliedInCluster(databaseResult.RaftCommandIndex, TimeSpan.FromSeconds(10));
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new IndexMerging.User { Name = "Karmel" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(doc.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(5)));
+                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+
+                // the db should move from node B to node C
+                var newTopology = new DatabaseTopology();
+                newTopology.Members.Add("A");
+                newTopology.Members.Add("C");
+                Assert.True(await WaitForDocumentInClusterAsync<IndexMerging.User>(newTopology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(60)));
             }
         }
 

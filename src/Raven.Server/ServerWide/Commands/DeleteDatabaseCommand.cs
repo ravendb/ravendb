@@ -9,7 +9,7 @@ namespace Raven.Server.ServerWide.Commands
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
         public bool HardDelete;
-        public string FromNode;
+        public string[] FromNodes;
 
         public DeleteDatabaseCommand() : base(null)
         {
@@ -29,15 +29,18 @@ namespace Raven.Server.ServerWide.Commands
             {
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
             }
-            if (string.IsNullOrEmpty(FromNode) == false)
+            if (FromNodes.Length > 0)
             {
-                if (record.Topology.RelevantFor(FromNode) == false)
+                foreach (var node in FromNodes)
                 {
-                    DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{FromNode}' failed.");
+                    if (record.Topology.RelevantFor(node) == false)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
+                    }
+                    record.Topology.RemoveFromTopology(node);
+                    record.Topology.ReplicationFactor--;
+                    record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
-                record.Topology.RemoveFromTopology(FromNode);
-                record.Topology.ReplicationFactor--;
-                record.DeletionInProgress[FromNode] = deletionInProgressStatus;
             }
             else
             {
@@ -61,7 +64,7 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(HardDelete)] = HardDelete;
-            json[nameof(FromNode)] = FromNode;
+            json[nameof(FromNodes)] = FromNodes;
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
         }
     }
