@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             _backupPath = NewDataPath(suffix: "BackupFolder");
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
             using (var store = GetDocumentStore())
@@ -94,7 +94,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task periodic_backup_should_work_with_long_intervals()
         {
             using (var store = GetDocumentStore())
@@ -167,7 +167,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups()
         {
             using (var store = GetDocumentStore())
@@ -224,7 +224,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_restore_smuggler_correctly()
         {
             using (var store = GetDocumentStore())
@@ -301,7 +301,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
             using (var store = GetDocumentStore())
@@ -371,7 +371,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
             using (var store = GetDocumentStore())
@@ -443,7 +443,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
