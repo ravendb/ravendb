@@ -59,7 +59,7 @@ namespace Raven.Server.Config.Categories
 
         [Description("If authentication is disabled, set address range type for which server access is unsecured (None | Local | PrivateNetwork | PublicNetwork).")]
         [DefaultValue(UnsecuredAccessAddressRange.Local)]
-        [ConfigurationEntry("Security.Authentication.UnsecuredAccessAllowed")]
+        [ConfigurationEntry("Security.UnsecuredAccessAllowed")]
         public UnsecuredAccessAddressRange UnsecuredAccessAllowed { get; set; }
 
         internal bool? IsUnsecureAccessSetupValid { get; private set; }

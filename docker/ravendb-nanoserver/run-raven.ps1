@@ -34,7 +34,7 @@ if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
 }
 
 if ([string]::IsNullOrEmpty($env:UnsecuredAccessAllowed) -eq $False) {
-    $commandArgs += "--Security.Authentication.UnsecuredAccessAllowed=$($env:UnsecuredAccessAllowed)"
+    $commandArgs += "--Security.UnsecuredAccessAllowed=$($env:UnsecuredAccessAllowed)"
 }
 
 if ([string]::IsNullOrEmpty($env:PublicServerUrl) -eq $False) {
