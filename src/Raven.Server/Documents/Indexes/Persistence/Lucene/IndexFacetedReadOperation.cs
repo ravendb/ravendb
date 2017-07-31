@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (query.Metadata.IsDistinct)
                 fieldsHash = CalculateQueryFieldsHash(query, context);
 
-            var baseQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var facet in defaultFacets.Values)

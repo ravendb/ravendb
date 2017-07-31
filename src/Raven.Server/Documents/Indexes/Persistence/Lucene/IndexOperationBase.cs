@@ -95,12 +95,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return analyzerInstance;
         }
 
-        protected Query GetLuceneQuery(QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-            return GetLuceneQuery(metadata, metadata.Query.Where, parameters, analyzer);
+            return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer);
         }
 
-        protected Query GetLuceneQuery(QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             Query documentQuery;
 
@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(metadata, whereExpression, parameters, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer);
                 }
                 finally
                 {

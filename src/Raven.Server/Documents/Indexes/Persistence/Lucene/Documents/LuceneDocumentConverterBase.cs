@@ -375,7 +375,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                 var ldv = value as LazyNumberValue;
                 if (ldv != null)
                 {
-                    if (TryToTrimTrailingZeros(ldv, indexContext, out LazyStringValue doubleAsString) == false)
+                    if (TryToTrimTrailingZeros(ldv, indexContext, out var doubleAsString) == false)
                         doubleAsString = ldv.Inner;
 
                     instance.Add(GetOrCreateField(path, null, doubleAsString, null, storage, indexing, termVector));
@@ -650,7 +650,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     || value is double;
         }
 
-        private static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
+        internal static unsafe bool TryToTrimTrailingZeros(LazyNumberValue ldv, JsonOperationContext context, out LazyStringValue dblAsString)
         {
             var dotIndex = ldv.Inner.LastIndexOf(".");
             if (dotIndex <= 0)

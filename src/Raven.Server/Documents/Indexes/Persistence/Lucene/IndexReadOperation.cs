@@ -69,13 +69,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
+        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
         {
             var pageSize = GetPageSize(_searcher, query.PageSize);
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
             var sort = GetSort(query);
             var returnedResults = 0;
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, CancellationToken token)
+        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
         {
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);
 
-                subQueries[i] = GetLuceneQuery(query.Metadata, whereExpression, query.QueryParameters, _analyzer);
+                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer);
             }
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, CancellationToken token)
         {
             var documentQuery = new BooleanQuery();
 
@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(query.Metadata, query.Metadata.Query.Where, null, _analyzer);
+                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer);
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},
@@ -457,7 +457,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(query.Metadata, query.QueryParameters, _analyzer);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
             var sort = GetSort(query);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);

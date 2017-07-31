@@ -1672,12 +1672,12 @@ namespace Raven.Server.Documents.Indexes
                             if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
+                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), documentsContext, token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), token.Token);
+                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), documentsContext, token.Token);
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
@@ -1909,7 +1909,7 @@ namespace Raven.Server.Documents.Indexes
                             var documents = reader.MoreLikeThis(query, stopWords,
                                 fieldsToFetch =>
                                     GetQueryResultRetriever(documentsContext,
-                                        new FieldsToFetch(fieldsToFetch, Definition, null)), token.Token);
+                                        new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, token.Token);
                             var results = scope != null ? scope.Transform(documents) : documents;
 
                             foreach (var document in results)
