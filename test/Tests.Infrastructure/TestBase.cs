@@ -144,7 +144,8 @@ namespace FastTests
                     context.OpenReadTransaction();
                     var lastCommit = Server.ServerStore.Engine.GetLastCommitIndex(context);
                     var doc = Server.ServerStore.Cluster.Read(context, "db/" + databaseName.ToLowerInvariant());
-                    throw new InvalidOperationException("For " + databaseName + ". Database is null and database record is: " + (doc == null ? "null" : doc.ToString()) + " Last commit: " + lastCommit);
+                    throw new InvalidOperationException("For " + databaseName + ". Database is null and database record is: " + (doc == null ? "null" : doc.ToString()) + " Last commit: " + lastCommit + "\r\n" + 
+                        string.Join("\r\n", Server.ServerStore.Cluster.Commands));
                 }
             }
             return database;

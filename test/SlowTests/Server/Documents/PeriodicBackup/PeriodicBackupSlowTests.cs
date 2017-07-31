@@ -19,16 +19,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : RavenTestBase
     {
-        private readonly string _backupPath;
-
-        public PeriodicBackupTestsSlow()
-        {
-            _backupPath = NewDataPath(suffix: "BackupFolder");
-        }
-
-        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+       [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+
             using (var store = GetDocumentStore())
             {
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
@@ -52,7 +47,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -84,7 +79,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_backupPath).First());
+                    Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
@@ -97,6 +92,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task periodic_backup_should_work_with_long_intervals()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 var periodicBackupRunner = (await GetDocumentDatabaseInstanceFor(store)).PeriodicBackupRunner;
@@ -121,7 +117,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupType = BackupType.Backup,
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -155,7 +151,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_backupPath).First());
+                    Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/1");
@@ -170,6 +166,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -182,7 +179,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -214,7 +211,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_backupPath).First());
+                    Directory.GetDirectories(backupPath).First());
                 using (var session = store.OpenAsyncSession())
                 {
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2" });
@@ -227,6 +224,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_restore_smuggler_correctly()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -239,7 +237,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -271,9 +269,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var store1 = GetDocumentStore(dbSuffixIdentifier: "2"))
             using (var store2 = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
-                var backupDirectory = Directory.GetDirectories(_backupPath).First();
+                var backupDirectory = Directory.GetDirectories(backupPath).First();
 
-                var backupToMovePath = $"{_backupPath}\\IncrementalBackupTemp";
+                var backupToMovePath = $"{backupPath}\\IncrementalBackupTemp";
                 Directory.CreateDirectory(backupToMovePath);
                 var incrementalBackupFile = Directory.GetFiles(backupDirectory).Last();
                 var fileName = Path.GetFileName(incrementalBackupFile);
@@ -304,6 +302,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -317,7 +316,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupType = BackupType.Backup,
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -349,7 +348,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 const string databaseName = "restored_database";
                 var restoreConfiguration = new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(_backupPath).First(),
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = databaseName
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
@@ -374,6 +373,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_and_restore_snapshot()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -387,7 +387,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupType = BackupType.Snapshot,
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -420,7 +420,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 const string restoredDatabaseName = "restored_database_snapshot";
                 var restoreConfiguration = new RestoreBackupConfiguration
                 {
-                    BackupLocation = Directory.GetDirectories(_backupPath).First(),
+                    BackupLocation = Directory.GetDirectories(backupPath).First(),
                     DatabaseName = restoredDatabaseName
                 };
                 var restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
@@ -446,6 +446,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task restore_settings_tests()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 var restoreConfiguration = new RestoreBackupConfiguration();
@@ -480,7 +481,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     BackupType = BackupType.Backup,
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -495,24 +496,24 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     return getPeriodicBackupResult.Status?.LastEtag > 0;
                 }, TimeSpan.FromMinutes(2));
 
-                restoreConfiguration.BackupLocation = _backupPath;
-                restoreConfiguration.DataDirectory = _backupPath;
+                restoreConfiguration.BackupLocation = backupPath;
+                restoreConfiguration.DataDirectory = backupPath;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("New data directory must be empty of any files or folders", e.InnerException.Message);
 
-                restoreConfiguration.BackupLocation = _backupPath;
+                restoreConfiguration.BackupLocation = backupPath;
                 var emptyFolder = NewDataPath(suffix: "BackupFolderRestore");
                 restoreConfiguration.DataDirectory = emptyFolder; ;
-                restoreConfiguration.JournalsStoragePath = _backupPath;
+                restoreConfiguration.JournalsStoragePath = backupPath;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("Journals directory must be empty of any files or folders", e.InnerException.Message);
 
-                restoreConfiguration.BackupLocation = _backupPath;
+                restoreConfiguration.BackupLocation = backupPath;
                 restoreConfiguration.DataDirectory = emptyFolder; ;
                 restoreConfiguration.JournalsStoragePath = emptyFolder;
-                restoreConfiguration.IndexingStoragePath = _backupPath;
+                restoreConfiguration.IndexingStoragePath = backupPath;
                 restoreBackupTask = new RestoreBackupOperation(restoreConfiguration);
                 e = Assert.Throws<RavenException>(() => store.Admin.Server.Send(restoreBackupTask));
                 Assert.Contains("Indexes directory must be empty of any files or folders", e.InnerException.Message);

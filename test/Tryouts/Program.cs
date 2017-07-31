@@ -17,11 +17,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 Logger.Info("Program: " + i);
-                using (var test = new SlowTests.Voron.Bugs.RavenDB_6971())
+                using (var test = new FastTests.Server.Documents.PeriodicBackup.PeriodicBackupTests())
                 {
                     try
                     {
-                        test.Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart();
+                        test.CanBackupToDirectory().Wait();
                     }
                     catch (Exception e)
                     {

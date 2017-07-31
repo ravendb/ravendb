@@ -19,23 +19,17 @@ namespace FastTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTests : RavenTestBase
     {
-        private readonly string _backupPath;
-
-        public PeriodicBackupTests()
-        {
-            _backupPath = NewDataPath(suffix: "BackupFolder");
-        }
-
         [Fact, Trait("Category", "Smuggler")]
         public async Task CanSetupPeriodicBackupWithVeryLargePeriods()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 var config = new PeriodicBackupConfiguration
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     FullBackupFrequency = "* */1 * * *",
                     IncrementalBackupFrequency = "* */2 * * *"
@@ -50,9 +44,10 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [Fact(Skip = "RavenDB-7931 Takes too long"), Trait("Category", "Smuggler")]
         public async Task CanBackupToDirectory()
         {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenAsyncSession())
@@ -65,7 +60,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 {
                     LocalSettings = new LocalSettings
                     {
-                        FolderPath = _backupPath
+                        FolderPath = backupPath
                     },
                     IncrementalBackupFrequency = "* * * * *" //every minute
                 };
@@ -80,7 +75,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
             {
                 await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(_backupPath).First());
+                    Directory.GetDirectories(backupPath).First());
 
                 using (var session = store.OpenAsyncSession())
                 {
