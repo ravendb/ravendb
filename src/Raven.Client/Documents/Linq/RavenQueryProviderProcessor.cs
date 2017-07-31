@@ -627,9 +627,9 @@ The recommended method is to use full text search (mark the field as Analyzed an
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.OpenSubclause();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.NullValue, _insideExact);
+            _documentQuery.WhereEquals(memberInfo.Path, null, _insideExact);
             _documentQuery.OrElse();
-            _documentQuery.WhereEquals(memberInfo.Path, Constants.Documents.Indexing.Fields.EmptyString, _insideExact);
+            _documentQuery.WhereEquals(memberInfo.Path, string.Empty, _insideExact);
             _documentQuery.CloseSubclause();
         }
 
