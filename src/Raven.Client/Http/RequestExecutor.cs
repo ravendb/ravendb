@@ -323,7 +323,7 @@ namespace Raven.Client.Http
                 case ReadBalanceBehavior.RoundRobin:
                     return _nodeSelector.GetNodeBySessionId(sessionId);                
                 case ReadBalanceBehavior.FastestNode:
-                    return _nodeSelector.InSpeedTestPhase ? _nodeSelector.GetPreferredNode() : _nodeSelector.GetFastestNode();                
+                    return _nodeSelector.GetFastestNode();                
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -549,7 +549,7 @@ namespace Raven.Client.Http
                                 var preferredTask = command.SendAsync(_httpClient, request, cts.Token);
                                 if (ShouldExecuteOnAll(chosenNode, command))
                                 {
-                                    ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token);
+                                    await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token).ConfigureAwait(false);
                                 }
 
                                 response = await preferredTask.ConfigureAwait(false);
@@ -567,7 +567,7 @@ namespace Raven.Client.Http
                         var preferredTask = command.SendAsync(_httpClient, request, token);
                         if (ShouldExecuteOnAll(chosenNode, command))
                         {
-                            ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token);
+                            await ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token).ConfigureAwait(false);
                         }
 
                         response = await preferredTask.ConfigureAwait(false);
@@ -663,9 +663,13 @@ namespace Raven.Client.Http
                    chosenNode != null;
         }
 
-        private void ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
+        private static readonly Task<HttpRequestMessage> NeverEndingRequest = new TaskCompletionSource<HttpRequestMessage>().Task;
+        
+        private async Task ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
             CancellationToken token = default(CancellationToken))
         {
+            int numberOfFailedTasks = 0;
+
             var nodes = _nodeSelector.Topology.Nodes;
             var tasks = new Task[nodes.Count];
             for (int i = 0; i < nodes.Count; i++)
@@ -676,19 +680,50 @@ namespace Raven.Client.Http
                     continue;
                 }
 
-                var request = CreateRequest(chosenNode, command, out var url);
+                var request = CreateRequest(chosenNode, command, out var _);
                 try
                 {
-                    tasks[i] = command.SendAsync(_httpClient, request, token);
+                    tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
+                    {
+                        try
+                        {
+                            if (x.Exception != null)
+                            {
+                                // we need to make sure that the response is 
+                                // properly disposed from all the calls 
+                                x.Result.Dispose();
+                            }
+                        }
+                        catch (Exception e)
+                        {
+                            // there is really nothing we can do here
+                        }
+                    }, token);
                 }
                 catch (Exception)
                 {
-                    //noop
+                    numberOfFailedTasks++;
+                    // nothing we can do about it
+                    tasks[i] = NeverEndingRequest;
                 }
             }
 
-            var fastest = Task.WaitAny(tasks);
-            _nodeSelector.RecordFastest(fastest);
+            while (numberOfFailedTasks  < tasks.Length)
+            {
+                // here we rely on WhenAny NOT throwing if the completed
+                // task has failed
+                var completed = await Task.WhenAny(tasks).ConfigureAwait(false);
+                var index = Array.IndexOf(tasks, completed);
+                if (completed.IsCanceled || completed.IsFaulted)
+                {
+                    tasks[index] = NeverEndingRequest;
+                    numberOfFailedTasks++;
+                    continue;
+                }
+                _nodeSelector.RecordFastest(index, nodes[index]);
+            }
+            // we can reach here if the number of failed task equal to the nuber
+            // of the nodes, in which case we have nothing to do
         }
 
         private static void ThrowTimeoutTooLarge(TimeSpan? timeout)
@@ -1053,7 +1088,7 @@ namespace Raven.Client.Http
         {
             await EnsureNodeSelector().ConfigureAwait(false);
 
-            return _nodeSelector.InSpeedTestPhase ? _nodeSelector.GetPreferredNode() : _nodeSelector.GetFastestNode();
+            return _nodeSelector.GetFastestNode();
         }
 
         private async Task EnsureNodeSelector()

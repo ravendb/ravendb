@@ -17,11 +17,11 @@ namespace Tryouts
             {
                 Console.WriteLine(i);
                 Logger.Info("Program: " + i);
-                using (var test = new FastTests.Server.Documents.PeriodicBackup.PeriodicBackupTests())
+                using (var test = new FastTests.Issues.RavenDB_6141())
                 {
                     try
                     {
-                        test.CanBackupToDirectory().Wait();
+                        test.Default_database_path_settings();
                     }
                     catch (Exception e)
                     {

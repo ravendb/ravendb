@@ -105,6 +105,11 @@ namespace Raven.Client.Http
             var state = _state;
             if (state.Failures[state.Fastest] == 0)
                 return (state.Fastest, state.Nodes[state.Fastest]);
+            
+            // if the fastest node has failures, we'll immeidately schedule
+            // another run of finding who the fastest node is, in the meantime
+            // we'll just use the server preferred node or failover as usual
+            
             SwitchToSpeedTestPhase(null);
             return GetPreferredNode();
         }
@@ -137,12 +142,19 @@ namespace Raven.Client.Http
 
         public bool InSpeedTestPhase => _state.SpeedTestMode == 2;
 
-        public void RecordFastest(int index)
+        public void RecordFastest(int index, ServerNode node)
         {
             var state = _state;
             var stateFastest = state.FastestRecords;
 
+            // the following two checks are to verify that things didn't move
+            // while we were computing the fastest node, we verify that the index
+            // of the fastest node and the identity of the node didn't change during
+            // our check
             if (index < 0 || index >= stateFastest.Length)
+                return;
+
+            if (ReferenceEquals(node, state.Nodes[index]) == false)
                 return;
 
             if (Interlocked.Increment(ref stateFastest[index]) >= 10)
