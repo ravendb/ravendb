@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -61,30 +62,103 @@ namespace Raven.Server.Documents.Indexes
 
                 stream.Position = 0;
                 
-                if (options.EncryptionEnabled == false)
-                {                
-                    // This will write the index definitions to a file on disk (not through voron) --> not encrypted even if encryption is on.
-                    // So we will disable it (temporarily) when working with encryption. 
-                    if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                {
+                    using (var metadata = File.Open(options.BasePath.Combine(MetadataFileName).FullPath, FileMode.Create))
                     {
-                        using (var metadata = File.Open(options.BasePath.Combine(MetadataFileName).FullPath, FileMode.Create))
-                        using (var metadataWriter = new StreamWriter(metadata, Encoding.UTF8))
+                        if (options.EncryptionEnabled)
                         {
-                            metadataWriter.WriteLine(Name);
-                            metadataWriter.Flush();
-
-                            stream.CopyTo(metadata);
-                            stream.Position = 0;
+                            EncryptStream(options, stream);
                         }
+
+                        stream.CopyTo(metadata);
+                        stream.Position = 0;
                     }
                 }
-
 
                 using (Slice.From(context.Allocator, stream.ToArray(), out Slice val))
                 {
                     tree.Add(DefinitionSlice, val);
                 }
             }
+        }
+
+        private static unsafe void EncryptStream(StorageEnvironmentOptions options, MemoryStream stream)
+        {
+            var data = stream.ToArray();
+            var nonce = Sodium.GenerateRandomBuffer(sizeof(long) * 8);
+            var encryptedData = new byte[data.Length + Sodium.crypto_aead_chacha20poly1305_ABYTES()];
+
+            fixed (byte* pData = data)
+            fixed (byte* pEncryptedData = encryptedData)
+            fixed (byte* pNonce = nonce)
+            fixed (byte* pKey = options.MasterKey)
+            {
+                ulong cLen;
+                var rc = Sodium.crypto_aead_chacha20poly1305_encrypt(
+                    pEncryptedData,
+                    &cLen,
+                    pData,
+                    (ulong)data.Length,
+                    null,
+                    0,
+                    null,
+                    pNonce,
+                    pKey
+                );
+
+                Debug.Assert(cLen <= (ulong)data.Length + (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+
+                if (rc != 0)
+                    throw new InvalidOperationException($"Unable to encrypt stream, rc={rc}");
+            }
+
+            // reset the stream and write the encrypted data to it
+            stream.SetLength(0);
+            stream.Write(encryptedData, 0, encryptedData.Length);
+            stream.Write(nonce, 0, nonce.Length);
+            stream.Position = 0;
+        }
+
+        private static unsafe void DecryptStream(StorageEnvironmentOptions options, MemoryStream stream)
+        {
+            var buffer = stream.ToArray();
+            var nonce = new byte[sizeof(long)];
+            var data = new byte[buffer.Length - nonce.Length];
+
+            Array.Copy(buffer, 0, data, 0, buffer.Length - nonce.Length);
+            Array.Copy(buffer, buffer.Length - nonce.Length, nonce, 0, nonce.Length);
+
+            var decryptedData = new byte[data.Length - Sodium.crypto_aead_chacha20poly1305_ABYTES()];
+            
+            fixed (byte* pData = data)
+            fixed (byte* pDecryptedData = decryptedData)
+            fixed (byte* pNonce = nonce)
+            fixed (byte* pKey = options.MasterKey)
+            {
+                ulong mLen;
+                var rc = Sodium.crypto_aead_chacha20poly1305_decrypt(
+                    pDecryptedData,
+                    &mLen,
+                    null,
+                    pData,
+                    (ulong)data.Length,
+                    null,
+                    0,
+                    pNonce,
+                    pKey
+                );
+
+                Debug.Assert(mLen <= (ulong)data.Length - (ulong)Sodium.crypto_aead_chacha20poly1305_ABYTES());
+
+                if (rc != 0)
+                    throw new InvalidOperationException($"Unable to decrypt stream, rc={rc}");
+            }
+
+            // reset the stream and write the decrypted data to it
+            stream.SetLength(0);
+            stream.Write(decryptedData, 0, decryptedData.Length);
+            stream.Position = 0;
         }
 
         public void Persist(JsonOperationContext context, BlittableJsonTextWriter writer)
@@ -222,17 +296,32 @@ namespace Raven.Server.Documents.Indexes
 
         protected abstract int ComputeRestOfHash(int hashCode);
 
-        public static string TryReadNameFromMetadataFile(string directory)
+        public bool TryReadNameFromMetadataFile(TransactionOperationContext context, StorageEnvironmentOptions options, out string name)
         {
-            var metadataFile = Path.Combine(directory, MetadataFileName);
-            if (File.Exists(metadataFile) == false)
-                return null;
+            var metadata = ReadMetadataFile(options);
 
-            var name = File.ReadLines(metadataFile, Encoding.UTF8).FirstOrDefault();
-            if (string.IsNullOrWhiteSpace(name))
-                return null;
+            var metadataJson = context.ReadForDisk(metadata, string.Empty);
 
-            return name;
+            return metadataJson.TryGet("Name", out name);
+        }
+
+        public Stream ReadMetadataFile(StorageEnvironmentOptions options)
+        {
+            try
+            {
+                var metadata = File.ReadAllBytes(options.BasePath.Combine(MetadataFileName).FullPath);
+                var stream = new MemoryStream(metadata);
+
+                if (options.EncryptionEnabled)
+                {
+                    DecryptStream(options, stream);
+                }
+                return stream;
+            }
+            catch (Exception e)
+            {
+                throw new InvalidOperationException($"Unable to read metadata file for index '{Name}' at {options.BasePath.Combine(MetadataFileName).FullPath}", e);
+            }
         }
 
         public static bool TryReadIdFromDirectory(DirectoryInfo directory, out int indexId, out string indexName)
