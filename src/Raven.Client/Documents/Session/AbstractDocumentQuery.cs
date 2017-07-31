@@ -1511,6 +1511,14 @@ If you really want to do in memory filtering on the data returned from the query
                 .Append("SELECT ");
 
             var token = SelectTokens.First;
+            if (SelectTokens.Count == 1 && token.Value is DistinctToken)
+            {
+                token.Value.WriteTo(writer);
+                writer.Append(" *");
+
+                return;
+            }
+
             while (token != null)
             {
                 if (token.Previous != null && token.Previous.Value is DistinctToken == false)

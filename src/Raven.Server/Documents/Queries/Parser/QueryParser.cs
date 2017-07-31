@@ -119,9 +119,12 @@ namespace Raven.Server.Documents.Queries.Parser
 
         private List<(QueryExpression, FieldToken)> SelectOrWithClause(string clause, out bool isDistinct)
         {
-            var select = new List<(QueryExpression Expr, FieldToken Id)>();
-
             isDistinct = Scanner.TryScan("DISTINCT");
+
+            if (Scanner.TryScan("*"))
+                return null;
+
+            var select = new List<(QueryExpression Expr, FieldToken Id)>();
 
             do
             {
