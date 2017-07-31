@@ -365,23 +365,26 @@ namespace Raven.Server.Documents.TcpHandlers
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
                     bool anyDocumentsSentInCurrentIteration = false;
-                    using (docsContext.OpenReadTransaction())
+                    
+                    
+                    var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
+
+                    _buffer.SetLength(0);
+
+                    var docsToFlush = 0;
+
+                    using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+                    using (var writer = new BlittableJsonTextWriter(context, _buffer))
                     {
-                        var sendingCurrentBatchStopwatch = Stopwatch.StartNew();
 
-                        _buffer.SetLength(0);
-
-                        var docsToFlush = 0;
-
-                        using (TcpConnection.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                        using (var writer = new BlittableJsonTextWriter(context, _buffer))
+                        using (docsContext.OpenReadTransaction())
                         {
                             foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector) ?
-                                    result.Doc.ChangeVector :
-                                    ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
+                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector)
+                                    ? result.Doc.ChangeVector
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -439,83 +442,87 @@ namespace Raven.Server.Documents.TcpHandlers
                                     }
                                 }
                             }
-
-                            if (anyDocumentsSentInCurrentIteration)
-                            {
-                                context.Write(writer, new DynamicJsonValue
-                                {
-                                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
-                                });
-
-                                await FlushDocsToClient(writer, docsToFlush, true);
-                            }
                         }
 
-                        if (anyDocumentsSentInCurrentIteration == false)
-                        {                            
-                            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,Options.SubscriptionName, startEtag, lastChangeVector);
-
-                            if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
-                                await SendHeartBeat();
-
-                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
-                            
-                            if (globalEtag > startEtag)
-                                continue;
-
-                            if (await WaitForChangedDocuments(replyFromClientTask))
-                                continue;
-                        }
-
-                        SubscriptionConnectionClientMessage clientReply;
-
-                        while (true)
+                        if (anyDocumentsSentInCurrentIteration)
                         {
-                            var result = await Task.WhenAny(replyFromClientTask,
-                                    TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
-                            CancellationTokenSource.Token.ThrowIfCancellationRequested();
-                            if (result == replyFromClientTask)
+                            context.Write(writer, new DynamicJsonValue
                             {
-                                clientReply = await replyFromClientTask;
-                                if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
-                                {
-                                    CancellationTokenSource.Cancel();
-                                    break;
-                                }
-                                replyFromClientTask = GetReplyFromClientAsync();
-                                break;
-                            }
-                            await SendHeartBeat();
-                        }
-                        
-                        CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.EndOfBatch)
+                            });
 
-                        switch (clientReply.Type)
-                        {
-                            case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                                await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                                    Options.SubscriptionId,
-                                    Options.SubscriptionName,
-                                    startEtag,
-                                    lastChangeVector);
-                                Stats.LastAckReceivedAt = DateTime.UtcNow;
-                                Stats.AckRate.Mark();
-                                await WriteJsonAsync(new DynamicJsonValue
-                                {
-                                    [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
-                                });
-
-                                break;
-
-                            //precaution, should not reach this case...
-                            case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
-                                CancellationTokenSource.Cancel();
-                                break;
-                            default:
-                                throw new ArgumentException("Unknown message type from client " +
-                                                            clientReply.Type);
+                            await FlushDocsToClient(writer, docsToFlush, true);
                         }
                     }
+
+                    if (anyDocumentsSentInCurrentIteration == false)
+                    {                            
+                        await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,Options.SubscriptionName, startEtag, lastChangeVector);
+
+                        if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
+                            await SendHeartBeat();
+
+                        using (docsContext.OpenReadTransaction())
+                        {
+                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
+
+                            if (globalEtag > startEtag)
+                                continue;
+                        }
+
+                        if (await WaitForChangedDocuments(replyFromClientTask))
+                            continue;
+                    }
+
+                    SubscriptionConnectionClientMessage clientReply;
+
+                    while (true)
+                    {
+                        var result = await Task.WhenAny(replyFromClientTask,
+                                TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000), CancellationTokenSource.Token)).ConfigureAwait(false);
+                        CancellationTokenSource.Token.ThrowIfCancellationRequested();
+                        if (result == replyFromClientTask)
+                        {
+                            clientReply = await replyFromClientTask;
+                            if (clientReply.Type == SubscriptionConnectionClientMessage.MessageType.DisposedNotification)
+                            {
+                                CancellationTokenSource.Cancel();
+                                break;
+                            }
+                            replyFromClientTask = GetReplyFromClientAsync();
+                            break;
+                        }
+                        await SendHeartBeat();
+                    }
+                        
+                    CancellationTokenSource.Token.ThrowIfCancellationRequested();
+
+                    switch (clientReply.Type)
+                    {
+                        case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
+                            await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
+                                Options.SubscriptionId,
+                                Options.SubscriptionName,
+                                startEtag,
+                                lastChangeVector);
+                            Stats.LastAckReceivedAt = DateTime.UtcNow;
+                            Stats.AckRate.Mark();
+                            await WriteJsonAsync(new DynamicJsonValue
+                            {
+                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.Confirm)
+                            });
+
+                            break;
+
+                        //precaution, should not reach this case...
+                        case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
+                            CancellationTokenSource.Cancel();
+                            break;
+                        default:
+                            throw new ArgumentException("Unknown message type from client " +
+                                                        clientReply.Type);
+                    }
+                    
                 }
             }
         }
