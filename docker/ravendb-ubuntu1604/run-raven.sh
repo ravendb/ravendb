@@ -18,7 +18,7 @@ if [ ! -z "$PublicTcpServerUrl" ]; then
 fi
 
 if [ ! -z "$UnsecuredAccessAllowed" ]; then
-    COMMAND="$COMMAND --Security.Authentication.UnsecuredAccessAllowed=$UnsecuredAccessAllowed"
+    COMMAND="$COMMAND --Security.UnsecuredAccessAllowed=$UnsecuredAccessAllowed"
 fi
 
 if [ ! -z "$DataDir" ]; then
