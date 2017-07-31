@@ -111,10 +111,19 @@ namespace Raven.Client.Http
                     if (_nodeSelector == null)
                     {
                         _nodeSelector = new NodeSelector(newTopology);
+                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        {
+                            _nodeSelector.ScheduleSpeedTest();
+                        }
                     }
                     else if (_nodeSelector.OnUpdateTopology(newTopology))
                     {
                         DisposeAllFailedNodesTimers();
+
+                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        {
+                            _nodeSelector.ScheduleSpeedTest();
+                        }
                     }
                 }
             }

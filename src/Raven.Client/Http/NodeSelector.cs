@@ -4,14 +4,17 @@ using System.Threading;
 
 namespace Raven.Client.Http
 {
-    public class NodeSelector
+    public class NodeSelector : IDisposable
     {
         private class NodeSelectorState
         {
             public readonly Topology Topology;
             public readonly int CurrentNodeIndex;
             public readonly List<ServerNode> Nodes;
-            public readonly int[] Failures; 
+            public readonly int[] Failures;
+            public readonly int[] FastestRecords;
+            public int Fastest;
+            public int SpeedTestMode;
 
             public NodeSelectorState(int currentNodeIndex, Topology topology)
             {
@@ -19,12 +22,15 @@ namespace Raven.Client.Http
                 CurrentNodeIndex = currentNodeIndex;
                 Nodes = topology.Nodes;
                 Failures = new int[topology.Nodes.Count];
+                FastestRecords = new int[topology.Nodes.Count];
             }
         }        
 
-        private NodeSelectorState _state;
-
         public Topology Topology => _state.Topology;
+
+        private Timer _updateFastestNodeTimer;
+
+        private NodeSelectorState _state;
 
         public NodeSelector(Topology topology)
         {
@@ -94,6 +100,15 @@ namespace Raven.Client.Http
             return GetPreferredNode();
         }
 
+        public (int Index, ServerNode Node) GetFastestNode()
+        {            
+            var state = _state;
+            if (state.Failures[state.Fastest] == 0)
+                return (state.Fastest, state.Nodes[state.Fastest]);
+            SwitchToSpeedTestPhase(null);
+            return GetPreferredNode();
+        }
+
         public void RestoreNodeIndex(int nodeIndex)
         {
             var state = _state;
@@ -107,6 +122,72 @@ namespace Raven.Client.Http
         protected static void ThrowEmptyTopology()
         {
             throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
+        }
+
+        private void SwitchToSpeedTestPhase(object _)
+        {
+            var state = _state;
+            if (Interlocked.CompareExchange(ref state.SpeedTestMode, 1, 0) != 0)
+                return;
+
+            Array.Clear(state.FastestRecords,0, state.Failures.Length);
+
+            Interlocked.Exchange(ref state.SpeedTestMode, 2);
+        }
+
+        public bool InSpeedTestPhase => _state.SpeedTestMode == 2;
+
+        public void RecordFastest(int index)
+        {
+            var state = _state;
+            var stateFastest = state.FastestRecords;
+
+            if (index < 0 || index >= stateFastest.Length)
+                return;
+
+            if (Interlocked.Increment(ref stateFastest[index]) >= 10)
+            {
+                SelectFastest(state, index);
+                return;
+            }
+
+            var total = 0;
+            int maxIndex = 0;
+            var maxValue = 0;
+            for (int i = 0; i < stateFastest.Length; i++)
+            {
+                total += stateFastest[i];
+                if (maxValue < stateFastest[i])
+                {
+                    maxIndex = i;
+                    maxValue = stateFastest[i];
+                }
+            }
+            if (total < 100)
+                return;
+
+            SelectFastest(state, maxIndex);
+        }
+
+        private void SelectFastest(NodeSelectorState state, int index)
+        {
+            state.Fastest = index;
+            Interlocked.CompareExchange(ref state.SpeedTestMode, 0, 2);
+            _updateFastestNodeTimer.Change(TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
+        }
+
+        public void ScheduleSpeedTest()
+        {
+            if (_updateFastestNodeTimer == null)
+            {
+                _updateFastestNodeTimer = new Timer(SwitchToSpeedTestPhase, null, Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
+            }
+            SwitchToSpeedTestPhase(null);
+        }
+
+        public void Dispose()
+        {
+            _updateFastestNodeTimer?.Dispose();
         }
     }
 }
