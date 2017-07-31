@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Threading;
@@ -63,11 +64,31 @@ namespace Rachis.Transport
                 }
                 catch (Exception e)
                 {
-                    _log.ErrorException($"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{requestMessage.Content}\r\n{requestMessage.Headers}",e);
+                    var msg = $"Error while sending a request {requestMessage.Method} {requestMessage.RequestUri}\r\n content:{await GetContentAsString(requestMessage.Content).ConfigureAwait(false)}\r\n{requestMessage.Headers}";
+                    _log.ErrorException(msg, e);
                     throw;
                 }
                 return CheckForAuthErrors();
             });
+        }
+
+        /// <summary>
+        /// This method gets the string representation of the content of the raft request it is mostly intended for debug and doesn't really show the actual stream content but a logical equivalent.       
+        /// </summary>
+        /// <param name="requestMessageContent">The content to stringify</param>
+        /// <returns></returns>
+        private async Task<string> GetContentAsString(HttpContent requestMessageContent)
+        {
+            var ec = requestMessageContent as HttpTransportSender.EntriesContent;
+            if (ec != null)
+                return ec.ToString();
+            var sc = requestMessageContent as HttpTransportSender.SnapshotContent;
+            if (sc != null)
+                return sc.ToString();
+            var readAsStringAsync = requestMessageContent?.ReadAsStringAsync();
+            if (readAsStringAsync != null)
+                return await readAsStringAsync.ConfigureAwait(false);
+            return string.Empty;
         }
 
         private async Task RunWithAuthRetry(Func<Task<Boolean>> requestOperation)

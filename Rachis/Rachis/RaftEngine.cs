@@ -100,7 +100,7 @@ namespace Rachis
             return candidacyResult;
         }
 
-        private readonly Task _eventLoopTask;
+        private Task _eventLoopTask;
 
         private string _currentLeader;
 
@@ -191,9 +191,9 @@ namespace Rachis
                     //Append entries is a very common messgae (it is the heartbeat)
                     //We don't want to keep empty append entries in the log so we filter them.
                     AppendEntriesRequestWithEntries appendEntriesRequest;
-                    if (messageBase != null && ShouldNotFilterMessage(messageBase,out appendEntriesRequest))
+                    if (messageBase != null && ShouldNotFilterMessage(messageBase, out appendEntriesRequest))
                         EngineStatistics.Messages.LimitedSizeEnqueue(
-                            new MessageWithTimingInformation {Message = appendEntriesRequest??messageBase, MessageReceiveTime = DateTime.UtcNow},
+                            new MessageWithTimingInformation {Message = appendEntriesRequest ?? messageBase, MessageReceiveTime = DateTime.UtcNow},
                             RaftEngineStatistics.NumberOfMessagesToTrack);
                     if (_eventLoopCancellationTokenSource.IsCancellationRequested)
                     {
@@ -209,8 +209,8 @@ namespace Rachis
                     {
                         if (hasStateChagned)
                         {
-                            if(_log.IsDebugEnabled)
-                                _log.Debug("State {0} timeout but the behavior has changed to {2} so we will skip timeout handling ({1:#,#;;0} ms).", oldBehavior.State, oldBehavior.Timeout,behavior.State);
+                            if (_log.IsDebugEnabled)
+                                _log.Debug("State {0} timeout but the behavior has changed to {2} so we will skip timeout handling ({1:#,#;;0} ms).", oldBehavior.State, oldBehavior.Timeout, behavior.State);
                             continue;
                         }
                         if (State != RaftEngineState.Leader && _log.IsDebugEnabled)
@@ -235,6 +235,15 @@ namespace Rachis
                 catch (OperationCanceledException)
                 {
                     break;
+                }
+                catch (Exception e)
+                {
+                    //This is unexpected and we can't have our event loop die on us so we re-create it 
+                    _log.ErrorException($"Unexpected exception thrown from event loop",e);
+                    _eventLoopTask.ContinueWith(_ =>
+                    {
+                        _eventLoopTask = Task.Factory.StartNew(EventLoop, TaskCreationOptions.LongRunning);
+                    }, CancellationToken);
                 }
             }
         }
