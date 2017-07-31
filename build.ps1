@@ -7,6 +7,7 @@ param(
     [switch]$Rpi,
     [switch]$DontRebuildStudio,
     [switch]$DontBuildStudio,
+    [switch]$JustStudio,
     [switch]$JustNuget,
     [switch]$Help)
 
@@ -111,12 +112,14 @@ UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 DownloadDependencies
 
-BuildSparrow $SPARROW_SRC_DIR
-BuildClient $CLIENT_SRC_DIR
-BuildTestDriver $TESTDRIVER_SRC_DIR
+if ($JustStudio -eq $False) {
+    BuildSparrow $SPARROW_SRC_DIR
+    BuildClient $CLIENT_SRC_DIR
+    BuildTestDriver $TESTDRIVER_SRC_DIR
 
-CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
-CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
+    CreateNugetPackage $CLIENT_SRC_DIR $RELEASE_DIR $versionSuffix
+    CreateNugetPackage $TESTDRIVER_SRC_DIR $RELEASE_DIR $versionSuffix
+}
 
 if ($JustNuget) {
     exit 0
@@ -125,8 +128,13 @@ if ($JustNuget) {
 if (ShouldBuildStudio $STUDIO_OUT_DIR $DontRebuildStudio $DontBuildStudio) {
     BuildTypingsGenerator $TYPINGS_GENERATOR_SRC_DIR
     BuildStudio $STUDIO_SRC_DIR $version
+    write-host "Studio built successfully."
 } else {
     write-host "Not building studio..."
+}
+
+if ($JustStudio) {
+    exit 0
 }
 
 Foreach ($spec in $targets) {
