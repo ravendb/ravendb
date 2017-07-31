@@ -1769,6 +1769,8 @@ If you really want to do in memory filtering on the data returned from the query
                 return whereParams.Value;
             if (whereParams.Value is bool)
                 return whereParams.Value;
+            if (whereParams.Value is Guid)
+                return whereParams.Value;
             if (type.GetTypeInfo().IsEnum)
                 return whereParams.Value;
 
