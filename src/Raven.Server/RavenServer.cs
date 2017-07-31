@@ -62,11 +62,7 @@ namespace Raven.Server
     {
         static RavenServer()
         {
-            //TODO: When this method become available, update to call directly
-            var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
-                .CreateDelegate(typeof(Func<int, int, bool>));
-
-            setMinThreads(250, 250);
+            
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
