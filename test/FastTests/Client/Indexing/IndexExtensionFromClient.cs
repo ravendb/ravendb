@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
+using NodaTime;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
 namespace FastTests.Client.Indexing
@@ -22,9 +21,10 @@ namespace FastTests.Client.Indexing
                     session.Store(p);
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    var query = session.Query<PeopleByEmail.PeopleByEmailResult, PeopleByEmail>().Where(x=>x.Email == PeopleUtil.CalculatePersonEmail(p.Name,p.Age)).OfType<Person>().Single();
+                    WaitForUserToContinueTheTest(store);
+                    var query = session.Query<PeopleByEmail.PeopleByEmailResult, PeopleByEmail>()
+                        .Where(x => x.Email == PeopleUtil.CalculatePersonEmail(p.Name, p.Age)).OfType<Person>().Single();
                 }
-
             }
         }
 
@@ -53,20 +53,15 @@ namespace FastTests.Client.Indexing
                         "PeopleUtil",
                         @"
 using System;
+using NodaTime;
 namespace My.Crazy.Namespace
 {
     public static class PeopleUtil
     {
         public static string CalculatePersonEmail(string name, uint age)
         {
-            return $""{name}.{DateTime.Now.Year - age}@ayende.com"";
+            return $""{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).Minus(Duration.FromDays(356*age)).ToDateTimeUtc().Year}@ayende.com"";
         }
-    }
-
-    public class Person
-    {
-        public string Name { get; set; }
-        public uint Age { get; set; }
     }
 }
 "
@@ -80,7 +75,8 @@ namespace My.Crazy.Namespace
     {
         public static string CalculatePersonEmail(string name, uint age)
         {
-            return $"{name}.{DateTime.Now.Year - age}@ayende.com";
+            //The code below intention is just to make sure NodaTime is compiling with our index
+            return $"{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).ToDateTimeUtc().Year - age}@ayende.com";
         }
     }
 }

@@ -22,7 +22,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
-using System.Collections;
+
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -108,7 +108,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTrees(extentions);
+            var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
                 .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var compilation = CSharpCompilation.Create(
                 assemblyName: name + ".dll",
                 syntaxTrees: syntaxTrees,
-                references: References,
+                references: res.references,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
                 );
@@ -188,12 +188,12 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees) GetUsingDirectiveAndSyntaxTrees(Dictionary<string,string> extentions)
+        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string,string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)
             {
-                return (Usings, syntaxTrees);
+                return (Usings, syntaxTrees, References);
             }
             var @using = new HashSet<string>();
             
@@ -208,14 +208,31 @@ namespace Raven.Server.Documents.Indexes.Static
                     @using.Add(ns.Name.ToString());
                 }
             }
+            var refrences = GetRefrences();
             if (@using.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
                 var newUsing = @using.Select(x=> SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
-                return (newUsing.ToArray(), syntaxTrees);
+                return (newUsing.ToArray(), syntaxTrees, refrences);
             }
-            return (Usings, syntaxTrees);
+            return (Usings, syntaxTrees, refrences);
+        }
+
+        private static MetadataReference[] GetRefrences()
+        {
+            //libsodium is a none managed dll we must exclude it from the list of dlls
+            var dlls = Directory.GetFiles(Path.GetDirectoryName(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location), "*.dll").Where(x=>Path.GetFileName(x).StartsWith("libsodium") == false).ToArray();
+            var newRefrences = new MetadataReference[References.Length + dlls.Length];
+            for (var i = 0; i < References.Length; i++)
+            {
+                newRefrences[i] = References[i];
+            }
+            for (int i = 0; i < dlls.Length; i++)
+            {
+                newRefrences[i + References.Length] = MetadataReference.CreateFromFile(dlls[i]);
+            }
+            return newRefrences;
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
