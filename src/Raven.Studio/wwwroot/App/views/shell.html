@@ -176,12 +176,15 @@
 
 <script type="text/html" id="leafMenuItem">
     <li data-bind="with: item">
-        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav === true, attr: { href: path }, css: { 'active': $parent.menu.activeItem() === $data }">
+        <a data-bind="click: $parent.menu.navigate.bind($parent.menu), visible: nav, attr: { href: path }, css: { 'active': $parent.menu.activeItem() === $data }">
             <i data-bind="css: css"></i>
             <span data-bind="text: title"></span>
-            <div class="collection-count" data-bind="visible: nav === true">                              
-                <div class="value" data-bind="text: badgeData"></div>              
-            </div>
+            <div data-bind="if: badgeData">
+                <div class="collection-count" data-bind="attr: { title: badgeData().toLocaleString() }">
+                    <div class="value label-danger" data-bind="text: countPrefix"></div> 
+                    <div data-bind="attr: { class: sizeClass }"></div>
+                </div>
+            </div>           
         </a>
     </li>
 </script>

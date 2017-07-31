@@ -1,5 +1,5 @@
 ﻿/// <reference path="../../../../typings/tsd.d.ts" />
-
+import generalUtils = require("common/generalUtils");
 import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 
 class leafMenuItem implements menuItem {
@@ -17,7 +17,10 @@ class leafMenuItem implements menuItem {
     enabled: KnockoutObservable<boolean>;
     type: menuItemType = "leaf";
     itemRouteToHighlight: string;
+
     badgeData: KnockoutObservable<number>;
+    countPrefix: KnockoutComputed<number>;
+    sizeClass: KnockoutComputed<string>;
 
     constructor({ title, tooltip, route, moduleId, nav, hash, css, dynamicHash, enabled, openAsDialog, itemRouteToHighlight, badgeData }: {
         title: string,
@@ -48,6 +51,7 @@ class leafMenuItem implements menuItem {
         this.css = css;
         this.enabled = enabled;
         this.openAsDialog = openAsDialog;
+
         this.path = ko.pureComputed(() => {
             if (this.hash) {
                 return this.hash;
@@ -56,6 +60,22 @@ class leafMenuItem implements menuItem {
             }
 
             return null;
+        });
+
+        this.sizeClass = ko.pureComputed(() => {
+            if (!this.badgeData) {
+                return "";
+            }
+
+            return generalUtils.getSizeClass(this.badgeData());
+        });
+
+        this.countPrefix = ko.pureComputed(() => {
+            if (!this.badgeData) {
+                return null;
+            }
+
+            return generalUtils.getCountPrefix(this.badgeData());
         });
     }
 }

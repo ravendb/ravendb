@@ -1,6 +1,7 @@
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
+import generalUtils = require("common/generalUtils");
 
 class collection {
     static readonly allDocumentsCollectionName = "All Documents";
@@ -21,25 +22,11 @@ class collection {
         this.documentCount(docCount);
 
         this.sizeClass = ko.pureComputed(() => {
-            const count = this.documentCount();
-            if (count < 100000) {
-                return "";
-            }
-            if (count < 1000 * 1000) {
-                return "kilo";
-            }
-            return "mega";
+            return generalUtils.getSizeClass(this.documentCount());
         });
 
         this.countPrefix = ko.pureComputed(() => {
-            const count = this.documentCount();
-            if (count < 100000) {
-                return count;
-            }
-            if (count < 1000 * 1000) {
-                return _.floor(count / 1000, 2);
-            }
-            return _.floor(count / 1000000, 2);
+            return generalUtils.getCountPrefix(this.documentCount());
         });
 
         this.documentCount.subscribe(() => {
