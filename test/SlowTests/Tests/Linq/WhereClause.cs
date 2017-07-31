@@ -189,8 +189,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (Name = :p0 OR Name = :p1)", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -207,8 +207,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (Name = :p0 OR Name = :p1)", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -225,8 +225,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = :p0 OR Name = :p1))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -243,8 +243,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = :p0 OR Name = :p1))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -261,8 +261,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = :p0 OR Name = :p1))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -295,8 +295,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = :p0 OR Name = :p1))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -313,8 +313,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (true AND NOT (Name = :p0 OR Name = :p1)))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
             }
         }
@@ -331,8 +331,8 @@ namespace SlowTests.Tests.Linq
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
                     Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (true AND NOT (Name = :p0 OR Name = :p1)))", iq.Query);
-                    Assert.Equal("NULL_VALUE", iq.QueryParameters["p0"]);
-                    Assert.Equal("EMPTY_STRING", iq.QueryParameters["p1"]);
+                    Assert.Equal(null, iq.QueryParameters["p0"]);
+                    Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
 
                     // Note: this can be generated also a smaller query: 
                     // Assert.Equal("*:* AND (Name:[[NULL_VALUE]] OR Name:[[EMPTY_STRING]])", q.ToString());
