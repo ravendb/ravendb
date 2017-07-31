@@ -21,7 +21,6 @@ namespace FastTests.Client.Indexing
                     session.Store(p);
                     session.SaveChanges();
                     WaitForIndexing(store);
-                    WaitForUserToContinueTheTest(store);
                     var query = session.Query<PeopleByEmail.PeopleByEmailResult, PeopleByEmail>()
                         .Where(x => x.Email == PeopleUtil.CalculatePersonEmail(p.Name, p.Age)).OfType<Person>().Single();
                 }
@@ -60,7 +59,8 @@ namespace My.Crazy.Namespace
     {
         public static string CalculatePersonEmail(string name, uint age)
         {
-            return $""{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).Minus(Duration.FromDays(356*age)).ToDateTimeUtc().Year}@ayende.com"";
+            //The code below intention is just to make sure NodaTime is compiling with our index
+            return $""{name}.{Instant.FromDateTimeUtc(DateTime.Now.ToUniversalTime()).ToDateTimeUtc().Year - age}@ayende.com"";
         }
     }
 }
