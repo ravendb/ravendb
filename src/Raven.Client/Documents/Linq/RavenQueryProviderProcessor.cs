@@ -714,14 +714,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             else
             {
                 // Support for .Where(x => x.Properties.Any())
-                _documentQuery.WhereEquals(new WhereParams
-                {
-                    FieldName = memberInfo.Path,
-                    Value = "*",
-                    AllowWildcards = true,
-                    IsNestedPath = memberInfo.IsNestedPath,
-                    Exact = _insideExact
-                });
+                _documentQuery.WhereExists(memberInfo.Path);
             }
         }
 
@@ -1863,7 +1856,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             {
                 fields[i] = fieldToFetch.Name;
                 projections[i] = fieldToFetch.Alias ?? fieldToFetch.Name;
-                
+
                 i++;
             }
 

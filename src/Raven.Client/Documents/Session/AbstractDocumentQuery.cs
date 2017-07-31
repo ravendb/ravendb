@@ -1646,9 +1646,13 @@ If you really want to do in memory filtering on the data returned from the query
 
             Negate = false;
 
-            if (fieldName != null && WhereTokens.Count == 0 || WhereTokens.Last.Value is OpenSubclauseToken)
+            if (WhereTokens.Count == 0 || WhereTokens.Last.Value is OpenSubclauseToken)
             {
-                WhereExists(fieldName);
+                if (fieldName != null)
+                    WhereExists(fieldName);
+                else
+                    WhereTrue();
+
                 AndAlso();
             }
 
