@@ -157,13 +157,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 json.TryGet(nameof(IndexField.Name), out string name);
                 json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
-                json.TryGet(nameof(IndexField.MapReduceOperation), out int mapReduceOperationAsInt);
-
-                int sortOptionAsInt;
-                json.TryGet(nameof(IndexField.Sort), out sortOptionAsInt);
-
-                int mapReduceOperationAsInt;
-                json.TryGet(nameof(IndexField.Aggregation), out mapReduceOperationAsInt);
+                json.TryGet(nameof(IndexField.Aggregation), out int aggregationAsInt);
 
                 var field = new IndexField
                 {
@@ -171,7 +165,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Storage = FieldStorage.Yes,
                     Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default,
-                    Aggregation = (AggregationOperation)mapReduceOperationAsInt
+                    Aggregation = (AggregationOperation)aggregationAsInt
                 };
 
                 mapFields[i] = field;

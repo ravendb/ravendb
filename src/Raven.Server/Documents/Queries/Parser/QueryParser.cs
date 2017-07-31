@@ -640,8 +640,8 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 return true;
             }
-            int tokenStart, tokenLength;
-            if (Parameter(out tokenStart, out tokenLength))
+
+            if (Parameter(out int tokenStart, out int tokenLength))
             {
                 val = new ValueToken
                 {

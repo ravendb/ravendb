@@ -23,8 +23,7 @@ namespace Raven.Server.Documents.Queries.Faceted
                 PageSize = pageSize
             };
 
-            StringValues values;
-            if (httpContext.Request.Query.TryGetValue("facetDoc", out values))
+            if (httpContext.Request.Query.TryGetValue("facetDoc", out StringValues values))
                 result.FacetSetupDoc = values.First();
 
             if (httpContext.Request.Query.TryGetValue("query", out values))

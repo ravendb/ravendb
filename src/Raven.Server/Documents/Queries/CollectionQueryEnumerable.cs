@@ -344,8 +344,7 @@ namespace Raven.Server.Documents.Queries
 
                 private void AddId(string id)
                 {
-                    Slice key;
-                    Slice.From(_allocator, id, out key);
+                    Slice.From(_allocator, id, out Slice key);
                     _allocator.ToLowerCase(ref key.Content);
 
                     Ids.Add(key);
