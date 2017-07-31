@@ -163,7 +163,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task MoveToPassiveWhenRefusedConnectionFromAllNodes()
         {
-            MiscUtils.DisableLongTimespan = true;
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var databaseName = "MoveToPassiveWhenRefusedConnectionFromAllNodes";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
@@ -222,7 +222,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task RedistrebuteDatabaseIfNodeFailes()
         {
-            MiscUtils.DisableLongTimespan = true;
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var dbGroupSize = 2;
             var databaseName = "RedistrebuteDatabaseIfNodeFailes";

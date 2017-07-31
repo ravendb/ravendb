@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Replication
             _database.ReplicationLoader.OutgoingReplicationRemoved += OutgoingHandlerRemoved;
 
             foreach (var handler in _database.ReplicationLoader.IncomingHandlers)
-                IncomingHandlerAdded(handler.ConnectionInfo.SourceDatabaseId, handler);
+                IncomingHandlerAdded(handler);
 
             foreach (var handler in _database.ReplicationLoader.OutgoingHandlers)
                 OutgoingHandlerAdded(handler);
@@ -81,7 +81,7 @@ namespace Raven.Server.Documents.Replication
                 _database.ReplicationLoader.IncomingReplicationAdded -= IncomingHandlerAdded;
 
                 foreach (var kvp in _incoming)
-                    IncomingHandlerRemoved(kvp.Key);
+                    IncomingHandlerRemoved(kvp.Value.Handler);
 
                 foreach (var kvp in _outgoing)
                     OutgoingHandlerRemoved(kvp.Key);
@@ -173,15 +173,15 @@ namespace Raven.Server.Documents.Replication
                 stats.Performance.Add(latestStat, _cts.Token);
         }
 
-        private void IncomingHandlerRemoved(string id)
+        private void IncomingHandlerRemoved(IncomingReplicationHandler handler)
         {
-            if (_incoming.TryRemove(id, out var stats))
+            if (_incoming.TryRemove(handler.ConnectionInfo.SourceDatabaseId, out var stats))
                 stats.Handler.DocumentsReceived -= IncomingDocumentsReceived;
         }
 
-        private void IncomingHandlerAdded(string id, IncomingReplicationHandler handler)
+        private void IncomingHandlerAdded(IncomingReplicationHandler handler)
         {
-            _incoming.GetOrAdd(id, key =>
+            _incoming.GetOrAdd(handler.ConnectionInfo.SourceDatabaseId, key =>
             {
                 handler.DocumentsReceived += IncomingDocumentsReceived;
 

@@ -221,8 +221,8 @@ namespace Raven.Server.Rachis
                 OperationTimeout = configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
 
-                MiscUtils.LongTimespanIfDebugging(ref _operationTimeout);
-                MiscUtils.LongTimespanIfDebugging(ref _electionTimeout);
+                DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
+                DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
                 ContextPool = new TransactionContextPool(_persistentState);
 

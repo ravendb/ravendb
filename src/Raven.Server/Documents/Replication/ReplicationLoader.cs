@@ -28,8 +28,8 @@ namespace Raven.Server.Documents.Replication
     {
         public event Action<string, Exception> ReplicationFailed;
 
-        public event Action<string, IncomingReplicationHandler> IncomingReplicationAdded;
-        public event Action<string> IncomingReplicationRemoved;
+        public event Action<IncomingReplicationHandler> IncomingReplicationAdded;
+        public event Action<IncomingReplicationHandler> IncomingReplicationRemoved;
 
         public event Action<OutgoingReplicationHandler> OutgoingReplicationAdded;
         public event Action<OutgoingReplicationHandler> OutgoingReplicationRemoved;
@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Replication
             if (newConnection == newIncoming)
             {
                 newIncoming.Start();
-                IncomingReplicationAdded?.Invoke(newIncoming.ConnectionInfo.SourceDatabaseId, newIncoming);
+                IncomingReplicationAdded?.Invoke(newIncoming);
             }
             else
                 newIncoming.Dispose();
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Replication
                         $"Disconnecting existing connection from {value.FromToString} because we got a new connection from the same source db");
                 }
 
-                IncomingReplicationRemoved?.Invoke(connectionInfo.SourceDatabaseId);
+                IncomingReplicationRemoved?.Invoke(value);
 
                 value.Dispose();
             }
@@ -553,7 +553,7 @@ namespace Raven.Server.Documents.Replication
             using (instance)
             {
                 if (_incoming.TryRemove(instance.ConnectionInfo.SourceDatabaseId, out _))
-                    IncomingReplicationRemoved?.Invoke(instance.ConnectionInfo.SourceDatabaseId);
+                    IncomingReplicationRemoved?.Invoke(instance);
 
                 instance.Failed -= OnIncomingReceiveFailed;
                 instance.DocumentsReceived -= OnIncomingReceiveSucceeded;

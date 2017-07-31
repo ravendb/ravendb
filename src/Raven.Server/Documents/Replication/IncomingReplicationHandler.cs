@@ -16,6 +16,7 @@ using System.Net;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
+using Raven.Client.Util;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Utils;
 using Sparrow.Utils;
@@ -35,6 +36,7 @@ namespace Raven.Server.Documents.Replication
         private readonly Logger _log;
         public event Action<IncomingReplicationHandler, Exception> Failed;
         public event Action<IncomingReplicationHandler> DocumentsReceived;
+        public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
         public long LastDocumentEtag;
         public long LastHeartbeatTicks;
@@ -73,7 +75,6 @@ namespace Raven.Server.Documents.Replication
                 .Select(x => x == lastStats ? x.ToReplicationPerformanceLiveStatsWithDetails() : x.ToReplicationPerformanceStats())
                 .ToArray();
         }
-
 
         public IncomingReplicationStatsAggregator GetLatestReplicationPerformance()
         {
@@ -130,6 +131,8 @@ namespace Raven.Server.Documents.Replication
                     {
                         try
                         {
+                            AddReplicationPulse(ReplicationPulseDirection.IncomingInitiate);
+
                             using (var msg = interruptibleRead.ParseToMemory(
                                 _replicationFromAnotherSource,
                                 "IncomingReplication/read-message",
@@ -148,7 +151,6 @@ namespace Raven.Server.Documents.Replication
                                 }
                                 else // notify peer about new change vector
                                 {
-
                                     using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(
                                             out DocumentsOperationContext documentsContext))
                                     using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
@@ -168,6 +170,8 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
+                            AddReplicationPulse(ReplicationPulseDirection.IncomingInitiateError, e.Message);
+
                             if (_log.IsInfoEnabled)
                             {
                                 if (e.InnerException is SocketException)
@@ -227,6 +231,8 @@ namespace Raven.Server.Documents.Replication
                 switch (messageType)
                 {
                     case ReplicationMessageType.Documents:
+                        AddReplicationPulse(ReplicationPulseDirection.IncomingBegin);
+
                         var stats = _lastStats = new IncomingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                         AddReplicationPerformance(stats);
 
@@ -240,10 +246,10 @@ namespace Raven.Server.Documents.Replication
 
                                     HandleReceivedDocumentsAndAttachmentsBatch(documentsContext, message, _lastDocumentEtag, scope);
                                     break;
-
                                 }
                                 catch (Exception e)
                                 {
+                                    AddReplicationPulse(ReplicationPulseDirection.IncomingError, e.Message);
                                     scope.AddError(e);
                                     throw;
                                 }
@@ -251,9 +257,12 @@ namespace Raven.Server.Documents.Replication
                         }
                         finally
                         {
+                            AddReplicationPulse(ReplicationPulseDirection.IncomingEnd);
                             stats.Complete();
                         }
                     case ReplicationMessageType.Heartbeat:
+                        AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
+
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
                             var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector);
@@ -502,6 +511,8 @@ namespace Raven.Server.Documents.Replication
 
         private void SendHeartbeatStatusToSource(DocumentsOperationContext documentsContext, BlittableJsonTextWriter writer, long lastDocumentEtag, string handledMessageType)
         {
+            AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeatAcknowledge);
+
             string databaseChangeVector;
             long currentLastEtagMatchingChangeVector;
 
@@ -745,6 +756,17 @@ namespace Raven.Server.Documents.Replication
 
                 _replicatedAttachmentStreams[attachment.Base64Hash] = attachment;
             }
+        }
+
+        private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
+        {
+            HandleReplicationPulse?.Invoke(new LiveReplicationPulsesCollector.ReplicationPulse
+            {
+                OccurredAt = SystemTime.UtcNow,
+                Direction = direction,
+                From = ConnectionInfo,
+                ExceptionMessage = exceptionMessage,
+            });
         }
 
         private void AddReplicationPerformance(IncomingReplicationStatsAggregator stats)
