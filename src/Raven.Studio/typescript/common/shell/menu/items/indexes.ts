@@ -1,5 +1,6 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
+import footer = require("common/shell/footer");
 export = getIndexesMenuItem;
 
 function getIndexesMenuItem(appUrls: computedAppUrls) {
@@ -43,7 +44,8 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             title: 'Index Errors',
             nav: true,
             css: 'icon-index-errors',
-            dynamicHash: appUrls.indexErrors
+            dynamicHash: appUrls.indexErrors,
+            badgeData:  ko.pureComputed(() => { return footer.default.stats() ? footer.default.stats().countOfIndexingErrors() : null; }) 
         }),
         /* TODO
         new leafMenuItem({
