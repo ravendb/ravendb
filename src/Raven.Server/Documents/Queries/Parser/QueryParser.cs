@@ -324,7 +324,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
             if (parenthesis == false)
             {
-                // if the other arg isn't parenthesis, use operator precedence dules
+                // if the other arg isn't parenthesis, use operator precedence rules
                 // to re-write the query
                 switch (type)
                 {
