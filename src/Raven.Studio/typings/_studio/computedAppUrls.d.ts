@@ -21,6 +21,7 @@ interface computedAppUrls {
     editTransformer: (transformerName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
+    terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
     exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;

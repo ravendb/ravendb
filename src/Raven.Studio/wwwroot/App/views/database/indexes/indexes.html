@@ -210,6 +210,17 @@
                         </div>
                         <div class="btn-group" role="group" data-bind="if: !isFaulty()">
                             <a class="btn btn-default" data-bind="attr: { href: queryUrl() }"><i class="icon-search"></i><span>Query</span></a>
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" >
+                                <span class="caret"></span>
+                                <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li data-bind="">
+                                    <a data-bind="attr: { href: termsUrl() }">
+                                        <i class="icon-terms"></i> Terms 
+                                    </a>
+                                </li>
+                            </ul>
                         </div>
                         <div class="btn-group" role="group" data-bind="if: !isFaulty()">
                             <a class="btn btn-default" data-bind="attr: { href: editUrl() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i></a>

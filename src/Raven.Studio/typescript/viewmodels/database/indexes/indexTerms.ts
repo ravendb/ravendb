@@ -45,7 +45,11 @@ class indexTerms extends viewModelBase {
 
     navigateToQuery(fieldName: string, term: string) {
         const query = queryCriteria.empty();
-        query.queryText(fieldName + ":" + queryUtil.escapeTerm(term));
+        const queryText = queryUtil.formatIndexQuery(this.indexName, {
+            name: fieldName,
+            value: term
+        });
+        query.queryText(queryText);
 
         const queryDto = query.toStorageDto();
         const recentQueries = recentQueriesStorage.getRecentQueries(this.activeDatabase());

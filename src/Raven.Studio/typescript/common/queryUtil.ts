@@ -122,6 +122,16 @@ class queryUtil {
         }
     }
     
+    static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
+        let query = `from index '${indexName}'`;
+        if (predicates && predicates.length) {
+            query = predicates.reduce((result, field) => {
+                return `${result} where ${field.name} = '${field.value}'`;
+            }, query);
+        }
+
+        return query;
+    }
 }
 
 export = queryUtil;

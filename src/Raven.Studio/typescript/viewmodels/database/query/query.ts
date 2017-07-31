@@ -333,7 +333,15 @@ class query extends viewModelBase {
                 this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
         } else if (recentQueryHash) {
-            messagePublisher.reportError(`Could not find recent query: ${recentQueryHash}`);
+            const index = this.indexes().find(x => x.name === recentQueryHash);
+            if (index) {
+                let query = queryUtil.formatIndexQuery(recentQueryHash);
+                this.criteria().queryText(query);
+                this.runQuery();
+            }
+            else {
+                messagePublisher.reportError(`Could not find recent query: ${recentQueryHash}`);
+            }
         }
     }
 
