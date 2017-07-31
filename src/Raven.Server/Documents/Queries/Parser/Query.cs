@@ -15,6 +15,13 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<FieldToken> GroupBy;
         public string QueryText;
 
+        public string ToJsonAst()
+        {
+            var output = new StringWriter();
+            ToJsonAst(new JsonTextWriter(output));
+            return output.GetStringBuilder().ToString();
+        }
+
         public override string ToString()
         {
             var writer = new StringWriter();

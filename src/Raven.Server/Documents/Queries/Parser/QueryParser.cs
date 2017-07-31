@@ -317,32 +317,41 @@ namespace Raven.Server.Documents.Queries.Parser
 
             _state = NextTokenOptions.Parenthesis;
 
+            var parenthesis = Scanner.TryPeek('(');
+
             if (Binary(out var right) == false)
                 ThrowParseException($"Failed to find second part of {type} expression");
 
-            switch (type)
+            if (parenthesis == false)
             {
-                case OperatorType.And:
-                case OperatorType.AndNot:
-                    switch (right.Type)
-                    {
-                        case OperatorType.AndNot:
-                        case OperatorType.OrNot:
-                        case OperatorType.Or:
-                        case OperatorType.And:
+                // if the other arg isn't parenthesis, use operator precedence dules
+                // to re-write the query
+                switch (type)
+                {
+                    case OperatorType.And:
+                    case OperatorType.AndNot:
+                        switch (right.Type)
+                        {
+                            case OperatorType.AndNot:
+                            case OperatorType.OrNot:
+                            case OperatorType.Or:
+                            case OperatorType.And:
 
-                            right.Left = new QueryExpression
-                            {
-                                Left = op,
-                                Right = right.Left,
-                                Type = type
-                            };
-                            op = right;
-                            return true;
-                    }
+                                right.Left = new QueryExpression
+                                {
+                                    Left = op,
+                                    Right = right.Left,
+                                    Type = type
+                                };
+                                op = right;
+                                return true;
+                        }
 
-                    break;
+                        break;
+                }
             }
+
+            
             op = new QueryExpression
             {
                 Type = type,

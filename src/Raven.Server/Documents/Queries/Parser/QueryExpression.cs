@@ -213,6 +213,8 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WriteValue(Type.ToString());
             switch (Type)
             {
+                case OperatorType.True:
+                    break;
                 case OperatorType.Equal:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:

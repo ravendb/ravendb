@@ -5,6 +5,7 @@ using FastTests.Voron.Storage;
 using SlowTests.Cluster;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents;
+using SlowTests.Tests.Linq;
 
 namespace Tryouts
 {
@@ -36,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_3166())
+                using (var test = new IsNullOrEmpty())
                 {
                     try
                     {
-                        test.QueryOnDictionaryWithDateTimeAsValueShouldWork();
+                        test.IsNullOrEmptyEqFalse();
                     }
                     catch (Exception e)
                     {
