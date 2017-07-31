@@ -22,7 +22,7 @@ using Voron.Data;
 using Voron.Data.Tables;
 using Voron.Impl;
 using Raven.Client.Http;
-using Raven.Server.Config.Categories;
+using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 
@@ -212,14 +212,14 @@ namespace Raven.Server.Rachis
             Timeout.TimeoutPeriod = _rand.Next(timeout / 3 * 2, timeout);
         }
 
-        public unsafe void Initialize(StorageEnvironment env, ClusterConfiguration configuration, string myUrl)
+        public unsafe void Initialize(StorageEnvironment env, RavenConfiguration configuration, string myUrl)
         {
             try
             {
                 _persistentState = env;
 
-                OperationTimeout = configuration.ClusterOperationTimeout.AsTimeSpan;
-                ElectionTimeout = configuration.ElectionTimeout.AsTimeSpan;
+                OperationTimeout = configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
+                ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
 
                 MiscUtils.LongTimespanIfDebugging(ref _operationTimeout);
                 MiscUtils.LongTimespanIfDebugging(ref _electionTimeout);
@@ -253,7 +253,7 @@ namespace Raven.Server.Rachis
                         if (topology.GetUrlFromTag(_tag) != myUrl)
                         {
                             topology.Members.Remove(_tag);
-                            topology.Members.Add(_tag, myUrl);
+                            topology.Members.Add(_tag, configuration.Core.GetNodeHttpServerUrl(myUrl));
                             SetTopology(this, context, topology);
                         }
                     }

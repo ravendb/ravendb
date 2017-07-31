@@ -364,7 +364,7 @@ namespace Raven.Server.ServerWide
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
-            _engine.Initialize(_env, Configuration.Cluster, myUrl);
+            _engine.Initialize(_env, Configuration, myUrl);
 
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
