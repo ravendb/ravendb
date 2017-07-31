@@ -101,9 +101,10 @@ namespace Raven.Server.Config
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
         {
-            if (string.IsNullOrEmpty(customConfigPath) == false && File.Exists(customConfigPath))
+            if (string.IsNullOrEmpty(customConfigPath) == false)
             {
-                _configBuilder.AddJsonFile(customConfigPath);
+                    _configBuilder.AddJsonFile(customConfigPath, optional: true);
+                // if we were specified a non existing file, don't use the defaults
                 return;
             }
 

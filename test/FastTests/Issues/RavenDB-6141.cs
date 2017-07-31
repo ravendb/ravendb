@@ -15,7 +15,7 @@ namespace FastTests.Issues
         [Fact]
         public void Default_database_path_settings()
         {
-            var config = new RavenConfiguration("foo", ResourceType.Database);
+            var config = new RavenConfiguration("foo", ResourceType.Database, customConfigPath: "missing file " +  Guid.NewGuid());
             config.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             config.Initialize();
@@ -31,7 +31,7 @@ namespace FastTests.Issues
 
             // actual configuration is created in the following manner
 
-            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server), "foo",
+            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server,customConfigPath: "missing file " + Guid.NewGuid()), "foo",
                 ResourceType.Database);
 
             config.Initialize();
