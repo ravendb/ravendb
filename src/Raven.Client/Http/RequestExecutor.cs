@@ -249,9 +249,20 @@ namespace Raven.Client.Http
                     if (_nodeSelector == null)
                     {
                         _nodeSelector = new NodeSelector(command.Result);
+
+                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        {
+                            _nodeSelector.ScheduleSpeedTest();
+                        }
                     }
                     else if (_nodeSelector.OnUpdateTopology(command.Result))
+                    {
                         DisposeAllFailedNodesTimers();
+                        if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
+                        {
+                            _nodeSelector.ScheduleSpeedTest();
+                        }
+                    }
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
                 }
@@ -312,6 +323,7 @@ namespace Raven.Client.Http
                 case ReadBalanceBehavior.RoundRobin:
                     return _nodeSelector.GetNodeBySessionId(sessionId);                
                 case ReadBalanceBehavior.FastestNode:
+                    return _nodeSelector.InSpeedTestPhase ? _nodeSelector.GetPreferredNode() : _nodeSelector.GetFastestNode();                
                 default:
                     throw new ArgumentOutOfRangeException();
             }
@@ -534,7 +546,13 @@ namespace Raven.Client.Http
                             cts.CancelAfter(timeout.Value);
                             try
                             {
-                                response = await command.SendAsync(_httpClient, request, cts.Token).ConfigureAwait(false);
+                                var preferredTask = command.SendAsync(_httpClient, request, cts.Token);
+                                if (ShouldExecuteOnAll(chosenNode, command))
+                                {
+                                    ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, cts.Token);
+                                }
+
+                                response = await preferredTask.ConfigureAwait(false);
                             }
                             catch (OperationCanceledException e)
                             {
@@ -546,7 +564,13 @@ namespace Raven.Client.Http
                     }
                     else
                     {
-                        response = await command.SendAsync(_httpClient, request, token).ConfigureAwait(false);
+                        var preferredTask = command.SendAsync(_httpClient, request, token);
+                        if (ShouldExecuteOnAll(chosenNode, command))
+                        {
+                            ExecuteOnAllToFigureOutTheFastest(chosenNode, command, preferredTask, token);
+                        }
+
+                        response = await preferredTask.ConfigureAwait(false);
                     }
                     sp.Stop();
                 }
@@ -626,6 +650,45 @@ namespace Raven.Client.Http
                     }
                 }
             }
+        }
+
+        private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
+        {
+            return _readBalanceBehavior == ReadBalanceBehavior.FastestNode &&
+                   _nodeSelector != null &&
+                   _nodeSelector.InSpeedTestPhase &&
+                   _nodeSelector.Topology?.Nodes?.Count > 1 &&
+                   command.IsReadRequest &&
+                   command.ResponseType == RavenCommandResponseType.Object && 
+                   chosenNode != null;
+        }
+
+        private void ExecuteOnAllToFigureOutTheFastest<TResult>(ServerNode chosenNode, RavenCommand<TResult> command, Task<HttpResponseMessage> preferredTask,
+            CancellationToken token = default(CancellationToken))
+        {
+            var nodes = _nodeSelector.Topology.Nodes;
+            var tasks = new Task[nodes.Count];
+            for (int i = 0; i < nodes.Count; i++)
+            {
+                if (nodes[i].ClusterTag == chosenNode.ClusterTag)
+                {
+                    tasks[i] = preferredTask;
+                    continue;
+                }
+
+                var request = CreateRequest(chosenNode, command, out var url);
+                try
+                {
+                    tasks[i] = command.SendAsync(_httpClient, request, token);
+                }
+                catch (Exception)
+                {
+                    //noop
+                }
+            }
+
+            var fastest = Task.WaitAny(tasks);
+            _nodeSelector.RecordFastest(fastest);
         }
 
         private static void ThrowTimeoutTooLarge(TimeSpan? timeout)
@@ -984,6 +1047,13 @@ namespace Raven.Client.Http
             await EnsureNodeSelector().ConfigureAwait(false);
 
             return _nodeSelector.GetNodeBySessionId(sessionId);
+        }
+
+        public async Task<(int Index, ServerNode Node)> GetFastestNode()
+        {
+            await EnsureNodeSelector().ConfigureAwait(false);
+
+            return _nodeSelector.InSpeedTestPhase ? _nodeSelector.GetPreferredNode() : _nodeSelector.GetFastestNode();
         }
 
         private async Task EnsureNodeSelector()

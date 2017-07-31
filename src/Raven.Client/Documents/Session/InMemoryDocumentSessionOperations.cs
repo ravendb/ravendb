@@ -85,6 +85,8 @@ namespace Raven.Client.Documents.Session
                     result = await _requestExecutor.GetNodeBySessionId(_clientSessionId).ConfigureAwait(false);
                     break;
                 case ReadBalanceBehavior.FastestNode:
+                    result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
+                    break; 
                 default:
                     throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
             }
