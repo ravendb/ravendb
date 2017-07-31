@@ -78,6 +78,7 @@ namespace Rachis.Transport
         public class SnapshotContent : HttpContent
         {
             private readonly Action<Stream> _streamWriter;
+            private Stream _stream;
 
             public SnapshotContent(Action<Stream> streamWriter)
             {
@@ -86,6 +87,7 @@ namespace Rachis.Transport
 
             protected override Task SerializeToStreamAsync(Stream stream, TransportContext context)
             {
+                _stream = stream;
                 _streamWriter(stream);
 
                 return Task.FromResult(1);
@@ -95,6 +97,28 @@ namespace Rachis.Transport
             {
                 length = -1;
                 return false;
+            }
+            
+            public override string ToString()
+            {
+                if (_stream != null && _stream.CanSeek)
+                {
+                    _stream.Seek(0, SeekOrigin.Begin);
+                    byte[] buffer = new byte[16 * 1024];
+                    using (MemoryStream ms = new MemoryStream())
+                    {
+                        int read;
+                        while ((read = _stream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            ms.Write(buffer, 0, read);
+                        }
+                        return Convert.ToBase64String(ms.ToArray());
+                    }
+                }
+                else
+                {
+                    return "SnapshotContent is either not set with a stream or the stream isn't seekable";
+                }
             }
         }
 
@@ -208,8 +232,7 @@ namespace Rachis.Transport
                     }
                     if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
                     {
-                        _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}", dest.Name, httpResponseMessage.ReasonPhrase);
-                        return;
+                        _log.Warn("Error appending entries to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
                     }
                     var appendEntriesResponse = JsonConvert.DeserializeObject<AppendEntriesResponse>(reply);
                     SendToSelf(appendEntriesResponse);
@@ -217,7 +240,7 @@ namespace Rachis.Transport
             });
         }
 
-        private class EntriesContent : HttpContent
+        internal class EntriesContent : HttpContent
         {
             private readonly LogEntry[] _entries;
 
@@ -255,6 +278,11 @@ namespace Rachis.Transport
                 length = -1;
                 return false;
             }
+
+            public override string ToString()
+            {
+                return string.Join(", ", _entries.Select(x => x.ToString()));
+            }
         }
 
         public void Send(NodeConnectionInfo dest, CanInstallSnapshotRequest req)
@@ -276,8 +304,7 @@ namespace Rachis.Transport
                     }
                     if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
                     {
-                        _log.Warn("Error checking if can install snapshot to {0}. Status: NotAcceptable\r\nreason:{1}", dest.Name, httpResponseMessage.ReasonPhrase);
-                        return;
+                        _log.Warn("Error checking if can install snapshot to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
                     }
                     var canInstallSnapshotResponse = JsonConvert.DeserializeObject<CanInstallSnapshotResponse>(reply);
                     SendToSelf(canInstallSnapshotResponse);
@@ -304,10 +331,10 @@ namespace Rachis.Transport
                     {
                         _log.Warn("Error requesting vote from {0}. Status: {1}\r\n{2}\r\nreason:{3}", dest.Name, httpResponseMessage.StatusCode, reply, httpResponseMessage.ReasonPhrase);
                         return;
-                    } else if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
+                    }
+                    if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
                     {
-                        _log.Warn("Error requesting vote from {0}. Status: NotAcceptable\r\nreason:{1}", dest.Name, httpResponseMessage.ReasonPhrase);
-                        return;
+                        _log.Warn("Error requesting vote from {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
                     }
                     var requestVoteResponse = JsonConvert.DeserializeObject<RequestVoteResponse>(reply);
                     SendToSelf(requestVoteResponse);
@@ -338,8 +365,7 @@ namespace Rachis.Transport
                     }
                     if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
                     {
-                        _log.Warn("Error sending timeout now to {0}. Status: NotAcceptable\r\nreason:{1}", dest.Name, httpResponseMessage.ReasonPhrase);
-                        return;
+                        _log.Warn("Error sending timeout now to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
                     }
                     SendToSelf(new NothingToDo());
                 }
@@ -364,8 +390,7 @@ namespace Rachis.Transport
                     }
                     if (httpResponseMessage.StatusCode == HttpStatusCode.NotAcceptable)
                     {
-                        _log.Warn("Error sending disconnecton notification to {0}. Status: NotAcceptable\r\nreason:{1}", dest.Name, httpResponseMessage.ReasonPhrase);
-                        return;
+                        _log.Warn("Error sending disconnecton notification to {0}. Status: NotAcceptable\r\nreason:{1}\r\ncontent{2}", dest.Name, httpResponseMessage.ReasonPhrase, reply);
                     }
 
                     SendToSelf(new NothingToDo());
