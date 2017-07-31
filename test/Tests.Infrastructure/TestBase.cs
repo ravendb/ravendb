@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Loader;
@@ -77,6 +78,12 @@ namespace FastTests
             };
 #endif
 
+            //TODO: When this method become available, update to call directly
+            var setMinThreads = (Func<int, int, bool>)typeof(ThreadPool).GetTypeInfo().GetMethod("SetMinThreads")
+                .CreateDelegate(typeof(Func<int, int, bool>));
+
+            setMinThreads(250, 250);
+            
             var maxNumberOfConcurrentTests = Math.Max(ProcessorInfo.ProcessorCount / 2, 2);
 
             var fileInfo = new FileInfo(XunitConfigurationFile);
