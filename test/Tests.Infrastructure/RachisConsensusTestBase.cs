@@ -137,7 +137,7 @@ namespace Tests.Infrastructure
             var serverStore = new RavenServer(configuration).ServerStore;
             var rachis = new RachisConsensus<CountingStateMachine>(serverStore, seed);
             var storageEnvironment = new StorageEnvironment(server);
-            rachis.Initialize(storageEnvironment, configuration.Cluster,configuration.Core.ServerUrl);
+            rachis.Initialize(storageEnvironment, configuration, configuration.Core.ServerUrl);
             rachis.OnDispose += (sender, args) =>
             {
                 storageEnvironment.Dispose();
