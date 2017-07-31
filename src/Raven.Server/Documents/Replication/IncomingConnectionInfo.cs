@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Replication.Messages;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -65,6 +66,18 @@ namespace Raven.Server.Documents.Replication
         public static bool operator !=(IncomingConnectionInfo left, IncomingConnectionInfo right)
         {
             return !Equals(left, right);
+        }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(SourceDatabaseName)] = SourceDatabaseName,
+                [nameof(SourceUrl)] = SourceUrl,
+                [nameof(SourceMachineName)] = SourceMachineName,
+                [nameof(SourceTag)] = SourceTag,
+                [nameof(RemoteIp)] = RemoteIp,
+            };
         }
     }
 }

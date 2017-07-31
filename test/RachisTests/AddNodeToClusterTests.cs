@@ -33,7 +33,7 @@ namespace RachisTests
         [Fact]
         public async Task RemoveNodeWithDb()
         {
-            MiscUtils.DisableLongTimespan = true;
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
             var fromSeconds = TimeSpan.FromSeconds(5);
 
             var leader = await CreateRaftClusterAndGetLeader(5);

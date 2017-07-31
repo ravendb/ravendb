@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -14,6 +13,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
+using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -32,6 +32,7 @@ namespace Raven.Server.Documents.Replication
         public const string AlertTitle = "Replication";
 
         public event Action<OutgoingReplicationHandler> DocumentsSend;
+        public event Action<LiveReplicationPulsesCollector.ReplicationPulse> HandleReplicationPulse;
 
         internal readonly DocumentDatabase _database;
         private readonly Logger _log;
@@ -67,7 +68,6 @@ namespace Raven.Server.Documents.Replication
         private readonly bool _external;
 
         private readonly ConcurrentQueue<OutgoingReplicationStatsAggregator> _lastReplicationStats = new ConcurrentQueue<OutgoingReplicationStatsAggregator>();
-
         private OutgoingReplicationStatsAggregator _lastStats;
 
         public OutgoingReplicationHandler(ReplicationLoader parent, DocumentDatabase database, ReplicationNode node, bool external)
@@ -116,6 +116,8 @@ namespace Raven.Server.Documents.Replication
 
         private void ReplicateToDestination()
         {
+            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
+
             NativeMemory.EnsureRegistered();
             try
             {
@@ -159,29 +161,35 @@ namespace Raven.Server.Documents.Replication
                             {
                                 var exception = new InvalidOperationException(response.Reply.Exception);
                                 if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)))
+                                {
+                                    AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
                                     DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
+                                }
 
+                                AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, $"Got error: {response.Reply.Exception}");
                                 throw exception;
                             }
                         }
                         catch (DatabaseDoesNotExistException e)
                         {
-                            var msg =
-                                $"Failed to parse initial server replication response, because there is no database named {_database.Name} on the other end. " +
-                                "In order for the replication to work, a database with the same name needs to be created at the destination";
+                            var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} " +
+                                      "on the other end. " +
+                                      "In order for the replication to work, a database with the same name needs to be created at the destination";
                             if (_log.IsInfoEnabled)
-                            {
                                 _log.Info(msg, e);
-                            }
 
+                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
                             AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
                         }
                         catch (OperationCanceledException e)
                         {
+                            var msg = "Got operation canceled notification while opening outgoing replication channel. " +
+                                      "Aborting and closing the channel.";
                             if (_log.IsInfoEnabled)
-                                _log.Info("Got operation canceled notification while opening outgoing replication channel. Aborting and closing the channel.", e);
+                                _log.Info(msg, e);
+                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
                             throw;
                         }
                         catch (Exception e)
@@ -190,6 +198,7 @@ namespace Raven.Server.Documents.Replication
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
+                            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
                             AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
@@ -208,6 +217,7 @@ namespace Raven.Server.Documents.Replication
                                 var sp = Stopwatch.StartNew();
                                 var stats = _lastStats = new OutgoingReplicationStatsAggregator(_parent.GetNextReplicationStatsId(), _lastStats);
                                 AddReplicationPerformance(stats);
+                                AddReplicationPulse(ReplicationPulseDirection.OutgoingBegin);
 
                                 try
                                 {
@@ -229,12 +239,18 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         catch (OperationCanceledException)
                                         {
-                                            //cancellation is not an actual error,
-                                            //it is a "notification" that we need to cancel current operation
+                                            // cancellation is not an actual error,
+                                            // it is a "notification" that we need to cancel current operation
+
+                                            var msg = "Operation was canceled.";
+                                            AddReplicationPulse(ReplicationPulseDirection.OutgoingError, msg);
+                                            
                                             throw;
                                         }
                                         catch (Exception e)
                                         {
+                                            AddReplicationPulse(ReplicationPulseDirection.OutgoingError, e.Message);
+
                                             scope.AddError(e);
                                             throw;
                                         }
@@ -243,6 +259,7 @@ namespace Raven.Server.Documents.Replication
                                 finally
                                 {
                                     stats.Complete();
+                                    AddReplicationPulse(ReplicationPulseDirection.OutgoingEnd);
                                 }
                             }
 
@@ -285,12 +302,24 @@ namespace Raven.Server.Documents.Replication
             }
         }
 
+        private void AddReplicationPulse(ReplicationPulseDirection direction, string exceptionMessage = null)
+        {
+            HandleReplicationPulse?.Invoke(new LiveReplicationPulsesCollector.ReplicationPulse
+            {
+                OccurredAt = SystemTime.UtcNow,
+                Direction = direction,
+                To = Destination,
+                IsExternal = _external,
+                ExceptionMessage = exceptionMessage,
+            });
+        }
+
         private void AddReplicationPerformance(OutgoingReplicationStatsAggregator stats)
         {
             _lastReplicationStats.Enqueue(stats);
 
             while (_lastReplicationStats.Count > 25)
-                _lastReplicationStats.TryDequeue(out stats);
+                _lastReplicationStats.TryDequeue(out _);
         }
 
         private void AddAlertOnFailureToReachOtherSide(string msg, Exception e)
@@ -480,6 +509,8 @@ namespace Raven.Server.Documents.Replication
 
         internal void SendHeartbeat()
         {
+            AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
+
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (documentsContext.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
@@ -500,23 +531,29 @@ namespace Raven.Server.Documents.Replication
                 {
                     if (_log.IsInfoEnabled)
                         _log.Info($"Sending heartbeat failed. ({FromToString})", e);
+                    AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatError, "Sending heartbeat failed.");
                     throw;
                 }
 
                 try
                 {
                     HandleServerResponse();
+                    AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatAcknowledge);
                 }
                 catch (OperationCanceledException)
                 {
+                    const string msg = "Got cancellation notification while parsing heartbeat response. Closing replication channel.";
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Got cancellation notification while parsing heartbeat response. Closing replication channel. ({FromToString})");
+                        _log.Info($"{msg} ({FromToString})");
+                    AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatAcknowledgeError, msg);
                     throw;
                 }
                 catch (Exception e)
                 {
+                    const string msg = "Parsing heartbeat result failed.";
                     if (_log.IsInfoEnabled)
-                        _log.Info($"Parsing heartbeat result failed. ({FromToString})", e);
+                        _log.Info($"{msg} ({FromToString})", e);
+                    AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeatAcknowledgeError, msg);
                     throw;
                 }
             }
@@ -527,8 +564,8 @@ namespace Raven.Server.Documents.Replication
             while (true)
             {
                 var timeout = 2 * 60 * 1000; // TODO: configurable
-                if (Debugger.IsAttached)
-                    timeout *= 10;
+                DebuggerAttachedTimeout.OutgoingReplication(ref timeout);
+
                 using (var replicationBatchReplyMessage = _interruptibleRead.ParseToMemory(
                     _connectionDisposed,
                     "replication acknowledge message",
@@ -572,8 +609,7 @@ namespace Raven.Server.Documents.Replication
             throw new OperationCanceledException("The connection has been closed by the Dispose method");
         }
 
-        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage,
-            bool allowNotify)
+        internal ReplicationMessageReply HandleServerResponse(BlittableJsonReaderObject replicationBatchReplyMessage, bool allowNotify)
         {
             replicationBatchReplyMessage.BlittableValidation();
             var replicationBatchReply = JsonDeserializationServer.ReplicationMessageReply(replicationBatchReplyMessage);
@@ -593,12 +629,9 @@ namespace Raven.Server.Documents.Replication
                     OnSuccessfulTwoWaysCommunication();
                     break;
                 default:
-                    var msg =
-                        $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
+                    var msg = $"Received error from remote replication destination. Error received: {replicationBatchReply.Exception}";
                     if (_log.IsInfoEnabled)
-                    {
                         _log.Info(msg);
-                    }
                     break;
             }
 
