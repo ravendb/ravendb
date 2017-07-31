@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using Raven.Client.Documents.Queries.Facets;
 using Sparrow;
@@ -26,7 +27,7 @@ namespace Raven.Client.Documents.Queries
         {
             _buffer.Write((byte*)&f, sizeof(float));
         }
-        
+
         public void Write(long l)
         {
             _buffer.Write((byte*)&l, sizeof(long));
@@ -38,14 +39,14 @@ namespace Raven.Client.Documents.Queries
                 return;
             Write(l.Value);
         }
-        
+
         public void Write(float? f)
         {
             if (f == null)
                 return;
             Write(f.Value);
         }
-        
+
         public void Write(int? i)
         {
             if (i == null)
@@ -64,7 +65,7 @@ namespace Raven.Client.Documents.Queries
             if (b)
                 _buffer.WriteByte(1);
         }
-        
+
         public void Write(bool? b)
         {
             if (b != null)
@@ -86,7 +87,7 @@ namespace Raven.Client.Documents.Queries
                 Write(s[i]);
             }
         }
-        
+
         public void Write(List<string> s)
         {
             if (s == null) return;
@@ -120,34 +121,45 @@ namespace Raven.Client.Documents.Queries
             foreach (var kvp in qp)
             {
                 Write(kvp.Key);
-                if (kvp.Value is string s)
-                {
-                    Write(s);
-                }
-                else if (kvp.Value is long l)
-                {
-                    Write(l);
-                }
-                else if (kvp.Value is int i)
-                {
-                    Write(i);
-                }
-                else if (kvp.Value is bool b)
-                {
-                    Write(b);
-                }
-                else if (kvp.Value == null)
-                {
-                    // write nothing
-                }
-                else
-                {
-                    Write(kvp.Value.ToString());
-                }
+                WriteParameterValue(kvp.Value);
             }
         }
-        
-        
+
+        private void WriteParameterValue(object value)
+        {
+            if (value is string s)
+            {
+                Write(s);
+            }
+            else if (value is long l)
+            {
+                Write(l);
+            }
+            else if (value is int i)
+            {
+                Write(i);
+            }
+            else if (value is bool b)
+            {
+                Write(b);
+            }
+            else if (value == null)
+            {
+                // write nothing
+            }
+            else if (value is IEnumerable e)
+            {
+                var enumerator = e.GetEnumerator();
+                while (enumerator.MoveNext())
+                    WriteParameterValue(enumerator.Current);
+            }
+            else
+            {
+                Write(value.ToString());
+            }
+        }
+
+
         public void Write(Dictionary<string, string> qp)
         {
             if (qp == null)

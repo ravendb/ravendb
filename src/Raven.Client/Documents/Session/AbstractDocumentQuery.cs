@@ -1391,12 +1391,7 @@ If you really want to do in memory filtering on the data returned from the query
 
         public void ContainsAny(string fieldName, IEnumerable<object> values)
         {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
-
-            WhereTokens.AddLast(WhereToken.ContainsAny(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereIn(fieldName, values);
         }
 
         public void ContainsAll(string fieldName, IEnumerable<object> values)
@@ -1406,7 +1401,7 @@ If you really want to do in memory filtering on the data returned from the query
             AppendOperatorIfNeeded(WhereTokens);
             NegateIfNeeded(fieldName);
 
-            WhereTokens.AddLast(WhereToken.ContainsAll(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
+            WhereTokens.AddLast(WhereToken.AllIn(fieldName, AddQueryParameter(TransformEnumerable(fieldName, UnpackEnumerable(values)).ToArray())));
         }
 
         public void AddRootType(Type type)

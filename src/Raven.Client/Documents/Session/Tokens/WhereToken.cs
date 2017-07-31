@@ -114,6 +114,16 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken AllIn(string fieldName, string parameterName)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.AllIn
+            };
+        }
+
         public static WhereToken Between(string fieldName, string fromParameterName, string toParameterName, bool exact)
         {
             return new WhereToken
@@ -134,26 +144,6 @@ namespace Raven.Client.Documents.Session.Tokens
                 ParameterName = parameterName,
                 WhereOperator = WhereOperator.Search,
                 QueryOperator = op
-            };
-        }
-
-        public static WhereToken ContainsAny(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.ContainsAny
-            };
-        }
-
-        public static WhereToken ContainsAll(string fieldName, string parameterName)
-        {
-            return new WhereToken
-            {
-                FieldName = fieldName,
-                ParameterName = parameterName,
-                WhereOperator = WhereOperator.ContainsAll
             };
         }
 
@@ -220,6 +210,12 @@ namespace Raven.Client.Documents.Session.Tokens
                         .Append(ParameterName)
                         .Append(")");
                     break;
+                case WhereOperator.AllIn:
+                    writer
+                        .Append(" ALL IN (:")
+                        .Append(ParameterName)
+                        .Append(")");
+                    break;
                 case WhereOperator.Between:
                     writer
                         .Append(" BETWEEN :")
@@ -265,8 +261,6 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Lucene:
                 case WhereOperator.StartsWith:
                 case WhereOperator.EndsWith:
-                case WhereOperator.ContainsAny:
-                case WhereOperator.ContainsAll:
                     writer
                         .Append(", :")
                         .Append(ParameterName)

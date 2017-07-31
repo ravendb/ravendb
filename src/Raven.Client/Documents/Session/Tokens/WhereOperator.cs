@@ -8,13 +8,12 @@ namespace Raven.Client.Documents.Session.Tokens
         LessThan,
         LessThanOrEqual,
         In,
+        AllIn,
         Between,
         Search,
         Lucene,
         StartsWith,
         EndsWith,
-        ContainsAny,
-        ContainsAll,
         Exists
     }
 }

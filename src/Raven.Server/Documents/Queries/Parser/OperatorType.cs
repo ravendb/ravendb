@@ -9,6 +9,7 @@
         GreaterThanEqual,
         Between,
         In,
+        AllIn,
         Method,
         And,
         AndNot,

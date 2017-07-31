@@ -42,6 +42,7 @@ namespace Raven.Server.Documents.Queries
                     VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.First, expression.Second, parameters);
                     return;
                 case OperatorType.In:
+                case OperatorType.AllIn:
                     VisitFieldTokens(QueryExpression.Extract(QueryText, expression.Field), expression.Values, parameters);
                     return;
                 case OperatorType.Method:

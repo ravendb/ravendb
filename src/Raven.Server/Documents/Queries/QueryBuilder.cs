@@ -140,36 +140,22 @@ namespace Raven.Server.Documents.Queries
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
                         var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
 
-                        var matches = new List<string>(expression.Values.Count);
-                        foreach (var valueToken in expression.Values)
-                        {
-                            foreach (var (value, type) in GetValues(fieldName, query, metadata, parameters, valueToken))
-                            {
-                                string valueAsString;
-                                switch (type)
-                                {
-                                    case ValueTokenType.Long:
-                                        var valueAsLong = (long)value;
-                                        valueAsString = valueAsLong.ToString(CultureInfo.InvariantCulture);
-                                        break;
-                                    case ValueTokenType.Double:
-                                        var lnv = (LazyNumberValue)value;
-
-                                        if (LuceneDocumentConverterBase.TryToTrimTrailingZeros(lnv, context, out var doubleAsString) == false)
-                                            doubleAsString = lnv.Inner;
-
-                                        valueAsString = doubleAsString.ToString();
-                                        break;
-                                    default:
-                                        valueAsString = value?.ToString();
-                                        break;
-                                }
-
-                                matches.Add(LuceneQueryHelper.GetTermValue(valueAsString, termType, exact));
-                            }
-                        }
+                        var matches = new List<string>();
+                        foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
+                            matches.Add(LuceneQueryHelper.GetTermValue(value, termType, exact));
 
                         return new TermsMatchQuery(fieldName, matches);
+                    }
+                case OperatorType.AllIn:
+                    {
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
+
+                        var allInQuery = new BooleanQuery();
+                        foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
+                            allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value, exact), Occur.MUST);
+
+                        return allInQuery;
                     }
                 case OperatorType.And:
                 case OperatorType.AndNot:
@@ -223,6 +209,37 @@ namespace Raven.Server.Documents.Queries
             Debug.Assert(false, "should never happen");
 
             return null;
+        }
+
+        private static IEnumerable<string> GetValuesForIn(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
+        {
+            foreach (var valueToken in expression.Values)
+            {
+                foreach (var (value, type) in GetValues(fieldName, query, metadata, parameters, valueToken))
+                {
+                    string valueAsString;
+                    switch (type)
+                    {
+                        case ValueTokenType.Long:
+                            var valueAsLong = (long)value;
+                            valueAsString = valueAsLong.ToString(CultureInfo.InvariantCulture);
+                            break;
+                        case ValueTokenType.Double:
+                            var lnv = (LazyNumberValue)value;
+
+                            if (LuceneDocumentConverterBase.TryToTrimTrailingZeros(lnv, context, out var doubleAsString) == false)
+                                doubleAsString = lnv.Inner;
+
+                            valueAsString = doubleAsString.ToString();
+                            break;
+                        default:
+                            valueAsString = value?.ToString();
+                            break;
+                    }
+
+                    yield return valueAsString;
+                }
+            }
         }
 
         private static string ExtractIndexFieldName(string queryText, FieldToken field, QueryMetadata metadata)

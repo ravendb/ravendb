@@ -136,8 +136,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(Extract(query, Second.TokenStart, Second.TokenLength, Second.EscapeChars));
                     break;
                 case OperatorType.In:
+                case OperatorType.AllIn:
                     writer.Write(Extract(query, Field.TokenStart, Field.TokenLength, Field.EscapeChars));
-                    writer.Write(" IN (");
+                    writer.Write(Type != OperatorType.AllIn ? " IN (" : " ALL IN (");
                     for (var i = 0; i < Values.Count; i++)
                     {
                         var value = Values[i];
@@ -252,6 +253,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         Second.Type == ValueTokenType.Double || Second.Type == ValueTokenType.Long);
                     break;
                 case OperatorType.In:
+                case OperatorType.AllIn:
                     writer.WritePropertyName("Field");
                     WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
                     writer.WritePropertyName("Values");

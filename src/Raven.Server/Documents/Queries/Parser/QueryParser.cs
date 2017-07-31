@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "(" };
+        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "ALL IN", "(" };
         private static readonly string[] BinaryOperators = { "OR", "AND" };
         private static readonly string[] StaticValues = { "true", "false", "null" };
         private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
@@ -420,6 +420,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     case "IN":
                         type = OperatorType.In;
                         break;
+                    case "ALL IN":
+                        type = OperatorType.AllIn;
+                        break;
                     case "(":
                         type = OperatorType.Method;
                         break;
@@ -461,6 +464,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     };
                     return true;
                 case OperatorType.In:
+                case OperatorType.AllIn:
                     if (Scanner.TryScan('(') == false)
                         ThrowParseException("parsing In, expected '('");
 
@@ -487,7 +491,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     op = new QueryExpression
                     {
                         Field = field,
-                        Type = OperatorType.In,
+                        Type = type,
                         Values = list
                     };
 
