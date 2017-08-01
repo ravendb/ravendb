@@ -66,16 +66,11 @@ namespace Raven.Client.Documents.Linq
                 {
                     var parent = GetPath(callExpression.Object);
 
-                    var itemKey = GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType).ToString();
-
-                    if (itemKey.Any(char.IsWhiteSpace))
-                        itemKey = $"'{itemKey}'";
-
                     return new Result
                     {
                         MemberType = callExpression.Method.ReturnType,
                         IsNestedPath = false,
-                        Path = parent.Path + "." + itemKey
+                        Path = parent.Path + "." + GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
                     };
                 }
 

@@ -12,14 +12,6 @@ namespace Raven.Server.Json
         {
             if (blittableJsonTraverser.TryRead(document.Data, path, out value, out StringSegment leftPath) == false)
             {
-                if (value == null && IsQuoted(leftPath))
-                {
-                    var baseBath = path.SubSegment(0, path.Length - leftPath.Length);
-                    var quotedPath = leftPath.SubSegment(1, leftPath.Length - 2);
-
-                    return TryRead(blittableJsonTraverser, document, new StringSegment(baseBath + quotedPath), out value);
-                }
-
                 value = TypeConverter.ConvertForIndexing(value);
 
                 if (value == null)
@@ -121,14 +113,6 @@ namespace Raven.Server.Json
 
             value = TypeConverter.ConvertForIndexing(value);
             return true;
-        }
-
-        private static bool IsQuoted(StringSegment leftPath)
-        {
-            var leftPathStart = leftPath[0];
-            var leftPathEnd = leftPath[leftPath.Length - 1];
-
-            return leftPathStart == '\'' && leftPathEnd == '\'' || leftPathStart == '\"' && leftPathEnd == '\"';
         }
     }
 }

@@ -72,6 +72,8 @@ namespace Sparrow.Json
                         if (TryRead(propertyInnerObject, pathSegment, out result, out leftPath))
                             return true;
 
+                        result = reader;
+
                         return false;
                     }
 
