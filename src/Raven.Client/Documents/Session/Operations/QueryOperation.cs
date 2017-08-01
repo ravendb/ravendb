@@ -51,7 +51,6 @@ namespace Raven.Client.Documents.Session.Operations
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
-            AssertNotQueryById();
             AssertPageSizeSet();
         }
 
@@ -66,28 +65,6 @@ namespace Raven.Client.Documents.Session.Operations
         public void SetResult(QueryResult queryResult)
         {
             EnsureIsAcceptableAndSaveResult(queryResult);
-        }
-
-        private static readonly Regex IdOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
-            RegexOptions.Compiled |
-            RegexOptions.IgnorePatternWhitespace);
-
-        private void AssertNotQueryById()
-        {
-            // this applies to dynamic indexes only
-            if (_collectionName != null)
-                return;
-
-            var match = IdOnly.Match(_indexQuery.Query);
-            if (match.Success == false)
-                return;
-
-            if (_session.Conventions.AllowQueriesOnId)
-                return;
-
-            var value = match.Groups[1].Value;
-
-            throw new InvalidOperationException("Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" + Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
         }
 
         private void AssertPageSizeSet()
