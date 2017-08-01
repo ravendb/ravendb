@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
                     query.Customize(c => c.WaitForNonStaleResults());
                     var results =
-                        query.Where(x => x.Name == SearchText)
+                        query.Search(x => x.Name , SearchText)
                             .As<Example>()
                             .ToList();
 
