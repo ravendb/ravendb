@@ -144,6 +144,9 @@ namespace Raven.Server.Documents.Queries
                         foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
                             matches.Add(LuceneQueryHelper.GetTermValue(value, termType, exact));
 
+                        if (matches.Count == 0)
+                            return new MatchAllDocsQuery();
+
                         return new TermsMatchQuery(fieldName, matches);
                     }
                 case OperatorType.AllIn:
@@ -154,6 +157,9 @@ namespace Raven.Server.Documents.Queries
                         var allInQuery = new BooleanQuery();
                         foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
                             allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value, exact), Occur.MUST);
+
+                        if (allInQuery.Clauses.Count == 0)
+                            return new MatchAllDocsQuery();
 
                         return allInQuery;
                     }
