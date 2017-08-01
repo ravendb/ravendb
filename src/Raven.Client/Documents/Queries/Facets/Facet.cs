@@ -360,7 +360,7 @@ namespace Raven.Client.Documents.Queries.Facets
             {
                 //The nullable stuff here it a bit weird, but it helps with trying to cast Value types
                 case "System.DateTime":
-                    return RavenQuery.Escape(((DateTime)value).GetDefaultRavenFormat());
+                    return ((DateTime)value).GetDefaultRavenFormat();
                 case "System.Int32":
                     return NumberUtil.NumberToString(((int)value));
                 case "System.Int64":
@@ -372,7 +372,7 @@ namespace Raven.Client.Documents.Queries.Facets
                 case "System.Decimal":
                     return NumberUtil.NumberToString((double)(decimal)value);
                 case "System.String":
-                    return RavenQuery.Escape(value.ToString());
+                    return value.ToString();
                 default:
                     throw new InvalidOperationException("Unable to parse the given type " + value.GetType().Name + ", into a facet range!!! ");
             }

@@ -5,10 +5,11 @@ using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Search;
 using Raven.Client;
-using Raven.Server.Documents.Queries.Parse;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
+using Sparrow.Json;
 using Voron;
 
 namespace Raven.Server.Documents.Queries
@@ -44,10 +45,6 @@ namespace Raven.Server.Documents.Queries
 
         private class Enumerator : IEnumerator<Document>
         {
-            private static readonly char[] InSeparator = { ',' };
-            private static readonly string InPrefix = $"@in<{Constants.Documents.Indexing.Fields.DocumentIdFieldName}>:";
-            private static readonly string EqualPrefix = $"{Constants.Documents.Indexing.Fields.DocumentIdFieldName}:";
-
             private readonly DocumentsStorage _documents;
             private readonly FieldsToFetch _fieldsToFetch;
             private readonly DocumentsOperationContext _context;
@@ -65,6 +62,7 @@ namespace Raven.Server.Documents.Queries
             private int _innerCount;
             private readonly List<Slice> _ids;
             private readonly Sort _sort;
+            private readonly MapQueryResultRetriever _resultsRetriever;
 
             public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
@@ -84,22 +82,24 @@ namespace Raven.Server.Documents.Queries
                     throw new BooleanQuery.TooManyClauses();
 
                 _sort = ExtractSortFromQuery(query);
+
+                _resultsRetriever = new MapQueryResultRetriever(documents, context, fieldsToFetch);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)
             {
-                if (query.SortedFields == null || query.SortedFields.Length == 0)
+                if (query.Metadata.OrderBy == null)
                     return null;
 
-                Debug.Assert(query.SortedFields.Length == 1);
+                Debug.Assert(query.Metadata.OrderBy.Length == 1);
 
-                var randomField = query.SortedFields[0];
+                var randomField = query.Metadata.OrderBy[0];
 
-                Debug.Assert(randomField.Field.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName));
+                Debug.Assert(randomField.OrderingType == OrderByFieldType.Random);
 
-                var customFieldName = SortFieldHelper.ExtractName(randomField.Field);
+                var customFieldName = randomField.Name;
 
-                if (customFieldName.IsNullOrWhiteSpace())
+                if (string.IsNullOrEmpty(customFieldName))
                     return new Sort(null);
 
                 return new Sort(customFieldName);
@@ -110,16 +110,17 @@ namespace Raven.Server.Documents.Queries
                 if (string.IsNullOrWhiteSpace(query.Query))
                     return null;
 
-                return SimpleQueryParser.GetTermValuesForField(query, Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                    .Select(id =>
-                    {
-                        Slice.From(_context.Allocator, id, out Slice key);
-                        _context.Allocator.ToLowerCase(ref key.Content);
+                if (query.Metadata.Query.Where == null)
+                    return null;
 
-                        return key;
-                    })
-                    .OrderBy(x => x, SliceComparer.Instance)
-                    .ToList();
+                if (query.Metadata.IndexFieldNames.Contains(Constants.Documents.Indexing.Fields.DocumentIdFieldName) == false)
+                    return null;
+
+                var idsRetriever = new RetrieveDocumentIdsVisitor(query.Metadata, _context.Allocator);
+
+                idsRetriever.Visit(query.Metadata.Query.Where, query.QueryParameters);
+
+                return idsRetriever.Ids.OrderBy(x => x, SliceComparer.Instance).ToList();
             }
 
             public bool MoveNext()
@@ -153,7 +154,7 @@ namespace Raven.Server.Documents.Queries
                     _innerCount++;
 
                     var doc = _fieldsToFetch.IsProjection
-                        ? MapQueryResultRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
+                        ? _resultsRetriever.GetProjectionFromDocument(_inner.Current, 0f, _fieldsToFetch, _context)
                         : _inner.Current;
 
                     if (_query.SkipDuplicateChecking || _fieldsToFetch.IsDistinct == false)
@@ -219,7 +220,7 @@ namespace Raven.Server.Documents.Queries
                         count++;
 
                         var doc = _fieldsToFetch.IsProjection
-                            ? MapQueryResultRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
+                            ? _resultsRetriever.GetProjectionFromDocument(document, 0f, _fieldsToFetch, _context)
                             : _inner.Current;
 
                         if (doc.Data.Count <= 0)
@@ -267,15 +268,84 @@ namespace Raven.Server.Documents.Queries
 
                 public Sort(string field)
                 {
-                    if (string.IsNullOrWhiteSpace(field))
-                        field = Guid.NewGuid().ToString();
-
-                    _random = new Random(field.GetHashCode());
+                    _random = field == null ?
+                        new Random() :
+                        new Random(field.GetHashCode());
                 }
 
                 public int Next()
                 {
                     return _random.Next();
+                }
+            }
+
+            private class RetrieveDocumentIdsVisitor : WhereExpressionVisitor
+            {
+                private readonly Parser.Query _query;
+                private readonly QueryMetadata _metadata;
+                private readonly ByteStringContext _allocator;
+
+                public readonly List<Slice> Ids = new List<Slice>();
+
+                public RetrieveDocumentIdsVisitor(QueryMetadata metadata, ByteStringContext allocator) : base(metadata.Query.QueryText)
+                {
+                    _query = metadata.Query;
+                    _metadata = metadata;
+                    _allocator = allocator;
+                }
+
+                public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
+                {
+                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        return;
+
+                    var id = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, value);
+
+                    Debug.Assert(id.Type == ValueTokenType.String);
+
+                    AddId(id.Value.ToString());
+                }
+
+                public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
+                {
+                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        return;
+
+                    var first = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, firstValue);
+                    var second = QueryBuilder.GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, _query, _metadata, parameters, secondValue);
+
+                    Debug.Assert(first.Type == ValueTokenType.String);
+                    Debug.Assert(second.Type == ValueTokenType.String);
+
+                    AddId(first.Value.ToString());
+                    AddId(second.Value.ToString());
+                }
+
+                public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)
+                {
+                    if (fieldName != Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                        return;
+
+                    foreach (var item in values)
+                    {
+                        foreach (var id in QueryBuilder.GetValues(fieldName, _query, _metadata, parameters, item))
+                        {
+                            AddId(id.Value?.ToString());
+                        }
+                    }
+                }
+
+                public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
+                {
+                    throw new NotSupportedException();
+                }
+
+                private void AddId(string id)
+                {
+                    Slice.From(_allocator, id, out Slice key);
+                    _allocator.ToLowerCase(ref key.Content);
+
+                    Ids.Add(key);
                 }
             }
         }

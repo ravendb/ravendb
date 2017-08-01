@@ -2,101 +2,6 @@
     <div class="flex-window-head">
         <div class="row margin-bottom">
             <div class="col-sm-2">
-                <h2>Index</h2>
-            </div>
-            <div class="col-sm-10">
-
-                <div class="dropdown">
-                    <button class="btn dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                        <span data-bind="text: selectedIndexLabel"></span>
-                        <span class="caret"></span>
-                    </button>
-                    <div class="dropdown-menu">
-                        <ul class="menu max-height">
-
-                        <!-- ko foreach: indexes -->
-                        <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
-                        <!-- /ko -->
-                        <li class="divider" data-bind="visible: collections().length"></li>
-                        <!-- ko foreach: collections -->
-                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic/' + name)">
-                            <a href="#">
-                                <span data-bind="text: 'dynamic/' + name"></span>
-                            </a>
-                        </li>
-                        <!-- /ko -->
-                        <li class="divider"></li>
-                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'dynamic')">
-                            <a href="#">
-                                <span>dynamic/All Documents</span>
-                            </a>
-                        </li>
-                        </ul>
-                    </div>
-                </div>
-                <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
-                <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
-                <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
-                <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }">
-                    <a class="btn btn-default" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
-                </div>
-                <div class="btn-group has-disable-reason"  data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }">
-                    <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i><span>Map/Reduce Visualizer</span></a>
-                </div>
-                <div class="pull-right-sm">
-                    <div class="dropdown dropdown-right">
-                        <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: recentQueries().length">
-                            <i class="icon-recent"></i><span>Recent</span>
-                            <span class="caret"></span>
-                        </button>
-                        <div class="dropdown-menu" role="menu" >
-                            <ul class="menu max-height" data-bind="foreach: recentQueries">
-                            <li>
-                                <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
-                                    <span data-bind="text: indexName === 'dynamic' ? 'All Documents' : indexName"></span>
-                                    <span data-bind="visible: queryText">
-                                        <span class="text-muted">|</span>
-                                        <span data-bind="text: queryText"></span>
-                                    </span>
-                                    <span data-bind="visible: sorts.length, with: sorts">
-                                        <span class="text-muted">|</span>
-                                        <span data-bind="text: 'sort by ' + $root.getRecentQuerySortText($data)"></span>
-                                    </span>
-                                    <span data-bind="with: transformerQuery">
-                                        <span class="text-muted">|</span>
-                                        <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
-                                    </span>
-                                    <span data-bind="visible: useAndOperator">
-                                        <span class="text-muted">|</span>
-                                        <span>AND operator</span>
-                                    </span>
-                                    <span data-bind="visible: showFields">
-                                        <span class="text-muted">|</span>
-                                        <span>show fields</span>
-                                    </span>
-                                    <span data-bind="visible: indexEntries">
-                                        <span class="text-muted">|</span>
-                                        <span>index entries</span>
-                                    </span>
-                                </a>
-                            </li>
-                            </ul>
-                        </div>
-                    </div>
-                    <div class="dropdown dropdown-right">
-                        <button class="btn btn-default query-settings dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            <i class="icon-settings"></i><span>Settings</span>
-                            <span class="caret"></span>
-                        </button>
-                        <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="row margin-bottom">
-            <div class="col-sm-2">
                 <h2 class="query-title">Query <small><i class="icon-info text-info"></i></small></h2>
             </div>
             <div class="col-sm-10">
@@ -108,20 +13,54 @@
                             </div>
                         </div>
 
-                        <pre class="form-control editor query-source"
-                              data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/lucene', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
-                        <div class="add-filter" data-bind="dropdownPanel: true">
-                            <div data-bind="template: { name: 'filter-template' }"></div>
+                        <div class="btn-group btn-group-sm pull-right" role="group">
+                            <div class="dropdown">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
+                                    data-bind="enable: recentQueries().length">
+    <i class="icon-recent"></i><span>Recent</span>
+                                                        <span class="caret"></span>
+                                                    </button>
+                                <div class="dropdown-menu" role="menu">
+                                    <ul class="menu max-height" data-bind="foreach: recentQueries">
+                                        <li>
+                                            <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
+                                                <span data-bind="visible: queryText">
+                                                    <span class="text-muted">|</span>
+                                                    <span data-bind="text: queryText"></span>
+                                                </span>
+                                                <span data-bind="with: transformerQuery">
+                                                    <span class="text-muted">|</span>
+                                                    <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
+                                                </span>
+                                                <span data-bind="visible: showFields">
+                                                    <span class="text-muted">|</span>
+                                                    <span>show fields</span>
+                                                </span>
+                                                <span data-bind="visible: indexEntries">
+                                                    <span class="text-muted">|</span>
+                                                    <span>index entries</span>
+                                                </span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                                    aria-expanded="true">
+                                <i class="icon-settings"></i><span>Settings</span>
+                                <span class="caret"></span>
+                            </button>
+                                <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
+                                </div>
+                            </div>
                         </div>
+                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/lucene', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
                     </div>
                     <div class="query-controls">
                         <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
                             <i class="icon-play2 icon-lg"></i><br />
                             <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
-                        </button>
-                        <div class="flex-separator"></div>
-                        <button class="btn btn-default btn-block text-center" data-bind="click: openAddFilter">
-                            <i class="icon-plus"></i><span>Add filter</span>
                         </button>
                     </div>
                 </div>
@@ -141,56 +80,12 @@
                     <small data-bind="html: querySummary"></small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
-                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? 'Available only for map indexes' : '' }">
-                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: !isIndexMapReduce(), click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
+                    <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
+                        <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default btn-sm dropdown-toggle btn-checkable" type="button" data-toggle="dropdown" 
-                                data-bind="css: { 'btn-info active': criteria().hasSorts }, enable: !criteria().allDocumentsIndexSelected()">
-                            <i class="icon-sortby"></i><span>Sort by</span>
-                            <span class="caret"></span>
-                        </button>
-                        <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
-                            <div data-bind="foreach: criteria().sorts">
-                                <div class="row row-sm margin-bottom">
-                                    <div class="col-xs-5">
-                                        <div class="dropdown btn-block">
-                                            <button class="btn btn-block text-left dropdown-toggle" type="button" data-toggle="dropdown">
-                                                <span data-bind="text: fieldName() || 'Select field'"></span>
-                                                <span class="caret"></span>
-                                            </button>
-                                            <ul class="dropdown-menu" data-bind="foreach: $root.indexFields">
-                                                <li><a href="#" data-bind="click: $parent.fieldName.bind($parent.fieldName, $data), text: $data"></a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div class="col-xs-5">
-                                        <div class="dropdown btn-block">
-                                            <button class="btn btn-block text-left dropdown-toggle" type="button">
-                                                <span data-bind="text: sortType"></span>
-                                                <span class="caret"></span>
-                                            </button>
-                                            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.SortTypes">
-                                                <li><a href="#" data-bind="click: $parent.sortType.bind($parent.sortType, $data), text: $data"></a></li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                    <div class="col-xs-2">
-                                        <button class="btn btn-block" data-bind="click: _.partial($root.removeSortBy, $data)"><i class="icon-trash"></i></button>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            
-                           <div class="clearfix">
-                               <span data-bind="visible: criteria().sorts().length === 0">No sorting specified</span>
-                                <button class="btn btn-primary btn-sm pull-right" data-bind="click: addSortBy"><span class="icon-plus"></span><span>Add</span></button>
-                           </div>
-                           
-                        </div>
-                    </div>
-                    <div class="btn-group dropdown-right">
-                        <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" id="transform-results-btn" type="button" data-toggle="dropdown" data-bind="css: { 'btn-info active': criteria().transformer }">
+                        <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" id="transform-results-btn" type="button" data-toggle="dropdown"
+                            data-bind="css: { 'btn-info active': criteria().transformer }">
                             <i class="icon-transform-results"></i>
                             <span>Transform results</span>
                             <span class="caret"></span>
@@ -206,19 +101,19 @@
                                         <ul class="dropdown-menu">
                                             <li><a href="#" data-bind="click: _.partial($root.selectTransformer, null)">None</a></li>
                                             <!-- ko foreach: $root.allTransformers -->
-                                                <li><a href="#" data-bind="click: _.partial($root.selectTransformer, $data), text: Name"></a></li>
+                                            <li><a href="#" data-bind="click: _.partial($root.selectTransformer, $data), text: Name"></a></li>
                                             <!-- /ko -->
                                         </ul>
                                     </div>
                                 </div>
                             </div>
-                            
+
                             <div data-bind="foreach: uiTransformerParameters">
                                 <div class="row row-sm margin-bottom form-group" data-bind="validationElement: value">
                                     <div class="col-xs-4">
                                         <div class="control-label" data-bind="text: name + (hasDefault?'':'*')"></div>
                                     </div>
-                                    <div class="col-xs-8" >
+                                    <div class="col-xs-8">
                                         <input type="text" class="form-control" placeholder="value" data-bind="textInput: value">
                                     </div>
                                 </div>
@@ -232,9 +127,9 @@
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
-                    
+
                     <div class="btn-group dropdown-right">
-                        <button class="btn btn-default btn-sm dropdown-toggle" type="button"  data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                        <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                             <i class="icon-table"></i><span>Display</span>
                             <span class="caret"></span>
                         </button>
@@ -269,152 +164,17 @@
     No results found.
 </script>
 
-<div class="backdrop" data-bind="click: closeAddFilter"></div>
+<script type="text/html" id="initial-results-template">
+    TODO You'll see results here. Go ahead and type in your query.
+</script>
 
 <div class="tooltip json-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
 
-
-<script type="text/html" id="filter-template">
-    <div class="row flex-row">
-        <div class="col-sm-9">
-            <h3>Add Filter</h3>
-            <form class="form-horizontal" data-bind="with: filterSettings">
-                <div class="form-group" data-bind="validationElement: searchField">
-                    <label for="" class="col-sm-4 col-md-3 control-label">Field</label>
-                    <div class="col-sm-8 col-md-9">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true" data-bind="enable: $root.addFilterEnabled">
-                                <span data-bind="text: searchField() || 'Select field'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $root.indexFields">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.searchField, $data)"></a></li>
-                            </ul>
-                            <span class="help-block" data-bind="validationMessage: searchField"></span>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label class="col-sm-4 col-md-3 control-label">Type</label>
-                    <div class="col-sm-8 col-md-9">
-                        <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeString" value="string" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
-                            <label for="fieldTypeString">String</label>
-                        </div>
-                        <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeRange" value="range" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
-                            <label for="fieldTypeRange">Range</label>
-                        </div>
-                        <div class="radio radio-inline">
-                            <input type="radio" id="fieldTypeIn" value="in" name="fieldType" data-bind="checked: type, enable: $root.addFilterEnabled">
-                            <label for="fieldTypeIn">In</label>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group" data-bind="visible: $root.isStringFilter">
-                    <label for="" class="col-sm-4 col-md-3 control-label">Search type</label>
-                    <div class="col-sm-8 col-md-9">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" data-bind="enable: $root.addFilterEnabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                <span data-bind="text: searchType"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.SearchTypes">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.searchType, $data)"></a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-group" data-bind="visible: $root.isStringFilter, validationElement: value">
-                    <label for="valueInput" class="col-sm-4 col-md-3 control-label">Value</label>
-                    <div class="col-sm-8 col-md-9">
-                        <input type="text" id="valueInput" class="form-control" data-bind="textInput: value, enable: $root.addFilterEnabled" />
-                    </div>
-                </div>
-                <div class="form-group" data-bind="visible: $root.isRangeFilter">
-                    <label for="" class="col-sm-4 col-md-3 control-label">Search type</label>
-                    <div class="col-sm-8 col-md-9">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                <span data-bind="text: rangeSearchType"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu" data-bind="foreach: $root.constructor.RangeSearchTypes">
-                                <li><a href="#" data-bind="text: $data, click: _.partial($parent.rangeSearchType, $data)"></a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div data-bind="visible: $root.isDateFilter()">
-                    <div class="form-group">
-                        <label for="rangeFromInputDate" class="col-sm-4 col-md-3 control-label">From</label>
-                        <div class="col-sm-8 col-md-9">
-                            <div class="input-group date" id="rangeFromInputDate" data-bind="datePicker: rangeDateFrom, datepickerOptions: { endDateElement: 'rangeToInputDate'}" >
-                                <input type="text" class="form-control" data-bind="textInput: rangeFrom" />
-                                <span class="input-group-addon">
-                                    <span class="icon-calendar"></span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-group">
-                        <label for="rangeToInputDate" class="col-sm-4 col-md-3 control-label">To</label>
-                        <div class="col-sm-8 col-md-9">
-                            <div class="input-group date" id="rangeToInputDate" data-bind="datePicker: rangeDateTo, datepickerOptions: { startDateElement: 'rangeFromInputDate'}">
-                                <input type="text" class="form-control" data-bind="textInput: rangeTo" />
-                                <span class="input-group-addon">
-                                    <span class="icon-calendar"></span>
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div data-bind="visible: $root.isRangeFilter() && !$root.isDateFilter()">
-                    <div class="form-group" data-bind="validationElement: rangeFrom">
-                        <label for="rangeFromInput" class="col-sm-4 col-md-3 control-label">From</label>
-                        <div class="col-sm-8 col-md-9">
-                            <input type="text" id="rangeFromInput" class="form-control" data-bind="textInput: rangeFrom" />
-                        </div>
-                    </div>
-                    <div class="form-group" data-bind="validationElement: rangeTo">
-                        <label for="rangeToInput" class="col-sm-4 col-md-3 control-label">To</label>
-                        <div class="col-sm-8 col-md-9">
-                            <input type="text" id="rangeToInput" class="form-control" data-bind="textInput: rangeTo" />
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-group" data-bind="visible: $root.isInFilter, validationElement: inValues">
-                    <label for="inValuesInput" class="col-sm-4 col-md-3 control-label">Values
-                        <div class="labelNote">(comma separated)</div>
-                    </label>
-                    <div class="col-sm-8 col-md-9">
-                        <input type="text" id="inValuesInput" class="form-control" data-bind="textInput: inValues" />
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="col-sm-3 flex-bottom">
-            <div class="form-group">
-                <button class="btn btn-primary btn-block" data-bind="click: $root.addFilter, enable: $root.addFilterEnabled">
-                    <i class="icon-plus"></i>
-                    <span>Add</span>
-                </button>
-                <button class="btn btn-block" data-bind="click: closeAddFilter">
-                    <i class="icon-cancel"></i>
-                    <span>Close</span>
-                </button>
-            </div>
-        </div>
-    </div>
-</script>
-
 <script type="text/html" id="settings-template">
     <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-6">        
+        <div class="col-xs-offset-1 col-xs-6">
             <div class="control-label">Cache enabled</div>
         </div>
         <div class="col-xs-5">
@@ -426,22 +186,7 @@
     </div>
     <div class="row settings-item">
         <div class="col-xs-offset-1 col-xs-6">
-            <div class="control-label">Default operator</div>
-        </div>
-        <div class="col-xs-5">
-            <div class="radio radio-inline">
-                <input type="radio" id="inlineRadio1" value="AND" title="Set the default operator to AND" data-bind="checked: criteria().useAndOperator, checkedValue: true">
-                <label for="inlineRadio1"> AND </label>
-            </div>
-            <div class="radio radio-inline">
-                <input type="radio" id="inlineRadio2" value="OR" title="Set the default operator to OR" data-bind="checked: criteria().useAndOperator, checkedValue: false">
-                <label for="inlineRadio2"> OR </label>
-            </div>
-        </div>
-    </div>
-    <div class="row settings-item">
-        <div class="col-xs-offset-1 col-xs-6">
-           <div class="control-label">Show stored index fields only</div>
+            <div class="control-label">Show stored index fields only</div>
         </div>
         <div class="col-xs-5">
             <div class="toggle">
@@ -456,7 +201,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries">
                 <label></label>
             </div>
         </div>

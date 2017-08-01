@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<SampleData, SampleData_Index>()
-                        .Search(a => a.Name, "A*", options: SearchOptions.And, escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard)
+                        .Search(a => a.Name, "A*", options: SearchOptions.And)
                         .Customize(customization => customization.WaitForNonStaleResultsAsOfNow())
                         .FirstOrDefault();
 

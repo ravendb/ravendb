@@ -8,8 +8,6 @@ namespace Raven.Client.Server
 
         public int? MaxNumberOfRequestsPerSession { get; set; }
 
-        public int? MaxLengthOfQueryUsingGetUrl { get; set; }
-
         public bool? PrettifyGeneratedLinqExpressions { get; set; }
 
         public DynamicJsonValue ToJson()
@@ -18,7 +16,6 @@ namespace Raven.Client.Server
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
-                [nameof(MaxLengthOfQueryUsingGetUrl)] = MaxLengthOfQueryUsingGetUrl,
                 [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions
             };
         }

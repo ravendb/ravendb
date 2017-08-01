@@ -196,13 +196,10 @@ interface transformerParamDto {
 }
 
 interface queryDto {
-    indexName: string;
     queryText: string;
-    sorts: string[];
     transformerQuery: transformerQueryDto;
     showFields: boolean;
     indexEntries: boolean;
-    useAndOperator: boolean;
 }
 
 interface storedQueryDto extends queryDto {

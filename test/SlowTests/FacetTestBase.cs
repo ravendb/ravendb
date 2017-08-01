@@ -60,9 +60,9 @@ namespace SlowTests
                 WaitForIndexing(store);
         }
 
-        public static FacetsRequest GetFacets()
+        public static List<Facet> GetFacets()
         {
-            var facets = new List<Facet>
+            return new List<Facet>
             {
                 new Facet<Camera> {Name = x => x.Manufacturer},
                 new Facet<Camera>
@@ -88,10 +88,6 @@ namespace SlowTests
                         x => x.Megapixels > 10.0m
                     }
                 }
-            };
-            return new FacetsRequest
-            {
-                Facets = facets
             };
         }
 
@@ -210,10 +206,5 @@ namespace SlowTests
                 return (int)(Megapixels * 100) ^ (int)(Cost * 100) ^ (int)DateOfListing.Ticks ^ Id.Length;
             }
         }
-    }
-
-    public class FacetsRequest
-    {
-        public List<Facet> Facets { get; set; }
     }
 }

@@ -1,33 +1,51 @@
 using System;
-using SlowTests.Server.Replication;
-using Sparrow.Logging;
-using System.Threading.Tasks;
+using SlowTests.Bugs;
+using SlowTests.Issues;
+using FastTests.Voron.Storage;
+using SlowTests.Cluster;
+using Raven.Server.Documents.Replication;
+using Raven.Client.Documents;
+using SlowTests.Tests.Linq;
 
 namespace Tryouts
 {
     public class Program
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger("Program", "Program");
-
         public static void Main(string[] args)
         {
-            //   LoggingSource.Instance.SetupLogMode(LogMode.Information, @"c:\work\ravendb\logs");
+            //using (var store = new DocumentStore
+            //{
+            //    Urls = new string[] { "http://127.0.0.1:8080" },
+            //    Database = "test"
+            //}.Initialize())
+            //{
+            //    var sub = store.Subscriptions.Open(new Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions(11));
+            //    sub.Run(batch =>
+            //    {
+            //        foreach (var item in batch.Items)
+            //        {
+            //            Console.WriteLine(item.Id);
+            //        }
+            //    }).Wait();
+            //}
+            RunTest();
+        }
 
-            for (int i = 0; i < 100000; i++)
+        private static void RunTest()
+        {
+            for (int i = 0; i < 100; i++)
             {
+                Console.Clear();
                 Console.WriteLine(i);
-                Logger.Info("Program: " + i);
-                using (var test = new FastTests.Issues.RavenDB_6141())
+                using (var test = new RavenDB_3758())
                 {
                     try
                     {
-                        test.Default_database_path_settings();
+                        test.Can_Overwrite_Side_By_Side_Index();
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine(e);
-                        Console.Beep();
-                        Console.Beep();
                         Console.Beep();
                         return;
                     }

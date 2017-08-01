@@ -1,8 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
@@ -13,7 +10,7 @@ namespace FastTests.Server.Json
     {
         private readonly JsonOperationContext _ctx;
         private readonly List<BlittableJsonReaderObject> _docs = new List<BlittableJsonReaderObject>();
-        private readonly BlittableJsonTraverser _sut = new BlittableJsonTraverser();
+        private readonly BlittableJsonTraverser _sut = BlittableJsonTraverser.Default;
 
         public BlittableJsonTraverserTests()
         {
@@ -76,7 +73,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Friends,Name");
+            var read = _sut.Read(doc, "Friends[].Name");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -113,7 +110,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Friends,Name.First");
+            var read = _sut.Read(doc, "Friends[].Name.First");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -161,7 +158,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Items,,Bar.Foo");
+            var read = _sut.Read(doc, "Items[].[].Bar.Foo");
 
             var enumerable = read as IEnumerable<object>;
 
@@ -219,7 +216,7 @@ namespace FastTests.Server.Json
                 }
             });
 
-            var read = _sut.Read(doc, "Items,Bar,Foo.Baz");
+            var read = _sut.Read(doc, "Items[].Bar[].Foo.Baz");
 
             var enumerable = read as IEnumerable<object>;
 

@@ -6,13 +6,11 @@ namespace FastTests.Client.Queries
 {
     public class RangeQueryTest : RavenTestBase
     {
-
         [Fact]
         public void RangeQuery()
         {
             using (var store = GetDocumentStore())
             {
-
                 store.ExecuteIndex(new AccommodationsIndex());
 
                 using (var session = store.OpenSession())
@@ -28,16 +26,14 @@ namespace FastTests.Client.Queries
                     session.SaveChanges();
                 }
 
-
                 WaitForIndexing(store);
 
                 using (var session = store.OpenSession())
                 {
-
                     var accs = session.Advanced.DocumentQuery<object, AccommodationsIndex>()
-                        .Where("ImageUrl:[* TO *]")
+                        .WhereExists("ImageUrl")
                         .AndAlso()
-                        .Where("Categories:[* TO *]")
+                        .WhereExists("Categories")
                         .AndAlso()
                         .WhereEquals("ExistsInLanguage", true)
                         .ToList();
@@ -49,7 +45,7 @@ namespace FastTests.Client.Queries
 
         }
 
-        public class TestAccommodation
+        private class TestAccommodation
         {
             public string Id { get; set; }
 
@@ -66,7 +62,7 @@ namespace FastTests.Client.Queries
             public string Categories { get; set; }
         }
 
-        public class AccommodationsIndex : AbstractMultiMapIndexCreationTask<TestAccommodation>
+        private class AccommodationsIndex : AbstractMultiMapIndexCreationTask<TestAccommodation>
         {
             public AccommodationsIndex()
             {

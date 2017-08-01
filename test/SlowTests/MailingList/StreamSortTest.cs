@@ -68,7 +68,6 @@ namespace SlowTests.MailingList
                 Map = foos => from foo in foos
                               select new { foo.Num };
 
-                Sort(x => x.Num, SortOptions.Numeric);
             }
         }
     }

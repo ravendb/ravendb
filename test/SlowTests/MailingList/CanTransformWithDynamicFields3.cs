@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
@@ -175,7 +176,7 @@ namespace SlowTests.MailingList
                 {
                     var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_Map>()
                         .SetTransformer(typeof(GlobalizationTransformer).Name)
-                        .SetTransformerParameters(new Dictionary<string, object>
+                        .SetTransformerParameters(new Parameters
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })
@@ -205,7 +206,7 @@ namespace SlowTests.MailingList
                 {
                     var results = session.Advanced.DocumentQuery<BaseEntityResult, TranslatedEntities_MapReduce>()
                         .SetTransformer(typeof(GlobalizationTransformer).Name)
-                        .SetTransformerParameters(new Dictionary<string, object>
+                        .SetTransformerParameters(new Parameters
                         {
                             {GlobalizationTransformer.GlobalizationQueryListenerKey, "pt"}
                         })

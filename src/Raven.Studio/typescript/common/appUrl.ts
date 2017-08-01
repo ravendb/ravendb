@@ -45,6 +45,7 @@ class appUrl {
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
+        terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
         exploration: ko.pureComputed(() => appUrl.forExploration(appUrl.currentDatabase())),
         tasks: ko.pureComputed(() => appUrl.forTasks(appUrl.currentDatabase())),

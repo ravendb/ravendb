@@ -9,7 +9,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Session;
@@ -231,14 +230,14 @@ namespace FastTests
                 return new DynamicArray(command.Result.Results);
             }
 
-            public QueryResult Query(string indexName, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
+            public QueryResult Query(IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                return AsyncHelpers.RunSync(() => QueryAsync(indexName, query, metadataOnly, indexEntriesOnly));
+                return AsyncHelpers.RunSync(() => QueryAsync(query, metadataOnly, indexEntriesOnly));
             }
 
-            public async Task<QueryResult> QueryAsync(string indexName, IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
+            public async Task<QueryResult> QueryAsync(IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                var command = new QueryCommand(_store.Conventions, Context, indexName, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
+                var command = new QueryCommand(_store.Conventions, Context, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 

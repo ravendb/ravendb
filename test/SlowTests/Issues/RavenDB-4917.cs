@@ -63,10 +63,6 @@ namespace SlowTests.Issues
                 Index(e => e.DisplayName, FieldIndexing.Default);
 
                 Analyze(e => e.FirstName, "StandardAnalyzer");
-
-                Sort(p => p.LastName, SortOptions.String);
-                Sort(p => p.FirstName, SortOptions.String);
-                Sort(p => p.DisplayName, SortOptions.String);
             }
         }
     }

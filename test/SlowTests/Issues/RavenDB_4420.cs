@@ -57,10 +57,13 @@ namespace SlowTests.Issues
                         .ToList();
 
                     // assert
-                    Assert.Equal("@in<MyProperty>:(0 , 1) ", whereInRawQuery.Query);
+                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty IN (:p0)", whereInRawQuery.Query);
+                    Assert.Contains(MyEnum.Value1, (object[])whereInRawQuery.QueryParameters["p0"]);
+                    Assert.Contains(MyEnum.Value2, (object[])whereInRawQuery.QueryParameters["p0"]);
                     Assert.Equal(2, whereInQuery.Count);
 
-                    Assert.Equal("MyProperty:0", whereRawQuery.Query);
+                    Assert.Equal("FROM INDEX 'MyIndex' WHERE MyProperty = :p0", whereRawQuery.Query);
+                    Assert.Equal(MyEnum.Value1, whereRawQuery.QueryParameters["p0"]);
                     Assert.Equal(1, whereQuery.Count);
                 }
             }

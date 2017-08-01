@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 
 namespace Raven.Client.Documents.Session
 {
@@ -12,6 +11,8 @@ namespace Raven.Client.Documents.Session
     public interface IAbstractDocumentQuery<T>
     {
         string IndexName { get; }
+
+        string CollectionName { get; }
 
         /// <summary>
         /// Gets the document convention from the query session
@@ -37,11 +38,6 @@ namespace Raven.Client.Documents.Session
         IEnumerable<string> GetProjectionFields();
 
         /// <summary>
-        /// Order the search results in alphanumeric order
-        /// </summary>
-        void AlphaNumericOrdering(string fieldName, bool descending = false);
-
-        /// <summary>
         /// Order the search results randomly
         /// </summary>
         void RandomOrdering();
@@ -62,7 +58,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "fieldName">Name of the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        void AddOrder(string fieldName, bool descending);
+        void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
@@ -91,26 +87,14 @@ namespace Raven.Client.Documents.Session
         void Skip(int count);
 
         /// <summary>
-        ///   Filter the results from the index using the specified where clause.
+        ///   Matches value
         /// </summary>
-        /// <param name = "whereClause">The where clause.</param>
-        void Where(string whereClause);
+        void WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        void WhereEquals(string fieldName, object value);
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        void WhereEquals(string fieldName, object value, bool isAnalyzed);
+        void WhereEquals(WhereParams whereParams);
 
         /// <summary>
         ///   Simplified method for opening a new clause within the query
@@ -124,11 +108,6 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         void CloseSubclause();
 
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        void WhereEquals(WhereParams whereParams);
-
         ///<summary>
         /// Negate the next operation
         ///</summary>
@@ -137,7 +116,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        void WhereIn(string fieldName, IEnumerable<object> values);
+        void WhereIn(string fieldName, IEnumerable<object> values, bool exact = false);
 
         /// <summary>
         ///   Matches fields which starts with the specified value.
@@ -156,48 +135,29 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches fields where the value is between the specified start and end, exclusive
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        /// <returns></returns>
-        void WhereBetween(string fieldName, object start, object end);
-
-        /// <summary>
-        ///   Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        /// <returns></returns>
-        void WhereBetweenOrEqual(string fieldName, object start, object end);
+        void WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is greater than the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereGreaterThan(string fieldName, object value);
+        void WhereGreaterThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is greater than or equal to the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereGreaterThanOrEqual(string fieldName, object value);
+        void WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is less than the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereLessThan(string fieldName, object value);
+        void WhereLessThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///   Matches fields where the value is less than or equal to the specified value
         /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "value">The value.</param>
-        void WhereLessThanOrEqual(string fieldName, object value);
+        void WhereLessThanOrEqual(string fieldName, object value, bool exact = false);
+
+        void WhereExists(string fieldName);
 
         /// <summary>
         ///   Add an AND to the query
@@ -246,7 +206,11 @@ namespace Raven.Client.Documents.Session
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name = "fields">The fields.</param>
-        void OrderBy(params string[] fields);
+        void OrderBy(string field, OrderingType ordering = OrderingType.String);
+
+        void OrderByScore();
+
+        void OrderByScoreDescending();
 
         /// <summary>
         ///   Adds matches highlighting for the specified field.
@@ -326,7 +290,7 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        void Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
+        void Search(string fieldName, string searchTerms);
 
         /// <summary>
         ///   Returns a <see cref = "System.String" /> that represents this instance.
@@ -339,7 +303,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   The last term that we asked the query to use equals on
         /// </summary>
-        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
 
         void Intersect();
         void AddRootType(Type type);
@@ -358,11 +322,14 @@ namespace Raven.Client.Documents.Session
 
         void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
-        /// <summary>
-        /// Adds a dynamic query field to the query
-        /// </summary>
-        void AddMapReduceField(DynamicMapReduceField field);
+        void GroupBy(string fieldName, params string[] fieldNames);
 
-        DynamicMapReduceField[] GetGroupByFields();
+        void GroupByKey(string fieldName, string projectedName = null);
+
+        void GroupBySum(string fieldName, string projectedName = null);
+
+        void GroupByCount(string projectedName = null);
+
+        void WhereTrue();
     }
 }

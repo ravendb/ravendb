@@ -19,8 +19,6 @@ namespace SlowTests.Core.Utils.Indexes
             Map = companies => from company in companies
                                select new { company.Name };
 
-            Sort(c => c.Name, SortOptions.String);
-
             Analyzers.Add(c => c.Name, typeof(PlCollationAnalyzer).ToString());
         }
     }

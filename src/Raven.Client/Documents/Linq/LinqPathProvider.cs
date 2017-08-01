@@ -70,8 +70,7 @@ namespace Raven.Client.Documents.Linq
                     {
                         MemberType = callExpression.Method.ReturnType,
                         IsNestedPath = false,
-                        Path = parent.Path + "." +
-                                      GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
+                        Path = parent.Path + "." + GetValueFromExpression(callExpression.Arguments[0], callExpression.Method.GetParameters()[0].ParameterType)
                     };
                 }
 

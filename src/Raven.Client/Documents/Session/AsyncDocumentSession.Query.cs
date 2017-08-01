@@ -6,44 +6,29 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-        /// <summary>
-        /// Dynamically queries RavenDB using LINQ
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        public IRavenQueryable<T> Query<T>()
-        {
-            string indexName = CreateDynamicIndexName<T>();
-
-            return Query<T>(indexName);
-        }
-
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractIndexCreationTask, new()
         {
             var indexCreator = new TIndexCreator();
-            return Query<T>(indexCreator.IndexName, indexCreator.IsMapReduce);
+            return Query<T>(indexCreator.IndexName, null, indexCreator.IsMapReduce);
         }
 
-        public IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false)
+        public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            var ravenQueryStatistics = new QueryStatistics();
+            var type = typeof(T);
+            (indexName, collectionName) = ProcessQueryParameters(type, indexName, collectionName, Conventions);
+
+            var queryStatistics = new QueryStatistics();
             var highlightings = new QueryHighlightings();
             var ravenQueryInspector = new RavenQueryInspector<T>();
-            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, ravenQueryStatistics, highlightings, isMapReduce);
+            var ravenQueryProvider = new RavenQueryProvider<T>(this, indexName, collectionName, type, queryStatistics, highlightings, isMapReduce);
             ravenQueryInspector.Init(ravenQueryProvider,
-                ravenQueryStatistics,
+                queryStatistics,
                 highlightings,
                 indexName,
+                collectionName,
                 null,
                 this, isMapReduce);
             return ravenQueryInspector;
-        }
-
-        /// <summary>
-        /// Create a new query for <typeparam name="T"/>
-        /// </summary>
-        public IAsyncDocumentQuery<T> AsyncQuery<T>(string indexName, bool isMapReduce = false)
-        {
-            return AsyncDocumentQuery<T>(indexName, isMapReduce);
         }
 
         /// <summary>
@@ -56,25 +41,17 @@ namespace Raven.Client.Documents.Session
         {
             var index = new TIndexCreator();
 
-            return AsyncDocumentQuery<T>(index.IndexName, index.IsMapReduce);
+            return AsyncDocumentQuery<T>(index.IndexName, null, index.IsMapReduce);
         }
 
         /// <summary>
-        /// Query the specified index using Lucene syntax
+        ///     Query the specified index using Lucene syntax
         /// </summary>
-        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string index, bool isMapReduce)
+        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
-            return new AsyncDocumentQuery<T>(this, index, new string[0], new string[0], isMapReduce);
-        }
+            (indexName, collectionName) = ProcessQueryParameters(typeof(T), indexName, collectionName, Conventions);
 
-        /// <summary>
-        /// Dynamically query RavenDB using Lucene syntax
-        /// </summary>
-        public IAsyncDocumentQuery<T> AsyncDocumentQuery<T>()
-        {
-            var indexName = CreateDynamicIndexName<T>();
-
-            return new AsyncDocumentQuery<T>(this, indexName, new string[0], new string[0], false);
+            return new AsyncDocumentQuery<T>(this, indexName, collectionName, isGroupBy: isMapReduce);
         }
 
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
@@ -85,9 +62,17 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Create a new query for <typeparam name="T"/>
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, bool isMapReduce)
+        IDocumentQuery<T> IDocumentQueryGenerator.Query<T>(string indexName, string collectionName, bool isMapReduce)
         {
             throw new NotSupportedException("You can't query sync from an async session");
+        }
+
+        /// <summary>
+        /// Create a new query for <typeparam name="T"/>
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryGenerator.AsyncQuery<T>(string indexName, string collectionName, bool isMapReduce)
+        {
+            return AsyncDocumentQuery<T>(indexName, collectionName, isMapReduce);
         }
     }
 }

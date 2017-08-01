@@ -28,8 +28,8 @@ namespace Raven.Client.Documents.Session
         {
             //maybe we don't need to do anything..
             var blittable = entity as BlittableJsonReaderObject;
-            if(blittable != null)
-                return blittable;            
+            if (blittable != null)
+                return blittable;
 
             using (var writer = new BlittableJsonWriter(_session.Context, documentInfo))
             {
@@ -54,7 +54,6 @@ namespace Raven.Client.Documents.Session
         {
             using (var writer = new BlittableJsonWriter(context, documentInfo))
             {
-
                 var serializer = conventions.CreateSerializer();
 
                 serializer.Serialize(writer, entity);

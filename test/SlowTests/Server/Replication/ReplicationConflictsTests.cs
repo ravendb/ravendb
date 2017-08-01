@@ -30,9 +30,9 @@ namespace SlowTests.Server.Replication
             public int Age { get; set; }
         }
 
-        private class New_User: User { }
+        private class New_User : User { }
 
-        private class New_User2: User { }
+        private class New_User2 : User { }
 
         [Fact]
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
@@ -327,7 +327,7 @@ namespace SlowTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var operation = store2.Operations.Send(new DeleteByIndexOperation(userIndex.IndexName, new IndexQuery() { Query = string.Empty }));
+                var operation = store2.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
@@ -359,9 +359,9 @@ namespace SlowTests.Server.Replication
                 WaitUntilHasConflict(store2, "foo/bar");
 
                 // /indexes/Raven/DocumentsByEntityName
-                var operation = store2.Operations.Send(new PatchByIndexOperation(userIndex.IndexName, new IndexQuery()
+                var operation = store2.Operations.Send(new PatchByIndexOperation(new IndexQuery
                 {
-                    Query = string.Empty
+                    Query = $"FROM INDEX '{userIndex.IndexName}'"
                 }, new PatchRequest
                 {
                     Script = string.Empty
@@ -634,13 +634,13 @@ namespace SlowTests.Server.Replication
             {
                 using (var session = store1.OpenSession())
                 {
-                    session.Store(new User {Name = "Karmel"}, "foo/bar");
+                    session.Store(new User { Name = "Karmel" }, "foo/bar");
                     session.SaveChanges();
                 }
 
                 using (var session = store2.OpenSession())
                 {
-                    session.Store(new New_User {Name = "Oren"}, "foo/bar");
+                    session.Store(new New_User { Name = "Oren" }, "foo/bar");
                     session.SaveChanges();
                 }
 

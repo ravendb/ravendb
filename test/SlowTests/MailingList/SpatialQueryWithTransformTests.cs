@@ -189,7 +189,6 @@ namespace SlowTests.MailingList
                         },
                         _ = SpatialGenerate(location.Ltd, location.Lng)
                     };
-                Sort(x => x.CreatedAt, SortOptions.String);
             }
         }
     }

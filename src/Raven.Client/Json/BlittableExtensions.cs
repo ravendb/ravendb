@@ -16,7 +16,7 @@ namespace Raven.Client.Json
         /// <returns></returns>
         public static IEnumerable<Tuple<object, object>> SelectTokenWithRavenSyntaxReturningFlatStructure(this BlittableJsonReaderBase self, string path, bool createSnapshots = false)
         {
-            var pathParts = path.Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+            var pathParts = path.Split(new[] { "[]." }, StringSplitOptions.RemoveEmptyEntries);
             var result = new BlittablePath(pathParts[0]).Evaluate(self, false);
 
             if (pathParts.Length == 1)
@@ -39,7 +39,7 @@ namespace Raven.Client.Json
                     if (prop.Value is BlittableJsonReaderBase)
                     {
                         var itemAsBlittable = (BlittableJsonReaderBase)prop.Value;
-                        foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
+                        foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join("[].", pathParts.Skip(1).ToArray())))
                         {
                             yield return subItem;
                         }
@@ -60,7 +60,7 @@ namespace Raven.Client.Json
                     if (item is BlittableJsonReaderBase)
                     {
                         var itemAsBlittable = item as BlittableJsonReaderBase;
-                        foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join(",", pathParts.Skip(1).ToArray())))
+                        foreach (var subItem in itemAsBlittable.SelectTokenWithRavenSyntaxReturningFlatStructure(string.Join("[].", pathParts.Skip(1).ToArray())))
                         {
                             yield return subItem;
                         }

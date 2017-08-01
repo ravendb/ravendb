@@ -47,7 +47,10 @@ namespace SlowTests.MailingList
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
                     .WithinRadiusOf(500, 45.54545, -73.63908)
-                    .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
+                    .OpenSubclause()
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
+                    .CloseSubclause()
                     .Take(10)
                     .ToList();
 
@@ -58,7 +61,10 @@ namespace SlowTests.MailingList
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
                     .WithinRadiusOf(500, 45.54545, -73.63908)
-                    .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
+                    .OpenSubclause()
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
+                    .CloseSubclause()
                     .Take(10)
                     .ToList();
 
@@ -103,7 +109,10 @@ namespace SlowTests.MailingList
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
                     .RelatesToShape(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
-                    .Where("(Name:(" + terms + ") OR Terms:(" + terms + "))")
+                    .OpenSubclause()
+                    .WhereLucene("Name", $"{terms}")
+                    .WhereLucene("Terms", $"{terms}")
+                    .CloseSubclause()
                     .Take(10)
                     .ToList();
 

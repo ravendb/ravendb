@@ -49,8 +49,8 @@ namespace SlowTests.Issues
 
                 var exception = Assert.Throws<RavenException>(() =>
                 {
-                    var op = store.Operations.Send(new DeleteByIndexOperation("Users/ByName",
-                        new IndexQuery() { Query = "Name:Users*" },
+                    var op = store.Operations.Send(new DeleteByIndexOperation(
+                        new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
                         new QueryOperationOptions { AllowStale = false, MaxOpsPerSecond = null, StaleTimeout = TimeSpan.FromMilliseconds(10) }));
 
                     op.WaitForCompletion(TimeSpan.FromSeconds(15));

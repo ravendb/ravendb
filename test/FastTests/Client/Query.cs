@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -50,8 +51,13 @@ namespace FastTests.Client
                         .Where(x => x.Name.Equals("Tarzan"))
                         .ToList();
 
+                    var queryResult3 = newSession.Query<User>()
+                        .Where(x => x.Name.EndsWith("n"))
+                        .ToList();
+
                     Assert.Equal(queryResult.Count, 2);
                     Assert.Equal(queryResult2.Count, 1);
+                    Assert.Equal(queryResult3.Count, 2);
                 }
             }
         }
@@ -81,7 +87,7 @@ namespace FastTests.Client
                     try
                     {
                         queryResult = newSession.Query<DogsIndex.Result, DogsIndex>()
-                            .Customize(x => x.AlphaNumericOrdering<Dog>(d => d.Name))
+                            .Customize(x => x.AddOrder<Dog>(d => d.Name, ordering: OrderingType.AlphaNumeric))
                             .Customize(x => x.WaitForNonStaleResults())
                             .Where(x => x.Age > 2)
                             .ToList();

@@ -51,14 +51,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 Reason = reason;
             }
 
-            public string Index { get; private set; }
-            public string Reason { get; private set; }
+            public string Index { get; }
+            public string Reason { get; }
         }
 
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap())
+                .Where(x => x.Type.IsAuto() && (query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap()))
                 .Select(x => x.Definition)
                 .ToList();
 
@@ -110,13 +110,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
-            else
+
+            if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
             {
-                if (definition.Collections.Count > 1) // we only allow indexes with a single entity name
-                {
-                    explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
-                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                }
+                explanations?.Add(new Explanation(indexName, "Index contains more than a single entity name, may result in a different type being returned."));
+                return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
             }
 
             var index = _indexStore.GetIndex(definition.Name);
@@ -134,95 +132,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in query.MapFields)
             {
-                if (definition.TryGetField(index.Type.IsAuto() ? field.Name : field.NormalizedName, out IndexField indexField))
+                if (definition.ContainsField(field.Name) == false)
                 {
-                    if (string.IsNullOrWhiteSpace(indexField.Analyzer) == false)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field have a custom analyzer: {indexField.Name}"));
-                        currentBestState = DynamicQueryMatchType.Partial;
-                    }
-
-                    if (indexField.Indexing != FieldIndexing.Default)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field is not using default indexing: {indexField.Name}"));
-                        currentBestState = DynamicQueryMatchType.Partial;
-                    }
-                }
-                else
-                {
-                    explanations?.Add(new Explanation(indexName, $"The following field is missing: {indexField.Name}"));
+                    explanations?.Add(new Explanation(indexName, $"The following field is missing: {field.Name}"));
                     currentBestState = DynamicQueryMatchType.Partial;
-                }
-            }
-
-            //TODO arek: ignore highlighting for now
-
-            foreach (var sortInfo in query.SortDescriptors) // with matching sort options
-            {
-                var sortFieldName = index.Type.IsAuto() ? sortInfo.Name : sortInfo.NormalizedName;
-
-                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.AlphaNumericFieldName) ||
-                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
-                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
-                {
-                    sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
-                }
-
-                sortFieldName = FieldUtil.RemoveRangeSuffixIfNecessary(sortFieldName);
-
-                IndexField indexField = null;
-                // if the field is not in the output, then we can't sort on it. 
-                if (definition.ContainsField(sortFieldName) == false)
-                {
-                    if (query.IsMapReduce == false)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortFieldName}' which we need to sort on"));
-                        currentBestState = DynamicQueryMatchType.Partial;
-                        continue;
-                    }
-
-                    // for map-reduce queries try to get field from group by fields as well
-                    var autoMapReduceIndexDefinition = definition as AutoMapReduceIndexDefinition;
-                    if (autoMapReduceIndexDefinition != null)
-                    {
-                        if (autoMapReduceIndexDefinition.GroupByFields.TryGetValue(sortFieldName, out indexField) == false)
-                        {
-                            explanations?.Add(new Explanation(indexName, $"Rejected because index does not contains field '{sortFieldName}' which we need to sort on"));
-                            currentBestState = DynamicQueryMatchType.Partial;
-                            continue;
-                        }
-                    }
-                    else
-                    {
-                        var mapReduceIndexDefinition = definition as MapReduceIndexDefinition;
-                        if (mapReduceIndexDefinition != null)
-                        {
-                            throw new NotImplementedException("TODO arek");
-                        }
-                    }
-                }
-                else
-                {
-                    indexField = definition.GetField(sortFieldName);
-                }
-
-                Debug.Assert(indexField != null);
-
-                if (sortInfo.FieldType != indexField.Sort)
-                {
-                    if (indexField.Sort == null)
-                    {
-                        switch (sortInfo.FieldType) // if field is not sorted, we check if we asked for the default sorting
-                        {
-                            case SortOptions.String:
-                            case SortOptions.None:
-                                continue;
-                        }
-                    }
-
-                    explanations?.Add(new Explanation(indexName,
-                            $"The specified sort type ({sortInfo.FieldType}) is different than the one specified for field '{sortFieldName}' ({indexField.Sort})"));
-                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                 }
             }
 
@@ -264,9 +177,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 var field = definition.GetField(mapField.Name);
 
-                if (field.MapReduceOperation != mapField.MapReduceOperation)
+                if (field.Aggregation != mapField.AggregationOperation)
                 {
-                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.MapReduceOperation} operation defined, while query required {mapField.MapReduceOperation}"));
+                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
 
                     return false;
                 }

@@ -58,12 +58,13 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                const string Query = "Title:<<new>> Album:<<new>> Keywords:<<new>>";
                 using (var session = store.OpenSession())
                 {
                     var content = session.Advanced
                         .DocumentQuery<MusicContent, MusicSearchIndex>()
-                        .Where(Query)
+                        .WhereLucene("Title", "<<new>>")
+                        .WhereLucene("Album", "<<new>>")
+                        .WhereLucene("Keywords", "<<new>>")
                         .Skip(1)
                         .Take(10)
                         .ToList();

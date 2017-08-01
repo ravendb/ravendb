@@ -30,10 +30,6 @@ namespace Raven.Client.Documents.Conventions
         internal static DocumentConventions Default = new DocumentConventions();
 
         private static IDictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
-        private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
-        private readonly List<Type> _customRangeTypes = new List<Type>();
-
-        private readonly List<Tuple<Type, TryConvertValueForQueryDelegate<object>>> _listOfQueryValueConverters = new List<Tuple<Type, TryConvertValueForQueryDelegate<object>>>();
 
         private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
@@ -72,13 +68,12 @@ namespace Raven.Client.Documents.Conventions
             TransformTypeCollectionNameToDocumentIdPrefix = DefaultTransformCollectionNameToDocumentIdPrefix;
             FindCollectionName = DefaultGetCollectionName;
 
-            FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace(",", "_").Replace(".", "_");
+            FindPropertyNameForIndex = (indexedType, indexedName, path, prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
             FindPropertyNameForDynamicIndex = (indexedType, indexedName, path, prop) => path + prop;
 
             MaxNumberOfRequestsPerSession = 30;
 
             PrettifyGeneratedLinqExpressions = true;
-            MaxLengthOfQueryUsingGetUrl = 1024 + 512;
 
             JsonContractResolver = new DefaultRavenContractResolver();
             CustomizeJsonSerializer = serializer => { };// todo: remove this or merge with SerializeEntityToJsonStream
@@ -102,11 +97,6 @@ namespace Raven.Client.Documents.Conventions
         /// </summary>
         /// <value>The max number of requests per session.</value>
         public int MaxNumberOfRequestsPerSession { get; set; }
-
-        /// <summary>
-        ///     Gets or sets the default max length of a query using the GET method against a server.
-        /// </summary>
-        public int MaxLengthOfQueryUsingGetUrl { get; set; }
 
         /// <summary>
         ///     Whether to allow queries on document id.
@@ -217,6 +207,10 @@ namespace Raven.Client.Documents.Conventions
                     sb.Append("Of")
                         .Append(DefaultGetCollectionName(argument));
                 result = sb.ToString();
+            }
+            else if (t == typeof(object))
+            {
+                result = Constants.Documents.Collections.AllDocumentsCollection;
             }
             else
             {
@@ -362,6 +356,7 @@ namespace Raven.Client.Documents.Conventions
             jsonSerializer.Converters.Add(JsonLuceneDateTimeConverter.Instance);
             jsonSerializer.Converters.Add(JsonObjectConverter.Instance);
             jsonSerializer.Converters.Add(JsonDictionaryDateTimeKeysConverter.Instance);
+            jsonSerializer.Converters.Add(ParametersConverter.Instance);
             jsonSerializer.Converters.Add(JsonLinqEnumerableConverter.Instance);
             // TODO: Iftah
             //var convertersToUse = SaveEnumsAsIntegers ? DefaultConvertersEnumsAsIntegers : DefaultConverters;
@@ -403,43 +398,6 @@ namespace Raven.Client.Documents.Conventions
             return (DocumentConventions)MemberwiseClone();
         }
 
-        public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter, SortOptions defaultSortOption = SortOptions.String, bool usesRangeField = false)
-        {
-            TryConvertValueForQueryDelegate<object> actual = (string name, object value, QueryValueConvertionType convertionType, out string strValue) =>
-            {
-                if (value is T)
-                    return converter(name, (T)value, convertionType, out strValue);
-                strValue = null;
-                return false;
-            };
-
-            int index;
-            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
-            {
-                var entry = _listOfQueryValueConverters[index];
-                if (entry.Item1.IsAssignableFrom(typeof(T)))
-                    break;
-            }
-
-            _listOfQueryValueConverters.Insert(index, Tuple.Create(typeof(T), actual));
-
-            if (defaultSortOption != SortOptions.String)
-                _customDefaultSortOptions.Add(typeof(T).Name, defaultSortOption);
-
-            if (usesRangeField)
-                _customRangeTypes.Add(typeof(T));
-        }
-
-
-        public bool TryConvertValueForQuery(string fieldName, object value, QueryValueConvertionType convertionType, out string strValue)
-        {
-            foreach (var queryValueConverterTuple in _listOfQueryValueConverters
-                .Where(tuple => tuple.Item1.IsInstanceOfType(value)))
-                return queryValueConverterTuple.Item2(fieldName, value, convertionType, out strValue);
-            strValue = null;
-            return false;
-        }
-
         public static RangeType GetRangeType(object o)
         {
             if (o == null)
@@ -462,7 +420,6 @@ namespace Raven.Client.Documents.Conventions
                 return RangeType.Double;
 
             return RangeType.None;
-            //return _customRangeTypes.Contains(type); TODO [ppekrol]
         }
 
         /// <summary>
@@ -516,13 +473,11 @@ namespace Raven.Client.Documents.Conventions
                     _originalConfiguration = new ClientConfiguration
                     {
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        MaxLengthOfQueryUsingGetUrl = MaxLengthOfQueryUsingGetUrl,
                         PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions
                     };
                 }
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
-                MaxLengthOfQueryUsingGetUrl = configuration.MaxLengthOfQueryUsingGetUrl ?? _originalConfiguration.MaxLengthOfQueryUsingGetUrl.Value;
                 PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
             }
         }

@@ -18,6 +18,7 @@ namespace Raven.Client.Documents.Session.Operations
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _indexName;
+        private readonly string _collectionName;
         private readonly IndexQuery _indexQuery;
         private readonly bool _waitForNonStaleResults;
         private readonly bool _metadataOnly;
@@ -32,13 +33,14 @@ namespace Raven.Client.Documents.Session.Operations
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
-        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
+        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, string collectionName, IndexQuery indexQuery,
                               string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
                               HashSet<string> includes, bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _session = session;
             _indexName = indexName;
+            _collectionName = collectionName;
             _indexQuery = indexQuery;
             _waitForNonStaleResults = waitForNonStaleResults;
             _timeout = timeout;
@@ -49,7 +51,6 @@ namespace Raven.Client.Documents.Session.Operations
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
 
-            AssertNotQueryById();
             AssertPageSizeSet();
         }
 
@@ -58,35 +59,12 @@ namespace Raven.Client.Documents.Session.Operations
             _session.IncrementRequestCount();
             LogQuery();
 
-            return new QueryCommand(_session.Conventions, _session.Context, _indexName, _indexQuery, _includes, _metadataOnly, _indexEntriesOnly);
+            return new QueryCommand(_session.Conventions, _session.Context, _indexQuery, _metadataOnly, _indexEntriesOnly);
         }
 
         public void SetResult(QueryResult queryResult)
         {
             EnsureIsAcceptableAndSaveResult(queryResult);
-        }
-
-        private static readonly Regex IdOnly = new Regex(@"^__document_id \s* : \s* ([\w_\-/\\\.]+) \s* $",
-            RegexOptions.Compiled |
-            RegexOptions.IgnorePatternWhitespace);
-
-        private void AssertNotQueryById()
-        {
-            // this applies to dynamic indexes only
-            if (!_indexName.StartsWith("dynamic/", StringComparison.OrdinalIgnoreCase) &&
-                !string.Equals(_indexName, "dynamic", StringComparison.OrdinalIgnoreCase))
-                return;
-
-            var match = IdOnly.Match(_indexQuery.Query);
-            if (match.Success == false)
-                return;
-
-            if (_session.Conventions.AllowQueriesOnId)
-                return;
-
-            var value = match.Groups[1].Value;
-
-            throw new InvalidOperationException("Attempt to query by id only is blocked, you should use call session.Load(\"" + value + "\"); instead of session.Query().Where(x=>x.Id == \"" + value + "\");" + Environment.NewLine + "You can turn this error off by specifying documentStore.Conventions.AllowQueriesOnId = true;, but that is not recommend and provided for backward compatibility reasons only.");
         }
 
         private void AssertPageSizeSet()
@@ -179,6 +157,13 @@ namespace Raven.Client.Documents.Session.Operations
                         ? default(T)
                         : value;
                 }
+
+                if (document.TryGetMember(projectionFields[0], out object inner) == false)
+                        return default(T);
+
+                var innerJson = inner as BlittableJsonReaderObject;
+                if (innerJson != null)
+                    document = innerJson;
             }
 
             var result = (T)session.Conventions.DeserializeEntityFromBlittable(typeof(T), document);
@@ -225,7 +210,5 @@ namespace Raven.Client.Documents.Session.Operations
         }
 
         public IndexQuery IndexQuery => _indexQuery;
-
-        public string IndexName => _indexName;
     }
 }

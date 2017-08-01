@@ -4,8 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
-using System.Text;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.Suggestion
 {
@@ -28,9 +27,9 @@ namespace Raven.Client.Documents.Queries.Suggestion
             MaxSuggestions = DefaultMaxSuggestions;
             Popularity = true;
         }
-       
+
         public string IndexName { get; set; }
-        
+
         /// <summary>
         /// Term is what the user likely entered, and will used as the basis of the suggestions.
         /// </summary>
@@ -64,29 +63,19 @@ namespace Raven.Client.Documents.Queries.Suggestion
         /// </summary>
         public bool Popularity { get; set; }
 
-        protected virtual void CreateRequestUri(StringBuilder uri)
+        public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            uri.Append($"/queries/{Uri.EscapeUriString(IndexName)}?&op=suggest&terms={Term}&field={Field}");
-
-            if (Accuracy.HasValue && (Math.Abs(Accuracy.Value - DefaultAccuracy) >= 0.0001))
-                uri.Append($"&accuracy={Accuracy.Value}");
-            if (Distance.HasValue && Distance.Value != DefaultDistance)
-                uri.Append($"&distance={Enum.GetName(typeof(StringDistanceTypes), Distance.Value)}");
-            if (MaxSuggestions != DefaultMaxSuggestions)
-                uri.Append($"&maxSuggestions={MaxSuggestions}");
-            if (Popularity)
-                uri.Append($"&popular=true");
-        }
-
-        public string GetRequestUri()
-        {
-            if (string.IsNullOrEmpty(IndexName))
-                throw new InvalidOperationException("Index name cannot be null or empty");
-
-            var uri = new StringBuilder();
-            CreateRequestUri(uri);
-
-            return uri.ToString();
+            using (var hasher = new QueryHashCalculator(ctx))
+            {
+                hasher.Write(Popularity);
+                hasher.Write(Accuracy);
+                hasher.Write((int?)Distance);
+                hasher.Write(MaxSuggestions);
+                hasher.Write(Field);
+                hasher.Write(Term);
+                hasher.Write(IndexName);
+                return hasher.GetHash();
+            }
         }
     }
 }

@@ -11,13 +11,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Exceptions;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
-using Raven.Server.Documents.Queries.Suggestions;
-using Raven.Server.Documents.TransactionCommands;
+using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -39,20 +40,20 @@ namespace Raven.Server.Documents.Queries
             _documentsContext = documentsContext;
         }
 
-        public async Task<DocumentQueryResult> ExecuteQuery(string indexName, IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
+        public async Task<DocumentQueryResult> ExecuteQuery(IndexQueryServerSide query, StringValues includes, long? existingResultEtag, OperationCancelToken token)
         {
             DocumentQueryResult result;
             var sw = Stopwatch.StartNew();
-            if (Index.IsDynamicIndex(indexName))
+            if (query.Metadata.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                result = await runner.Execute(indexName, query, existingResultEtag);
+                result = await runner.Execute(query, existingResultEtag);
                 result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
                 return result;
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag();
@@ -65,23 +66,23 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task ExecuteStreamQuery(string indexName, IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
+        public async Task ExecuteStreamQuery(IndexQueryServerSide query, HttpResponse response, BlittableJsonTextWriter writer, OperationCancelToken token)
         {
-            if (Index.IsDynamicIndex(indexName))
+            if (query.Metadata.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
 
-                await runner.ExecuteStream(response, writer, indexName, query).ConfigureAwait(false);
+                await runner.ExecuteStream(response, writer, query).ConfigureAwait(false);
 
                 return;
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.Metadata.IndexName);
 
             await index.StreamQuery(response, writer, query, _documentsContext, token);
         }
 
-        public Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        public Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long? facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
             if (query.FacetSetupDoc != null)
             {
@@ -107,12 +108,15 @@ namespace Raven.Server.Documents.Queries
                 query.Facets = facetSetup.Facets;
             }
 
-            return ExecuteFacetedQuery(indexName, query, facetsEtag.Value, existingResultEtag, token);
+            return ExecuteFacetedQuery(query, facetsEtag.Value, existingResultEtag, token);
         }
 
-        private async Task<FacetedQueryResult> ExecuteFacetedQuery(string indexName, FacetQuery query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
+        private async Task<FacetedQueryResult> ExecuteFacetedQuery(FacetQueryServerSide query, long facetsEtag, long? existingResultEtag, OperationCancelToken token)
         {
-            var index = GetIndex(indexName);
+            if (query.Metadata.IsDynamic)
+                throw new InvalidQueryException("Facet query must be executed against static index.", query.Metadata.QueryText, query.QueryParameters);
+
+            var index = GetIndex(query.Metadata.IndexName);
             if (existingResultEtag.HasValue)
             {
                 var etag = index.GetIndexEtag() ^ facetsEtag;
@@ -134,16 +138,13 @@ namespace Raven.Server.Documents.Queries
             return index.GetTerms(field, fromValue, pageSize, context, token);
         }
 
-        public SuggestionQueryResultServerSide ExecuteSuggestionQuery(string indexName, SuggestionQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
-        {            
+        public SuggestionQueryResultServerSide ExecuteSuggestionQuery(SuggestionQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        {
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
 
             // Check pre-requisites for the query to happen. 
-            
-            if (Index.IsDynamicIndex(indexName))
-                throw new InvalidOperationException("Cannot get suggestions for dynamic indexes, only static indexes with explicitly defined Suggestions are supported");
-                    
+
             if (string.IsNullOrWhiteSpace(query.Term))
                 throw new InvalidOperationException("Suggestions queries require a term.");
 
@@ -154,12 +155,12 @@ namespace Raven.Server.Documents.Queries
 
             // Check definition for the index. 
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.IndexName);
             var indexDefinition = index.GetIndexDefinition();
             if (indexDefinition == null)
                 throw new InvalidOperationException($"Could not find specified index '{this}'.");
 
-            if ( indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
+            if (indexDefinition.Fields.TryGetValue(query.Field, out IndexFieldOptions field) == false)
                 throw new InvalidOperationException($"Index '{this}' does not have a field '{query.Field}'.");
 
             if (field.Suggestions == null)
@@ -182,7 +183,7 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(string indexName, MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
+        public MoreLikeThisQueryResultServerSide ExecuteMoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext context, long? existingResultEtag, OperationCancelToken token)
         {
             if (query == null)
                 throw new ArgumentNullException(nameof(query));
@@ -191,7 +192,7 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("The document id or map group fields are mandatory");
 
             var sw = Stopwatch.StartNew();
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.Metadata.IndexName);
 
             if (existingResultEtag.HasValue)
             {
@@ -207,15 +208,15 @@ namespace Raven.Server.Documents.Queries
             return result;
         }
 
-        public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(string indexName, IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
+        public async Task<IndexEntriesQueryResult> ExecuteIndexEntriesQuery(IndexQueryServerSide query, long? existingResultEtag, OperationCancelToken token)
         {
-            if (Index.IsDynamicIndex(indexName))
+            if (query.Metadata.IsDynamic)
             {
                 var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
-                return await runner.ExecuteIndexEntries(indexName, query, existingResultEtag);
+                return await runner.ExecuteIndexEntries(query, existingResultEtag);
             }
 
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.Metadata.IndexName);
 
             if (existingResultEtag.HasValue)
             {
@@ -227,19 +228,19 @@ namespace Raven.Server.Documents.Queries
             return index.IndexEntries(query, _documentsContext, token);
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(string indexName, IndexQueryServerSide indexQuery)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainDynamicIndexSelection(IndexQueryServerSide query)
         {
-            if (Index.IsDynamicIndex(indexName) == false)
+            if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
             var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
 
-            return runner.ExplainIndexSelection(indexName, indexQuery);
+            return runner.ExplainIndexSelection(query);
         }
 
-        public Task<IOperationResult> ExecuteDeleteQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecuteDeleteQuery(IndexQueryServerSide query, QueryOperationOptions options, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = new DeleteDocumentCommand(key, null, _database);
 
@@ -251,9 +252,9 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        public Task<IOperationResult> ExecutePatchQuery(string indexName, IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(indexName, query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
                 var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
 
@@ -266,11 +267,11 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        private async Task<IOperationResult> ExecuteOperation<T>(string indexName, IndexQueryServerSide query, QueryOperationOptions options,
+        private async Task<IOperationResult> ExecuteOperation<T>(IndexQueryServerSide query, QueryOperationOptions options,
             DocumentsOperationContext context, Action<DeterminateProgress> onProgress, Func<string, bool, BulkOperationCommand<T>> func, OperationCancelToken token)
             where T : TransactionOperationsMerger.MergedTransactionCommand
         {
-            var index = GetIndex(indexName);
+            var index = GetIndex(query.Metadata.IndexName);
 
             if (index.Type.IsMapReduce())
                 throw new InvalidOperationException("Cannot execute bulk operation on Map-Reduce indexes.");
@@ -339,19 +340,19 @@ namespace Raven.Server.Documents.Queries
 
         private static IndexQueryServerSide ConvertToOperationQuery(IndexQueryServerSide query, QueryOperationOptions options)
         {
-            return new IndexQueryServerSide
+            return new IndexQueryServerSide(query.Metadata)
             {
                 Query = query.Query,
                 Start = query.Start,
                 WaitForNonStaleResultsTimeout = options.StaleTimeout,
                 PageSize = int.MaxValue,
-                SortedFields = query.SortedFields,
                 HighlighterPreTags = query.HighlighterPreTags,
                 HighlighterPostTags = query.HighlighterPostTags,
                 HighlightedFields = query.HighlightedFields,
                 HighlighterKeyName = query.HighlighterKeyName,
                 TransformerParameters = query.TransformerParameters,
-                Transformer = query.Transformer
+                Transformer = query.Transformer,
+                QueryParameters = query.QueryParameters
             };
         }
 

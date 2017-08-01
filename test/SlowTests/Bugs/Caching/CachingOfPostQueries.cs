@@ -76,8 +76,6 @@ namespace SlowTests.Bugs.Caching
         {
             using (var store = GetTestStore())
             {
-                var maxLengthOfGetRequest = store.Conventions.MaxLengthOfQueryUsingGetUrl;
-                store.Conventions.MaxLengthOfQueryUsingGetUrl = 10;
                 using (var session = store.OpenSession())
                 {
                     var response = session.Query<Person, PersonsIndex>().FirstOrDefault(x => x.Name != "Jane" && x.Name != "Mika" && x.Name != "Michael" && x.Name != "Samuel");
@@ -87,7 +85,6 @@ namespace SlowTests.Bugs.Caching
                     Assert.Equal(session.Advanced.NumberOfRequests, 2);
                     Assert.Equal(1, session.Advanced.RequestExecutor.Cache.NumberOfItems);
                 }
-                store.Conventions.MaxLengthOfQueryUsingGetUrl = maxLengthOfGetRequest;
             }
         }
 
@@ -148,8 +145,7 @@ namespace SlowTests.Bugs.Caching
                 {
                     await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        Query = "Name:Johnny",
-                        IndexName = "PersonsIndex",
+                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
                         Start = 0,
                         PageSize = 16,
                         Facets = new List<Facet>
@@ -165,8 +161,7 @@ namespace SlowTests.Bugs.Caching
 
                     await session.Advanced.DocumentStore.Operations.SendAsync(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        Query = "Name:Johnny",
-                        IndexName = "PersonsIndex",
+                        Query = "FROM INDEX 'PersonsIndex' WHERE Name = 'Johnny'",
                         Start = 0,
                         PageSize = 16,
                         Facets = new List<Facet>

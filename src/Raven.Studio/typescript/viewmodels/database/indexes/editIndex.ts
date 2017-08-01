@@ -239,7 +239,6 @@ class editIndex extends viewModelBase {
             checkedFieldsArray.push(field.name);
             checkedFieldsArray.push(field.analyzer);
             checkedFieldsArray.push(field.indexing);
-            checkedFieldsArray.push(field.sort);
             checkedFieldsArray.push(field.storage);
             checkedFieldsArray.push(field.suggestions);
             checkedFieldsArray.push(field.termVector);

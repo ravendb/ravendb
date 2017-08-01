@@ -25,13 +25,6 @@ namespace Raven.Client.Documents.Linq
         /// </summary>
         void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
 
-
-        /// <summary>
-        /// Callback to get the results of the stream
-        /// </summary>
-
-        void AfterStreamExecuted(Action<object> afterStreamExecuted);
-
         /// <summary>
         /// Customizes the query using the specified action
         /// </summary>
@@ -99,7 +92,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Set the fields to fetch
         /// </summary>
-        HashSet<string> FieldsToFetch { get; }
+        HashSet<FieldToFetch> FieldsToFetch { get; }
 
         /// <summary>
         /// The result transformer to use
@@ -109,7 +102,7 @@ namespace Raven.Client.Documents.Linq
         /// <summary>
         /// Gets the query inputs being supplied to
         /// </summary>
-        Dictionary<string, object> TransformerParameters { get; }
+        Parameters TransformerParameters { get; }
 
         /// <summary>
         /// Adds input to transformer via a key/value pair
@@ -120,6 +113,6 @@ namespace Raven.Client.Documents.Linq
 
         void AddTransformerParameter(string input, DateTime value);
 
-        Type OriginalQueryType { get; set; }
+        Type OriginalQueryType { get; }
     }
 }

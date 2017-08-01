@@ -1,10 +1,14 @@
+using System;
 using Lucene.Net.Search;
+using Microsoft.AspNetCore.Http;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {
     public class RandomSortField : SortField
     {
-        public RandomSortField(string field) : base(field, INT)
+        private static readonly string DummyValue = "RandomValue-" + Guid.NewGuid();
+
+        public RandomSortField(string field) : base(field ?? DummyValue, INT)
         {
         }
 

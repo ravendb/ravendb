@@ -51,10 +51,12 @@ namespace SlowTests.Tests.Linq
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()
-                                .Where(ar => ar.StringArray.ContainsAny(items) &&
-                                             ar.SomeProperty == "somethingElse")
-                                .ToString();
-                    Assert.Equal("(StringArray:a OR StringArray:b OR StringArray:c) AND SomeProperty:somethingElse", test);
+                        .Where(ar => ar.StringArray.ContainsAny(items) && ar.SomeProperty == "somethingElse");
+
+                    var iq = RavenTestHelper.GetIndexQuery(test);
+                    Assert.Equal("FROM TestDocs WHERE StringArray IN (:p0) AND SomeProperty = :p1", iq.Query);
+                    Assert.Equal(items, iq.QueryParameters["p0"]);
+                    Assert.Equal("somethingElse", iq.QueryParameters["p1"]);
 
                     var results = session.Query<TestDoc>()
                                          .Where(t => t.StringArray.ContainsAny(new[] { "test", "NOTmatch" }))
@@ -84,10 +86,12 @@ namespace SlowTests.Tests.Linq
 
                     var items = new[] { "a", "b", "c" };
                     var test = session.Query<TestDoc>()
-                                .Where(ar => ar.StringArray.ContainsAll(items) &&
-                                             ar.SomeProperty == "somethingElse")
-                                .ToString();
-                    Assert.Equal("(StringArray:a AND StringArray:b AND StringArray:c) AND SomeProperty:somethingElse", test);
+                        .Where(ar => ar.StringArray.ContainsAll(items) && ar.SomeProperty == "somethingElse");
+
+                    var iq = RavenTestHelper.GetIndexQuery(test);
+                    Assert.Equal("FROM TestDocs WHERE StringArray ALL IN (:p0) AND SomeProperty = :p1", iq.Query);
+                    Assert.Equal(items, iq.QueryParameters["p0"]);
+                    Assert.Equal("somethingElse", iq.QueryParameters["p1"]);
 
                     var results = session.Query<TestDoc>()
                                          .Where(t => t.StringArray.ContainsAll(new[] { "test", "doc", "foo" }))

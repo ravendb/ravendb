@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
-using Sparrow.Json.Parsing;
+using System.Net.Http;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands.MultiGet
 {
@@ -21,7 +22,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
         /// </summary>
         public string Query { get; set; }
         
-        public string Method { get; set; }
+        public HttpMethod Method { get; set; }
 
         /// <summary>
         /// Concatenated Url and Query.
@@ -39,11 +40,16 @@ namespace Raven.Client.Documents.Commands.MultiGet
             }
         }
 
-        public DynamicJsonValue Content { get; set; }
+        public IContent Content { get; set; }
 
         public GetRequest()
         {
             Headers = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        }
+
+        public interface IContent
+        {
+            void WriteContent(BlittableJsonTextWriter writer, JsonOperationContext context);
         }
     }
 }

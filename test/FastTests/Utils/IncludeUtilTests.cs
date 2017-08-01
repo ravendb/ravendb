@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Raven.Server.Json;
-using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -88,11 +85,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo", ids);
                 Assert.Equal(new[] { "foobar/1", "foobar/2", "foobar/3", "foobar/4" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,X.Y", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C[].X.Y", ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/2", "ccc/3", "ccc/5" }, ids);
             }
         }
@@ -115,11 +112,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,(abc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].(abc/)", ids);
                 Assert.Equal(new[] { "abc/foo/1", "foo/1",
                     "abc/foo/2", "foo/2",
                     "abc/foo/3", "foo/3",
@@ -131,7 +128,7 @@ namespace FastTests.Utils
                     "abc/foobar/3", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,[{0}/abc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].[{0}/abc]", ids);
                 Assert.Equal(new[] { "foo/1/abc", "foo/1",
                     "foo/2/abc", "foo/2",
                     "foo/3/abc", "foo/3",
@@ -162,11 +159,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo(abc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo(abc/)", ids);
                 Assert.Equal(new[] { "abc/foo/1", "foo/1",
                     "abc/foo/2", "foo/2",
                     "abc/foo/3", "foo/3",
@@ -179,7 +176,7 @@ namespace FastTests.Utils
 
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Foo[{0}/abc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Foo[{0}/abc]", ids);
                 Assert.Equal(new[] { "foo/1/abc", "foo/1",
                     "foo/2/abc", "foo/2",
                     "foo/3/abc", "foo/3",
@@ -210,11 +207,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo(abc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo(abc/)", ids);
                 Assert.Equal(new[] { "abc/foo/1", "foo/1",
                     "abc/foo/2", "foo/2",
                     "abc/foo/3", "foo/3",
@@ -226,7 +223,7 @@ namespace FastTests.Utils
                     "abc/foobar/3", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,,Bar.Foo[{0}/abc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[].Bar.Foo[{0}/abc]", ids);
                 Assert.Equal(new[] { "foo/1/abc", "foo/1",
                     "foo/2/abc", "foo/2",
                     "foo/3/abc", "foo/3",
@@ -266,11 +263,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo(abc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo(abc/)", ids);
                 Assert.Equal(new[] { "abc/foo/1", "foo/1",
                     "abc/foo/2", "foo/2",
                     "abc/foo/3", "foo/3",
@@ -282,7 +279,7 @@ namespace FastTests.Utils
                     "abc/foobar/3", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo,Bar.Foo[{0}/abc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[].Bar.Foo[{0}/abc]", ids);
                 Assert.Equal(new[] { "foo/1/abc", "foo/1",
                     "foo/2/abc", "foo/2",
                     "foo/3/abc", "foo/3",
@@ -331,11 +328,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3", "bar/1", "bar/2", "bar/3", "foobar/1", "foobar/2", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo(abc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo(abc/)", ids);
                 Assert.Equal(new[] { "abc/foo/1", "foo/1",
                     "abc/foo/2", "foo/2",
                     "abc/foo/3", "foo/3",
@@ -347,7 +344,7 @@ namespace FastTests.Utils
                     "abc/foobar/3", "foobar/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,BarX.Foo,Bar.Foo[{0}/abc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].BarX.Foo[].Bar.Foo[{0}/abc]", ids);
                 Assert.Equal(new[] { "foo/1/abc", "foo/1",
                     "foo/2/abc", "foo/2",
                     "foo/3/abc", "foo/3",
@@ -482,7 +479,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C[].A.X.Y", ids);
                 Assert.Equal(new[] { "ccc/1", "ccc/3", "ccc/4", "ccc/5" }, ids);
             }
         }
@@ -558,7 +555,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y(ccc/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C[].A.X.Y(ccc/)", ids);
                 Assert.Equal(new[] { "ccc/1", "1", "ccc/3", "3", "ccc/4", "4", "ccc/5", "5" }, ids);
             }
         }
@@ -633,7 +630,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C,A.X.Y[{0}/ccc]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.C[].A.X.Y[{0}/ccc]", ids);
                 Assert.Equal(new[] { "1/ccc", "1", "3/ccc", "3", "4/ccc", "4", "5/ccc", "5" }, ids);
             }
         }
@@ -650,7 +647,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,(foo/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].(foo/)", ids);
                 Assert.Equal(new[] { "foo/1", "1", "foo/2", "2", "foo/3", "3" }, ids);
             }
         }
@@ -667,7 +664,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,[{0}/foo]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].[{0}/foo]", ids);
                 Assert.Equal(new[] { "1/foo", "1", "2/foo", "2", "3/foo", "3" }, ids);
             }
         }
@@ -702,7 +699,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo(foo/)", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo(foo/)", ids);
                 Assert.Equal(new[] { "foo/11", "11", "foo/2", "2", "foo/3", "3", "foo/4", "4" }, ids);
             }
         }
@@ -737,7 +734,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,Foo[{0}/foo]", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].Foo[{0}/foo]", ids);
                 Assert.Equal(new[] { "11/foo", "11", "2/foo", "2", "3/foo", "3", "4/foo", "4" }, ids);
             }
         }
@@ -754,7 +751,7 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId[].", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -778,11 +775,11 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.Bar.ContactInfoId[].", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "Foo.ContactInfoId2[].", ids);
                 Assert.Equal(new[] { "foo/1", "foo/2", "foo/3" }, ids);
             }
         }
@@ -801,15 +798,15 @@ namespace FastTests.Utils
             using (var reader = context.ReadObject(obj, "foo"))
             {
                 var ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId1[].", ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId2[].", ids);
                 Assert.Equal(new object[] { "1.1", "2.2", "3.3" }, ids);
 
                 ids.Clear();
-                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3,", ids);
+                IncludeUtil.GetDocIdFromInclude(reader, "ContactInfoId3[].", ids);
                 Assert.Equal(new object[] { "1", "2", "3" }, ids);
             }
         }

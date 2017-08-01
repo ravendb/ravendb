@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session
         ///		<param name="fieldName">Name of the field.</param>
         ///		<param name="descending">if set to <c>true</c> [descending].</param>
         /// </summary>
-        IDocumentQueryCustomization AddOrder(string fieldName, bool descending = false);
+        IDocumentQueryCustomization AddOrder(string fieldName, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Adds an ordering for a specific field to the query
@@ -110,22 +110,7 @@ namespace Raven.Client.Documents.Session
         ///		<param name="propertySelector">Property selector for the field.</param>
         ///		<param name="descending">if set to <c>true</c> [descending].</param>
         /// </summary>
-        IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<param name="fieldName">The order by field name.</param>
-        ///		<param name="descending">Should be ordered by descending.</param>
-        /// </summary>
-        IDocumentQueryCustomization AlphaNumericOrdering(string fieldName, bool descending = false);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
-        ///		<param name="propertySelector">Property selector for the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        IDocumentQueryCustomization AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
+        IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the search results randomly

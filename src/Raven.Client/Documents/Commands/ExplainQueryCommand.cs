@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Net.Http;
+using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
@@ -18,48 +20,36 @@ namespace Raven.Client.Documents.Commands
 
         private readonly DocumentConventions _conventions;
         private readonly JsonOperationContext _context;
-        private readonly string _indexName;
         private readonly IndexQuery _indexQuery;
 
-        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery)
+        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery)
         {
-            if (indexQuery == null)
-                throw new ArgumentNullException(nameof(indexQuery));
-
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _context = context ?? throw new ArgumentNullException(nameof(context));
-            _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
-            _indexQuery = indexQuery;
+            _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
         }
 
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            var method = _indexQuery.Query == null || _indexQuery.Query.Length <= _conventions.MaxLengthOfQueryUsingGetUrl
-                ? HttpMethod.Get
-                : HttpMethod.Post;
+            var path = new StringBuilder(node.Url)
+                .Append("/databases/")
+                .Append(node.Database)
+                .Append("/queries?debug=explain");
 
             var request = new HttpRequestMessage
             {
-                Method = method
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(stream =>
+                    {
+                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        {
+                            writer.WriteIndexQuery(_conventions, _context, _indexQuery);
+                        }
+                    }
+                )
             };
 
-            if (method == HttpMethod.Post)
-            {
-                request.Content = new BlittableJsonContent(stream =>
-                {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
-                    {
-                        writer.WriteStartObject();
-                        writer.WritePropertyName("Query");
-                        writer.WriteString(_indexQuery.Query);
-                        writer.WriteEndObject();
-                    }
-                });
-            }
-
-            var indexQueryUrl = $"{_indexQuery.GetIndexQueryUrl(_indexName, "queries", includeQuery: method == HttpMethod.Get)}&debug=explain";
-            url = $"{node.Url}/databases/{node.Database}/" + indexQueryUrl;
-
+            url = path.ToString();
             return request;
         }
 

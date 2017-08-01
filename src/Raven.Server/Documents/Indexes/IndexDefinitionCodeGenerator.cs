@@ -172,9 +172,6 @@ namespace Raven.Server.Documents.Indexes
         private static IEnumerable<SyntaxNodeOrToken> InnerParsingIndexDefinitionFieldsToRoslyn(IndexFieldOptions options)
         {
             var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
-            if (options.Sort != null)
-                syntaxNodeOrToken.Add(ParseEnum(options.Sort, nameof(options.Sort)));
-
             if (options.Indexing != null)
             {
                 addCommaTokenIfNecessary(syntaxNodeOrToken);

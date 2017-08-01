@@ -19,16 +19,7 @@ namespace SlowTests.Tests.Queries
     public class IntersectionQuery : RavenTestBase
     {
         [Fact]
-        public void CanPerformIntersectionQuery_Remotely()
-        {
-            using (var store = GetDocumentStore())
-            {
-                ExecuteTest(store);
-            }
-        }
-
-        [Fact]
-        public void CanPerformIntersectionQuery_Embedded()
+        public void CanPerformIntersectionQuery()
         {
             using (var store = GetDocumentStore())
             {
@@ -69,7 +60,15 @@ namespace SlowTests.Tests.Queries
             {
                 //This should be BarCodeNumber = -999, 10001
                 var resultPage1 = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
-                    .Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
+                    .WhereEquals("Name", "Wolf")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Blue")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Small")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Gray")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Large")
                     .OrderBy("BarcodeNumber")
                     .Take(2)
                     .ToList();
@@ -82,9 +81,17 @@ namespace SlowTests.Tests.Queries
                 }
                 Assert.Equal(new[] { -999, 10001 }, resultPage1.Select(r => r.BarcodeNumber));
 
-                //This should be BarCodeNumber = 10001, 10002 (i.e. it spans pages 1 & 2)
+                //This should be BarCodeNumber = 10001, 10002(i.e.it spans pages 1 & 2)
                 var resultPage1a = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
-                    .Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
+                    .WhereEquals("Name", "Wolf")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Blue")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Small")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Gray")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Large")
                     .OrderBy("BarcodeNumber")
                     .Skip(1)
                     .Take(2)
@@ -100,7 +107,16 @@ namespace SlowTests.Tests.Queries
 
                 //This should be BarCodeNumber = 10002, 10003, 10004, 10006 (But NOT 10005
                 var resultPage2 = s.Advanced.DocumentQuery<TShirt>("TShirtNested")
-                    .Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
+                    //.Where("Name:Wolf INTERSECT Types_Color:Blue AND Types_Size:Small INTERSECT Types_Color:Gray AND Types_Size:Large")
+                    .WhereEquals("Name", "Wolf")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Blue")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Small")
+                    .Intersect()
+                    .WhereEquals("Types_Color", "Gray")
+                    .AndAlso()
+                    .WhereEquals("Types_Size", "Large")
                     .OrderBy("BarcodeNumber")
                     .Skip(2)
                     .Take(10) //we should only get 4 here, want to test a page size larger than what is possible!!!!!
@@ -132,7 +148,7 @@ namespace SlowTests.Tests.Queries
                                                     },
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                     {
-                                                        { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.Numeric } }
+                                                        { "BarcodeNumber", new IndexFieldOptions { } }
                                                     }
                                                 }}));
 

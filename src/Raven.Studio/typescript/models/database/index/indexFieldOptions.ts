@@ -13,19 +13,6 @@ function yesNoLabelProvider(arg: boolean) {
 class indexFieldOptions {
 
     static readonly DefaultFieldOptions = "__all_fields";
-    static readonly SortOptions: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.SortOptions, string>> = [{
-            label: "None",
-            value: "None"
-        }, {
-            label: "Numeric",
-            value: "Numeric"
-        }, {
-            label: "String", 
-            value: "String"
-        }, {
-            label: "StringVal",
-            value: "StringVal"
-        }];
 
     static readonly TermVectors: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldTermVector, string>> = [{
             label: "No",
@@ -69,10 +56,6 @@ class indexFieldOptions {
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
     defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
 
-    sort = ko.observable<Raven.Client.Documents.Indexes.SortOptions>();
-    effectiveSort = this.effectiveComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
-    defaultSort = this.defaultComputed(x => x.sort(), labelMatcher(indexFieldOptions.SortOptions));
-
     storage = ko.observable<Raven.Client.Documents.Indexes.FieldStorage>();
     effectiveStorage = this.effectiveComputed(x => x.storage());
     defaultStorage = this.defaultComputed(x => x.storage());
@@ -102,7 +85,6 @@ class indexFieldOptions {
         this.parent(parentFields);
         this.analyzer(dto.Analyzer);
         this.indexing(dto.Indexing);
-        this.sort(dto.Sort);
         this.storage(dto.Storage);
         this.suggestions(dto.Suggestions);
         this.termVector(dto.TermVector);
@@ -203,7 +185,6 @@ class indexFieldOptions {
         const field = new indexFieldOptions("", {
             Storage: "No",
             Indexing: "Default",
-            Sort: "None",
             Analyzer: "StandardAnalyzer",
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
@@ -238,7 +219,6 @@ class indexFieldOptions {
         return {
             Analyzer: this.analyzer(),
             Indexing: this.indexing(),
-            Sort: this.sort(),
             Storage: this.storage(),
             Suggestions: this.suggestions(),
             TermVector: this.termVector(),

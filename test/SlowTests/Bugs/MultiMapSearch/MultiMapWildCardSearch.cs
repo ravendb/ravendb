@@ -42,8 +42,8 @@ namespace SlowTests.Bugs.MultiMapSearch
                         .Query<AccountSearch.ReduceResult, AccountSearch>()
                         .Statistics(out statistics)
                         .Where(x => x.PortalId == portalId)
-                        .Search(x => x.Query, "*", 1, SearchOptions.And, EscapeQueryOptions.AllowPostfixWildcard)
-                        .Search(x => x.QueryBoosted, "*", 1, SearchOptions.Or, EscapeQueryOptions.AllowPostfixWildcard)
+                        .Search(x => x.Query, "*", 1, SearchOptions.And)
+                        .Search(x => x.QueryBoosted, "*", 1, SearchOptions.Or)
                         .Customize(x => x.WaitForNonStaleResults());
 
                     var result = query

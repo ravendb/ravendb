@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
                     // Using "== Rogério" works fine
                     var results1 = session.Query<Customer, CustomerByName>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name == "Rogério");
+                        .Search(x => x.Name, "Rogério");
 
                     Assert.Equal(results1.Count<Customer>(), 4);
                 }
@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
                     // Using ".StartsWith("Rogério")" is expected to bring same result from test1, but fails
                     var results2 = session.Query<Customer, CustomerByName>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .Where(x => x.Name.StartsWith("Rogério"));
+                        .Search(x => x.Name, "Rogério*");
 
                     Assert.Equal(results2.Count<Customer>(), 4);
                 }

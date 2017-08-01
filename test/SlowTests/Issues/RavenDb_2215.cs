@@ -40,8 +40,6 @@ namespace SlowTests.Issues
                                    sale.Val,
                                };
 
-                Sort(x => x.Nett, SortOptions.Numeric);
-                Sort(x => x.Val, SortOptions.Numeric);
                 Store(x => x.Nett, FieldStorage.Yes);
             }
         }

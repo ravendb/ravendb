@@ -38,6 +38,7 @@ class index {
     badgeText: KnockoutComputed<string>;
     editUrl: KnockoutComputed<string>;
     queryUrl: KnockoutComputed<string>;
+    termsUrl: KnockoutComputed<string>;
 
     isNormalPriority: KnockoutComputed<boolean>;
     isLowPriority: KnockoutComputed<boolean>;
@@ -108,6 +109,7 @@ class index {
     private initializeObservables() {
         const urls = appUrl.forCurrentDatabase();
         this.queryUrl = urls.query(this.name);
+        this.termsUrl = urls.terms(this.name);
         this.editUrl = urls.editIndex(this.name);
 
         this.isNormalPriority = ko.pureComputed(() => this.priority() === "Normal");

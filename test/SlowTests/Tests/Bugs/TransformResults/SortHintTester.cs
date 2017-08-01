@@ -43,7 +43,7 @@ namespace SlowTests.Tests.Bugs.TransformResults
                     {
                         answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                             .Statistics(out stats)
-                            .Where(x => x.Content == (content))
+                            .Search(x => x.Content, content)
                             .OrderBy(x => x.Content)
                             .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                             .Skip(0).Take(1)

@@ -7,6 +7,7 @@ using System.Threading;
 using Sparrow.Logging;
 using Lucene.Net.Search;
 using Lucene.Net.Store;
+using Raven.Server.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;
 using Voron.Impl;
@@ -36,7 +37,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             Cleanup(asOfTx.LowLevelTransaction.Environment.PossibleOldestReadTransaction(asOfTx.LowLevelTransaction));
         }
-        
+
         public IDisposable GetSearcher(Transaction tx, IState state, out IndexSearcher searcher)
         {
             var indexSearcherHoldingState = GetStateHolder(tx);
@@ -79,7 +80,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_states.Count == 1)
                 return;
-            
+
             // let's mark states which are no longer needed as ready for disposal
 
             for (var i = _states.Count - 1; i >= 1; i--)
@@ -116,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public volatile bool ShouldDispose;
             public int Usage;
             public readonly long AsOfTxId;
-           
+
             public IndexSearcherHoldingState(Transaction tx, Func<IState, IndexSearcher> recreateSearcher, string dbName)
             {
                 _recreateSearcher = recreateSearcher;
@@ -169,7 +170,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 GC.SuppressFinalize(this);
             }
 
-            public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, string[] fields, JsonOperationContext context, IState state)
+            public StringCollectionValue GetFieldsValues(int docId, uint fieldsHash, SelectField[] fields, JsonOperationContext context, IState state)
             {
                 var key = Tuple.Create(docId, fieldsHash);
 
@@ -180,7 +181,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var doc = _indexSearcher.Doc(docId, state);
                     return new StringCollectionValue((from field in fields
-                                                      from fld in doc.GetFields(field)
+                                                      from fld in doc.GetFields(field.Name)
                                                       where fld.StringValue(state) != null
                                                       select fld.StringValue(state)).ToList(), context);
                 });
@@ -227,9 +228,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     fixed (char* p = value)
                     {
-                        _hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char)*value.Length, _hash);
+                        _hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * value.Length, _hash);
                     }
-                    _hashCode = _hashCode*397 ^ value.GetHashCode();
+                    _hashCode = _hashCode * 397 ^ value.GetHashCode();
                 }
             }
 

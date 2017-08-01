@@ -49,43 +49,19 @@ namespace Raven.Server.Documents.Queries.Faceted
             return rangeType;
         }
 
-        public static string GetRangeName(string field, string text, Dictionary<string, IndexField> fields)
+        public static string GetRangeName(string field, string text)
         {
-            var sortOptions = GetSortOptionsForFacet(field, fields);
-            switch (sortOptions)
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
+            switch (rangeType)
             {
-                case SortOptions.None:
-                case SortOptions.String:
-                case SortOptions.StringVal:
-                    //case SortOptions.Custom: // TODO [arek]
-                    return text;
-                case SortOptions.Numeric:
-                    if (IsStringNumber(text))
-                        return text;
-
-                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(field);
-                    if (rangeType == RangeType.Long)
-                        return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
-
+                case RangeType.Long:
+                    return NumericUtils.PrefixCodedToLong(text).ToInvariantString();
+                case RangeType.Double:
                     return NumericUtils.PrefixCodedToDouble(text).ToInvariantString();
                 default:
-                    throw new ArgumentException($"Can't get range name from '{sortOptions}' sort option for '{field}' field.");
+                    return text;
             }
-        }
 
-        public static SortOptions GetSortOptionsForFacet(string field, Dictionary<string, IndexField> fields)
-        {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
-            if (fields.TryGetValue(field, out IndexField value) == false || value.Sort.HasValue == false)
-                return SortOptions.None;
-
-            return value.Sort.Value;
-        }
-
-        public static bool IsStringNumber(string value)
-        {
-            return string.IsNullOrEmpty(value) == false && char.IsDigit(value[0]);
         }
     }
 }

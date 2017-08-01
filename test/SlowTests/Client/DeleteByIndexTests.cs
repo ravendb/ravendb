@@ -38,7 +38,7 @@ namespace SlowTests.Client
                     indexName = stats.IndexName;
                 }
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
@@ -72,7 +72,7 @@ namespace SlowTests.Client
                     indexName = stats.IndexName;
                 }
 
-                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(indexName, new IndexQuery(), new QueryOperationOptions { AllowStale = false }));
+                var operation = await store.Operations.SendAsync(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 

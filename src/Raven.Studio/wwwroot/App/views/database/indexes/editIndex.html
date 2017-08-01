@@ -326,20 +326,6 @@
             </div>
             <div class="col-xs-12 col-sm-12 col-xl-7">
                 <div class="properties-container">
-                    <div class="properties-item">
-                        <span class="properties-label">Sort</span>
-                        <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false" data-bind="attr: { title: effectiveSort }">
-                                <span data-bind="text: effectiveSort"></span> <span class="caret"></span>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a href="#" data-bind="click: sort.bind(sort, null)"><span data-bind="text: defaultSort"></span></a></li>
-                                <!-- ko foreach: $data.constructor.SortOptions -->
-                                <li><a href="#" data-bind="click: $parent.sort.bind($parent.sort, value)"><span data-bind="text: label"></span></a></li>
-                                <!-- /ko -->
-                            </ul>
-                        </div>
-                    </div>
 
                     <div class="properties-item">
                         <span class="properties-label">Store</span>

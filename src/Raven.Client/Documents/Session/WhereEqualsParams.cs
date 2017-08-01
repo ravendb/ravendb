@@ -12,7 +12,6 @@ namespace Raven.Client.Documents.Session
         {
             IsNestedPath = false;
             AllowWildcards = false;
-            IsAnalyzed = true;
         }
 
         /// <summary>
@@ -26,11 +25,6 @@ namespace Raven.Client.Documents.Session
         public object Value { get; set; }
 
         /// <summary>
-        /// Should the field be analyzed
-        /// </summary>
-        public bool IsAnalyzed { get; set; }
-
-        /// <summary>
         /// Should the field allow wildcards
         /// </summary>
         public bool AllowWildcards { get; set; }
@@ -39,5 +33,7 @@ namespace Raven.Client.Documents.Session
         /// Is this a root property or not?
         /// </summary>
         public bool IsNestedPath { get; set; }
+        
+        public bool Exact { get; set; }
     }
 }

@@ -48,7 +48,6 @@ namespace SlowTests.Issues
                                         r.CityName,
                                     };
 
-                Sort(r => r.Index, SortOptions.Numeric);
             }
 
             public sealed class Result

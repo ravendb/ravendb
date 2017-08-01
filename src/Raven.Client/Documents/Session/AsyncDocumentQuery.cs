@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -14,6 +13,7 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
@@ -28,16 +28,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Initializes a new instance of the <see cref="AsyncDocumentQuery{T}"/> class.
         /// </summary>
-        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string[] fieldsToFetch, string[] projectionFields, bool isMapReduce)
-            : base(session, indexName, fieldsToFetch, projectionFields, isMapReduce)
-        {
-        }
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="AbstractDocumentQuery{T,TSelf}"/> class.
-        /// </summary>
-        public AsyncDocumentQuery(AsyncDocumentQuery<T> other)
-            : base(other)
+        public AsyncDocumentQuery(InMemoryDocumentSessionOperations session, string indexName, string collectionName, bool isGroupBy)
+            : base(session, indexName, collectionName, isGroupBy)
         {
         }
 
@@ -99,62 +91,32 @@ namespace Raven.Client.Documents.Session
         /// Filter the results from the index using the specified where clause.
         /// </summary>
         /// <param name="whereClause">The where clause.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Where(string whereClause)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLucene(string fieldName, string whereClause)
         {
-            Where(whereClause);
+            WhereLucene(fieldName, whereClause);
             return this;
         }
 
         /// <summary>
-        /// 	Matches exact value
+        /// 	Matches value
         /// </summary>
-        /// <remarks>
-        /// 	Defaults to NotAnalyzed
-        /// </remarks>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool exact = false)
         {
-            WhereEquals(fieldName, value);
+            WhereEquals(fieldName, value, exact);
             return this;
         }
 
         /// <summary>
-        ///   Matches exact value
+        ///   Matches value
         /// </summary>
-        /// <remarks>
-        ///   Defaults to NotAnalyzed
-        /// </remarks>
-        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value);
+            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
         /// <summary>
-        /// 	Matches exact value
-        /// </summary>
-        /// <remarks>
-        /// 	Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(string fieldName, object value, bool isAnalyzed)
-        {
-            WhereEquals(fieldName, value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        ///   Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///   Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed)
-        {
-            WhereEquals(GetMemberQueryPath(propertySelector.Body), value, isAnalyzed);
-            return this;
-        }
-
-        /// <summary>
-        /// Matches exact value
+        /// Matches value
         /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
@@ -165,18 +127,18 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereIn(string fieldName, IEnumerable<object> values, bool exact = false)
         {
-            WhereIn(fieldName, values);
+            WhereIn(fieldName, values, exact);
             return this;
         }
 
         /// <summary>
         /// Check that the field has one of the specified value
         /// </summary>
-        public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values)
+        public IAsyncDocumentQuery<T> WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false)
         {
-            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>());
+            WhereIn(GetMemberQueryPath(propertySelector.Body), values.Cast<object>(), exact);
             return this;
         }
 
@@ -230,9 +192,9 @@ namespace Raven.Client.Documents.Session
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetween(string fieldName, object start, object end, bool exact = false)
         {
-            WhereBetween(fieldName, start, end);
+            WhereBetween(fieldName, start, end, exact);
             return this;
         }
 
@@ -242,33 +204,9 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "start">The start.</param>
         /// <param name = "end">The end.</param>
-        public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
+        public IAsyncDocumentQuery<T> WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false)
         {
-            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end);
-            return this;
-        }
-
-        /// <summary>
-        /// Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereBetweenOrEqual(string fieldName, object start, object end)
-        {
-            WhereBetweenOrEqual(fieldName, start, end);
-            return this;
-        }
-
-        /// <summary>
-        ///   Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name = "propertySelector">Property selector for the field.</param>
-        /// <param name = "start">The start.</param>
-        /// <param name = "end">The end.</param>
-        public IAsyncDocumentQuery<T> WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end)
-        {
-            WhereBetweenOrEqual(GetMemberQueryPath(propertySelector.Body), start, end);
+            WhereBetween(GetMemberQueryPath(propertySelector.Body), start, end, exact);
             return this;
         }
 
@@ -277,9 +215,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThan(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThan(fieldName, value);
+            WhereGreaterThan(fieldName, value, exact);
             return this;
         }
 
@@ -288,9 +226,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -299,9 +237,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(fieldName, value);
+            WhereGreaterThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -310,9 +248,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereGreaterThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -321,9 +259,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThan(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThan(string fieldName, object value, bool exact = false)
         {
-            WhereLessThan(fieldName, value);
+            WhereLessThan(fieldName, value, exact);
             return this;
         }
 
@@ -332,9 +270,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThan(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
         }
 
@@ -343,9 +281,9 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereLessThanOrEqual(string fieldName, object value, bool exact = false)
         {
-            WhereLessThanOrEqual(fieldName, value);
+            WhereLessThanOrEqual(fieldName, value, exact);
             return this;
         }
 
@@ -354,9 +292,25 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "value">The value.</param>
-        public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value)
+        public IAsyncDocumentQuery<T> WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
         {
-            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value);
+            WhereLessThanOrEqual(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name = "propertySelector">Property selector for the field.</param>
+        public IAsyncDocumentQuery<T> WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector)
+        {
+            WhereExists(GetMemberQueryPath(propertySelector.Body));
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereExists(string fieldName)
+        {
+            WhereExists(fieldName);
             return this;
         }
 
@@ -418,19 +372,6 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Proximity(int proximity)
         {
             Proximity(proximity);
-            return this;
-        }
-
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering(string fieldName, bool descending)
-        {
-            AlphaNumericOrdering(fieldName, descending);
-            return this;
-        }
-
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending)
-        {
-            var fieldName = GetMemberQueryPath(propertySelector);
-            AlphaNumericOrdering(fieldName, descending);
             return this;
         }
 
@@ -515,7 +456,13 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TResult>(Transformer);
+        }
+
+        IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
+        {
+            GroupBy(fieldName, fieldNames);
+            return new AsyncGroupByDocumentQuery<T>(this);
         }
 
         /// <summary>
@@ -524,9 +471,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(params string[] fields)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderBy(string field, OrderingType ordering)
         {
-            OrderBy(fields);
+            OrderBy(field, ordering);
             return this;
         }
 
@@ -538,7 +485,11 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IAsyncDocumentQuery<T> OrderBy<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderBy(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
+            }
+
             return this;
         }
 
@@ -548,9 +499,9 @@ namespace Raven.Client.Documents.Session
         /// You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
         /// <param name="fields">The fields.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(params string[] fields)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDescending(string field, OrderingType ordering)
         {
-            OrderByDescending(fields);
+            OrderByDescending(field, ordering);
             return this;
         }
 
@@ -562,7 +513,11 @@ namespace Raven.Client.Documents.Session
         /// <param name = "propertySelectors">Property selectors for the fields.</param>
         public IAsyncDocumentQuery<T> OrderByDescending<TValue>(params Expression<Func<T, TValue>>[] propertySelectors)
         {
-            OrderByDescending(propertySelectors.Select(GetMemberQueryPathForOrderBy).ToArray());
+            foreach (var item in propertySelectors)
+            {
+                OrderByDescending(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
+            }
+
             return this;
         }
 
@@ -724,7 +679,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields, projections);
+            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -738,7 +693,7 @@ namespace Raven.Client.Documents.Session
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        public IAsyncDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> parameters)
+        public IAsyncDocumentQuery<T> SetTransformerParameters(Parameters parameters)
         {
             TransformerParameters = parameters;
             return this;
@@ -756,7 +711,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
 
             return ((AsyncDocumentSession)TheSession).AddLazyCountOperation(lazyQueryOperation, token);
         }
@@ -766,27 +721,28 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending)
+        /// <param name="ordering">Ordering type.</param>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending);
+            AddOrder(fieldName, descending, ordering);
             return this;
         }
 
         /// <summary>
         /// Adds an ordering by score for a specific field to the query
         /// </summary>
-        public IAsyncDocumentQuery<T> OrderByScore()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
+            OrderByScore();
             return this;
         }
 
         /// <summary>
         /// Adds an ordering by score descending for a specific field to the query
         /// </summary>
-        public IAsyncDocumentQuery<T> OrderByScoreDescending()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
+            OrderByScoreDescending();
             return this;
         }
 
@@ -795,7 +751,8 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name = "propertySelector">Property selector for the field.</param>
         /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending)
+        /// <param name = "ordering">Ordering type.</param>
+        public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
             AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
             return this;
@@ -815,9 +772,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.Search(string fieldName, string searchTerms)
         {
-            Search(fieldName, searchTerms, escapeQueryOptions);
+            Search(fieldName, searchTerms);
             return this;
         }
 
@@ -825,9 +782,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery)
+        public IAsyncDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
         {
-            Search(GetMemberQueryPath(propertySelector.Body), searchTerms, escapeQueryOptions);
+            Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
             return this;
         }
 
@@ -896,12 +853,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultField(string field)
-        {
-            UsingDefaultField(field);
-            return this;
-        }
-
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.UsingDefaultOperator(QueryOperator queryOperator)
         {
             UsingDefaultOperator(queryOperator);
@@ -957,15 +908,15 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
         {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName, FieldsToFetch, ProjectionFields);
+            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
         }
 
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
-            var command = new GetFacetsCommand(TheSession.Context, query);
+            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -974,9 +925,9 @@ namespace Raven.Client.Documents.Session
         public async Task<FacetedQueryResult> GetFacetsAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
 
-            var command = new GetFacetsCommand(TheSession.Context, query);
+            var command = new GetFacetsCommand(Conventions, TheSession.Context, query);
             await TheSession.RequestExecutor.ExecuteAsync(command, TheSession.Context, token).ConfigureAwait(false);
 
             return command.Result;
@@ -985,18 +936,18 @@ namespace Raven.Client.Documents.Session
         public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, facetStart, facetPageSize, Conventions);
 
-            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
         }
 
         public Lazy<Task<FacetedQueryResult>> GetFacetsLazyAsync(List<Facet> facets, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
         {
             var q = GetIndexQuery();
-            var query = FacetQuery.Create(IndexName, q, null, facets, facetStart, facetPageSize, Conventions);
+            var query = FacetQuery.Create(q, null, facets, facetStart, facetPageSize, Conventions);
 
-            var lazyFacetsOperation = new LazyFacetsOperation(query);
+            var lazyFacetsOperation = new LazyFacetsOperation(Conventions, query);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation<FacetedQueryResult>(lazyFacetsOperation, null, token);
         }
 
@@ -1055,7 +1006,7 @@ namespace Raven.Client.Documents.Session
                 QueryOperation = InitializeQueryOperation();
             }
 
-            var lazyQueryOperation = new LazyQueryOperation<T>(QueryOperation, AfterQueryExecutedCallback);
+            var lazyQueryOperation = new LazyQueryOperation<T>(TheSession.Conventions, QueryOperation, AfterQueryExecutedCallback);
             return ((AsyncDocumentSession)TheSession).AddLazyOperation(lazyQueryOperation, onEval);
         }
 
@@ -1112,26 +1063,30 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, string[] fieldsToFetch, string[] projectionFields)
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
         {
-            var asyncDocumentQuery = new AsyncDocumentQuery<TResult>(
+            if (newFieldsToFetch != null)
+                UpdateFieldsToFetchToken(newFieldsToFetch);
+
+            var query = new AsyncDocumentQuery<TResult>(
                 TheSession,
                 IndexName,
-                fieldsToFetch,
-                projectionFields,
-                IsMapReduce)
+                CollectionName,
+                IsGroupBy)
             {
                 PageSize = PageSize,
-                QueryText = new StringBuilder(QueryText.ToString()),
+                SelectTokens = SelectTokens,
+                FieldsToFetchToken = FieldsToFetchToken,
+                WhereTokens = WhereTokens,
+                OrderByTokens = OrderByTokens,
+                GroupByTokens = GroupByTokens,
+                QueryParameters = QueryParameters,
                 Start = Start,
                 Timeout = Timeout,
                 CutoffEtag = CutoffEtag,
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                OrderByFields = OrderByFields,
-                DynamicMapReduceFields = DynamicMapReduceFields,
-                _isDistinct = _isDistinct,
                 AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
@@ -1143,7 +1098,6 @@ namespace Raven.Client.Documents.Session
                 SpatialUnits = SpatialUnits,
                 DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
-                DefaultField = DefaultField,
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
@@ -1156,10 +1110,12 @@ namespace Raven.Client.Documents.Session
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,
                 LastEquality = LastEquality,
-                ShouldExplainScores = ShouldExplainScores
+                ShouldExplainScores = ShouldExplainScores,
+                IsIntersect = IsIntersect
             };
-            asyncDocumentQuery.AfterQueryExecuted(AfterQueryExecutedCallback);
-            return asyncDocumentQuery;
+
+            query.AfterQueryExecuted(AfterQueryExecutedCallback);
+            return query;
         }
     }
 }

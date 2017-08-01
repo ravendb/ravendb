@@ -60,10 +60,6 @@ namespace Raven.Client.Documents.Queries.Spatial
             WaitForNonStaleResultsAsOfNow = query.WaitForNonStaleResultsAsOfNow;
             CutoffEtag = query.CutoffEtag;
             PageSize = query.PageSize;
-            FieldsToFetch = query.FieldsToFetch;
-            DefaultField = query.DefaultField; // keep?
-            DefaultOperator = query.DefaultOperator;
-            SortedFields = query.SortedFields;
             HighlightedFields = query.HighlightedFields;
             HighlighterPreTags = query.HighlighterPreTags;
             HighlighterPostTags = query.HighlighterPostTags;
@@ -71,10 +67,8 @@ namespace Raven.Client.Documents.Queries.Spatial
             Transformer = query.Transformer;
             TransformerParameters = query.TransformerParameters;
             ExplainScores = query.ExplainScores;
-            IsDistinct = query.IsDistinct;
             AllowMultipleIndexEntriesForSameDocumentToResultTransformer =
                 query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
-
         }
 
         /// <summary>

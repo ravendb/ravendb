@@ -149,11 +149,7 @@ namespace Raven.Client
                     private Fields()
                     {
                     }
-
-                    public const string AlphaNumericFieldName = "__alphaNumeric";
-
-                    public const string RandomFieldName = "__random";
-
+                    
                     public const string CustomSortFieldName = "__customSort";
 
                     public const string DocumentIdFieldName = "__document_id";
@@ -172,8 +168,6 @@ namespace Raven.Client
 
                     public const string DistanceFieldName = "__distance";
 
-                    public const string IndexFieldScoreName = "__field_score";
-
                     internal const string RangeFieldSuffix = "_Range";
 
                     public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
@@ -181,10 +175,6 @@ namespace Raven.Client
                     public const string RangeFieldSuffixDouble = "_D" + RangeFieldSuffix;
 
                     public const string IgnoredDynamicField = "__ignored";
-
-                    public const string NullValueNotAnalyzed = "[[NULL_VALUE]]";
-
-                    public const string EmptyStringNotAnalyzed = "[[EMPTY_STRING]]";
 
                     public const string NullValue = "NULL_VALUE";
 
@@ -215,8 +205,6 @@ namespace Raven.Client
                 private Querying()
                 {
                 }
-
-                public const string IntersectSeparator = " INTERSECT ";
             }
 
             public class Encryption

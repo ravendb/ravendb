@@ -9,7 +9,7 @@ class patchByQueryCommand extends commandBase {
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.queries.queries$ + this.indexName;
+        const url = endpoints.databases.queries.queries + this.indexName;
         const urlParams = "?query=" + encodeURIComponent(this.queryStr) + "&allowStale=true";
         return this.patch(url + urlParams, JSON.stringify(this.patchRequest), this.db)
             .done((response: operationIdDto) => {

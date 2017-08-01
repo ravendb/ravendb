@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -19,195 +18,283 @@ namespace SlowTests.Tests.Querying
         [Fact]
         public void CanUnderstandSimpleEquality()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereEquals("Name", "ayende", false);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereEquals("Name", "ayende", exact: true);
 
-            Assert.Equal("Name:[[ayende]]", q.ToString());
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
+            Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandSimpleEqualityWithVariable()
         {
             var ayende = "ayende" + 1;
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereEquals("Name", ayende, false);
-            Assert.Equal("Name:[[ayende1]]", q.ToString());
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereEquals("Name", ayende, exact: true);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
+            Assert.Equal("ayende1", query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandSimpleContains()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", new[] { "ayende" });
-            Assert.Equal("@in<Name>:(ayende)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] { "ayende" }, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandParamArrayContains()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", new[] { "ryan", "heath" });
-            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandArrayContains()
         {
             var array = new[] { "ryan", "heath" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandArrayContainsWithPhrase()
         {
             var array = new[] { "ryan", "heath here" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(ryan , \"heath here\")", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] { "ryan", "heath here" }, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandArrayContainsWithOneElement()
         {
             var array = new[] { "ryan" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@in<Name>:(ryan)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object [] {"ryan"}, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandArrayContainsWithZeroElements()
         {
             var array = new string[0];
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", array);
-            Assert.Equal("@emptyIn<Name>:(no-results)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[0], query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandEnumerableContains()
         {
             IEnumerable<string> list = new[] { "ryan", "heath" };
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", list);
-            Assert.Equal("@in<Name>:(ryan , heath)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] {"ryan", "heath"}, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandSimpleContainsWithVariable()
         {
             var ayende = "ayende" + 1;
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereIn("Name", new[] { ayende });
-            Assert.Equal("@in<Name>:(ayende1)", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal(new object[] { "ayende1" }, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void NoOpShouldProduceEmptyString()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false));
-            Assert.Equal("", q.ToString());
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false));
+
+            Assert.Equal("FROM INDEX 'IndexName'", q.ToString());
         }
 
         [Fact]
         public void CanUnderstandAnd()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereEquals("Name", "ayende")
                 .AndAlso()
                 .WhereEquals("Email", "ayende@ayende.com");
-            Assert.Equal("Name:ayende AND Email:ayende@ayende.com", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0 AND Email = :p1", q.ToString());
+            Assert.Equal("ayende", query.QueryParameters["p0"]);
+            Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
 
         [Fact]
         public void CanUnderstandOr()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
                 .WhereEquals("Name", "ayende")
                 .OrElse()
                 .WhereEquals("Email", "ayende@ayende.com");
-            Assert.Equal("Name:ayende OR Email:ayende@ayende.com", q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0 OR Email = :p1", q.ToString());
+            Assert.Equal("ayende", query.QueryParameters["p0"]);
+            Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
 
         [Fact]
         public void CanUnderstandLessThan()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereLessThan("Birthday", new DateTime(2010, 05, 15));
-            Assert.Equal("Birthday:{* TO 2010-05-15T00:00:00.0000000}", q.ToString());
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereLessThan("Birthday", dateTime);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday < :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandEqualOnDate()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereEquals("Birthday", new DateTime(2010, 05, 15));
-            Assert.Equal("Birthday:2010-05-15T00:00:00.0000000", q.ToString());
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereEquals("Birthday", dateTime);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday = :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandLessThanOrEqual()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereLessThanOrEqual("Birthday", new DateTime(2010, 05, 15));
-            Assert.Equal("Birthday:[* TO 2010-05-15T00:00:00.0000000]", q.ToString());
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereLessThanOrEqual("Birthday", dateTime);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday <= :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandGreaterThan()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThan("Birthday", new DateTime(2010, 05, 15));
-            Assert.Equal("Birthday:{2010-05-15T00:00:00.0000000 TO NULL}", q.ToString());
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereGreaterThan("Birthday", dateTime);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday > :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandGreaterThanOrEqual()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15));
-            Assert.Equal("Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", q.ToString());
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereGreaterThanOrEqual("Birthday", dateTime);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandProjectionOfSingleField()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereGreaterThanOrEqual("Birthday", dateTime)
                 .SelectFields<IndexedUser>("Name") as DocumentQuery<IndexedUser>;
-            string fields = q.GetProjectionFields().Any() ?
-                "<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
-            Assert.Equal("<Name>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", fields + q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("SELECT Name FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandProjectionOfMultipleFields()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThanOrEqual("Birthday", new DateTime(2010, 05, 15))
+            var dateTime = new DateTime(2010, 05, 15);
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereGreaterThanOrEqual("Birthday", dateTime)
                 .SelectFields<IndexedUser>("Name", "Age") as DocumentQuery<IndexedUser>;
-            string fields = q.GetProjectionFields().Any() ?
-                "<" + String.Join(", ", q.GetProjectionFields().ToArray()) + ">: " : "";
-            Assert.Equal("<Name, Age>: Birthday:[2010-05-15T00:00:00.0000000 TO NULL]", fields + q.ToString());
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("SELECT Name, Age FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandSimpleEqualityOnInt()
         {
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereEquals("Age", 3, false);
-            Assert.Equal("Age:3", q.ToString());
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereEquals("Age", 3);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Age = :p0", q.ToString());
+            Assert.Equal(3, query.QueryParameters["p0"]);
         }
 
         [Fact]
         public void CanUnderstandGreaterThanOnInt()
         {
-            // should DocumentQuery<T> understand how to generate range field names?
-            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false))
-                .WhereGreaterThan("Age_L_Range", 3);
-            Assert.Equal("Age_L_Range:{3 TO NULL}", q.ToString());
+            var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
+                .WhereGreaterThan("Age", 3);
+
+            var query = q.GetIndexQuery();
+
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Age > :p0", q.ToString());
+            Assert.Equal(3, query.QueryParameters["p0"]);
         }
 
         private class IndexedUser

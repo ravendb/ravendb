@@ -44,7 +44,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 Assert.Throws<ObjectDisposedException>(() => index.Start());
 
-                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQueryServerSide(), null, OperationCancelToken.None));
+                var ex = await Record.ExceptionAsync(() => index.Query(new IndexQueryServerSide($"FROM INDEX'{index.Name}'"), null, OperationCancelToken.None));
                 Assert.IsType<ObjectDisposedException>(ex);
 
                 index = AutoMapIndex.CreateNew(1, new AutoMapIndexDefinition("Users", new[] { new IndexField
@@ -101,14 +101,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })) > 0);
                 var name2 = new IndexField
                 {
                     Name = "Name2",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 };
 
                 var etag2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
@@ -138,7 +136,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
-                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].Sort);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
@@ -148,7 +145,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
-                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Name2"].Sort);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Low, indexes[1].Definition.Priority);
                 Assert.Equal(IndexState.Disabled, indexes[1].State);
@@ -967,11 +963,11 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 var index2 = database.IndexStore.GetIndex(index2Id);
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    await index1.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
+                    await index1.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
                 }
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    await index2.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
+                    await index2.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
                 }
 
                 Assert.Equal(IndexPriority.Normal, index1.Definition.Priority);
@@ -989,7 +985,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 {
-                    await index1.Query(new IndexQueryServerSide(), context, OperationCancelToken.None); // last querying time
+                    await index1.Query(new IndexQueryServerSide("FROM Users"), context, OperationCancelToken.None); // last querying time
                 }
 
                 database.IndexStore.RunIdleOperations(); // this will mark index2 as idle, because the difference between two indexes and index last querying time is more than TimeToWaitBeforeMarkingAutoIndexAsIdle
@@ -1086,7 +1082,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
 
                 var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
@@ -1132,7 +1127,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
 
                 var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));

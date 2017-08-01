@@ -57,7 +57,7 @@ namespace Raven.Client.Documents.Session
 
         private IEnumerator<StreamResult<T>> YieldResults<T>(IDocumentQuery<T> query, IEnumerator<BlittableJsonReaderObject> enumerator, bool usedTransformer)
         {
-            var projections = ((DocumentQuery<T>)query).ProjectionFields;
+            var projections = ((DocumentQuery<T>)query).FieldsToFetchToken?.Projections;
 
             while (enumerator.MoveNext())
             {

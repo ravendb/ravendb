@@ -16,13 +16,16 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
-        protected readonly FieldsToFetch _fieldsToFetch;
         private readonly JsonOperationContext _context;
+        private readonly BlittableJsonTraverser _blittableTraverser;
 
-        protected QueryResultRetrieverBase(FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        protected readonly FieldsToFetch FieldsToFetch;
+
+        protected QueryResultRetrieverBase(FieldsToFetch fieldsToFetch, JsonOperationContext context, bool reduceResults)
         {
             _context = context;
-            _fieldsToFetch = fieldsToFetch;
+            FieldsToFetch = fieldsToFetch;
+            _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
 
         public abstract Document Get(Lucene.Net.Documents.Document input, float score, IState state);
@@ -34,27 +37,27 @@ namespace Raven.Server.Documents.Queries.Results
         protected Document GetProjection(Lucene.Net.Documents.Document input, float score, string id, IState state)
         {
             Document doc = null;
-            if (_fieldsToFetch.AnyExtractableFromIndex == false)
+            if (FieldsToFetch.AnyExtractableFromIndex == false)
             {
                 doc = DirectGet(input, id, state);
 
                 if (doc == null)
                     return null;
 
-                return GetProjectionFromDocument(doc, score, _fieldsToFetch, _context);
+                return GetProjectionFromDocument(doc, score, FieldsToFetch, _context);
             }
 
             var documentLoaded = false;
 
             var result = new DynamicJsonValue();
 
-            if (_fieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
+            if (FieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
-            if (_fieldsToFetch.ExtractAllFromIndex || _fieldsToFetch.ExtractAllFromDocument)
+            if (FieldsToFetch.ExtractAllFromIndex || FieldsToFetch.ExtractAllFromDocument)
             {
-                if (_fieldsToFetch.ExtractAllFromIndex)
+                if (FieldsToFetch.ExtractAllFromIndex)
                 {
                     fields = input.GetFields()
                         .Where(x => x.Name != Constants.Documents.Indexing.Fields.DocumentIdFieldName
@@ -62,10 +65,10 @@ namespace Raven.Server.Documents.Queries.Results
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, x.IsStored));
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, x.IsStored, isDocumentId: false));
                 }
 
-                if (_fieldsToFetch.ExtractAllFromDocument)
+                if (FieldsToFetch.ExtractAllFromDocument)
                 {
                     if (fields == null)
                         fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
@@ -80,17 +83,17 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fields.ContainsKey(name))
                                 continue;
 
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, canExtractFromIndex: false);
+                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, canExtractFromIndex: false, isDocumentId: false);
                         }
                     }
                 }
             }
 
             if (fields == null)
-                fields = _fieldsToFetch.Fields;
-            else if (_fieldsToFetch.Fields != null && _fieldsToFetch.Fields.Count > 0)
+                fields = FieldsToFetch.Fields;
+            else if (FieldsToFetch.Fields != null && FieldsToFetch.Fields.Count > 0)
             {
-                foreach (var kvp in _fieldsToFetch.Fields)
+                foreach (var kvp in FieldsToFetch.Fields)
                 {
                     if (fields.ContainsKey(kvp.Key))
                         continue;
@@ -127,7 +130,7 @@ namespace Raven.Server.Documents.Queries.Results
             return ReturnProjection(result, doc, score, _context);
         }
 
-        public static Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
+        public Document GetProjectionFromDocument(Document doc, float score, FieldsToFetch fieldsToFetch, JsonOperationContext context)
         {
             var result = new DynamicJsonValue();
 
@@ -165,7 +168,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.CanExtractFromIndex == false)
                 return false;
 
-            var name = fieldToFetch.Name.Value;
+            var name = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
 
             DynamicJsonArray array = null;
             FieldType fieldType = null;
@@ -231,12 +234,33 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadForMemory(ms, field.Name);
         }
 
-        private static void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            if (BlittableJsonTraverserHelper.TryRead(BlittableJsonTraverser.Default, document, fieldToFetch.Name, out object value) == false)
-                return;
+            object value;
 
-            toFill[fieldToFetch.Name.Value] = value;
+            if (fieldToFetch.IsDocumentId)
+            {
+                value = document.Id;
+            }
+            else if (fieldToFetch.IsCompositeField == false)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, fieldToFetch.Name, out value) == false)
+                    return;
+            }
+            else
+            {
+                var component = new DynamicJsonValue();
+
+                foreach (var componentField in fieldToFetch.Components)
+                {
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, componentField, out var componentValue))
+                        component[componentField] = componentValue;
+                }
+
+                value = component;
+            }
+
+            toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = value;
         }
 
         private class UniqueFieldNames : IEqualityComparer<IFieldable>

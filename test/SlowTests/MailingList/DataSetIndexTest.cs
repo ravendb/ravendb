@@ -172,8 +172,6 @@ namespace SlowTests.MailingList
                              _ = g.OrderByDescending(x => x.Date).First().Attributes.Select(x => CreateField(x.Name, x.Value))
                          };
 
-                Sort(x => x.Date, SortOptions.String);
-
                 Stores = new Dictionary<Expression<Func<Result, object>>, FieldStorage>()
                              {
                                  { e=>e.SongId, FieldStorage.Yes},

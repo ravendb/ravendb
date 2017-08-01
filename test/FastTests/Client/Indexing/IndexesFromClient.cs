@@ -344,7 +344,6 @@ namespace FastTests.Client.Indexing
 
                     Assert.Equal((int?)serverField.Indexing, (int?)field.Indexing);
                     Assert.Equal(serverField.Analyzer, field.Analyzer);
-                    Assert.Equal((int?)serverField.Sort, (int?)field.Sort);
                     Assert.Equal(serverField.Spatial == null, field.Spatial == null);
                     Assert.Equal((int?)serverField.Storage, (int?)field.Storage);
                     Assert.Equal(serverField.Suggestions, field.Suggestions);
@@ -507,7 +506,7 @@ namespace FastTests.Client.Indexing
 
                 using (var commands = store.Commands())
                 {
-                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, "dynamic/Users", new IndexQuery());
+                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, new IndexQuery { Query = "FROM Users" });
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
@@ -563,7 +562,7 @@ namespace FastTests.Client.Indexing
 
                     var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery()
                     {
-                        IndexName = index.Name,
+                        Query = $"FROM INDEX '{index.Name}'",
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
                         MinimumTermFrequency = 0

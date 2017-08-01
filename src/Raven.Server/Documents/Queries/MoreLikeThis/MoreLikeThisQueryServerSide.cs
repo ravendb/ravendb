@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Transformers;
+using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -11,8 +12,32 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 {
     public sealed class MoreLikeThisQueryServerSide : MoreLikeThisQuery<BlittableJsonReaderObject>
     {
+        [JsonIgnore]
+        public QueryMetadata Metadata { get; private set; }
+
+        public static MoreLikeThisQueryServerSide Create(BlittableJsonReaderObject json)
+        {
+            var result = JsonDeserializationServer.MoreLikeThisQuery(json);
+
+            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                result.PageSize = int.MaxValue;
+
+            if (string.IsNullOrWhiteSpace(result.Query))
+                throw new InvalidOperationException($"More like this query does not contain '{nameof(Query)}' field.");
+
+            result.Metadata = new QueryMetadata(result.Query, null);
+
+            if (result.Metadata.IsDynamic)
+                throw new InvalidOperationException("More like this query must be executed against static index.");
+
+            return result;
+        }
+
         public static MoreLikeThisQueryServerSide Create(HttpContext httpContext, int pageSize, JsonOperationContext context)
         {
+            if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
+                throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
+
             var result = new MoreLikeThisQueryServerSide
             {
                 // all defaults which need to have custom value
@@ -27,7 +52,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                 {
                     if (string.Equals(item.Key, "query", StringComparison.OrdinalIgnoreCase))
                     {
-                        result.AdditionalQuery = item.Value[0];
+                        result.Query = item.Value[0];
                     }
                     else if (string.Equals(item.Key, "include", StringComparison.OrdinalIgnoreCase))
                     {
@@ -119,6 +144,11 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
+
+            result.Metadata = new QueryMetadata(result.Query, null);
+
+            if (result.Metadata.IsDynamic)
+                throw new InvalidOperationException("More like this query must be executed against static index.");
 
             return result;
         }

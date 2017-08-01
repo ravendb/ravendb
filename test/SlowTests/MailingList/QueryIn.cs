@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
@@ -55,15 +56,15 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     Assert.NotEmpty(session
-                                        .Query<MyEntity>("TestIndex")
-                                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
-                                        .Where(x => x.ImageId.In(new[] { 67, 66, 78, 99, 700, 6 }))
-                                        .Take(1024));
+                        .Query<MyEntity>("TestIndex")
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
+                        .Search(x => x.ImageId, "67 66 78 99 700 6")
+                        .Take(1024));
                     Assert.NotEmpty(session
-                                            .Query<MyEntity>("TestIndex")
-                                            .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
-                                            .Where(x => x.ImageId.In(new[] { 67, 23, 66, 78, 99, 700, 6 }))
-                                            .Take(1024));
+                        .Query<MyEntity>("TestIndex")
+                        .Customize(x => x.WaitForNonStaleResults(TimeSpan.FromMinutes(5)))
+                        .Search(x => x.ImageId, " 67 23 66 78 99 700 6")
+                        .Take(1024));
                 }
             }
         }

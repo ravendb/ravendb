@@ -18,15 +18,10 @@ namespace Raven.Client.Documents.Session
         ///     Queries the specified index using Linq.
         /// </summary>
         /// <typeparam name="T">The result of the query</typeparam>
-        /// <param name="indexName">Name of the index.</param>
+        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
+        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
         /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
-        IRavenQueryable<T> Query<T>(string indexName, bool isMapReduce = false);
-
-        /// <summary>
-        ///     Dynamically queries RavenDB using LINQ
-        /// </summary>
-        /// <typeparam name="T">The result of the query</typeparam>
-        IRavenQueryable<T> Query<T>();
+        IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false);
 
         /// <summary>
         ///     Queries the index specified by <typeparamref name="TIndexCreator" /> using Linq.

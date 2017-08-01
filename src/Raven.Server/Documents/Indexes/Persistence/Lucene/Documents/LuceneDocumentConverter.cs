@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using Raven.Server.Json;
 using Sparrow.Json;
-using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -13,10 +12,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         public LuceneDocumentConverter(ICollection<IndexField> fields, bool reduceOutput = false)
             : base(fields, reduceOutput)
         {
-            if (reduceOutput)
-                _blittableTraverser = new BlittableJsonTraverser(new char[] {}); // map-reduce results have always flat structure
-            else
-                _blittableTraverser = BlittableJsonTraverser.Default;
+            _blittableTraverser = reduceOutput ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
         }
         
         protected override int GetFields<T>(T instance, LazyStringValue key, object doc, JsonOperationContext indexContext) 

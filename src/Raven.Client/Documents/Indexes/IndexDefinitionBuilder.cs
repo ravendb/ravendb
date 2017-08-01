@@ -58,18 +58,6 @@ namespace Raven.Client.Documents.Indexes
         public IDictionary<string, FieldIndexing> IndexesStrings { get; set; }
 
         /// <summary>
-        /// Gets or sets the sort options.
-        /// </summary>
-        /// <value>The sort options.</value>
-        public IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> SortOptions { get; set; }
-
-        /// <summary>
-        /// Gets or sets the sort options.
-        /// </summary>
-        /// <value>The sort options.</value>
-        public Dictionary<string, SortOptions> SortOptionsStrings { get; set; }
-
-        /// <summary>
         /// Get or set the analyzers
         /// </summary>
         public IDictionary<Expression<Func<TReduceResult, object>>, string> Analyzers { get; set; }
@@ -135,8 +123,6 @@ namespace Raven.Client.Documents.Indexes
             StoresStrings = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
             IndexesStrings = new Dictionary<string, FieldIndexing>();
-            SortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-            SortOptionsStrings = new Dictionary<string, SortOptions>();
             SuggestionsOptions = new HashSet<Expression<Func<TReduceResult, object>>>();
             Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
             AnalyzersStrings = new Dictionary<string, string>();
@@ -172,7 +158,6 @@ namespace Raven.Client.Documents.Indexes
 
                 var indexes = ConvertToStringDictionary(Indexes);
                 var stores = ConvertToStringDictionary(Stores);
-                var sortOptions = ConvertToStringDictionary(SortOptions);
                 var analyzers = ConvertToStringDictionary(Analyzers);
                 var suggestionsOptions = ConvertToStringSet(SuggestionsOptions).ToDictionary(x => x, x => true);
                 var termVectors = ConvertToStringDictionary(TermVectors);
@@ -216,16 +201,10 @@ namespace Raven.Client.Documents.Indexes
                     spatialOptions.Add(spatialString);
                 }
 
-                foreach (var sortOption in SortOptionsStrings)
-                {
-                    if (sortOptions.ContainsKey(sortOption.Key))
-                        throw new InvalidOperationException("There is a duplicate key in sort options: " + sortOption.Key);
-                    sortOptions.Add(sortOption);
-                }
+            
 
                 ApplyValues(indexDefinition, indexes, (options, value) => options.Indexing = value);
                 ApplyValues(indexDefinition, stores, (options, value) => options.Storage = value);
-                ApplyValues(indexDefinition, sortOptions, (options, value) => options.Sort = value);
                 ApplyValues(indexDefinition, analyzers, (options, value) => options.Analyzer = value);
                 ApplyValues(indexDefinition, termVectors, (options, value) => options.TermVector = value);
                 ApplyValues(indexDefinition, spatialOptions, (options, value) => options.Spatial = value);

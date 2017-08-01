@@ -54,7 +54,6 @@ namespace FastTests.Server.Documents.Indexing
             {
                 Map = users => from u in users
                     select new { u.Age };
-                Sort(x => x.Age, SortOptions.Numeric);
 
             }
         }
@@ -172,7 +171,6 @@ namespace FastTests.Server.Documents.Indexing
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
                 Assert.Equal(FieldIndexing.Analyzed, index.Fields["Name"].Indexing);
-                Assert.Equal(SortOptions.Numeric, index.Fields["Age"].Sort);
                 Assert.Equal(@"docs.Users.Select(doc=>new{Age=doc.Age
 ,Email=doc.Email
 ,Name=doc.Name

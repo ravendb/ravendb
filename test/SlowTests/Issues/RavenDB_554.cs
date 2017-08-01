@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                     using (var commands = docStore.Commands())
                     {
-                        var queryResult = commands.Query(IndexName, new IndexQuery(), false, true);
+                        var queryResult = commands.Query(new IndexQuery { Query = $"FROM INDEX '{IndexName}'" }, false, true);
                         foreach (BlittableJsonReaderObject result in queryResult.Results)
                         {
                             string q;

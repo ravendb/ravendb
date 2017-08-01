@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                     Maps = { "from doc in docs.Docs select new { DocId = doc.DocId, _ = doc.Map.Select(p => CreateField(p.Key, p.Value)) }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "X", new IndexFieldOptions { Sort = SortOptions.Numeric } }
+                        { "X", new IndexFieldOptions { } }
                     }
                 }}));
                 using (var session = store.OpenSession())

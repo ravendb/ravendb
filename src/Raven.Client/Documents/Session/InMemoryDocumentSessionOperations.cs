@@ -1142,16 +1142,6 @@ more responsive application.
             return EntityToBlittable.ConvertToEntity(entityType, id, document);
         }
 
-        public string CreateDynamicIndexName<T>()
-        {
-            var indexName = "dynamic";
-            if (typeof(T) != typeof(object))
-            {
-                indexName += "/" + Conventions.GetCollectionName(typeof(T));
-            }
-            return indexName;
-        }
-
         public bool CheckIfIdAlreadyIncluded(string[] ids, KeyValuePair<string, Type>[] includes)
         {
             return CheckIfIdAlreadyIncluded(ids, includes.Select(x => x.Key));
@@ -1290,6 +1280,20 @@ more responsive application.
         public void OnBeforeQueryExecutedInvoke(BeforeQueryExecutedEventArgs beforeQueryExecutedEventArgs)
         {
             OnBeforeQueryExecuted?.Invoke(this, beforeQueryExecutedEventArgs);
+        }
+
+        protected (string IndexName, string CollectionName) ProcessQueryParameters(Type type, string indexName, string collectionName, DocumentConventions conventions)
+        {
+            var isIndex = string.IsNullOrWhiteSpace(indexName) == false;
+            var isCollection = string.IsNullOrWhiteSpace(collectionName) == false;
+
+            if (isIndex && isCollection)
+                throw new InvalidOperationException($"Parameters '{nameof(indexName)}' and '{nameof(collectionName)}' are mutually exclusive. Please specify only one of them.");
+
+            if (isIndex == false && isCollection == false)
+                collectionName = Conventions.GetCollectionName(type);
+
+            return (indexName, collectionName);
         }
     }
 

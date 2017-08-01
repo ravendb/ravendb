@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             _documents = documents;
         }
 
-        public async Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, string dynamicIndexName, IndexQueryServerSide query)
+        public async Task ExecuteStream(HttpResponse response, BlittableJsonTextWriter writer, IndexQueryServerSide query)
         {
-            var tuple = await MatchIndex(dynamicIndexName, query, false);
+            var tuple = await MatchIndex(query, false);
             var index = tuple.Index;
             var collection = tuple.Collection;
             if (index == null)
@@ -56,9 +56,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             await index.StreamQuery(response, writer, query, _context, _token);
         }
 
-        public async Task<DocumentQueryResult> Execute(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
+        public async Task<DocumentQueryResult> Execute(IndexQueryServerSide query, long? existingResultEtag)
         {
-            var tuple = await MatchIndex(dynamicIndexName, query, true);
+            var tuple = await MatchIndex(query, true);
             var index = tuple.Index;
             var collection = tuple.Collection;
             if (index == null)
@@ -88,13 +88,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return await index.Query(query, _context, _token);
         }
 
-        public async Task<IndexEntriesQueryResult> ExecuteIndexEntries(string dynamicIndexName, IndexQueryServerSide query, long? existingResultEtag)
+        public async Task<IndexEntriesQueryResult> ExecuteIndexEntries(IndexQueryServerSide query, long? existingResultEtag)
         {
-            var tuple = await MatchIndex(dynamicIndexName, query, false);
+            var tuple = await MatchIndex(query, false);
             var index = tuple.Index;
 
             if (index == null)
-                IndexDoesNotExistException.ThrowFor(dynamicIndexName);
+                IndexDoesNotExistException.ThrowFor(query.Metadata.CollectionName);
 
             if (existingResultEtag.HasValue)
             {
@@ -181,15 +181,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.ResultEtag = (long) Hashing.XXHash64.Calculate((byte*) buffer, sizeof(long) * 3);
         }
 
-        private async Task<(Index Index, string Collection)> MatchIndex(string dynamicIndexName, IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
+        private async Task<(Index Index, string Collection)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
         {
-            var collection = dynamicIndexName.Length == Index.DynamicIndex.Length
-                ? Constants.Documents.Collections.AllDocumentsCollection
-                : dynamicIndexName.Substring(Index.DynamicIndexPrefix.Length);
+            var collection = query.Metadata.CollectionName;
 
-            var map = DynamicQueryMapping.Create(collection, query);
+            var map = DynamicQueryMapping.Create(query);
 
-            if (map.MapFields.Length == 0 && map.SortDescriptors.Length == 0 && map.GroupByFields.Length == 0)
+            if (map.MapFields.Length == 0 && map.GroupByFields.Length == 0)
                 return (null, collection); // use collection query
 
             if (TryMatchExistingIndexToQuery(map, out Index index) == false)
@@ -221,8 +219,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
             }
-
-            EnsureValidQuery(query, map);
 
             return (index, collection);
         }
@@ -282,10 +278,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
         }
 
-        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(string dynamicIndexName, IndexQueryServerSide query)
+        public List<DynamicQueryToIndexMatcher.Explanation> ExplainIndexSelection(IndexQueryServerSide query)
         {
-            var collection = dynamicIndexName.Substring(Index.DynamicIndexPrefix.Length);
-            var map = DynamicQueryMapping.Create(collection, query);
+            var map = DynamicQueryMapping.Create(query);
             var explanations = new List<DynamicQueryToIndexMatcher.Explanation>();
 
             var dynamicQueryToIndex = new DynamicQueryToIndexMatcher(_indexStore);
@@ -326,14 +321,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             index = null;
             return false;
-        }
-
-        private static void EnsureValidQuery(IndexQueryServerSide query, DynamicQueryMapping map)
-        {
-            foreach (var field in map.MapFields)
-            {
-                query.Query = query.Query.Replace(field.Name, IndexField.ReplaceInvalidCharactersInFieldName(field.Name));
-            }
         }
     }
 }

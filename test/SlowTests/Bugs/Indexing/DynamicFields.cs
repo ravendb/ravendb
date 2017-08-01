@@ -164,7 +164,7 @@ namespace SlowTests.Bugs.Indexing
                 using (var session = store.OpenSession())
                 {
                     var products = session.Advanced.DocumentQuery<Product, Product_ByNumericAttributeUsingField>()
-                        .WhereEquals("Color", 30d)
+                        .WhereEquals("Color", "30")
                         .WaitForNonStaleResults(TimeSpan.FromMinutes(3))
                         .ToList();
 

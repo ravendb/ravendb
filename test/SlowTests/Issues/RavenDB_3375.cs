@@ -1,7 +1,8 @@
-using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
             {
                 Map = posts => from post in posts
                                from tag in post.Tags
-                               select new { _ = CreateField("Tag", tag, false, false) };
+                               select new { _ = CreateField("Tags", tag, false, false) };
             }
         }
 
@@ -46,15 +47,23 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query1 = session.Advanced.DocumentQuery<Post>("TagsIndex");
-                    query1 = query1.WhereEquals("Tag", "NoSpace:1", false);
+                    query1 = query1.WhereEquals("Tags", "NoSpace:1", exact: true);
                     var posts = query1.ToArray();
                     Assert.Equal(1, posts.Length); // Passes
 
                     var query2 = session.Advanced.DocumentQuery<Post>("TagsIndex")
-                                        .WhereEquals("Tag", "Space :2", false);
+                                        .WhereEquals("Tags", "Space :2", exact: true);
                     var posts2 = query2.ToArray();
                     Assert.Equal(1, posts2.Length); // Fails
+                }
 
+                using (var session = store.OpenSession())
+                {
+                    var posts = session.Query<Post>("TagsIndex")
+                        .Where(x => x.Tags.Contains("NoSpace:1"), exact: true)
+                        .ToList();
+
+                    Assert.Equal(1, posts.Count);
                 }
             }
         }

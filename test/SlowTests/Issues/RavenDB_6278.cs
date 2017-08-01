@@ -49,7 +49,7 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query("test", new IndexQuery(), indexEntriesOnly: true);
+                    var result = commands.Query(new IndexQuery {Query = "FROM Index 'test'"}, indexEntriesOnly: true);
                     Assert.Equal(1, result.Results.Length);
                 }
             }

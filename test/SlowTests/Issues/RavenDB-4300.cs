@@ -36,30 +36,7 @@ namespace SlowTests.Issues
                     var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
                     query.Customize(c => c.WaitForNonStaleResults());
                     var results =
-                        query.Where(x => x.Name == RavenQuery.Escape(SearchText, false, false))
-                            .As<Example>()
-                            .ToList();
-
-                    Assert.NotEmpty(results);
-                }
-            }
-        }
-
-        [Fact]
-        public void No_Escaping_Causes_Error()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new ExampleIndex().Execute(store);
-                Populate(store);
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResults());
-                    var results =
-                        query.Where(x => x.Name == SearchText)
+                        query.Search(x => x.Name , SearchText)
                             .As<Example>()
                             .ToList();
 

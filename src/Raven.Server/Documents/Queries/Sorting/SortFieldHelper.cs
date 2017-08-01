@@ -2,7 +2,7 @@
 
 namespace Raven.Server.Documents.Queries.Sorting
 {
-    public static class SortFieldHelper
+    public static class SortFieldHelper // TODO arek - remove me
     {
         private static readonly char[] Separators = { ';' };
 

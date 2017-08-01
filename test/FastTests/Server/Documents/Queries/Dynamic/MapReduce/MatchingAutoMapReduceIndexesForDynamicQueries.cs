@@ -26,29 +26,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Failure_match_if_there_is_no_index()
         {
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "",
-                DynamicMapReduceFields = new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                },
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                }
-            }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location"));
 
             var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
-
 
         [Fact]
         public void Complete_match_for_single_matching_index_with_sort_options()
@@ -59,8 +42,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count,
-                    Sort = SortOptions.Numeric
+                    Aggregation = AggregationOperation.Count,
                 },
             },
             new[]
@@ -69,34 +51,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
-                    Sort = SortOptions.String
                 }
             });
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
-                SortedFields = new[]
-                {
-                    new SortedField("Count_L_Range"),
-                    new SortedField("Location"),
-                }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide(
+                "SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland' ORDER BY Count AS long ASC, Location ASC"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -123,23 +84,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                },
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                }
-            }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland'"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -155,7 +100,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -169,23 +114,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, sum(Count) FROM Users GROUP BY Location"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -201,7 +130,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count,
                 },
             },
             new[]
@@ -215,28 +144,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Sum",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count(), sum(Sum) FROM Users GROUP BY Location"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -254,7 +162,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -278,7 +186,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count
                 },
             },
             new[]
@@ -303,28 +211,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountReducedByAgeAndLocation);
             add_index(usersByCountReducedByLocationAndNickNameAndAge);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "NickName",
-                        IsGroupBy = true
-                    }
-                }
-            });
+            var dynamicQuery =
+                DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location, NickName WHERE Location = 'Poland'"));
 
             var result = _sut.Match(dynamicQuery);
 
@@ -340,7 +228,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count,
                 },
             },
             new[]
@@ -358,13 +246,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Count",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Count
+                    Aggregation = AggregationOperation.Count,
                 },
                 new IndexField
                 {
                     Name = "TotalAge",
                     Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Sum
+                    Aggregation = AggregationOperation.Sum
                 },
             },
             new[]
@@ -379,62 +267,12 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             add_index(usersByCountGroupedByLocation);
             add_index(usersByCountAndTotalAgeGroupedByLocation);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:Poland",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                }
-            });
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE Location = 'Poland'"));
 
             var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(usersByCountAndTotalAgeGroupedByLocation.Name, result.IndexName);
-        }
-
-        [Fact]
-        public void Failure_when_sort_options_do_not_match()
-        {
-            var definition = new AutoMapReduceIndexDefinition("LineItems", new[]
-            {
-                new IndexField
-                {
-                    Name = "Price",
-                    Storage = FieldStorage.Yes,
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
-                    Sort = SortOptions.String
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "Name",
-                    Storage = FieldStorage.Yes
-                }
-            });
-
-            add_index(definition);
-
-            var dynamicQuery = DynamicQueryMapping.Create("LineItems", new IndexQueryServerSide
-            {
-                Query = "Price:70",
-                SortedFields = new[] { new SortedField("Price_L_Range") },
-            });
-
-            var result = _sut.Match(dynamicQuery);
-
-            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
         [Fact]
@@ -451,12 +289,8 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             add_index(definition);
 
-            var dynamicQuery = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Name:Arek",
-                SortedFields = new[] { new SortedField("Weight") },
-            });
-
+            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Name = 'Arek' ORDER BY Weight ASC"));
+ 
             var result = _sut.Match(dynamicQuery);
 
             Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
