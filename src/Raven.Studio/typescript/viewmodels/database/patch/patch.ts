@@ -3,8 +3,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import patchDocument = require("models/database/patch/patchDocument");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
-import collectionsStats = require("models/database/documents/collectionsStats");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
@@ -768,7 +766,8 @@ class patch extends viewModelBase {
         return new getDatabaseStatsCommand(this.activeDatabase())
             .execute()
             .done((results) => {
-                this.indexNames(results.Indexes.filter(x => x.Type === "Map").map(x => x.Name));
+                this.indexNames(results.Indexes.filter(x => x.Type === "Map").map(x => x.Name)); 
+                this.indexNames(_.sortBy(this.indexNames(), x => x.toUpperCase()));
             });
     }
 
