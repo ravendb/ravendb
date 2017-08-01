@@ -81,12 +81,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (SkipWhitespace(skipWhitespace) == false)
                 return false;
 
-            if (beginning)
-            {
-                if (char.IsLetter(_q[_pos]) == false && _q[_pos] != '_' && _q[_pos] != '@')
-                    return false;
-            }
-            else if (char.IsLetterOrDigit(_q[_pos]) == false)
+            if ((beginning ? char.IsLetter(_q[_pos]) == false : char.IsLetterOrDigit(_q[_pos]) == false) && _q[_pos] != '_' && _q[_pos] != '@')
                 return false;
 
             TokenStart = _pos;
