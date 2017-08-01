@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.MailingList.NullableSorting())
+                using (var test = new RavenDB_3758())
                 {
                     try
                     {
-                        test.SortByNullableDecimal();
+                        test.Can_Overwrite_Side_By_Side_Index();
                     }
                     catch (Exception e)
                     {

@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, Val = "One-123" };
             }
         }
 
@@ -38,7 +38,7 @@ namespace SlowTests.Issues
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, Val = "Two-123" };
             }
         }
 
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
             {
                 Map = orders =>
                       from order in orders
-                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
+                      select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax, Val = "Three-123" };
             }
         }
 
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
                 var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
                 var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
 
-                Assert.Equal(4, index.Fields.Count);
+                Assert.Contains("Three-123", index.Maps.First());
             }
         }
 
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
                 var indexes = store.Admin.Send(new GetIndexesOperation(0, 10));
                 var index = indexes.Single(x => x.Name == $"{Constants.Documents.Indexing.SideBySideIndexNamePrefix}{new Orders_All().IndexName}");
 
-                Assert.Equal(4, index.Fields.Count);
+                Assert.Contains("Three-123", index.Maps.First());
             }
         }
     }
