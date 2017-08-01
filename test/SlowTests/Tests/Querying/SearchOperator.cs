@@ -39,12 +39,12 @@ namespace SlowTests.Tests.Querying
                     session.SaveChanges();
 
                     // search for the keyword software
-                    var results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software")
+                    var results = session.Advanced.DocumentQuery<Something>("FTSIndex").WhereLucene("MyProp", "software")
                         .WaitForNonStaleResults()
                         .ToList();
                     Assert.Equal(1, results.Count);
 
-                    results = session.Advanced.DocumentQuery<Something>("FTSIndex").Search("MyProp", "software~")
+                    results = session.Advanced.DocumentQuery<Something>("FTSIndex").WhereLucene("MyProp", "software~")
                         .WaitForNonStaleResults()
                         .ToList();
                     Assert.Equal(2, results.Count);

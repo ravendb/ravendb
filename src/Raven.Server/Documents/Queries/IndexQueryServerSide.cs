@@ -30,6 +30,7 @@ namespace Raven.Server.Documents.Queries
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
             Query = EscapingHelper.UnescapeLongDataString(query);
+            QueryParameters = queryParameters;
             Metadata = new QueryMetadata(Query, queryParameters);
         }
 

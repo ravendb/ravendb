@@ -403,11 +403,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             using (var reader = index.IndexPersistence.OpenIndexReader(context.Transaction.InnerTransaction))
             {
-                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0",
-                    context.ReadObject(new DynamicJsonValue
-                    {
-                        ["p0"] = reduceKeyHash.ToString()
-                    }, "query/parameters"));
+                var queryParameters = context.ReadObject(new DynamicJsonValue
+                {
+                    ["p0"] = reduceKeyHash.ToString()
+                }, "query/parameters");
+                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0", queryParameters);
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
 
