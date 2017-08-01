@@ -1739,7 +1739,7 @@ If you really want to do in memory filtering on the data returned from the query
                     }
                     else
                     {
-                        if (char.IsLetterOrDigit(c) == false && c != '_' && c != '@' && c != '.')
+                        if (char.IsLetterOrDigit(c) == false && c != '_' && c != '@' && c != '.' && c != '[' && c != ']')
                         {
                             escape = true;
                             break;
