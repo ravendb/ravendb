@@ -500,7 +500,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
-            AddOrder("random('" + seed.Replace("'", "''" ) + "')", false);
+            AddOrder("random('" + seed.Replace("'", "''") + "')", false);
         }
 
         public void CustomSortUsing(string typeName, bool descending)
@@ -1684,7 +1684,7 @@ If you really want to do in memory filtering on the data returned from the query
         private string EnsureValidFieldName(string fieldName, bool isNestedPath)
         {
             if (TheSession?.Conventions == null || isNestedPath || IsGroupBy)
-                return fieldName;
+                return EscapeIfNecessary(fieldName);
 
             foreach (var rootType in RootTypes)
             {
@@ -1695,7 +1695,41 @@ If you really want to do in memory filtering on the data returned from the query
                 }
             }
 
-            return fieldName;
+            return EscapeIfNecessary(fieldName);
+
+            string EscapeIfNecessary(string name)
+            {
+                if (string.IsNullOrEmpty(name))
+                    return name;
+
+                var escape = false;
+                for (var i = 0; i < name.Length; i++)
+                {
+                    var c = name[i];
+
+                    if (i == 0)
+                    {
+                        if (char.IsLetter(c) == false && c != '_' && c != '@')
+                        {
+                            escape = true;
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        if (char.IsLetterOrDigit(c) == false && c != '_' && c != '@' && c != '.')
+                        {
+                            escape = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (escape)
+                    return $"'{name}'";
+
+                return name;
+            }
         }
 
         private static Func<object, string> GetImplicitStringConversion(Type type)
