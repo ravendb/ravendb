@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_425())
+                using (var test = new SlowTests.Issues.RavenDb_4706())
                 {
                     try
                     {
-                        test.WillGetErrorWhenQueryingById();
+                        test.SupportRandomOrder().Wait();
                     }
                     catch (Exception e)
                     {
