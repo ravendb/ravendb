@@ -33,7 +33,7 @@ namespace SlowTests.MailingList
                            .OrderBy(f => f.MonthNum)
                            .ToList();
 
-                    Assert.Equal("PerformanceItems/ByMonthNumSortByMonthNum", stats.IndexName);
+                    Assert.Equal("PerformanceItems/ByMonthNum", stats.IndexName);
 
                 }
             }
