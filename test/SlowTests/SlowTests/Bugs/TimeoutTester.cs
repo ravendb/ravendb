@@ -119,7 +119,7 @@ namespace SlowTests.SlowTests.Bugs
                         .Statistics(out stats)
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Content)
-                        .Where(x => x.Content == (content))
+                        .Search(x => x.Content, (content))
                         .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                         .Skip(0).Take(1)
                         .FirstOrDefault();
