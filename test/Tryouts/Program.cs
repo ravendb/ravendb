@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.MailingList.AutoIndexMerging())
+                using (var test = new SlowTests.MailingList.NullableSorting())
                 {
                     try
                     {
-                        test.AutoIndexReuseFails();
+                        test.SortByNullableDecimal();
                     }
                     catch (Exception e)
                     {

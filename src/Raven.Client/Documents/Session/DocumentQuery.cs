@@ -726,7 +726,7 @@ namespace Raven.Client.Documents.Session
         {
             foreach (var item in propertySelectors)
             {
-                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.Type));
+                OrderBy(GetMemberQueryPathForOrderBy(item), OrderingUtil.GetOrderingOfType(item.ReturnType));
             }
             return this;
         }
