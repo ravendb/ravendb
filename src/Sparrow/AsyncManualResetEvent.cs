@@ -19,7 +19,7 @@ namespace Sparrow
 
         public AsyncManualResetEvent(CancellationToken token)
         {
-            token.Register(() => _tcs.TrySetResult(false));
+            token.Register(() => _tcs.TrySetCanceled());
             _token = token;
         }
         public Task<bool> WaitAsync()
@@ -73,6 +73,7 @@ namespace Sparrow
 
         public void Set()
         {
+            _token.ThrowIfCancellationRequested();
             _tcs.TrySetResult(true);
         }
 
@@ -81,6 +82,7 @@ namespace Sparrow
             while (true)
             {
                 var tcs = _tcs;
+                _token.ThrowIfCancellationRequested();
                 if ((tcs.Task.IsCompleted == false && force == false) ||
 #pragma warning disable 420
                     Interlocked.CompareExchange(ref _tcs, new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously), tcs) == tcs)
@@ -93,7 +95,7 @@ namespace Sparrow
         {
             // we intentionally reset it first to have this operation to behave as atomic
             var previousTcs = _tcs;
-
+            _token.ThrowIfCancellationRequested();
             Reset(force: true);
             previousTcs.TrySetResult(true);
         }

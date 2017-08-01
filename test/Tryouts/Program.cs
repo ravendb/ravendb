@@ -1,4 +1,6 @@
 using System;
+using FastTests.Server;
+using FastTests.Server.Documents.Queries.Dynamic.Map;
 using SlowTests.Bugs;
 using SlowTests.Issues;
 using FastTests.Voron.Storage;
@@ -37,11 +39,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new RavenDB_3758())
+                using (var test = new FastTests.Server.Documents.DocumentsCrud())
                 {
                     try
                     {
-                        test.Can_Overwrite_Side_By_Side_Index();
+                        test.WillVerifyEtags_Existing();
                     }
                     catch (Exception e)
                     {

@@ -34,7 +34,7 @@ namespace FastTests
 
         protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, [CallerMemberName]string caller = null)
         {
-            var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory, caller: caller);
+            var database = CreateDocumentDatabase(runInMemory: false, dataDirectory: dataDirectory, caller: caller);
             db = database;
             Debug.Assert(database != null);
             return new DisposableAction(() =>
@@ -43,10 +43,15 @@ namespace FastTests
             });
         }
 
-        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory2 = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
+        protected DocumentDatabase CreateDocumentDatabase([CallerMemberName] string caller = null, bool runInMemory = true, string dataDirectory = null, Action<Dictionary<string, string>> modifyConfiguration = null)
         {
             var name = GetDatabaseName(caller);
 
+            return CreateDatabaseWithName(runInMemory, dataDirectory, modifyConfiguration, name);
+        }
+
+        protected DocumentDatabase CreateDatabaseWithName(bool runInMemory, string dataDirectory, Action<Dictionary<string, string>> modifyConfiguration, string name)
+        {
             _databases.Add(name);
 
             if (string.IsNullOrEmpty(dataDirectory))
@@ -55,7 +60,7 @@ namespace FastTests
             var configuration = new Dictionary<string, string>();
             configuration.Add(RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory), int.MaxValue.ToString());
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.DataDirectory), dataDirectory);
-            configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory2.ToString());
+            configuration.Add(RavenConfiguration.GetKey(x => x.Core.RunInMemory), runInMemory.ToString());
             configuration.Add(RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened), "true");
 
             modifyConfiguration?.Invoke(configuration);
