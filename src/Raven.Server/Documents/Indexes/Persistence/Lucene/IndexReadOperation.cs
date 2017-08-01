@@ -300,20 +300,15 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in orderByFields)
             {
-                if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                if (field.OrderingType == OrderByFieldType.Random)
                 {
-                    sort.Add(SortField.FIELD_SCORE);
+                    sort.Add(new RandomSortField(field.Name));
                     continue;
                 }
 
-                if (InvariantCompare.IsPrefix(field.Name, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
+                if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                 {
-                    var customFieldName = SortFieldHelper.ExtractName(field.Name);
-                    if (customFieldName.IsNullOrWhiteSpace()) // truly random
-                        sort.Add(new RandomSortField(Guid.NewGuid().ToString()));
-                    else
-                        sort.Add(new RandomSortField(customFieldName));
-
+                    sort.Add(SortField.FIELD_SCORE);
                     continue;
                 }
 

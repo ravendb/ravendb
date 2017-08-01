@@ -150,8 +150,6 @@ namespace Raven.Client
                     {
                     }
                     
-                    public const string RandomFieldName = "__random";
-
                     public const string CustomSortFieldName = "__customSort";
 
                     public const string DocumentIdFieldName = "__document_id";

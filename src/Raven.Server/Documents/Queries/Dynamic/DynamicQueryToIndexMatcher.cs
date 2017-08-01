@@ -143,8 +143,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var sortFieldName = sortInfo.Name;
 
-                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
-                    sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                if (sortFieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                 {
                     sortFieldName = SortFieldHelper.ExtractName(sortFieldName);
                 }

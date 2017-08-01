@@ -123,9 +123,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                             continue;
 
-                        if (InvariantCompare.IsPrefix(fieldName, Constants.Documents.Indexing.Fields.RandomFieldName, CompareOptions.None))
-                            continue;
-
                         sorting[fieldName] = new DynamicSortInfo()
                         {
                             Name = fieldName,
@@ -141,13 +138,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Metadata.OrderBy)
                 {
+                    if(field.OrderingType == OrderByFieldType.Random)
+                        continue;
+
                     var fieldName = field.Name;
 
                     if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
-                        fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                    if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     if (sorting.TryGetValue(fieldName, out var existingSort) == false)

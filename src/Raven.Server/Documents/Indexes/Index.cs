@@ -29,6 +29,7 @@ using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Documents.Transformers;
@@ -2031,12 +2032,15 @@ namespace Raven.Server.Documents.Indexes
             {
                 foreach (var sortedField in metadata.OrderBy)
                 {
+                    if (sortedField.OrderingType == OrderByFieldType.Random)
+                        continue;
+
                     var f = sortedField.Name;
+                    
                     if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
                         continue;
 
-                    if (f.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName) ||
-                        f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
+                    if (f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
                     if (IndexPersistence.ContainsField(f) == false &&

@@ -6,6 +6,7 @@
         String,
         Long,
         Double,
-        AlphaNumeric
+        AlphaNumeric,
+        Random
     }
 }

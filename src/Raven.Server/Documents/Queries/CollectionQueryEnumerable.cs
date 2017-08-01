@@ -96,11 +96,11 @@ namespace Raven.Server.Documents.Queries
 
                 var randomField = query.Metadata.OrderBy[0];
 
-                Debug.Assert(randomField.Name.StartsWith(Constants.Documents.Indexing.Fields.RandomFieldName));
+                Debug.Assert(randomField.OrderingType==OrderByFieldType.Random);
 
-                var customFieldName = SortFieldHelper.ExtractName(randomField.Name);
+                var customFieldName = randomField.Name;
 
-                if (customFieldName.IsNullOrWhiteSpace())
+                if (string.IsNullOrEmpty(customFieldName))
                     return new Sort(null);
 
                 return new Sort(customFieldName);
@@ -269,10 +269,9 @@ namespace Raven.Server.Documents.Queries
 
                 public Sort(string field)
                 {
-                    if (string.IsNullOrWhiteSpace(field))
-                        field = Guid.NewGuid().ToString();
-
-                    _random = new Random(field.GetHashCode());
+                    _random = field== null ? 
+                        new Random() : 
+                        new Random(field.GetHashCode());
                 }
 
                 public int Next()

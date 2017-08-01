@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
@@ -11,7 +12,7 @@ namespace Raven.Server.Documents.Queries.Parser
         public (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) From;
         public List<(QueryExpression Expression, FieldToken Alias)> Select;
         public List<(QueryExpression Expression, FieldToken Alias)> With;
-        public List<(FieldToken Field, OrderByFieldType FieldType, bool Ascending)> OrderBy;
+        public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
         public string QueryText;
 
@@ -84,9 +85,24 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     if (index != 0)
                         writer.Write(", ");
-                    var f = OrderBy[index];
-                    writer.Write(QueryExpression.Extract(QueryText, f.Field.TokenStart, f.Field.TokenLength, f.Field.EscapeChars));
-                    if (f.Ascending == false)
+                    OrderBy[index].Expression.ToString(QueryText, writer);
+                    switch (OrderBy[index].FieldType)
+                    {
+                        case OrderByFieldType.String:
+                            writer.Write(" AS string");
+                            break;
+                        case OrderByFieldType.Long:
+                            writer.Write(" AS long");
+                            break;
+                        case OrderByFieldType.Double:
+                            writer.Write(" AS double");
+                            break;
+                        case OrderByFieldType.AlphaNumeric:
+                            writer.Write(" AS alphanumeric");
+                            break;
+                    }
+                    
+                    if (OrderBy[index].Ascending == false)
                         writer.Write(" DESC");
                 }
                 writer.WriteLine();
@@ -172,8 +188,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Field");
-                    QueryExpression.WriteValue(QueryText, writer, field.Field.TokenStart, field.Field.TokenLength,
-                        field.Field.EscapeChars);
+                    field.Expression.ToJsonAst(QueryText, writer);
 
                     if (field.FieldType != OrderByFieldType.Implicit)
                     {

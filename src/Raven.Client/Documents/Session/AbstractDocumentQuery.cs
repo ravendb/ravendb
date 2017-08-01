@@ -491,7 +491,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.RandomFieldName + ";" + Guid.NewGuid(), false);
+            AddOrder("random()", false);
         }
 
         /// <summary>
@@ -500,7 +500,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
-            AddOrder(Constants.Documents.Indexing.Fields.RandomFieldName + ";" + seed, false);
+            AddOrder("random('" + seed.Replace("'", "''" ) + "')", false);
         }
 
         public void CustomSortUsing(string typeName, bool descending)

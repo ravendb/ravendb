@@ -72,15 +72,30 @@ namespace Raven.Server.Documents.Queries.Parser
             return fields;
         }
 
-        private List<ValueTuple<FieldToken, OrderByFieldType, bool>> OrderBy()
+        private List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)> OrderBy()
         {
-            var orderBy = new List<(FieldToken Field, OrderByFieldType FieldType, bool Ascending)>();
+            var orderBy = new List<(QueryExpression Expression, OrderByFieldType OrderingType, bool Ascending)>();
             do
             {
                 if (Field(out var field) == false)
                     ThrowParseException("Unable to get field for ORDER BY");
 
                 OrderByFieldType type = OrderByFieldType.Implicit;
+
+                QueryExpression op;
+                if (Scanner.TryScan('('))
+                {
+                    if (Method(field, out op) == false)
+                        ThrowParseException($"Unable to parse method call {QueryExpression.Extract(Scanner.Input, field)}for ORDER BY");
+                }
+                else
+                {
+                    op = new QueryExpression
+                    {
+                        Field = field,
+                        Type = OperatorType.Field
+                    };
+                }
 
                 if (Scanner.TryScan("AS") && Scanner.TryScan(OrderByAsOptions, out var asMatch))
                 {
@@ -109,7 +124,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         asc = false;
                 }
 
-                orderBy.Add((field, type, asc));
+                orderBy.Add((op, type, asc));
 
                 if (Scanner.TryScan(",") == false)
                     break;

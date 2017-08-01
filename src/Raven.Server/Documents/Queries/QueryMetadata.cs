@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Queries
             {
                 if (kvp.Value != ValueTokenType.Null)
                     continue;
-                
+
                 CanCache = false;
                 break;
             }
@@ -113,10 +113,43 @@ namespace Raven.Server.Documents.Queries
 
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
-                    var fieldInfo = Query.OrderBy[i];
-                    OrderBy[i] = (GetIndexFieldName(QueryExpression.Extract(Query.QueryText, fieldInfo.Field)), fieldInfo.FieldType, fieldInfo.Ascending);
+                    var order = Query.OrderBy[i];
+                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract(Query.QueryText, order.Expression.Field));
+
+                    switch (order.Expression.Type)
+                    {
+                        case OperatorType.Method:
+                            OrderBy[i] = ExtractOrderByFromMethod(order,indexFieldName);
+                            break;
+                        case OperatorType.Field:
+                            OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
+                            break;
+                        default:
+                            throw new InvalidOperationException("Invalid ORDER BY expression type " + order.Expression.Type);
+                    }
                 }
             }
+        }
+
+        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod((QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string indexFieldName)
+        {
+            if (string.Equals("random", indexFieldName, StringComparison.OrdinalIgnoreCase) == false)
+                throw new InvalidOperationException("Invalid ORDER BY method call " + indexFieldName);
+
+            if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
+            {
+                return (null, OrderByFieldType.Random, order.Ascending);
+            }
+            if (order.Expression.Arguments.Count > 1)
+                throw new InvalidOperationException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count);
+
+            var token = order.Expression.Arguments[0] as ValueToken;
+            if (token == null)
+                throw new InvalidOperationException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0]);
+
+            var arg = QueryExpression.Extract(QueryText, token);
+
+            return (arg, OrderByFieldType.Random, order.Ascending);
         }
 
         private void FillSelectFields(BlittableJsonReaderObject parameters)
