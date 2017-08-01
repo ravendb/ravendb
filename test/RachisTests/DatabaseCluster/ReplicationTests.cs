@@ -331,7 +331,6 @@ namespace RachisTests.DatabaseCluster
             var databaseName = GetDatabaseName();
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, useSsl: useSsl);
 
-            X509Certificate2 clientCertificate = null;
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
@@ -468,7 +467,7 @@ namespace RachisTests.DatabaseCluster
                 }
             }
         }
-        
+
         [Fact]
         public async Task ReplicateToWatcherWithAuth()
         {
@@ -500,7 +499,7 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                     await session.SaveChangesAsync();
                 }
-                
+
                 Assert.True(WaitForDocument<User>(store2, "users/1", (u) => u.Name == "Karmel"));
             }
         }
@@ -519,7 +518,7 @@ namespace RachisTests.DatabaseCluster
             {
                 [dbName + "otherstuff"] = DatabaseAccess.Admin
             });
-            
+
             using (var store1 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert1, modifyName: s => dbName))
             using (var store2 = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert2, modifyName: s => dbName,
                 createDatabase: false))
@@ -531,10 +530,10 @@ namespace RachisTests.DatabaseCluster
                 };
 
                 await AddWatcherToReplicationTopology(store1, watcher2);
-                
+
                 using (var session = store1.OpenAsyncSession())
                 {
-                    await session.StoreAsync(new User {Name = "Karmel"}, "users/1");
+                    await session.StoreAsync(new User { Name = "Karmel" }, "users/1");
                     await session.SaveChangesAsync();
                 }
 
