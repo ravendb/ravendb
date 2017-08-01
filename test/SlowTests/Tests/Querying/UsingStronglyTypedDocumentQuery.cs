@@ -51,14 +51,6 @@ namespace SlowTests.Tests.Querying
         }
 
         [Fact]
-        public void WhereBetweenOrEqualSameAsUntypedCounterpart()
-        {
-            throw new NotImplementedException();
-            //Assert.Equal(CreateUserQuery().WhereBetweenOrEqual("Name", "ayende", "zaphod").ToString(),
-            //    CreateUserQuery().WhereBetweenOrEqual(x => x.Name, "ayende", "zaphod").ToString());
-        }
-
-        [Fact]
         public void WhereGreaterThanSameAsUntypedCounterpart()
         {
             Assert.Equal(CreateUserQuery().WhereGreaterThan("Birthday", new DateTime(1970, 01, 01)).ToString(),
