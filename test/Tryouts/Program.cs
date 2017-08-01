@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDb3973())
+                using (var test = new SlowTests.MailingList.Stockholm())
                 {
                     try
                     {
-                        test.VerifyNegateQueryOptimization();
+                        test.ShouldIndexArray();
                     }
                     catch (Exception e)
                     {
