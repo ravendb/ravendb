@@ -1478,8 +1478,7 @@ If you really want to do in memory filtering on the data returned from the query
         public string GetMemberQueryPathForOrderBy(Expression expression)
         {
             var memberQueryPath = GetMemberQueryPath(expression);
-            var memberExpression = _linqPathProvider.GetMemberExpression(expression);
-            return FieldUtil.ApplyRangeSuffixIfNecessary(memberQueryPath, memberExpression.Type);
+            return memberQueryPath;
         }
 
         public string GetMemberQueryPath(Expression expression)

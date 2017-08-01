@@ -271,8 +271,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 return _index.Type.IsMap();
 
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return _fields.ContainsKey(field);
         }
 
