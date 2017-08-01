@@ -47,7 +47,7 @@ namespace SlowTests.MailingList
                 var results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .WhereLucene("Query", "\"Gigabit Switch Network\"")
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(!results.Any());
@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                   .WhereLucene("Query", "\"Gigabit Switch Network\" Vertical")
                   .CloseSubclause()
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(results.Count<Product>() == 1);
@@ -73,7 +73,7 @@ namespace SlowTests.MailingList
                   .WhereLucene("Query", "Vertical \"Gigabit Switch Network\"") // <-- Only difference from above successful test, is putting the single term in front of phrase
                   .CloseSubclause()
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(results.Count<Product>() == 1);
@@ -106,7 +106,7 @@ namespace SlowTests.MailingList
                 var results = session.Advanced.DocumentQuery<Product, Product_Search>()
                   .WhereLucene("Query", "\"Gigabit Switch Network\"")
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(!results.Any());
@@ -119,7 +119,7 @@ namespace SlowTests.MailingList
                   .WhereLucene("Query", "\"Gigabit Switch Network\" Switch")
                   .CloseSubclause()
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(results.Count<Product>() == 2);
@@ -132,7 +132,7 @@ namespace SlowTests.MailingList
                   .WhereLucene("Query", "\"Gigabit Switch Network\" Sound")
                   .CloseSubclause()
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(results.Count<Product>() == 1);
@@ -145,7 +145,7 @@ namespace SlowTests.MailingList
                   .WhereLucene("Query", "\"Gigabit Switch Network\" Switch Sound") // <- This should be "Gigabit Switch Network" OR Switch OR Sound
                   .CloseSubclause()
                   .AndAlso()
-                  .WhereEquals("Department", "Electronics")
+                  .WhereEquals("Department", "Electronics", exact: true)
                   .WaitForNonStaleResults()
                   .Statistics(out stats);
                 Assert.True(results.Count<Product>() == 3);
@@ -180,7 +180,7 @@ namespace SlowTests.MailingList
 
             return _store;
         }
-        
+
         private static List<Product> CreateProducts()
         {
             var products = new List<Product>
@@ -258,17 +258,17 @@ namespace SlowTests.MailingList
                       from product in products
                       select new
                       {
-                        Query = new object[]
+                          Query = new object[]
                         {
                             product.Name,
                             product.Category,
                             product.Description,
                             product.Attributes
                         },
-                        product.Name,
-                        product.Category,
-                        product.Created,
-                        product.Department
+                          product.Name,
+                          product.Category,
+                          product.Created,
+                          product.Department
                       };
 
                 Index(x => x.Query, FieldIndexing.Analyzed);
