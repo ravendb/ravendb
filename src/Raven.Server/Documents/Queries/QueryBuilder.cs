@@ -373,10 +373,10 @@ namespace Raven.Server.Documents.Queries
                 var expectedValueType = metadata.WhereFields[fieldName];
 
                 if (parameters == null)
-                    throw new InvalidOperationException();
+                    ThrowParametersWereNotProvided(metadata.QueryText);
 
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
-                    throw new InvalidOperationException();
+                    ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
                 var array = parameterValue as BlittableJsonReaderArray;
                 if (array != null)
@@ -411,15 +411,15 @@ namespace Raven.Server.Documents.Queries
                 var expectedValueType = metadata.WhereFields[fieldName];
 
                 if (parameters == null)
-                    throw new InvalidOperationException();
+                    ThrowParametersWereNotProvided(metadata.QueryText);
 
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
-                    throw new InvalidOperationException();
+                    ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
                 var parameterValueType = GetValueTokenType(parameterValue);
 
                 if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
-                    throw new InvalidOperationException();
+                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
             }
@@ -699,6 +699,16 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
+        }
+
+        private static void ThrowParametersWereNotProvided(string queryText)
+        {
+            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
+        }
+
+        private static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Value of parameter '{parameterName}' was not provided", queryText, parameters);
         }
 
         private enum MethodType
