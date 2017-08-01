@@ -269,14 +269,16 @@ namespace SlowTests.Tests.Bugs.TransformResults
                 {
                     AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                        .Where(x => x.UserId == UserId && x.Content == Content)
+                        .Where(x => x.UserId == UserId, true)
+                        .Search(x => x.Content, Content)
                         .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                         .SingleOrDefault();
                     Assert.NotNull(answerInfo);
 
                     AnswerEntity answerInfo2 = session.Query<Answer, Answers_ByAnswerEntity>()
                                                     .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                                                    .Where(x => x.UserId == UserId && x.Content == Content)
+                                                    .Where(x => x.UserId == UserId, true)
+                                                    .Search(x => x.Content, Content)
                                                     .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                                                     .SingleOrDefault();
                     Assert.NotNull(answerInfo2);
@@ -287,7 +289,8 @@ namespace SlowTests.Tests.Bugs.TransformResults
                 {
                     AnswerEntity answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
                         .Customize(x => x.WaitForNonStaleResultsAsOfNow())
-                        .Where(x => x.UserId == UserId && x.Content == Content)
+                        .Where(x => x.UserId == UserId, true)
+                        .Search(x => x.Content, Content)
                         .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                         .SingleOrDefault();
                     Assert.NotNull(answerInfo);
