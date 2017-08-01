@@ -264,7 +264,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             try
             {
-                AssemblyLoadContext.Default.LoadFromAssemblyPath(fileName);
+                AssemblyLoadContext.GetAssemblyName(fileName);
                 return true;
             }
             catch (Exception)

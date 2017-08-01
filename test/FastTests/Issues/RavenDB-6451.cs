@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Sparrow.Json;
 using Xunit;
 
@@ -67,8 +68,17 @@ namespace FastTests.Issues
             }
         }
 
+
         public bool HasInvalidProperties(Type t)
         {
+            return HasInvalidProperties(t, new HashSet<Type>());
+        }
+
+        private bool HasInvalidProperties(Type t, HashSet<Type> visited)
+        {
+            if (visited.Add(t) == false)
+                return false;
+            RuntimeHelpers.EnsureSufficientExecutionStack();
             var properties = t.GetProperties();
             foreach (var p in properties)
             {
@@ -91,7 +101,7 @@ namespace FastTests.Issues
                     p.PropertyType.GetTypeInfo().IsInterface == false &&
                     p.PropertyType.GetTypeInfo().ContainsGenericParameters == false &&
                     typeof(IEnumerable).IsAssignableFrom(p.PropertyType) == false &&
-                    HasInvalidProperties(p.PropertyType))
+                    HasInvalidProperties(p.PropertyType, visited))
                 {
                     return true;
                 }
