@@ -188,7 +188,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                     var readResponseTask = context.ReadForMemoryAsync(connection, _readStatusUpdateDebugString, internalTaskCancellationToken.Token);
                                     var timeout = TimeoutManager.WaitFor(receiveFromWorkerTimeout, _token);
 
-                                    if (await Task.WhenAny(readResponseTask, timeout) == timeout)
+                                    if (await Task.WhenAny(readResponseTask.AsTask(), timeout) == timeout)
                                     {
                                         if (_log.IsInfoEnabled)
                                         {

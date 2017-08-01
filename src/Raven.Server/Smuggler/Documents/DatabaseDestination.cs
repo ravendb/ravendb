@@ -178,7 +178,7 @@ namespace Raven.Server.Smuggler.Documents
                 var prevCommandTask = _prevCommandTask;
 
                 _prevCommand = _command;
-                _prevCommandTask = _database.TxMerger.Enqueue(_command);
+                _prevCommandTask = _database.TxMerger.Enqueue(_command).AsTask();
 
                 if (prevCommand != null)
                 {
@@ -209,7 +209,7 @@ namespace Raven.Server.Smuggler.Documents
                 if (_command.Documents.Count > 0)
                 {
                     using (_command)
-                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command));
+                        AsyncHelpers.RunSync(() => _database.TxMerger.Enqueue(_command).AsTask());
                 }
 
                 _command = null;

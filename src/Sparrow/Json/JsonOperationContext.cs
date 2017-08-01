@@ -420,12 +420,12 @@ namespace Sparrow.Json
             return ParseToMemory(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
         }
 
-        public Task<BlittableJsonReaderObject> ReadForDiskAsync(Stream stream, string documentId, CancellationToken? token = null)
+        public ValueTask<BlittableJsonReaderObject> ReadForDiskAsync(Stream stream, string documentId, CancellationToken? token = null)
         {
             return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk, token);
         }
 
-        public Task<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId, CancellationToken? token = null)
+        public ValueTask<BlittableJsonReaderObject> ReadForMemoryAsync(Stream stream, string documentId, CancellationToken? token = null)
         {
             return ParseToMemoryAsync(stream, documentId, BlittableJsonDocumentBuilder.UsageMode.None, token);
         }
@@ -603,7 +603,7 @@ namespace Sparrow.Json
             }
         }
 
-        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(WebSocket webSocket, string debugTag,
+        public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(WebSocket webSocket, string debugTag,
            BlittableJsonDocumentBuilder.UsageMode mode,
            ManagedPinnedBuffer bytes,
            CancellationToken token = default(CancellationToken)
@@ -649,13 +649,13 @@ namespace Sparrow.Json
             }
         }
 
-        private async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
+        private ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, CancellationToken? token = null)
         {
             using (GetManagedBuffer(out ManagedPinnedBuffer bytes))
-                return await ParseToMemoryAsync(stream, documentId, mode, bytes, token);
+                return ParseToMemoryAsync(stream, documentId, mode, bytes, token);
         }
 
-        public async Task<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes,
+        public async ValueTask<BlittableJsonReaderObject> ParseToMemoryAsync(Stream stream, string documentId, BlittableJsonDocumentBuilder.UsageMode mode, ManagedPinnedBuffer bytes,
             CancellationToken? token = null,
             int maxSize = int.MaxValue)
         {
