@@ -30,11 +30,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
+
+            var itemId = GetItemId();
             if (existingValue == null)
-                throw new InvalidOperationException($"Subscription with id {SubscriptionId} does not exist");
+                throw new InvalidOperationException($"Subscription with id {itemId} does not exist");
 
             if (record.Topology.WhoseTaskIsIt(this, isPassive) != NodeTag)
-                throw new InvalidOperationException($"Can't update subscription with id {SubscriptionId} by node {NodeTag}, because it's not it's task to update this subscription");
+                throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
             
@@ -44,7 +46,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             subscription.ChangeVector = ChangeVector;
             subscription.TimeOfLastClientActivity = DateTime.UtcNow;
 
-            return context.ReadObject(subscription.ToJson(), GetItemId());
+            return context.ReadObject(subscription.ToJson(), itemId);
         }
 
         public override void FillJson(DynamicJsonValue json)
