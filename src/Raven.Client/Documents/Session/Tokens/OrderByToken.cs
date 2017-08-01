@@ -42,8 +42,8 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer.Append(" AS alphaNumeric");
                     break;
             }
-
-            writer.Append(_descending ? " DESC" : " ASC");
+            if (_descending) // we only add this if we have to, ASC is the default and reads nicer
+                writer.Append(" DESC");
         }
     }
 }
