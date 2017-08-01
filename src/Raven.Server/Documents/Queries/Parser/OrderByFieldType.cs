@@ -7,6 +7,7 @@
         Long,
         Double,
         AlphaNumeric,
-        Random
+        Random,
+        Score
     }
 }

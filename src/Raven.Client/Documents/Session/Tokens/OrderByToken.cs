@@ -16,6 +16,20 @@ namespace Raven.Client.Documents.Session.Tokens
             _ordering = ordering;
         }
 
+        public static OrderByToken Random = new OrderByToken("random()", descending: false, ordering: OrderingType.String);
+
+        public static OrderByToken ScoreAscending = new OrderByToken("score()", descending: false, ordering: OrderingType.String);
+
+        public static OrderByToken ScoreDescending = new OrderByToken("score()", descending: true, ordering: OrderingType.String);
+
+        public static OrderByToken CreateRandom(string seed)
+        {
+            if (seed == null)
+                throw new ArgumentNullException(nameof(seed));
+
+            return new OrderByToken("random('" + seed.Replace("'", "''") + "')", false, OrderingType.String);
+        }
+
         public static OrderByToken CreateAscending(string fieldName, OrderingType ordering)
         {
             return new OrderByToken(fieldName, false, ordering);
@@ -42,6 +56,7 @@ namespace Raven.Client.Documents.Session.Tokens
                     writer.Append(" AS alphaNumeric");
                     break;
             }
+
             if (_descending) // we only add this if we have to, ASC is the default and reads nicer
                 writer.Append(" DESC");
         }

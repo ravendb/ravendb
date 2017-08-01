@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Queries
                     switch (order.Expression.Type)
                     {
                         case OperatorType.Method:
-                            OrderBy[i] = ExtractOrderByFromMethod(order,indexFieldName);
+                            OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName);
                             break;
                         case OperatorType.Field:
                             OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
@@ -131,25 +131,34 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod((QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string indexFieldName)
+        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod((QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string method)
         {
-            if (string.Equals("random", indexFieldName, StringComparison.OrdinalIgnoreCase) == false)
-                throw new InvalidOperationException("Invalid ORDER BY method call " + indexFieldName);
-
-            if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
+            if (string.Equals("random", method, StringComparison.OrdinalIgnoreCase))
             {
-                return (null, OrderByFieldType.Random, order.Ascending);
+                if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
+                    return (null, OrderByFieldType.Random, order.Ascending);
+
+                if (order.Expression.Arguments.Count > 1)
+                    throw new InvalidOperationException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count);
+
+                var token = order.Expression.Arguments[0] as ValueToken;
+                if (token == null)
+                    throw new InvalidOperationException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0]);
+
+                var arg = QueryExpression.Extract(QueryText, token);
+
+                return (arg, OrderByFieldType.Random, order.Ascending);
             }
-            if (order.Expression.Arguments.Count > 1)
-                throw new InvalidOperationException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count);
 
-            var token = order.Expression.Arguments[0] as ValueToken;
-            if (token == null)
-                throw new InvalidOperationException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0]);
+            if (string.Equals("score", method, StringComparison.OrdinalIgnoreCase))
+            {
+                if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
+                    return (null, OrderByFieldType.Score, order.Ascending);
 
-            var arg = QueryExpression.Extract(QueryText, token);
+                throw new InvalidOperationException("Invalid ORDER BY score call, expected zero arguments, got " + order.Expression.Arguments.Count);
+            }
 
-            return (arg, OrderByFieldType.Random, order.Ascending);
+            throw new InvalidOperationException("Invalid ORDER BY method call " + method);
         }
 
         private void FillSelectFields(BlittableJsonReaderObject parameters)

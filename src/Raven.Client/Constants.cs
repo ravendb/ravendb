@@ -168,8 +168,6 @@ namespace Raven.Client
 
                     public const string DistanceFieldName = "__distance";
 
-                    public const string IndexFieldScoreName = "__field_score";
-
                     internal const string RangeFieldSuffix = "_Range";
 
                     public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;

@@ -102,10 +102,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.OrderingType == OrderByFieldType.Random)
                         continue;
 
-                    var fieldName = field.Name;
-
-                    if (fieldName == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                    if (field.OrderingType == OrderByFieldType.Score)
                         continue;
+
+                    var fieldName = field.Name;
 
                     if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;

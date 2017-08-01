@@ -7,7 +7,6 @@ using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
@@ -96,7 +95,7 @@ namespace Raven.Server.Documents.Queries
 
                 var randomField = query.Metadata.OrderBy[0];
 
-                Debug.Assert(randomField.OrderingType==OrderByFieldType.Random);
+                Debug.Assert(randomField.OrderingType == OrderByFieldType.Random);
 
                 var customFieldName = randomField.Name;
 
@@ -269,8 +268,8 @@ namespace Raven.Server.Documents.Queries
 
                 public Sort(string field)
                 {
-                    _random = field== null ? 
-                        new Random() : 
+                    _random = field == null ?
+                        new Random() :
                         new Random(field.GetHashCode());
                 }
 

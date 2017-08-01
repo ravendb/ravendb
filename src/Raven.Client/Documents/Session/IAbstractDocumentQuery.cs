@@ -208,6 +208,10 @@ namespace Raven.Client.Documents.Session
         /// <param name = "fields">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
 
+        void OrderByScore();
+
+        void OrderByScoreDescending();
+
         /// <summary>
         ///   Adds matches highlighting for the specified field.
         /// </summary>

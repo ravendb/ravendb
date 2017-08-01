@@ -68,15 +68,15 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IDocumentQuery<T> OrderByScore()
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByScore()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
+            OrderByScore();
             return this;
         }
 
-        public IDocumentQuery<T> OrderByScoreDescending()
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByScoreDescending()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
+            OrderByScoreDescending();
             return this;
         }
 

@@ -39,7 +39,7 @@ namespace SlowTests.MailingList
                         .WaitForNonStaleResults()
                         .WhereStartsWith("FirstName", "David").Boost(3)
                         .WhereStartsWith("LastName", "David")
-                        .OrderBy(Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                        .OrderByScore()
                         .OrderBy("LastName")
                         .ToList();
 

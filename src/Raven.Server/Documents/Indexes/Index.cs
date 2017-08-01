@@ -1408,7 +1408,7 @@ namespace Raven.Server.Documents.Indexes
                         LastProcessedTombstoneEtag = collectionStats.LastProcessedTombstoneEtag
                     };
 
-                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext, 
+                    progressStats.NumberOfDocumentsToProcess = DocumentDatabase.DocumentsStorage.GetNumberOfDocumentsToProcess(documentsContext,
                         collection, progressStats.LastProcessedDocumentEtag, out long totalCount);
                     progressStats.TotalNumberOfDocuments = totalCount;
 
@@ -2035,10 +2035,10 @@ namespace Raven.Server.Documents.Indexes
                     if (sortedField.OrderingType == OrderByFieldType.Random)
                         continue;
 
-                    var f = sortedField.Name;
-                    
-                    if (f == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                    if (sortedField.OrderingType == OrderByFieldType.Score)
                         continue;
+
+                    var f = sortedField.Name;
 
                     if (f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;

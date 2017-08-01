@@ -864,11 +864,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     VisitSearch(expression);
                     break;
                 case "OrderByScore":
-                    _documentQuery.AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
+                    _documentQuery.OrderByScore();
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "OrderByScoreDescending":
-                    _documentQuery.AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
+                    _documentQuery.OrderByScoreDescending();
                     VisitExpression(expression.Arguments[0]);
                     break;
                 case "Intersect":

@@ -18,7 +18,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
-using Raven.Server.Documents.Queries.Sorting;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
 using Raven.Server.Exceptions;
 using Raven.Server.Indexing;
@@ -32,8 +31,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public sealed class IndexReadOperation : IndexOperationBase
     {
-        private static readonly CompareInfo InvariantCompare = CultureInfo.InvariantCulture.CompareInfo;
-
         private readonly IndexType _indexType;
         private readonly bool _indexHasBoostedFields;
 
@@ -132,9 +129,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
-            
+
             var methodName = QueryExpression.Extract(query.Metadata.QueryText, query.Metadata.Query.Where.Field);
-            
+
             if (string.Equals("intersect", methodName) == false)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just a single intersect() method call while it got '{methodName}' method", query.Metadata.QueryText, query.QueryParameters);
 
@@ -306,7 +303,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
                 }
 
-                if (field.Name == Constants.Documents.Indexing.Fields.IndexFieldScoreName)
+                if (field.OrderingType == OrderByFieldType.Score)
                 {
                     sort.Add(SortField.FIELD_SCORE);
                     continue;

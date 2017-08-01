@@ -731,18 +731,18 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Adds an ordering by score for a specific field to the query
         /// </summary>
-        public IAsyncDocumentQuery<T> OrderByScore()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScore()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, false);
+            OrderByScore();
             return this;
         }
 
         /// <summary>
         /// Adds an ordering by score descending for a specific field to the query
         /// </summary>
-        public IAsyncDocumentQuery<T> OrderByScoreDescending()
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByScoreDescending()
         {
-            AddOrder(Constants.Documents.Indexing.Fields.IndexFieldScoreName, true);
+            OrderByScoreDescending();
             return this;
         }
 

@@ -491,7 +491,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
-            OrderByTokens.AddLast(OrderByToken.CreateAscending("random()", OrderingType.String));
+            OrderByTokens.AddLast(OrderByToken.Random);
         }
 
         /// <summary>
@@ -505,7 +505,7 @@ namespace Raven.Client.Documents.Session
                 RandomOrdering();
                 return;
             }
-            OrderByTokens.AddLast(OrderByToken.CreateAscending("random('" + seed.Replace("'", "''") + "')", OrderingType.String));
+            OrderByTokens.AddLast(OrderByToken.CreateRandom(seed));
         }
 
         public void CustomSortUsing(string typeName, bool descending)
@@ -1112,6 +1112,16 @@ If you really want to do in memory filtering on the data returned from the query
         {
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateDescending(f, ordering));
+        }
+
+        public void OrderByScore()
+        {
+            OrderByTokens.AddLast(OrderByToken.ScoreAscending);
+        }
+
+        public void OrderByScoreDescending()
+        {
+            OrderByTokens.AddLast(OrderByToken.ScoreDescending);
         }
 
         /// <summary>
