@@ -45,29 +45,6 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
-        public void No_Escaping_Causes_Error()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new ExampleIndex().Execute(store);
-                Populate(store);
-                WaitForIndexing(store);
-
-                using (var session = store.OpenSession())
-                {
-                    var query = session.Query<ExampleIndex.ReduceResult, ExampleIndex>();
-                    query.Customize(c => c.WaitForNonStaleResults());
-                    var results =
-                        query.Where(x => x.Name == SearchText)
-                            .As<Example>()
-                            .ToList();
-
-                    Assert.NotEmpty(results);
-                }
-            }
-        }
-
         private static void Populate(IDocumentStore store)
         {
             using (var session = store.OpenSession())
