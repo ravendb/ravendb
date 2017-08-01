@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.Queries.Dynamic.MapReduce.BasicDynamicMapReduceQueries())
+                using (var test = new SlowTests.Issues.RavenDb3973())
                 {
                     try
                     {
-                        test.Group_by_nested_field_sum_on_collection();
+                        test.VerifyNegateQueryOptimization();
                     }
                     catch (Exception e)
                     {
