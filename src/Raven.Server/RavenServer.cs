@@ -352,7 +352,6 @@ namespace Raven.Server
             public async Task<IAdaptedConnection> OnConnectionAsync(ConnectionAdapterContext context)
             {
                 var connection = await _httpsConnectionAdapter.OnConnectionAsync(context);
-
                 var tls = context.Features.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
                 var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
@@ -373,11 +372,11 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
-            else if (certificate.NotAfter < DateTime.UtcNow)
+            else if (certificate.NotAfter.ToUniversalTime() < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
             }
-            else if (certificate.NotBefore > DateTime.UtcNow)
+            else if (certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }

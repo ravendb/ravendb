@@ -1,5 +1,9 @@
 #!/bin/bash
 
+pushd `dirname $0` > /dev/null
+SCRIPT_PATH=`pwd`
+popd > /dev/null
+
 # generate a self-signed cert with proper extensions
 NAME='test'
 
@@ -23,6 +27,8 @@ if [ -z $PASSPHRASE ]; then
     PASSPHRASE="test"
 fi
 
+CERT_CONF="$SCRIPT_PATH/cert.conf"
+
 echo "Generate key..."
 openssl genrsa -des3 \
     -passout "pass:$PASSPHRASE" \
@@ -35,7 +41,7 @@ openssl req -new -x509 \
     -out "$CRT_CERT" \
     -passin "pass:$PASSPHRASE" \
     -extensions extensions \
-    -config cert.conf \
+    -config "$CERT_CONF" \
     -subj "/C=IL/ST=Haifa/L=Hadera/O=Hibernating Rhinos/CN=test"
 
 openssl pkcs12 -export -passout "pass:$PASSPHRASE" -passin "pass:$PASSPHRASE" -out "$PFX_CERT" -inkey "$PRIVATE_KEY" -in "$CRT_CERT"    
