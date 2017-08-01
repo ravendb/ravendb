@@ -24,10 +24,6 @@ namespace SlowTests.Issues
                 Map = orders =>
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region };
-
-                Sort(x => x.Total, SortOptions.Numeric);
-                Sort(x => x.Quantity, SortOptions.Numeric);
-                Sort(x => x.Region, SortOptions.Numeric);
             }
         }
 
@@ -43,10 +39,6 @@ namespace SlowTests.Issues
                 Map = orders =>
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At };
-
-                Sort(x => x.Total, SortOptions.Numeric);
-                Sort(x => x.Quantity, SortOptions.Numeric);
-                Sort(x => x.Region, SortOptions.Numeric);
             }
         }
 
@@ -62,11 +54,6 @@ namespace SlowTests.Issues
                 Map = orders =>
                       from order in orders
                       select new { order.Currency, order.Product, order.Total, order.Quantity, order.Region, order.At, order.Tax };
-
-                Sort(x => x.Total, SortOptions.Numeric);
-                Sort(x => x.Quantity, SortOptions.Numeric);
-                Sort(x => x.Region, SortOptions.Numeric);
-                Sort(x => x.Tax, SortOptions.Numeric);
             }
         }
 

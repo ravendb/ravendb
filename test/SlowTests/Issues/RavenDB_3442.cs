@@ -33,7 +33,6 @@ namespace SlowTests.Issues
                 var index = indexes.Single(x => x.Name.StartsWith("Auto/"));
 
                 Assert.Equal(1, index.Fields.Count);
-                Assert.Equal(SortOptions.Numeric, index.Fields["Count"].Sort.Value);
             }
         }
 

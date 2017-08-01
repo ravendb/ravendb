@@ -30,8 +30,6 @@ namespace Raven.Client.Documents.Conventions
         internal static DocumentConventions Default = new DocumentConventions();
 
         private static IDictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
-        private readonly Dictionary<string, SortOptions> _customDefaultSortOptions = new Dictionary<string, SortOptions>();
-        private readonly List<Type> _customRangeTypes = new List<Type>();
 
         private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
@@ -422,7 +420,6 @@ namespace Raven.Client.Documents.Conventions
                 return RangeType.Double;
 
             return RangeType.None;
-            //return _customRangeTypes.Contains(type); TODO [ppekrol]
         }
 
         /// <summary>

@@ -313,7 +313,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
 
                 var fieldName = field.Name;
-                var sortOptions = SortOptions.String;
+                var sortOptions = SortField.STRING;
 
                 switch (field.OrderingType)
                 {
@@ -322,16 +322,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         sort.Add(new SortField(fieldName, anSort, field.Ascending == false));
                         continue;
                     case OrderByFieldType.Long:
-                        sortOptions = SortOptions.Numeric;
+                        sortOptions = SortField.LONG;
                         fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
                         break;
                     case OrderByFieldType.Double:
-                        sortOptions = SortOptions.Numeric;
+                        sortOptions = SortField.DOUBLE;
                         fieldName = fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
                         break;
                 }
 
-                sort.Add(new SortField(fieldName, (int)sortOptions, field.Ascending == false));
+                sort.Add(new SortField(fieldName, sortOptions, field.Ascending == false));
             }
 
             return new Sort(sort.ToArray());

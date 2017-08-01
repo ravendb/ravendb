@@ -143,7 +143,6 @@ namespace SlowTests.Bugs
                                      CarMake = car.Make
                                  };
 
-                Sort(p => p.CarMake, SortOptions.String);
                 Store(p => p.PersonId, FieldStorage.Yes);
                 Store(p => p.PersonName, FieldStorage.Yes);
                 Store(p => p.CarRegistration, FieldStorage.Yes);

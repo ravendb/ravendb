@@ -204,9 +204,6 @@ namespace SlowTests.Server.Documents.Notifications
                     from user in users
                     select new { user.Name, user.LastName, user.Age };
 
-                Sort(x => x.Name, SortOptions.String);
-                Sort(x => x.LastName, SortOptions.String);
-                Sort(x => x.Age, SortOptions.Numeric);
             }
         }
 
@@ -220,11 +217,6 @@ namespace SlowTests.Server.Documents.Notifications
                     from user in users
                     select new { user.Name, user.LastName, user.Age, user.AddressId, user.Id };
 
-                Sort(x => x.Name, SortOptions.String);
-                Sort(x => x.LastName, SortOptions.String);
-                Sort(x => x.Age, SortOptions.Numeric);
-                Sort(x => x.AddressId, SortOptions.String);
-                Sort(x => x.Id, SortOptions.String);
 
             }
         }

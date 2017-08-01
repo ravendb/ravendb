@@ -153,42 +153,6 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 indexDefinition.Fields[kvp.Key].Indexing = kvp.Value;
             }
 
-            foreach (var kvp in legacyIndexDefinition.SortOptions)
-            {
-                if (indexDefinition.Fields.ContainsKey(kvp.Key) == false)
-                    indexDefinition.Fields[kvp.Key] = new IndexFieldOptions();
-
-                SortOptions sortOptions;
-                switch (kvp.Value)
-                {
-                    case LegacyIndexDefinition.LegacySortOptions.None:
-                        sortOptions = SortOptions.None;
-                        break;
-                    case LegacyIndexDefinition.LegacySortOptions.String:
-                        sortOptions = SortOptions.String;
-                        break;
-                    case LegacyIndexDefinition.LegacySortOptions.Short:
-                    case LegacyIndexDefinition.LegacySortOptions.Long:
-                    case LegacyIndexDefinition.LegacySortOptions.Int:
-                    case LegacyIndexDefinition.LegacySortOptions.Byte:
-                        sortOptions = SortOptions.Numeric;
-                        break;
-                    case LegacyIndexDefinition.LegacySortOptions.Float:
-                    case LegacyIndexDefinition.LegacySortOptions.Double:
-                        sortOptions = SortOptions.Numeric;
-                        break;
-                    case LegacyIndexDefinition.LegacySortOptions.Custom:
-                        throw new NotImplementedException(kvp.Value.ToString());
-                    case LegacyIndexDefinition.LegacySortOptions.StringVal:
-                        sortOptions = SortOptions.StringVal;
-                        break;
-                    default:
-                        throw new NotSupportedException(kvp.Value.ToString());
-                }
-
-                indexDefinition.Fields[kvp.Key].Sort = sortOptions;
-            }
-
             foreach (var kvp in legacyIndexDefinition.SpatialIndexes)
             {
                 if (indexDefinition.Fields.ContainsKey(kvp.Key) == false)

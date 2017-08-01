@@ -145,7 +145,7 @@ namespace SlowTests.Core.Commands
                         Maps = { "from doc in docs.Users select new { doc.Name }" },
                         Fields = new Dictionary<string, IndexFieldOptions>
                                                                  {
-                                                                     { "Name", new IndexFieldOptions { Sort = SortOptions.String } }
+                                                                     { "Name", new IndexFieldOptions()}
                                                                  },
                         Name = "test"
                     }}));

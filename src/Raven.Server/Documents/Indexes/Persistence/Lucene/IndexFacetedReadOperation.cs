@@ -112,7 +112,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             facetValue = new FacetValue
                             {
-                                Range = FacetedQueryHelper.GetRangeName(facet.Name, kvp.Key, _fields)
+                                Range = FacetedQueryHelper.GetRangeName(facet.Name, kvp.Key)
                             };
                             facetValues.Add(kvp.Key, facetValue);
                         }
@@ -295,63 +295,52 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
-            var sortOptionsForFacet = FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields);
-            switch (sortOptionsForFacet)
+            var name = facet.AggregationField;
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
+            if (rangeType == RangeType.None)
             {
-                case SortOptions.String:
-                case SortOptions.StringVal:
-                //case SortOptions.Custom: // TODO arek
-                case SortOptions.None:
-                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FieldUtil.RemoveRangeSuffixIfNecessary(facet.AggregationField)));
-                case SortOptions.Numeric:
-                    var name = facet.AggregationField;
-                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
-                    if (rangeType == RangeType.None)
-                    {
-                        name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
-                        rangeType = RangeType.Double;
-                    }
+                name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
+                rangeType = RangeType.Double;
+            }
 
-                    long[] longs = null;
-                    double[] doubles = null;
-                    switch (rangeType)
-                    {
-                        case RangeType.Long:
-                            longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name, state);
-                            break;
-                        case RangeType.Double:
-                            doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
-                            break;
-                    }
-
-                    for (int index = 0; index < docsInQuery.Count; index++)
-                    {
-                        var doc = docsInQuery.Array[index];
-
-                        var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
-                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
-                        {
-                            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                        {
-                            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                        {
-                            value.Sum = currentVal + (value.Sum ?? 0d);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                        {
-                            value.Average = currentVal + (value.Average ?? 0d);
-                        }
-                    }
+            long[] longs = null;
+            double[] doubles = null;
+            switch (rangeType)
+            {
+                case RangeType.Long:
+                    longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name, state);
+                    break;
+                case RangeType.Double:
+                    doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException($"Not supported sort option for aggregation: {sortOptionsForFacet}");
+                    throw new InvalidOperationException("Invalid range type for " + facet.Name +", don't know how to handle " + rangeType);
+            }
+
+            for (int index = 0; index < docsInQuery.Count; index++)
+            {
+                var doc = docsInQuery.Array[index];
+
+                var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
+                if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
+                {
+                    value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
+                {
+                    value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
+                {
+                    value.Sum = currentVal + (value.Sum ?? 0d);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
+                {
+                    value.Average = currentVal + (value.Average ?? 0d);
+                }
             }
         }
 
@@ -455,7 +444,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             foreach (var facet in facets)
             {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
+                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && 
+                    FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None)
                     throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
             }
         }

@@ -88,7 +88,6 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     Analyzer = kvp.Value.Analyzer,
                     Spatial = null,
                     Suggestions = null,
-                    Sort = kvp.Value.Sort,
                     MapReduceOperation = kvp.Value.Aggregation
                 };
 

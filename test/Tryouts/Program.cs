@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new IsNullOrEmpty())
+                using (var test = new FastTests.Server.Documents.Queries.Dynamic.MapReduce.BasicDynamicMapReduceQueries())
                 {
                     try
                     {
-                        test.IsNullOrEmptyEqFalse();
+                        test.Group_by_nested_field_sum_on_collection();
                     }
                     catch (Exception e)
                     {

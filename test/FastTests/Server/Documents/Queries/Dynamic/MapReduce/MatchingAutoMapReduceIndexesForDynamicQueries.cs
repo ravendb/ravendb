@@ -43,7 +43,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
-                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -52,7 +51,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     Name = "Location",
                     Storage = FieldStorage.Yes,
-                    Sort = SortOptions.String
                 }
             });
 
@@ -133,7 +131,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
-                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -232,7 +229,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
-                    Sort = SortOptions.Numeric
                 },
             },
             new[]
@@ -251,7 +247,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     Name = "Count",
                     Storage = FieldStorage.Yes,
                     Aggregation = AggregationOperation.Count,
-                    Sort = SortOptions.Numeric
                 },
                 new IndexField
                 {
@@ -278,36 +273,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(usersByCountAndTotalAgeGroupedByLocation.Name, result.IndexName);
-        }
-
-        [Fact]
-        public void Failure_when_sort_options_do_not_match()
-        {
-            var definition = new AutoMapReduceIndexDefinition("LineItems", new[]
-            {
-                new IndexField
-                {
-                    Name = "Price",
-                    Storage = FieldStorage.Yes,
-                    Aggregation = AggregationOperation.Sum,
-                    Sort = SortOptions.String
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "Name",
-                    Storage = FieldStorage.Yes
-                }
-            });
-
-            add_index(definition);
-
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT sum(Price) FROM LineItems GROUP BY Name WHERE Price = 70 ORDER BY Price"));
-
-            var result = _sut.Match(dynamicQuery);
-
-            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
         [Fact]

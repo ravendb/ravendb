@@ -100,7 +100,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 }
             });
 
@@ -200,7 +199,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     Name = "Address.ZipCode",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 },
             });
 
@@ -212,27 +210,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
             Assert.Equal(DynamicQueryMatchType.Complete, result.MatchType);
             Assert.Equal(definition.Name, result.IndexName);
-        }
-
-        [Fact]
-        public void Failure_when_sort_options_do_not_match()
-        {
-            var definition = new AutoMapIndexDefinition("Users", new[]
-            {
-                new IndexField
-                {
-                    Name = "Weight",
-                    Storage = FieldStorage.No
-                },
-            });
-
-            add_index(definition);
-
-            var dynamicQuery = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE Weigth = 70 ORDER BY Weight AS double"));
-
-            var result = _sut.Match(dynamicQuery);
-
-            Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
         [Fact]
@@ -266,7 +243,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 },
             });
 

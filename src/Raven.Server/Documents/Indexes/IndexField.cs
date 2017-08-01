@@ -9,8 +9,6 @@ namespace Raven.Server.Documents.Indexes
 
         public string Analyzer { get; set; }
 
-        public SortOptions? Sort { get; set; }
-
         public AggregationOperation Aggregation { get; set; }
 
         public FieldStorage Storage { get; set; }
@@ -40,11 +38,6 @@ namespace Raven.Server.Documents.Indexes
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
                 field.Indexing = FieldIndexing.Analyzed;
 
-            if (options.Sort.HasValue)
-                field.Sort = options.Sort.Value;
-            else if (allFields?.Sort != null)
-                field.Sort = allFields.Sort.Value;
-
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
             else if (allFields?.Storage != null)
@@ -67,7 +60,6 @@ namespace Raven.Server.Documents.Indexes
         {
             return string.Equals(Name, other.Name, StringComparison.OrdinalIgnoreCase)
                 && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
-                && Sort == other.Sort
                 && Aggregation == other.Aggregation
                 && Storage == other.Storage
                 && Indexing == other.Indexing
@@ -97,7 +89,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 var hashCode = (Name != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Name) : 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);
-                hashCode = (hashCode * 397) ^ Sort.GetHashCode();
                 hashCode = (hashCode * 397) ^ (int)Aggregation;
                 hashCode = (hashCode * 397) ^ (int)Storage;
                 hashCode = (hashCode * 397) ^ (int)Indexing;
@@ -113,7 +104,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 Analyzer = Analyzer,
                 Indexing = Indexing,
-                Sort = Sort,
                 Storage = Storage,
                 TermVector = TermVector
             };

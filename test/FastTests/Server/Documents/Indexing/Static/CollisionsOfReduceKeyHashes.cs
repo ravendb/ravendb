@@ -77,7 +77,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     Fields =
                     {
                         {"Location", new IndexFieldOptions {Storage = FieldStorage.Yes}},
-                        {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes, Sort = SortOptions.Numeric}}
+                        {"Count", new IndexFieldOptions {Storage = FieldStorage.Yes}}
                     }
                 }, database);
 

@@ -73,7 +73,6 @@ namespace SlowTests.MailingList
                 Index(x => x.Text, FieldIndexing.Analyzed);
                 Index(x => x.Num, FieldIndexing.Default);
 
-                Sort(x => x.Num, SortOptions.Numeric);
             }
         }
     }

@@ -9,8 +9,6 @@ namespace Raven.Client.Documents.Indexes
 
         public FieldIndexing? Indexing { get; set; }
 
-        public SortOptions? Sort { get; set; }
-
         public FieldTermVector? TermVector { get; set; }
 
         public SpatialOptions Spatial { get; set; }
@@ -23,7 +21,6 @@ namespace Raven.Client.Documents.Indexes
         {
             return Storage == other.Storage
                    && Indexing == other.Indexing
-                   && Sort == other.Sort
                    && TermVector == other.TermVector
                    && Equals(Spatial, other.Spatial)
                    && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
@@ -53,7 +50,6 @@ namespace Raven.Client.Documents.Indexes
             {
                 var hashCode = Storage.GetHashCode();
                 hashCode = (hashCode * 397) ^ Indexing.GetHashCode();
-                hashCode = (hashCode * 397) ^ Sort.GetHashCode();
                 hashCode = (hashCode * 397) ^ TermVector.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);

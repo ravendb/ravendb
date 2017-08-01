@@ -53,7 +53,6 @@ namespace SlowTests.Tests.Linq
                     {
                         Map = docs => from doc in docs
                             select new {doc.Name, doc.Age},
-                        SortOptions = {{x => x.Name, SortOptions.StringVal}}
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
                 store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
@@ -104,7 +103,6 @@ namespace SlowTests.Tests.Linq
                     {
                         Map = docs => from doc in docs
                                       select new { doc.Name, doc.Age },
-                        SortOptions = { { x => x.Name, SortOptions.StringVal } }
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
                     store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));

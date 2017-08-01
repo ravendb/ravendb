@@ -104,7 +104,6 @@ namespace SlowTests.Bugs.LiveProjections
                 Map = docs => from t in docs
                               select new { t.Start };
 
-                IndexSortOptions.Add(s => s.Start, SortOptions.String);
             }
         }
 

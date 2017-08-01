@@ -118,7 +118,6 @@ namespace SlowTests.MailingList
                         Prices = p.Variants.Select(v => (decimal)v.ListPrice.Amount).Distinct(),
                     };
 
-                Sort(e => e.Prices, SortOptions.Numeric);
             }
         }
     }

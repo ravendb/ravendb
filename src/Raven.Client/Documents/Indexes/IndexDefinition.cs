@@ -305,14 +305,6 @@ namespace Raven.Client.Documents.Indexes
                     else
                         allDefault = false;
 
-                    if (field.Sort.HasValue)
-                    {
-                        if (field.Sort == SortOptions.None)
-                            field.Sort = null;
-                        else
-                            allDefault = false;
-                    }
-
                     if (field.TermVector.HasValue)
                     {
                         if (field.TermVector == FieldTermVector.No)
@@ -380,7 +372,6 @@ namespace Raven.Client.Documents.Indexes
                     {
                         Indexing = value.Indexing,
                         Analyzer = value.Analyzer,
-                        Sort = value.Sort,
                         Spatial = value.Spatial,
                         Storage = value.Storage,
                         Suggestions = value.Suggestions,

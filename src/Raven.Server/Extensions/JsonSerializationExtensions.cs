@@ -39,7 +39,6 @@ namespace Raven.Server.Extensions
                 var field = new DynamicJsonValue();
                 field[nameof(IndexFieldOptions.Analyzer)] = kvp.Value.Analyzer;
                 field[nameof(IndexFieldOptions.Indexing)] = kvp.Value.Indexing?.ToString();
-                field[nameof(IndexFieldOptions.Sort)] = kvp.Value.Sort?.ToString();
                 field[nameof(IndexFieldOptions.Spatial)] = spatial;
                 field[nameof(IndexFieldOptions.Storage)] = kvp.Value.Storage?.ToString();
                 field[nameof(IndexFieldOptions.Suggestions)] = kvp.Value.Suggestions;

@@ -887,13 +887,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(options.Sort));
-            if (options.Sort.HasValue)
-                writer.WriteString(options.Sort.ToString());
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(options.Storage));
             if (options.Storage.HasValue)
                 writer.WriteString(options.Storage.ToString());

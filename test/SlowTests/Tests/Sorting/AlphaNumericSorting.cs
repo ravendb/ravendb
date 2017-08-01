@@ -635,7 +635,6 @@ namespace SlowTests.Tests.Sorting
                                   doc.Year
                               };
 
-                Sort(x => x.Year, SortOptions.Numeric);
             }
         }
 

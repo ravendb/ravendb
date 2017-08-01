@@ -30,7 +30,6 @@ namespace SlowTests.Tests.Bugs.TransformResults
                                    DecimalTotal = g.Sum(x => x.DecimalTotal)
                                };
 
-            IndexSortOptions.Add(x => x.VoteTotal, SortOptions.Numeric);
         }
     }
 }

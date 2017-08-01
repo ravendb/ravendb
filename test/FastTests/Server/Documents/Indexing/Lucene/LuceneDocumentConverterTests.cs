@@ -142,13 +142,11 @@ namespace FastTests.Server.Documents.Indexing.Lucene
                 {
                     Name = "Weight",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 },
                 new IndexField
                 {
                     Name = "Age",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 },
             });
 

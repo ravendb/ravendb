@@ -215,10 +215,6 @@ namespace Raven.Server.Documents.Indexes
                 writer.WriteString((field.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.Sort)));
-                writer.WriteInteger((int)(field.Sort ?? SortOptions.None));
-                writer.WriteComma();
-
                 writer.WritePropertyName((nameof(field.Aggregation)));
                 writer.WriteInteger((int)(field.Aggregation));
 
@@ -396,13 +392,11 @@ namespace Raven.Server.Documents.Indexes
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
                 json.TryGet(nameof(IndexField.Name), out string name);
-                json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
 
                 var field = new IndexField
                 {
                     Name = name,
                     Storage = FieldStorage.No,
-                    Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default
                 };
 

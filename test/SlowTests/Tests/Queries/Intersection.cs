@@ -148,7 +148,7 @@ namespace SlowTests.Tests.Queries
                                                     },
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                     {
-                                                        { "BarcodeNumber", new IndexFieldOptions { Sort = SortOptions.Numeric } }
+                                                        { "BarcodeNumber", new IndexFieldOptions { } }
                                                     }
                                                 }}));
 

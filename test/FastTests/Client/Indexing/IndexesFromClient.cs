@@ -344,7 +344,6 @@ namespace FastTests.Client.Indexing
 
                     Assert.Equal((int?)serverField.Indexing, (int?)field.Indexing);
                     Assert.Equal(serverField.Analyzer, field.Analyzer);
-                    Assert.Equal((int?)serverField.Sort, (int?)field.Sort);
                     Assert.Equal(serverField.Spatial == null, field.Spatial == null);
                     Assert.Equal((int?)serverField.Storage, (int?)field.Storage);
                     Assert.Equal(serverField.Suggestions, field.Suggestions);

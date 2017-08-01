@@ -101,14 +101,12 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
                 Assert.True(await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 })) > 0);
                 var name2 = new IndexField
                 {
                     Name = "Name2",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.Numeric
                 };
 
                 var etag2 = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name2 }));
@@ -138,7 +136,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[0].Definition.Collections.Single());
                 Assert.Equal(1, indexes[0].Definition.MapFields.Count);
                 Assert.Equal("Name1", indexes[0].Definition.MapFields["Name1"].Name);
-                Assert.Equal(SortOptions.String, indexes[0].Definition.MapFields["Name1"].Sort);
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
                 Assert.Equal(IndexPriority.Normal, indexes[0].Definition.Priority);
                 Assert.Equal(IndexState.Normal, indexes[0].State);
@@ -148,7 +145,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
                 Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
-                Assert.Equal(SortOptions.Numeric, indexes[1].Definition.MapFields["Name2"].Sort);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Low, indexes[1].Definition.Priority);
                 Assert.Equal(IndexState.Disabled, indexes[1].State);
@@ -1086,7 +1082,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
 
                 var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
@@ -1132,7 +1127,6 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 {
                     Name = "Name1",
                     Storage = FieldStorage.No,
-                    Sort = SortOptions.String
                 };
 
                 var etag = await database.IndexStore.CreateIndex(new AutoMapIndexDefinition("Users", new[] { name1 }));
