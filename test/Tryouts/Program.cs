@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Tests.Faceted.AggregationFacet())
+                using (var test = new SlowTests.Issues.RavenDB_425())
                 {
                     try
                     {
-                        test.CanHandleAverageFacet_HighLevel();
+                        test.WillGetErrorWhenQueryingById();
                     }
                     catch (Exception e)
                     {
