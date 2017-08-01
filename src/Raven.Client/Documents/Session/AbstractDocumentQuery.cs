@@ -491,7 +491,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
-            AddOrder("random()", false);
+            OrderByTokens.AddLast(OrderByToken.CreateAscending("random()", OrderingType.String));
         }
 
         /// <summary>
@@ -500,7 +500,12 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
-            AddOrder("random('" + seed.Replace("'", "''") + "')", false);
+            if (string.IsNullOrWhiteSpace(seed))
+            {
+                RandomOrdering();
+                return;
+            }
+            OrderByTokens.AddLast(OrderByToken.CreateAscending("random('" + seed.Replace("'", "''") + "')", OrderingType.String));
         }
 
         public void CustomSortUsing(string typeName, bool descending)
