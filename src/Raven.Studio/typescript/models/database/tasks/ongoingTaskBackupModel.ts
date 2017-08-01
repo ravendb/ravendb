@@ -14,7 +14,7 @@ class ongoingTaskBackupModel extends ongoingTask {
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
 
-    constructor(dto: Raven.Server.Web.System.OngoingTaskBackup) {
+    constructor(dto: Raven.Client.Server.Operations.OngoingTaskBackup) {
         super();
 
         this.update(dto);
@@ -28,7 +28,7 @@ class ongoingTaskBackupModel extends ongoingTask {
         this.editUrl = urls.editPeriodicBackupTask(this.taskId); 
     }
 
-    update(dto: Raven.Server.Web.System.OngoingTaskBackup) {
+    update(dto: Raven.Client.Server.Operations.OngoingTaskBackup) {
         super.update(dto);
 
         this.backupType(dto.BackupType);

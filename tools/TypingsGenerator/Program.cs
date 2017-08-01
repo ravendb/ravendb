@@ -247,8 +247,8 @@ namespace TypingsGenerator
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions)); 
             scripter.AddType(typeof(OngoingTaskReplication));
-            scripter.AddType(typeof(OngoingRavenEtl));
-            scripter.AddType(typeof(OngoingSqlEtl));
+            scripter.AddType(typeof(OngoingTaskRavenEtl));
+            scripter.AddType(typeof(OngoingTaskSqlEtl));
             scripter.AddType(typeof(OngoingTaskBackup));
             scripter.AddType(typeof(OngoingTaskType));
             scripter.AddType(typeof(OngoingTaskState));
@@ -256,7 +256,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NodeId));
             scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(ExternalReplication));
-            scripter.AddType(typeof(GetTaskInfoResult));
 
             scripter.AddType(typeof(AdminJsScript));
             scripter.AddType(typeof(AdminJsScriptResult));

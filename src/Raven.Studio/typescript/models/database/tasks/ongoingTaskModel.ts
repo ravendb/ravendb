@@ -46,7 +46,7 @@ abstract class ongoingTaskModel {
         });
     }
 
-    protected update(dto: Raven.Server.Web.System.OngoingTask) {
+    protected update(dto: Raven.Client.Server.Operations.OngoingTask) {
         this.taskId = dto.TaskId;
         this.taskName(dto.TaskName);
         this.taskType(dto.TaskType);

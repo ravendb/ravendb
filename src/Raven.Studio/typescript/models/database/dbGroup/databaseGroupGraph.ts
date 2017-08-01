@@ -57,13 +57,13 @@ class taskNode extends layoutable {
         super();
     }
 
-    static for(dto: Raven.Server.Web.System.OngoingTask, responsibleNode: databaseNode) {
+    static for(dto: Raven.Client.Server.Operations.OngoingTask, responsibleNode: databaseNode) {
         const node = new taskNode();
         node.updateWith(dto, responsibleNode);
         return node;
     }
 
-    updateWith(dto: Raven.Server.Web.System.OngoingTask, responsibleNode: databaseNode) {
+    updateWith(dto: Raven.Client.Server.Operations.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;

@@ -13,7 +13,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     validationGroup: KnockoutValidationGroup; 
     showSubscriptionDetails = ko.observable(false);
     
-    constructor(dto: Raven.Server.Web.System.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionState ) {
+    constructor(dto: Raven.Client.Server.Operations.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionState ) {
         super();
 
         this.listViewUpdate(dto);
@@ -27,7 +27,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
         this.editUrl = urls.editSubscription(this.taskId, this.taskName());
     }
 
-    listViewUpdate(dto: Raven.Server.Web.System.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionState) {
+    listViewUpdate(dto: Raven.Client.Server.Operations.OngoingTaskSubscription | Raven.Client.Documents.Subscriptions.SubscriptionState) {
 
         // 1. Must pass the right data in case we are in Edit View flow
         if ('Criteria' in dto) {
@@ -36,7 +36,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             const state: Raven.Client.Server.Operations.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
             const emptyNodeId: Raven.Client.Server.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
 
-            const dtoListModel: Raven.Server.Web.System.OngoingTaskSubscription = {
+            const dtoListModel: Raven.Client.Server.Operations.OngoingTaskSubscription = {
                 Collection: dtoEditModel.Criteria.Collection,
                 TimeOfLastClientActivity: dto.TimeOfLastClientActivity,
                 ResponsibleNode: emptyNodeId,
@@ -52,9 +52,9 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
         }
         // 2. List View flow
         else {
-            super.update(dto as Raven.Server.Web.System.OngoingTaskSubscription);
+            super.update(dto as Raven.Client.Server.Operations.OngoingTaskSubscription);
             this.timeOfLastClientActivity(dto.TimeOfLastClientActivity);
-            this.collection((dto as Raven.Server.Web.System.OngoingTaskSubscription).Collection);
+            this.collection((dto as Raven.Client.Server.Operations.OngoingTaskSubscription).Collection);
         }
     }
 
