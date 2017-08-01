@@ -56,7 +56,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(1, definition.Collections.Count);
             Assert.Equal("Users", definition.Collections.Single());
             Assert.True(definition.ContainsField("Count"));
-            Assert.Equal("Auto/Users/ByCountSortByCountReducedByLocation", definition.Name);
+            Assert.Equal("Auto/Users/ByCountReducedByLocation", definition.Name);
         }
 
         [Fact]
@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(SortOptions.Numeric, definition.GetField("Count").Sort);
             Assert.Equal(SortOptions.Numeric, definition.GetField("Age").Sort);
 
-            Assert.Equal("Auto/Users/ByAgeAndCountSortByAgeCountReducedByLocation", definition.Name);
+            Assert.Equal("Auto/Users/ByAgeAndCountReducedByLocation", definition.Name);
         }
     }
 }
