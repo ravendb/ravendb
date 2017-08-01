@@ -87,25 +87,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.OrdinalIgnoreCase);
 
-            foreach (var field in query.Metadata.WhereFields)
-            {
-                var fieldName = field.Key;
-
-                if (fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                    continue;
-
-                mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
-            }
-
-            foreach (var field in query.Metadata.IndexFieldNames)// handle exists(FieldName), etc
+            foreach (var field in query.Metadata.IndexFieldNames)
             {
                 if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
-
-                if (mapFields.TryGetValue(field, out var _))
-                {
-                    continue; // already there
-                }
 
                 mapFields[field] = new DynamicQueryMappingItem(field, AggregationOperation.None);
             }
@@ -114,7 +99,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Metadata.OrderBy)
                 {
-                    if(field.OrderingType == OrderByFieldType.Random)
+                    if (field.OrderingType == OrderByFieldType.Random)
                         continue;
 
                     var fieldName = field.Name;
