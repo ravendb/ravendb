@@ -34,7 +34,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             try
             {
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                    enqueue.Wait();
+                {                    
+                    bool result = enqueue.Result;
+                }                    
             }
             catch (Exception e)
             {

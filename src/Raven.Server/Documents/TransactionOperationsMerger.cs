@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
         /// Enqueue the command to be eventually executed. If the command implements
         ///  IDisposable, the command will be disposed after it is run and a tx is committed.
         /// </summary>
-        public async Task Enqueue(MergedTransactionCommand cmd)
+        public async ValueTask<bool> Enqueue(MergedTransactionCommand cmd)
         {
             _edi?.Throw();
 
@@ -95,6 +95,8 @@ namespace Raven.Server.Documents
                     // Expected: "Invalid attempt made to decrement the event's count below zero."
                 }
             }
+
+            return true;
         }
 
         private static void ThrowTxMergerWasDisposed()

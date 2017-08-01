@@ -43,7 +43,7 @@ namespace Raven.Server.Routing
             return tryMatch.Value;
         }
 
-        public async Task<string> HandlePath(HttpContext context, string method, string path)
+        public async ValueTask<string> HandlePath(HttpContext context, string method, string path)
         {
             var tryMatch = _trie.TryMatch(method, path);
             if (tryMatch.Value == null)

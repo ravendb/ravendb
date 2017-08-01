@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Replication
                             }
                             else
                             {
-                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).ContinueWith(_ =>
+                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask().ContinueWith(_ =>
                                 {
                                     _replicationFromAnotherSource.Set();
                                 });
@@ -462,7 +462,7 @@ namespace Raven.Server.Documents.Replication
                 using (stats.For(ReplicationOperation.Incoming.Storage))
                 {
                     var replicationCommand = new MergedDocumentReplicationCommand(this, buffer, totalSize, lastEtag);
-                    task = _database.TxMerger.Enqueue(replicationCommand);
+                    task = _database.TxMerger.Enqueue(replicationCommand).AsTask();
 
                     using (var writer = new BlittableJsonTextWriter(documentsContext, _connectionOptions.Stream))
                     using (var msg = documentsContext.ReadObject(new DynamicJsonValue
