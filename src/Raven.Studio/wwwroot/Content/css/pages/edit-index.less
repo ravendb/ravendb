@@ -19,18 +19,66 @@
 }
 
 .auto-index {
+    .labels {
+        h6 {
+            line-height: 18px
+        }
+    }
+
     .label {
         width: 120px;
         color: @gray;
 
         h3 {
-            margin:0;
+            margin: 0;
         }
     }
 
     .property {
-        margin: 0 15px;
+        margin: 7px 15px;
         text-align: center;
+    }
+
+    .panel {
+        .collection, .fieldname {
+            h4 {
+                font-weight: bold;
+                color: @gray-lighter;
+            }
+        }
+
+        &:first-of-type {
+            .fieldname, .sort, .operation, .collection {
+                position: relative;
+
+                &:before {
+                    position: absolute;
+                    display: block;
+                    left: -110px;
+                    width: 80px;
+                    text-align: center;
+                    font-size: 11px;
+                    text-transform: uppercase;
+                    color: @gray-light;
+                }
+            }
+
+            .collection:before {
+                content: 'Collection';
+            }
+
+            .fieldname:before {
+                content: 'Field name';
+            }
+
+            .sort:before {
+                content: 'Sort';
+            }
+
+            .operation:before {
+                content: 'Operation';
+            }
+        }
     }
 
     .label-margin {
