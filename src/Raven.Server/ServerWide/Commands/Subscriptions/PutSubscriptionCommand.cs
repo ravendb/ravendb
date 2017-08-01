@@ -31,7 +31,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         {
             var subscriptionId = SubscriptionId ?? index;
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
-            var obj = context.ReadObject(new SubscriptionState {
+            var receivedSubscriptionState = context.ReadObject(new SubscriptionState {
                                 Criteria = Criteria,
                                 ChangeVector = InitialChangeVector,
                                 SubscriptionId = subscriptionId,
@@ -39,7 +39,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                                 TimeOfLastClientActivity = DateTime.UtcNow,
                                 Disabled = Disabled
             }.ToJson(), SubscriptionName);
-            using (obj)
+            BlittableJsonReaderObject modifiedSubscriptionState = null;
+            try
             {
                 string subscriptionItemName = SubscriptionState.GenerateSubscriptionItemKeyName(DatabaseName, SubscriptionName);
 
@@ -51,15 +52,26 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                         var ptr = tvr.Read(2, out int size);
                         var doc = new BlittableJsonReaderObject(ptr, size, context);
 
-                        var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
+                        var existingSubscriptionState = JsonDeserializationClient.SubscriptionState(doc);
 
-                        if (SubscriptionId != subscriptionState.SubscriptionId)
-                            throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName + "' is already in use in a subscription with different Id.");
-                        
+                        if (SubscriptionId != existingSubscriptionState.SubscriptionId)
+                            throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
+                                                                "' is already in use in a subscription with different Id.");
+
+                        if (InitialChangeVector == "DoNotChange")
+                        {
+                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
+                            modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
+                        }
                     }
 
-                    ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, obj);
+                    ClusterStateMachine.UpdateValue(subscriptionId, items, valueNameLowered, valueName, modifiedSubscriptionState??receivedSubscriptionState);
                 }
+            }
+            finally
+            {
+                receivedSubscriptionState.Dispose();
+                modifiedSubscriptionState?.Dispose();
             }
         }
 
