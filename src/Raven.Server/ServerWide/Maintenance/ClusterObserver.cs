@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
 using Raven.Server.NotificationCenter.Notifications;
@@ -102,7 +103,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             Term = -1
                         };
                         var graceIfLeaderChanged = _engine.CurrentTerm > topologyStamp.Term && _engine.CurrentLeader.LeaderShipDuration < _stabilizationTime;
-                        var letStatsBecomeStable = _engine.CurrentTerm == topologyStamp.Term && 
+                        var letStatsBecomeStable = _engine.CurrentTerm == topologyStamp.Term &&
                             (_engine.CurrentLeader.LeaderShipDuration - topologyStamp.LeadersTicks < _stabilizationTime);
                         if (graceIfLeaderChanged || letStatsBecomeStable)
                         {
@@ -127,7 +128,18 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
 
                 foreach (var command in updateCommands)
-                    await UpdateTopology(command);
+                {
+                    try
+                    {
+                        await UpdateTopology(command);
+                    }
+                    catch (ConcurrencyException)
+                    {
+                        // this is sort of expected, if the database was
+                        // modified by someone else, we'll avoid changing
+                        // it and run the logic again on the next round
+                    }
+                }
             }
         }
 
@@ -136,7 +148,7 @@ namespace Raven.Server.ServerWide.Maintenance
             Dictionary<string, ClusterNodeStatusReport> previous)
         {
             //TODO: RavenDB-7914 - any change here requires generating alerts
-            
+
             var modifiedTopology = false;
             var hasLivingNodes = false;
             foreach (var member in topology.Members)
@@ -151,7 +163,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.PromotablesStatus.Remove(member);
                     continue;
                 }
-           
+
                 if (FailedDatabaseInstanceOrNode(topology, member, dbName, current))
                 {
                     MoveToRehab(dbName, topology, current, previous, member);
@@ -172,7 +184,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var rehab in topology.Rehab)
                 {
                     //TODO: RavenDB-7911 - Find the most up to date rehab node
-                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current))
+                    if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current))
                         continue;
                     topology.Rehab.Remove(rehab);
                     topology.Members.Add(rehab);
@@ -180,14 +192,14 @@ namespace Raven.Server.ServerWide.Maintenance
                     alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable";
                     break;
                 }
-                
+
                 var alert = AlertRaised.Create(
                     "No living nodes in the database topology",
                     alertMsg,
                     AlertType.ClusterTopologyWarning,
                     NotificationSeverity.Warning
                 );
-                
+
                 _server.NotificationCenter.Add(alert);
                 if (_logger.IsOperationsEnabled)
                 {
@@ -246,13 +258,13 @@ namespace Raven.Server.ServerWide.Maintenance
         private void MoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, string member)
         {
             DatabaseStatusReport dbStats = null;
-            if (current.TryGetValue(member, out var nodeStats) && 
+            if (current.TryGetValue(member, out var nodeStats) &&
                 nodeStats.LastReportStatus == ClusterNodeStatusReport.ReportStatus.Ok &&
-                nodeStats.LastReport.TryGetValue(dbName, out  dbStats) && 
-                dbStats.Status != Faulted) 
+                nodeStats.LastReport.TryGetValue(dbName, out dbStats) &&
+                dbStats.Status != Faulted)
                 return;
-            
-            
+
+
             topology.Members.Remove(member);
             topology.Rehab.Add(member);
 
@@ -280,7 +292,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
             if (dbStats?.Error != null)
             {
-                reason += $". {dbStats.Error}";         
+                reason += $". {dbStats.Error}";
             }
 
             topology.DemotionReasons[member] = reason;
@@ -360,13 +372,13 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private void RemoveOtherNodesIfNeeded(DatabaseTopology topology)
         {
-            if (topology.Members.Count != topology.ReplicationFactor) 
+            if (topology.Members.Count != topology.ReplicationFactor)
                 return;
 
-            if (topology.Promotables.Count  == 0 && 
-                topology.Rehab.Count == 0) 
+            if (topology.Promotables.Count == 0 &&
+                topology.Rehab.Count == 0)
                 return;
-            
+
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations($"We reached the replication factor, so we remove all other rehab/promotable nodes {string.Join(", ", topology.Rehab.Concat(topology.Promotables))}");
@@ -374,7 +386,7 @@ namespace Raven.Server.ServerWide.Maintenance
             topology.Promotables.Clear();
             topology.Rehab.Clear();
         }
-        
+
         private bool FailedDatabaseInstanceOrNode(
             DatabaseTopology topology, string node, string db,
             Dictionary<string, ClusterNodeStatusReport> current)
@@ -410,9 +422,9 @@ namespace Raven.Server.ServerWide.Maintenance
             var dbCount = int.MaxValue;
             foreach (var report in current)
             {
-                if(report.Key == badNode)
+                if (report.Key == badNode)
                     continue;
-                if(report.Value.LastReport.ContainsKey(db))
+                if (report.Value.LastReport.ContainsKey(db))
                     continue;
                 if (dbCount > report.Value.LastReport.Count)
                 {

@@ -18,6 +18,7 @@ using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
+// ReSharper disable ExplicitCallerInfoArgument
 
 namespace FastTests
 {
@@ -31,9 +32,9 @@ namespace FastTests
             Assert.True(SpinWait.SpinUntil(() => index.GetLastMappedEtagsForDebug().Values.Min() == etag, timeout));
         }
 
-        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db)
+        protected IDisposable CreatePersistentDocumentDatabase(string dataDirectory, out DocumentDatabase db, [CallerMemberName]string caller = null)
         {
-            var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory);
+            var database = CreateDocumentDatabase(runInMemory2: false, dataDirectory: dataDirectory, caller: caller);
             db = database;
             Debug.Assert(database != null);
             return new DisposableAction(() =>
