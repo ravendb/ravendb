@@ -97,6 +97,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
             }
 
+            foreach (var field in query.Metadata.IndexFieldNames)// handle exists(FieldName), etc
+            {
+                if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    continue;
+
+                if (mapFields.TryGetValue(field, out var _))
+                {
+                    continue; // already there
+                }
+
+                mapFields[field] = new DynamicQueryMappingItem(field, AggregationOperation.None);
+            }
+
             if (query.Metadata.OrderBy != null)
             {
                 foreach (var field in query.Metadata.OrderBy)

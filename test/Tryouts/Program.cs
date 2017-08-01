@@ -37,11 +37,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDb_4706())
+                using (var test = new SlowTests.MailingList.AutoIndexMerging())
                 {
                     try
                     {
-                        test.SupportRandomOrder().Wait();
+                        test.AutoIndexReuseFails();
                     }
                     catch (Exception e)
                     {
