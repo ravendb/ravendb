@@ -60,8 +60,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
 
-            Validate(defaultFacets.Values);
-
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
             uint fieldsHash = 0;
@@ -438,16 +436,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.Metadata.SelectFields, context, _state);
             return alreadySeen.Add(fields);
-        }
-
-        private void Validate(IEnumerable<Facet> facets)
-        {
-            foreach (var facet in facets)
-            {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && 
-                    FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None)
-                    throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
-            }
         }
 
         public override void Dispose()
