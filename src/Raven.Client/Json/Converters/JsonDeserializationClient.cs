@@ -59,7 +59,15 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, ModifyOngoingTaskResult> ModifyOngoingTaskResult = GenerateJsonDeserializationRoutine<ModifyOngoingTaskResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, GetTaskInfoResult> GetTaskInfoResult = GenerateJsonDeserializationRoutine<GetTaskInfoResult>();
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskSubscription> GetOngoingTaskSubscriptionResult = GenerateJsonDeserializationRoutine<OngoingTaskSubscription>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskReplication> GetOngoingTaskReplicationResult = GenerateJsonDeserializationRoutine<OngoingTaskReplication>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskRavenEtl> GetOngoingTaskRavenEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskRavenEtl>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskBackup> GetOngoingTaskBackupResult = GenerateJsonDeserializationRoutine<OngoingTaskBackup>();
+
+        public static readonly Func<BlittableJsonReaderObject, OngoingTaskSqlEtl> GetOngoingTaskSqlEtlResult = GenerateJsonDeserializationRoutine<OngoingTaskSqlEtl>();
 
         public static readonly Func<BlittableJsonReaderObject, ModifySolverResult> ModifySolverResult = GenerateJsonDeserializationRoutine<ModifySolverResult>();
 

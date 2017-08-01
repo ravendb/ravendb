@@ -8,14 +8,14 @@ class getOngoingTaskInfoCommand extends commandBase {
         super();
     }
     
-    execute(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult | Raven.Client.Documents.Subscriptions.SubscriptionState> {
+    execute(): JQueryPromise<Raven.Client.Server.Operations.OngoingTaskReplication | Raven.Client.Documents.Subscriptions.SubscriptionState> {
         return this.getTaskInfo()
             .fail((response: JQueryXHR) => {
                 this.reportError(`Failed to get info for ${this.taskType} task with id: ${this.taskId}. `, response.responseText, response.statusText);
             });
     }
 
-    private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.GetTaskInfoResult | Raven.Client.Documents.Subscriptions.SubscriptionState> {
+    private getTaskInfo(): JQueryPromise<Raven.Client.Server.Operations.OngoingTaskReplication | Raven.Client.Documents.Subscriptions.SubscriptionState> {
 
         const url = endpoints.databases.ongoingTasks.task;
      

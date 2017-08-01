@@ -186,7 +186,7 @@ namespace FastTests.Server.Replication
             return await store.Admin.Server.SendAsync(op);
         }
 
-        protected static async Task<GetTaskInfoResult> GetTaskInfo(
+        protected static async Task<OngoingTask> GetTaskInfo(
             DocumentStore store,
             long taskId, OngoingTaskType type)
         {
