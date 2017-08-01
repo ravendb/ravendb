@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string,string> extentions = null)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string, string> extentions = null)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string,string> extentions)
+        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)
@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 return (Usings, syntaxTrees, References);
             }
             var @using = new HashSet<string>();
-            
+
             foreach (var ext in extentions)
             {
                 var rewrite = MethodDynamicParametersRewriter.Instance.Visit(SyntaxFactory.ParseSyntaxTree(ext.Value).GetRoot());
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Indexes.Static
             if (@using.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
-                var newUsing = @using.Select(x=> SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
+                var newUsing = @using.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
                 return (newUsing.ToArray(), syntaxTrees, refrences);
             }
@@ -222,8 +222,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private static MetadataReference[] GetRefrences()
         {
             //libsodium is a none managed dll we must exclude it from the list of dlls
-            var dlls = Directory.GetFiles(Path.GetDirectoryName(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location), "*.dll");
-            var managedDlls = GetManagedDlls(dlls);
+            var managedDlls = GetManagedDlls();
             var newRefrences = new MetadataReference[References.Length + managedDlls.Length];
             for (var i = 0; i < References.Length; i++)
             {
@@ -236,103 +235,41 @@ namespace Raven.Server.Documents.Indexes.Static
             return newRefrences;
         }
 
-        private static string[] GetManagedDlls(string[] dlls)
+        private static string[] GetManagedDlls()
         {
-            HashSet<string> toRemove = null;
-            foreach(var dll in dlls)
+            var path = Path.GetDirectoryName(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location);
+            var dlls = new List<string>();
+
+            foreach (var dll in Directory.GetFiles(path, "*.dll"))
             {
-                var hasValue = IsDllManaged.TryGetValue(dll, out var managed);
-                if (hasValue && managed == true)
+                if (_isDllManaged.TryGetValue(dll, out var managed) == false)
                 {
-                    continue;
-                }                
-                if (hasValue == false)
-                {
-                    if(IsManagedAssembly(dll) == true)
+                    managed = IsManagedAssembly(dll);
+                    // generating a new instance per 
+                    _isDllManaged = new Dictionary<string, bool>(_isDllManaged)
                     {
-                        IsDllManaged[dll] = true;
-                        continue;
-                    } else
-                    {
-                        IsDllManaged[dll] = false;
-                    }
+                        [dll] = managed
+                    };
                 }
-                if(toRemove == null)
-                {
-                    toRemove = new HashSet<string>();
-                }
-                toRemove.Add(dll);
+                if (managed)
+                    dlls.Add(dll);
+
             }
-            if(toRemove == null)
-            {
-                return dlls;
-            }
-            return new HashSet<string>(dlls).Except(toRemove).ToArray<string>();
+            return dlls.ToArray();
         }
 
-        private static Dictionary<string, bool> IsDllManaged = new Dictionary<string, bool>();
+        private static Dictionary<string, bool> _isDllManaged = new Dictionary<string, bool>();
 
         private static bool IsManagedAssembly(string fileName)
         {
-            using (Stream fileStream = new FileStream(fileName, FileMode.Open, FileAccess.Read))
-            using (BinaryReader binaryReader = new BinaryReader(fileStream))
+            try
             {
-                if (fileStream.Length < 64)
-                {
-                    return false;
-                }
-
-                //PE Header starts @ 0x3C (60). Its a 4 byte header.
-                fileStream.Position = 0x3C;
-                uint peHeaderPointer = binaryReader.ReadUInt32();
-                if (peHeaderPointer == 0)
-                {
-                    peHeaderPointer = 0x80;
-                }
-
-                // Ensure there is at least enough room for the following structures:
-                //     24 byte PE Signature & Header
-                //     28 byte Standard Fields         (24 bytes for PE32+)
-                //     68 byte NT Fields               (88 bytes for PE32+)
-                // >= 128 byte Data Dictionary Table
-                if (peHeaderPointer > fileStream.Length - 256)
-                {
-                    return false;
-                }
-
-                // Check the PE signature.  Should equal 'PE\0\0'.
-                fileStream.Position = peHeaderPointer;
-                uint peHeaderSignature = binaryReader.ReadUInt32();
-                if (peHeaderSignature != 0x00004550)
-                {
-                    return false;
-                }
-
-                // skip over the PEHeader fields
-                fileStream.Position += 20;
-
-                const ushort PE32 = 0x10b;
-                const ushort PE32Plus = 0x20b;
-
-                // Read PE magic number from Standard Fields to determine format.
-                var peFormat = binaryReader.ReadUInt16();
-                if (peFormat != PE32 && peFormat != PE32Plus)
-                {
-                    return false;
-                }
-
-                // Read the 15th Data Dictionary RVA field which contains the CLI header RVA.
-                // When this is non-zero then the file contains CLI data otherwise not.
-                ushort dataDictionaryStart = (ushort)(peHeaderPointer + (peFormat == PE32 ? 232 : 248));
-                fileStream.Position = dataDictionaryStart;
-
-                uint cliHeaderRva = binaryReader.ReadUInt32();
-                if (cliHeaderRva == 0)
-                {
-                    return false;
-                }
-
+                AssemblyLoadContext.Default.LoadFromAssemblyPath(fileName);
                 return true;
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 
