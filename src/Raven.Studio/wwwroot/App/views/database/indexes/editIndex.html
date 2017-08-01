@@ -229,8 +229,7 @@
                     <div class="flex-grow flex-vertical">
                         <div class="flex-horizontal flex-content-center flex-content-center margin-top">
                             <div class="panel panel-default padding padding-sm">
-                                <div class="property">
-                                    <h6>Collection</h6>
+                                <div class="property collection">
                                     <h4 data-bind="text: editedIndex().collection"></h4>
                                 </div>
                             </div>
@@ -254,7 +253,7 @@
                         <div class="flex-horizontal flex-content-center flex-content-center">
                             <div class="panel" data-bind="foreach: editedIndex().reduceFields">
                                 <div class="padding padding-xs text-center bg-info small">Reduce key</div>
-                                <div class=" padding padding-sm flex-horizontal" data-bind="template: { name: 'field-template-auto-index'}"></div>
+                                <div class=" padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
                             </div>
                         </div>
                     </div>
@@ -274,7 +273,7 @@
                 <div class="flex-grow flex-vertical">
                     <div class="flex-horizontal flex-content-center">
                         <div class="flex-horizontal" data-bind="foreach: editedIndex().mapFields">
-                            <div class="panel padding padding-sm flex-horizontal" data-bind="template: { name: 'field-template-auto-index'}"></div>
+                            <div class="panel padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
                             
                         </div>
                     </div>
@@ -285,16 +284,13 @@
 </div>
 
 <script type="text/html" id="field-template-auto-index">
-    <div class="property">
-        <h6>Field name</h6>
+    <div class="property fieldname">
         <h4 data-bind="text: fieldName"></h4>
     </div>
-    <div class="property">
-        <h6>Sort</h6>
+    <div class="property sort">
         <h4 data-bind="text: sort()"></h4>
     </div>
-    <div class="property" data-bind="visible: operation">
-        <h6>Operation</h6>
+    <div class="property operation" data-bind="visible: operation">
         <h4 data-bind="text: operation"></h4>
     </div>
 </script>
