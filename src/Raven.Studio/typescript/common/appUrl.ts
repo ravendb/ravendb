@@ -595,6 +595,10 @@ class appUrl {
         return "#databases/tasks/csvImport?" + databasePart;
     }
 
+    static forStatsRawData(db: database | databaseInfo): string {
+        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/stats";
+    }
+
     static forIndexesRawData(db: database | databaseInfo): string {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/indexes";
     }
