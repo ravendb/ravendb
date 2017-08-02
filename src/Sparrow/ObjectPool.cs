@@ -103,7 +103,75 @@ namespace Sparrow
             private T Value4;
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryClaim(ref CacheAwareElement bucket, out T item)
+            public static void Clear<TEvictionStrategy>(ref CacheAwareElement bucket, ref TEvictionStrategy policy)
+                where TEvictionStrategy : struct, IEvictionStrategy<T>
+            {
+                // Note that the initial read is optimistically not synchronized. That is intentional. 
+                // We will interlock only when we have a candidate. in a worst case we may miss some
+                // recently returned objects. Not a big deal.
+                T inst = bucket.Value1;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    Interlocked.CompareExchange(ref bucket.Value1, null, inst);
+                }
+
+                inst = bucket.Value2;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    Interlocked.CompareExchange(ref bucket.Value2, null, inst);
+                }
+
+                inst = bucket.Value3;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    Interlocked.CompareExchange(ref bucket.Value3, null, inst);
+                }
+
+                inst = bucket.Value4;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    Interlocked.CompareExchange(ref bucket.Value4, null, inst);
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static void ClearAndDispose<TEvictionStrategy>(ref CacheAwareElement bucket, ref TEvictionStrategy policy)
+                where TEvictionStrategy : struct, IEvictionStrategy<T>
+            {
+                // Note that the initial read is optimistically not synchronized. That is intentional. 
+                // We will interlock only when we have a candidate. in a worst case we may miss some
+                // recently returned objects. Not a big deal.
+                T inst = bucket.Value1;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    if (inst == Interlocked.CompareExchange(ref bucket.Value1, null, inst))
+                        ((IDisposable)inst).Dispose();
+                }
+
+                inst = bucket.Value2;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    if (inst == Interlocked.CompareExchange(ref bucket.Value2, null, inst))
+                        ((IDisposable)inst).Dispose();
+                }
+
+                inst = bucket.Value3;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    if (inst == Interlocked.CompareExchange(ref bucket.Value3, null, inst))
+                        ((IDisposable)inst).Dispose();
+                }
+
+                inst = bucket.Value4;
+                if (inst != null && policy.CanEvict(inst))
+                {
+                    if (inst == Interlocked.CompareExchange(ref bucket.Value4, null, inst))
+                        ((IDisposable)inst).Dispose();
+                }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public static bool TryClaim(ref CacheAwareElement bucket, out T item)
             {
                 // Note that the initial read is optimistically not synchronized. That is intentional. 
                 // We will interlock only when we have a candidate. in a worst case we may miss some
@@ -133,7 +201,7 @@ namespace Sparrow
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public bool TryRelease(ref CacheAwareElement bucket, T value)
+            public static bool TryRelease(ref CacheAwareElement bucket, T value)
             {
                 if (null == Interlocked.CompareExchange(ref bucket.Value1, value, null))
                     goto Done;
@@ -224,14 +292,14 @@ namespace Sparrow
         public ObjectPool(Factory factory, int size)
         {
             Debug.Assert(size >= 1);
-            _factory = factory;                        
+            _factory = factory;
 
+            // PERF: We will always have power of two pools to make operations a lot faster. 
+            size = Bits.NextPowerOf2(size);
+            size = Math.Max(16, size);
+            
             if (typeof(TProcessAwareBehavior) == typeof(ThreadAwareBehavior))
-            {
-                // PERF: We will always have power of two pools to make operations a lot faster. 
-                size = Bits.NextPowerOf2(size);
-                size = Math.Max(16, size); 
-                
+            {                
                 _bucketsMask = Buckets - 1;
                 _firstItems = new CacheAwareElement[Buckets];                
             }                        
@@ -268,7 +336,7 @@ namespace Sparrow
             {
                 int threadIndex = Environment.CurrentManagedThreadId & _bucketsMask;
                 ref var firstItem = ref _firstItems[threadIndex];
-                if (!firstItem.TryClaim(ref firstItem, out inst))
+                if (!CacheAwareElement.TryClaim(ref firstItem, out inst))
                 {
                     inst = AllocateSlow();
                 }
@@ -297,15 +365,16 @@ namespace Sparrow
 #endif
 #endif
             return inst;
-        }       
+        }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private T AllocateSlow()
         {
             var items = _items;
 
             if (_itemBottomCounter < _itemTopCounter)
             {
-                uint claim = (uint)Interlocked.Increment(ref _itemBottomCounter) & _itemsMask;
+                uint claim = ((uint)Interlocked.Increment(ref _itemBottomCounter) - 1) & _itemsMask;
 
                 T inst = items[claim].Value;
                 if (inst != null)
@@ -341,29 +410,29 @@ namespace Sparrow
                 int threadIndex = Environment.CurrentManagedThreadId & _bucketsMask;
                 ref var firstItem = ref _firstItems[threadIndex];
 
-                if (!firstItem.TryRelease(ref firstItem, obj))
-                {
-                    FreeSlow(obj);
-                }
+                if (CacheAwareElement.TryRelease(ref firstItem, obj))
+                    return;
             }
             else
             {
                 if (_firstElement == null)
                 {
-                    if (null != Interlocked.CompareExchange(ref _firstElement, obj, null))
-                    {
-                        FreeSlow(obj);
-                    }
+                    if (null == Interlocked.CompareExchange(ref _firstElement, obj, null))
+                        return;                    
                 }
             }
+
+            FreeSlow(obj);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void FreeSlow(T obj)
         {
             var items = _items;
 
-            uint claim = (uint)Interlocked.Increment(ref _itemTopCounter) & _itemsMask;
-
+            uint current = (uint)Interlocked.Increment(ref _itemTopCounter);
+            uint claim = (current - 1) & _itemsMask;
+            
             ref var item = ref items[claim];
             if (item.Value == null)
             {
@@ -372,6 +441,86 @@ namespace Sparrow
                 // It is very unlikely to happen and will only mean that one of the objects will get collected.
                 item.Value = obj;
             }
+        }
+
+        public void Clear(bool partial = true)
+        {
+            bool doDispose = typeof(IDisposable).IsAssignableFrom(typeof(T));
+
+            if (typeof(TProcessAwareBehavior) == typeof(ThreadAwareBehavior) && !partial)
+            {                
+                for (int i = 0; i < _firstItems.Length; i++)
+                {
+                    ref var bucket = ref _firstItems[i];
+                    while (CacheAwareElement.TryClaim(ref bucket, out var obj))
+                    {
+                        if (doDispose)
+                            ((IDisposable)obj).Dispose();
+                    }                    
+                }                                
+            }
+
+            uint current;
+            do
+            {
+                current = (uint)Interlocked.Increment(ref _itemBottomCounter);                
+                if (current < _itemTopCounter)
+                {
+                    uint claim = (current - 1) & _itemsMask;
+
+                    T inst = _items[claim].Value;
+                    if (inst != null)
+                    {
+                        // WARNING: In a absurdly fast loop this can still fail to get a proper, that is why 
+                        // we still use a compare exchange operation instead of using the reference.
+                        if (inst == Interlocked.CompareExchange(ref _items[claim].Value, null, inst) && doDispose)
+                        {
+                            ((IDisposable)inst).Dispose();
+                        }                                
+                    }
+                }
+            }
+            while (current < _itemTopCounter);            
+        }
+
+        public void Clear<TEvictionStrategy>(TEvictionStrategy evictionStrategy = default(TEvictionStrategy)) 
+            where TEvictionStrategy : struct, IEvictionStrategy<T>
+        {                      
+            bool doDispose = typeof(IDisposable).IsAssignableFrom(typeof(T));
+
+            if (typeof(TProcessAwareBehavior) == typeof(ThreadAwareBehavior))
+            {
+                for (int i = 0; i < _firstItems.Length; i++)
+                {
+                    ref var bucket = ref _firstItems[i];
+                    if (doDispose)
+                        CacheAwareElement.ClearAndDispose(ref bucket, ref evictionStrategy);
+                    else
+                        CacheAwareElement.Clear(ref bucket, ref evictionStrategy);                                            
+                }
+            }
+
+            uint current = (uint)_itemBottomCounter;
+            do
+            {
+                if (current < _itemTopCounter)
+                {
+                    uint claim = current & _itemsMask;
+
+                    T inst = _items[claim].Value;
+                    if (inst != null && evictionStrategy.CanEvict(inst))
+                    {
+                        // WARNING: In a absurdly fast loop this can still fail to get a proper, that is why 
+                        // we still use a compare exchange operation instead of using the reference.
+                        if (inst == Interlocked.CompareExchange(ref _items[claim].Value, null, inst) && doDispose)
+                        {
+                            ((IDisposable)inst).Dispose();
+                        }
+                    }
+                }
+                current++;
+            }
+            while (current < _itemTopCounter);
         }
 
         /// <summary>
@@ -434,6 +583,19 @@ namespace Sparrow
         }
     }
 
+    public interface IEvictionStrategy<in T> where T : class
+    {
+        bool CanEvict(T item);
+    }
+
+    public struct AlwaysEvictStrategy<T> : IEvictionStrategy<T> where T : class
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool CanEvict(T item)
+        {
+            return true;
+        }
+    }
 
     public interface IProcessAwareBehavior
     { }
