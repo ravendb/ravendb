@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
@@ -614,7 +615,6 @@ namespace Raven.Client.Documents.Subscriptions
                 }
                 catch (Exception ex)
                 {
-                    bool shouldRethrow = false;
                     try
                     {
                         if (_processingCts.Token.IsCancellationRequested)
@@ -625,29 +625,27 @@ namespace Raven.Client.Documents.Subscriptions
                             _logger.Info(
                                 $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
                         }
-                        if (TryHandleRejectedConnectionOrDispose(ex) == false)
+                        if (ShouldTryToReconnect(ex))
+                        {
+                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+                        }
+                        else
                         {
                             if (_logger.IsInfoEnabled)
                                 _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error", ex);
 
-                            shouldRethrow = true;
-                        }
-                        else
-                        {
-                            await TimeoutManager.WaitFor(_options.TimeToWaitBeforeConnectionRetry).ConfigureAwait(false);
+                            throw;
                         }
                     }
                     catch (Exception e)
                     {
                         throw new AggregateException(e, ex);
                     }
-                    if (shouldRethrow)
-                        throw;
                 }
             }
         }
 
-        private bool TryHandleRejectedConnectionOrDispose(Exception ex)
+        private bool ShouldTryToReconnect(Exception ex)
         {
             switch (ex)
             {
@@ -657,8 +655,9 @@ namespace Raven.Client.Documents.Subscriptions
                 case SubscriptionInvalidStateException _:
                 case DatabaseDoesNotExistException _:
                 case AuthorizationException _:
+                case AllTopologyNodesDownException _:
                     _processingCts.Cancel();
-                    break;
+                    return false;
                 case SubscriptionDoesNotBelongToNodeException se:
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
@@ -666,9 +665,9 @@ namespace Raven.Client.Documents.Subscriptions
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
                     return true;
+                default:
+                    return false;
             }
-
-            return false;
         }
 
 
