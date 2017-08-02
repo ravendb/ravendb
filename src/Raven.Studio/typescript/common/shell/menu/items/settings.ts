@@ -102,30 +102,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
 
         new separatorMenuItem('Tasks'),
         new leafMenuItem({
-            route: 'databases/tasks/importDatabase',
-            moduleId: 'viewmodels/database/tasks/importDatabase',
-            title: 'Import Database',
-            nav: true,
-            css: 'icon-import-database',
-            dynamicHash: appUrls.importDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/exportDatabase',
-            moduleId: 'viewmodels/database/tasks/exportDatabase',
-            title: 'Export Database',
-            nav: true,
-            css: 'icon-export-database',
-            dynamicHash: appUrls.exportDatabaseUrl
-        }),
-        new leafMenuItem({
-            route: 'databases/tasks/sampleData',
-            moduleId: 'viewmodels/database/tasks/createSampleData',
-            title: 'Create Sample Data',
-            nav: true,
-            css: 'icon-create-sample-data',
-            dynamicHash: appUrls.sampleDataUrl
-        }),
-        new leafMenuItem({
             route: 'databases/tasks/ongoingTasks',
             moduleId: 'viewmodels/database/tasks/ongoingTasks',
             title: 'Manage Ongoing Tasks',
@@ -157,6 +133,30 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.editSubscriptionTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/importDatabase',
+            moduleId: 'viewmodels/database/tasks/importDatabase',
+            title: 'Import Database',
+            nav: true,
+            css: 'icon-import-database',
+            dynamicHash: appUrls.importDatabaseUrl
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/exportDatabase',
+            moduleId: 'viewmodels/database/tasks/exportDatabase',
+            title: 'Export Database',
+            nav: true,
+            css: 'icon-export-database',
+            dynamicHash: appUrls.exportDatabaseUrl
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/sampleData',
+            moduleId: 'viewmodels/database/tasks/createSampleData',
+            title: 'Create Sample Data',
+            nav: true,
+            css: 'icon-create-sample-data',
+            dynamicHash: appUrls.sampleDataUrl
+        }),
         /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/csvImport',
@@ -168,6 +168,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         })*/
 
         new separatorMenuItem('Stats'),
+        new leafMenuItem({
+            route: 'databases/status',
+            moduleId: 'viewmodels/database/status/statistics',
+            title: 'Stats',
+            nav: true,
+            css: 'icon-stats',
+            dynamicHash: appUrls.status
+        }),
         new leafMenuItem({
             route: 'databases/status/storage/report',
             moduleId: 'viewmodels/database/status/storageReport',
@@ -310,14 +318,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: accessHelper.canExposeConfigOverTheWire(),
             dynamicHash: appUrls.requestsTracing
         }),*/
-        new leafMenuItem({
-            route: 'databases/status',
-            moduleId: 'viewmodels/database/status/statistics',
-            title: 'Stats',
-            nav: true,
-            css: 'icon-stats',
-            dynamicHash: appUrls.status
-        }),
         /* TODO: 
         new leafMenuItem({
             route: 'databases/status/logs',
