@@ -169,9 +169,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Search(string fieldName, string searchTerms)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.Search(string fieldName, string searchTerms, SearchOperator @operator)
         {
-            Search(fieldName, searchTerms);
+            Search(fieldName, searchTerms, @operator);
             return this;
         }
 
@@ -179,9 +179,9 @@ namespace Raven.Client.Documents.Session
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms)
+        public IDocumentQuery<T> Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator)
         {
-            Search(GetMemberQueryPath(propertySelector.Body), searchTerms);
+            Search(GetMemberQueryPath(propertySelector.Body), searchTerms, @operator);
             return this;
         }
 

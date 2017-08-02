@@ -38,6 +38,7 @@ namespace SlowTests.MailingList
                     var students = session.Advanced.DocumentQuery<Student>()
                         .WaitForNonStaleResults()
                         .WhereStartsWith("FirstName", "David").Boost(3)
+                        .OrElse()
                         .WhereStartsWith("LastName", "David")
                         .OrderByScore()
                         .OrderBy("LastName")
