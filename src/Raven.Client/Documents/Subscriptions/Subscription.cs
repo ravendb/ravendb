@@ -666,7 +666,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
                     return true;
                 default:
-                    return false;
+                    return true;
             }
         }
 
