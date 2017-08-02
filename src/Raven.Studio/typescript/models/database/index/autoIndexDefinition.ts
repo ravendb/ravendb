@@ -4,15 +4,13 @@ import indexDefinition = require("models/database/index/indexDefinition");
 
 class autoIndexField {
     fieldName = ko.observable<string>();
-    sort = ko.observable<string>();
     operation = ko.observable<string>();
 
-    // fieldStr has form: <Name:Count,Sort:None,Operation:Count>
+    // fieldStr has form: <Name:Count,Operation:Count>
     constructor(fieldStr: string) {
         
         const parsedString = this.parse(fieldStr);
         this.fieldName(parsedString['Name']);
-        this.sort(parsedString['Sort'] || 'None');
     }
 
     protected parse(str: string): dictionary<string> {
