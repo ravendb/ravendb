@@ -426,9 +426,9 @@ class query extends viewModelBase {
                         }*/
                     })
                     .fail((request: JQueryXHR) => {
-                        if (request.status === 404) {
-                            recentQueriesStorage.removeRecentQueryByQueryText(database, this.criteria().queryText());
-                        }
+                        const queryText = this.criteria().queryText();
+                        recentQueriesStorage.removeRecentQueryByQueryText(database, queryText);
+                        this.recentQueries.shift();
                     });
             };
 
