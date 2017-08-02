@@ -55,7 +55,7 @@
                                 </div>
                             </div>
                         </div>
-                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/lucene', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
+                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
                     </div>
                     <div class="query-controls">
                         <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
