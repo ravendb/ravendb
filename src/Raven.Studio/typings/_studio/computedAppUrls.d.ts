@@ -25,6 +25,13 @@ interface computedAppUrls {
     reporting: KnockoutComputed<string>;
     exploration: KnockoutComputed<string>;
     tasks: KnockoutComputed<string>;
+    importDatabaseUrl: KnockoutComputed<string>;
+    exportDatabaseUrl: KnockoutComputed<string>;
+    sampleDataUrl: KnockoutComputed<string>;
+    ongoingTasksUrl: KnockoutComputed<string>;
+    editExternalReplicationTaskUrl: KnockoutComputed<string>;
+    editSubscriptionTaskUrl: KnockoutComputed<string>;
+    csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
     replicationPerfStats: KnockoutComputed<string>;

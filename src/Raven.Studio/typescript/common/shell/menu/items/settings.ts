@@ -1,21 +1,10 @@
-﻿import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
-import appUrl = require("common/appUrl");
-import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
+﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
-    let activeDatabase = activeDatabaseTracker.default.database;
-    const importDatabaseUrl = ko.pureComputed(() => appUrl.forImportDatabase(activeDatabase()));
-    const exportDatabaseUrl = ko.pureComputed(() => appUrl.forExportDatabase(activeDatabase()));
-    const sampleDataUrl = ko.pureComputed(() => appUrl.forSampleData(activeDatabase()));
-    const ongoingTasksUrl = ko.pureComputed(() => appUrl.forOngoingTasks(activeDatabase()));
-    const editExternalReplicationTaskUrl = ko.pureComputed(() => appUrl.forEditExternalReplication(activeDatabase()));
-    const editSubscriptionTaskUrl = ko.pureComputed(() => appUrl.forEditSubscription(activeDatabase()));
-    const csvImportUrl = ko.pureComputed(() => appUrl.forCsvImport(activeDatabase()));
-
     var items: menuItem[] = [
         new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
@@ -118,7 +107,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Import Database',
             nav: true,
             css: 'icon-import-database',
-            dynamicHash: importDatabaseUrl
+            dynamicHash: appUrls.importDatabaseUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/exportDatabase',
@@ -126,7 +115,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Export Database',
             nav: true,
             css: 'icon-export-database',
-            dynamicHash: exportDatabaseUrl
+            dynamicHash: appUrls.exportDatabaseUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/sampleData',
@@ -134,7 +123,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Create Sample Data',
             nav: true,
             css: 'icon-create-sample-data',
-            dynamicHash: sampleDataUrl
+            dynamicHash: appUrls.sampleDataUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/ongoingTasks',
@@ -142,14 +131,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Manage Ongoing Tasks',
             nav: true,
             css: 'icon-manage-ongoing-tasks',
-            dynamicHash: ongoingTasksUrl
+            dynamicHash: appUrls.ongoingTasksUrl
         }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
             title: 'External Replication Task',
             nav: false,
-            dynamicHash: editExternalReplicationTaskUrl,
+            dynamicHash: appUrls.editExternalReplicationTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
@@ -157,7 +146,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/editPeriodicBackupTask',
             title: 'Backup Task',
             nav: false,
-            dynamicHash: editExternalReplicationTaskUrl,
+            dynamicHash: appUrls.editExternalReplicationTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
@@ -165,7 +154,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: 'viewmodels/database/tasks/editSubscriptionTask',
             title: 'Subscription Task',
             nav: false,
-            dynamicHash: editSubscriptionTaskUrl,
+            dynamicHash: appUrls.editSubscriptionTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         /* TODO:
