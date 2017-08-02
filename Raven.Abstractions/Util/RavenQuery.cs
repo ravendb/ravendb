@@ -50,12 +50,6 @@ namespace Raven.Abstractions.Util
             int start = 0;
             int length = term.Length;
             StringBuilder buffer = null;
-            if (length >= 2 && term[0] == '/' && term[1] == '/')
-            {
-                buffer = new StringBuilder(length * 2);
-                buffer.Append("\\/\\/");
-                start = 2;
-            }
             for (int i = start; i < length; i++)
             {
                 char ch = term[i];
@@ -84,6 +78,7 @@ namespace Raven.Abstractions.Util
                     case ']':
                     case '^':
                     case '~':
+                    case '/':
                     case ':':
                         {
                             if (buffer == null)
