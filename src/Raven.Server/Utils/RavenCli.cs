@@ -420,6 +420,7 @@ namespace Raven.Server.Utils
 
         private static bool CommandInfo(List<string> args, RavenCli cli)
         {
+            new ClusterMessage(Console.Out, cli._server.ServerStore).Print();
             var memoryInfo = MemoryInformation.GetMemoryInfo();
             WriteText(
                 $" Build {ServerVersion.Build}, Version {ServerVersion.Version}, SemVer {ServerVersion.FullVersion}, Commit {ServerVersion.CommitHash}" +

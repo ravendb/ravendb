@@ -3,23 +3,20 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Raven.Server.ServerWide;
+using Sparrow;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 using static Sparrow.Platform.PlatformDetails;
 
 namespace Raven.Server.Utils
 {
-    public class WelcomeMessage
+    public class WelcomeMessage : ConsoleMessage
     {
-        public WelcomeMessage(TextWriter tw)
+        public WelcomeMessage(TextWriter tw) : base(tw)
         {
-            _tw = tw;
         }
 
-        private readonly TextWriter _tw;
-        private bool WithColoring() => _tw == Console.Out;
-
-        public void Print()
+        public override void Print()
         {
             const string asciiHeader = @"       _____                       _____  ____ {0}      |  __ \                     |  __ \|  _ \ {0}      | |__) |__ ___   _____ _ __ | |  | | |_) |{0}      |  _  // _` \ \ / / _ \ '_ \| |  | |  _ < {0}      | | \ \ (_| |\ V /  __/ | | | |__| | |_) |{0}      |_|  \_\__,_| \_/ \___|_| |_|_____/|____/ {0}{0}";
             ConsoleWriteLineWithColor(ConsoleColor.DarkRed, asciiHeader, Environment.NewLine);
@@ -40,8 +37,61 @@ namespace Raven.Server.Utils
                 new ConsoleText { Message = "and awesome contributors!", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
             _tw.WriteLine(lineBorder);
         }
+    }
 
-        private void ConsoleWriteWithColor(params ConsoleText[] consoleTexts)
+    public class ClusterMessage : ConsoleMessage
+    {
+        private readonly ServerStore _server;
+
+        public ClusterMessage(TextWriter tw, ServerStore server) : base(tw)
+        {
+            _server = server;
+        }
+         
+        public override void Print()
+        {
+            if (string.IsNullOrEmpty(_server.Engine.ClusterId))
+                return;
+            var nodeTag = _server.Engine.Tag;
+            var id = _server.Engine.ClusterId;
+            var clusterColor = Hashing.XXHash64.CalculateRaw(id) % (int)ConsoleColor.White + 1;//skip black
+            ConsoleWriteWithColor(new ConsoleText
+                {
+                    Message = "Node ",
+                    ForegroundColor = ConsoleColor.Gray
+                },
+                new ConsoleText
+                {
+                    Message = nodeTag,
+                    ForegroundColor = ConsoleColor.Green
+                }, new ConsoleText
+                {
+                    Message = " in cluster ",
+                    ForegroundColor = ConsoleColor.Gray
+                },
+                new ConsoleText
+                {
+                    Message = $"{id}",
+                    ForegroundColor = (ConsoleColor)clusterColor
+                }
+                );
+            _tw.WriteLine();
+        }
+    }
+
+    public abstract class ConsoleMessage
+    {
+        protected ConsoleMessage(TextWriter tw)
+        {
+            _tw = tw;
+        }
+
+        protected readonly TextWriter _tw;
+        private bool WithColoring() => _tw == Console.Out;
+
+        public abstract void Print();
+
+        protected void ConsoleWriteWithColor(params ConsoleText[] consoleTexts)
         {
             if (consoleTexts == null)
             {
@@ -76,7 +126,7 @@ namespace Raven.Server.Utils
                 Console.ForegroundColor = previousForegroundColor;
         }
 
-        private void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
+        protected void ConsoleWriteLineWithColor(ConsoleColor color, string message, params object[] args)
         {
             ConsoleWriteWithColor(new ConsoleText
             {
@@ -87,7 +137,7 @@ namespace Raven.Server.Utils
             });
         }
 
-        internal class ConsoleText
+        protected class ConsoleText
         {
             public ConsoleText()
             {

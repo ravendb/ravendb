@@ -105,6 +105,8 @@ namespace Raven.Server
                             if (CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
+                            new ClusterMessage(Console.Out, server.ServerStore).Print();
+
                             Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
 
                             var consoleMre = new ManualResetEvent(false);
