@@ -7,9 +7,7 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var SqlHighlightRules = function() {
 
     var keywords = (
-        "select|insert|update|delete|from|where|and|or|group|by|order|limit|offset|having|as|case|" +
-        "when|else|end|type|left|right|join|on|outer|desc|asc|union|create|table|primary|key|if|" +
-        "foreign|not|references|default|null|inner|cross|natural|database|drop|grant"
+        "select|from|where|and|or|group|by|order|as|desc|asc|not|null"
     );
 
     var builtinConstants = (
@@ -17,13 +15,11 @@ var SqlHighlightRules = function() {
     );
 
     var builtinFunctions = (
-        "avg|count|first|last|max|min|sum|ucase|lcase|mid|len|round|rank|now|format|" + 
-        "coalesce|ifnull|isnull|nvl"
+        "count|sum|key|search|boost|startsWith|endsWith|lucene|exists|exact|random|score"
     );
 
     var dataTypes = (
-        "int|numeric|decimal|date|varchar|char|bigint|float|double|bit|binary|text|set|timestamp|" +
-        "money|real|number|integer"
+        "long|double|string"
     );
 
     var keywordMapper = this.createKeywordMapper({
