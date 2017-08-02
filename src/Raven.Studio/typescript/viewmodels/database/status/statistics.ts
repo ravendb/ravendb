@@ -8,7 +8,8 @@ import statsModel = require("models/database/stats/statistics");
 class statistics extends viewModelBase {
 
     stats = ko.observable<statsModel>();
-    
+    rawJsonUrl: KnockoutComputed<string>;
+
     private refreshStatsObservable = ko.observable<number>();
     private statsSubscription: KnockoutSubscription;
 
@@ -17,6 +18,10 @@ class statistics extends viewModelBase {
         this.statsSubscription = this.refreshStatsObservable.throttle(3000).subscribe((e) => this.fetchStats());
         this.fetchStats();
         this.updateHelpLink('H6GYYL');
+
+        this.rawJsonUrl = ko.pureComputed(() => {
+            return appUrl.forStatsRawData(this.activeDatabase());
+        });
     }
 
     detached() {
