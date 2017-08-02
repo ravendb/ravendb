@@ -680,7 +680,7 @@ namespace Raven.Client.Http
                     continue;
                 }
 
-                var request = CreateRequest(chosenNode, command, out var _);
+                var request = CreateRequest(nodes[i], command, out var _);
                 try
                 {
                     tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
@@ -721,6 +721,7 @@ namespace Raven.Client.Http
                     continue;
                 }
                 _nodeSelector.RecordFastest(index, nodes[index]);
+                return;
             }
             // we can reach here if the number of failed task equal to the nuber
             // of the nodes, in which case we have nothing to do
