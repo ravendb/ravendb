@@ -140,7 +140,7 @@ namespace Raven.Client.Http
             Interlocked.Increment(ref state.SpeedTestMode);
         }
 
-        public bool InSpeedTestPhase => _state.SpeedTestMode > 0;
+        public bool InSpeedTestPhase => _state.SpeedTestMode > 1;
 
         public void RecordFastest(int index, ServerNode node)
         {
