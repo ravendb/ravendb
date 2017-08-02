@@ -19,6 +19,9 @@ namespace Raven.Server.Documents.Indexes
         
         public bool HasSuggestions { get; set; }
 
+        public string FullTextSearchField { get; set; }
+
+
         public IndexField()
         {
             Indexing = FieldIndexing.Default;
@@ -50,6 +53,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
+
+            field.FullTextSearchField = options.FullTextSearchField;
                         
             // options.Spatial // TODO [ppekrol]
 
@@ -94,6 +99,7 @@ namespace Raven.Server.Documents.Indexes
                 hashCode = (hashCode * 397) ^ (int)Indexing;
                 hashCode = (hashCode * 397) ^ (int)TermVector;
                 hashCode = (hashCode * 397) ^ (HasSuggestions ? 233 : 343);
+                hashCode = (hashCode * 397) ^ (FullTextSearchField != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(FullTextSearchField) : 0);
                 return hashCode;
             }
         }
@@ -105,7 +111,8 @@ namespace Raven.Server.Documents.Indexes
                 Analyzer = Analyzer,
                 Indexing = Indexing,
                 Storage = Storage,
-                TermVector = TermVector
+                TermVector = TermVector,
+                FullTextSearchField = FullTextSearchField
             };
         }
     }

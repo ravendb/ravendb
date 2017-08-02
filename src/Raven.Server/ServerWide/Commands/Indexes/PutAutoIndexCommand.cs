@@ -86,6 +86,7 @@ namespace Raven.Server.ServerWide.Commands.Indexes
                     Storage = kvp.Value.Storage,
                     Indexing = kvp.Value.Indexing,
                     Analyzer = kvp.Value.Analyzer,
+                    FullTextSearchField = kvp.Value.FullTextSearchField,
                     Spatial = null,
                     Suggestions = null,
                     MapReduceOperation = kvp.Value.Aggregation

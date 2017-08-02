@@ -44,31 +44,43 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var field in fields)
             {
+                var fieldName = field.Key;
+
+                if (field.Value.FullTextSearchField != null)
+                {
+                    AddStandardAnalyzer(field.Value.FullTextSearchField);
+                }
+
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.NotAnalyzed:
                         if (keywordAnalyzer == null)
                             keywordAnalyzer = new KeywordAnalyzer();
 
-                        perFieldAnalyzerWrapper.AddAnalyzer(field.Key, keywordAnalyzer);
+                        perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
                     case FieldIndexing.Analyzed:
-                        var analyzer = GetAnalyzer(field.Key, field.Value, forQuerying);
+                        var analyzer = GetAnalyzer(fieldName, field.Value, forQuerying);
                         if (analyzer != null)
                         {
-                            perFieldAnalyzerWrapper.AddAnalyzer(field.Key, analyzer);
+                            perFieldAnalyzerWrapper.AddAnalyzer(fieldName, analyzer);
                             continue;
                         }
+                        AddStandardAnalyzer(fieldName);
 
-                        if (standardAnalyzer == null)
-                            standardAnalyzer = new RavenStandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
-
-                        perFieldAnalyzerWrapper.AddAnalyzer(field.Key, standardAnalyzer);
                         break;
                 }
             }
 
             return perFieldAnalyzerWrapper;
+
+            void AddStandardAnalyzer(string fieldName)
+            {
+                if (standardAnalyzer == null)
+                    standardAnalyzer = new RavenStandardAnalyzer(global::Lucene.Net.Util.Version.LUCENE_29);
+
+                perFieldAnalyzerWrapper.AddAnalyzer(fieldName, standardAnalyzer);
+            }
         }
 
         public abstract void Dispose();

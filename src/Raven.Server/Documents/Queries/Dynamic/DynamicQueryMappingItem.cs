@@ -11,7 +11,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
         }
 
         public readonly string Name;
+        public bool FullTextSearch;
 
         public AggregationOperation AggregationOperation { get; set; }
+
+        public string GetFullTextSearchFieldName()
+        {
+            return FullTextSearch == false ? null : "search(" + Name + ")";
+        }
     }
 }

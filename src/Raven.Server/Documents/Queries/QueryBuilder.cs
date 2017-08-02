@@ -247,6 +247,11 @@ namespace Raven.Server.Documents.Queries
             return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
         }
 
+        private static string ExtractIndexFieldName(string queryText, ValueToken field, QueryMetadata metadata)
+        {
+            return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+        }
+
         private static Lucene.Net.Search.Query HandleExists(Query query, QueryExpression expression, QueryMetadata metadata)
         {
             var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
@@ -312,11 +317,24 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
-            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
 
+            string fieldName;
+            if(expression.Arguments[0] is FieldToken ft)
+                fieldName = ExtractIndexFieldName(query.QueryText, ft, metadata);
+            else if (expression.Arguments[0] is ValueToken vt)
+                fieldName = ExtractIndexFieldName(query.QueryText, vt, metadata);
+            else
+                throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
+
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+            
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            if (metadata.IsDynamic)
+            {
+                fieldName = "search(" + fieldName + ")";
+            }
 
             var valueAsString = (string)value;
             var values = valueAsString.Split(' ');

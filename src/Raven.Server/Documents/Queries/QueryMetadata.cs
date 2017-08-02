@@ -61,6 +61,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string QueryText;
 
+        public HashSet<string> FullTextSeachFields;
+
         public readonly HashSet<string> IndexFieldNames = new HashSet<string>();
 
         public readonly Dictionary<string, ValueTokenType> WhereFields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
@@ -72,6 +74,15 @@ namespace Raven.Server.Documents.Queries
         public SelectField[] SelectFields;
 
         public readonly bool CanCache;
+
+        private void AddSearchField(string fieldName, ValueTokenType value)
+        {
+            if (FullTextSeachFields == null)
+                FullTextSeachFields = new HashSet<string>();
+            var indexFieldName = GetIndexFieldName(fieldName);
+            FullTextSeachFields.Add(indexFieldName);
+            WhereFields[indexFieldName] = value;
+        }
 
         private void AddExistField(string fieldName)
         {
@@ -413,11 +424,16 @@ namespace Raven.Server.Documents.Queries
                     return;
                 }
 
-                if (arguments.Count == 1)
-                    _metadata.AddExistField(fieldName); // exists(FieldName)
+                var methodName = QueryExpression.Extract(_metadata.Query.QueryText, expression.Field);
+
+                if("exists".Equals(methodName, StringComparison.OrdinalIgnoreCase))
+                    _metadata.AddExistField(fieldName);
+                else if ("search".Equals(methodName, StringComparison.OrdinalIgnoreCase))
+                    _metadata.AddSearchField(fieldName, previousType);
                 else
                     _metadata.AddWhereField(fieldName, previousType);
             }
         }
+
     }
 }

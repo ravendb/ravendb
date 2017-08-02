@@ -2020,12 +2020,14 @@ namespace Raven.Server.Documents.Indexes
         {
             foreach (var field in metadata.IndexFieldNames)
             {
-                var f = field;
-
-                if (IndexPersistence.ContainsField(f) == false &&
-                    IndexPersistence.ContainsField("_") == false)
-                    // the catch all field name means that we have dynamic fields names
-                    throw new ArgumentException($"The field '{f}' is not indexed, cannot query on fields that are not indexed");
+                AssertKnownField(field);
+            }
+            if (metadata.FullTextSeachFields != null)
+            {
+                foreach (var field in metadata.FullTextSeachFields)
+                {
+                    AssertKnownField(field);
+                }
             }
 
             if (metadata.OrderBy != null)
@@ -2043,14 +2045,25 @@ namespace Raven.Server.Documents.Indexes
                     if (f.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    if (IndexPersistence.ContainsField(f) == false &&
-                        f.StartsWith(Constants.Documents.Indexing.Fields.DistanceFieldName) == false &&
-                        IndexPersistence.ContainsField("_") == false)
-                        // the catch all field name means that we have dynamic fields names
-                        throw new ArgumentException("The field '" + f +
-                                                    "' is not indexed, cannot sort on fields that are not indexed");
+                    AssertKnownField(f);
                 }
             }
+        }
+
+        private void AssertKnownField(string f)
+        {
+            // the catch all field name means that we have dynamic fields names
+
+            if (IndexPersistence.ContainsField(f) || 
+                IndexPersistence.ContainsField("_"))
+                return;
+
+            ThrowInvalidField(f);
+        }
+
+        private static void ThrowInvalidField(string f)
+        {
+            throw new ArgumentException($"The field '{f}' is not indexed, cannot query/sort on fields that are not indexed");
         }
 
         private void FillFacetedQueryResult(FacetedQueryResult result, bool isStale, long facetSetupEtag,

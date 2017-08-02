@@ -35,6 +35,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     {
                         Name = field.Name,
                         Storage = FieldStorage.No,
+                        FullTextSearchField = field.GetFullTextSearchFieldName()
                     }).ToArray());
             }
 
@@ -50,6 +51,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Name = field.Name,
                         Storage = FieldStorage.No,
                         Aggregation = field.AggregationOperation,
+                        FullTextSearchField = field.GetFullTextSearchFieldName()
                     }).ToArray(),
                     GroupByFields.Select(field =>
                     new IndexField
@@ -85,7 +87,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ForCollection = query.Metadata.CollectionName
             };
 
-            var mapFields = new Dictionary<string, DynamicQueryMappingItem>(StringComparer.OrdinalIgnoreCase);
+            var mapFields = new Dictionary<string, DynamicQueryMappingItem>();
 
             foreach (var field in query.Metadata.IndexFieldNames)
             {
@@ -93,6 +95,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     continue;
 
                 mapFields[field] = new DynamicQueryMappingItem(field, AggregationOperation.None);
+            }
+
+            if (query.Metadata.FullTextSeachFields != null)
+            {
+                foreach (var field in query.Metadata.FullTextSeachFields)
+                {
+                    mapFields[field] = new DynamicQueryMappingItem(field, AggregationOperation.None)
+                    {
+                        FullTextSearch = true
+                    };
+                }
+
             }
 
             if (query.Metadata.OrderBy != null)

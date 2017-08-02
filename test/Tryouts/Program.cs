@@ -1,5 +1,6 @@
 using System;
 using FastTests.Server;
+using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Queries.Dynamic.Map;
 using SlowTests.Bugs;
 using SlowTests.Issues;
@@ -39,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new FastTests.Server.Documents.DocumentsCrud())
+                using (var test = new FullTextSearchOnAutoIndex())
                 {
                     try
                     {
-                        test.WillVerifyEtags_Existing();
+                        test.CanUseFullTextSearchInAutoIndex().Wait();
                     }
                     catch (Exception e)
                     {
