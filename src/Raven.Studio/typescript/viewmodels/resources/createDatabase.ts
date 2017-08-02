@@ -30,7 +30,6 @@ class createDatabase extends dialogViewModelBase {
     showReplicationFactorWarning: KnockoutComputed<boolean>;
     enforceManualNodeSelection: KnockoutComputed<boolean>;
     disableReplicationFactorInput: KnockoutComputed<boolean>;
-    indexesPathPlaceholder: KnockoutComputed<string>;
     selectionState: KnockoutComputed<checkbox>;
     disableSavingKeyData: KnockoutComputed<boolean>; 
 
@@ -99,6 +98,7 @@ class createDatabase extends dialogViewModelBase {
     }
 
     protected initObservables() {
+
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
@@ -110,14 +110,17 @@ class createDatabase extends dialogViewModelBase {
             });
         });
 
-        this.indexesPathPlaceholder = ko.pureComputed(() => {
-            const name = this.databaseModel.name();
-            return `~/${name || "{Database Name}"}/Indexes/`;
-        });
-
         this.databaseModel.configurationSections.forEach(section => {
             if (!section.hasOwnProperty('validationGroup')) {
                 section.validationGroup = undefined;
+            }
+        });
+
+        const encryption = this.databaseModel.configurationSections.find(x => x.name === "Encryption");
+        encryption.enabled.subscribe(encryptionEnabled => {
+            if (encryptionEnabled) {
+                this.databaseModel.replication.dynamicMode(false);
+                this.databaseModel.replication.manualMode(true);
             }
         });
 

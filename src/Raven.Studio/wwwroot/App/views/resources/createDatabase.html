@@ -88,37 +88,13 @@
 
 <script type="text/html" id="create-db-path">
     <div data-bind="with: databaseModel.path">
-        <h3>Paths configuration</h3>
+        <h3>Path configuration</h3>
         <div class="form-group row" data-bind="validationElement: dataPath">
             <div class="col-md-4">
                 <label class="control-label">Path</label>
             </div>
             <div class="col-md-8">
                 <input type="text" class="form-control" data-bind="textInput: dataPath, attr: { placeholder: '~/' + $root.databaseModel.name() }" />
-            </div>
-        </div>
-        <div class="form-group row" data-bind="validationElement: journalsPath">
-            <div class="col-md-4">
-                <label class="control-label">Journals</label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: journalsPath, attr: { placeholder: '~/' + $root.databaseModel.name() }" />
-            </div>
-        </div>
-        <div class="form-group row" data-bind="validationElement: indexesPath">
-            <div class="col-md-4">
-                <label class="control-label">Indexes</label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: indexesPath, attr: { placeholder: $root.indexesPathPlaceholder() }" />
-            </div>
-        </div>
-        <div class="form-group row" data-bind="validationElement: tempPath">
-            <div class="col-md-4">
-                <label class="control-label">Temp</label>
-            </div>
-            <div class="col-md-8">
-                <input type="text" class="form-control" data-bind="textInput: tempPath, attr: { placeholder: '~/' + $root.databaseModel.name() }" />
             </div>
         </div>
     </div>
@@ -141,6 +117,12 @@
                 </div>
             </div>
         </div>
+        
+        <div class="toggle">
+            <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, disable: $root.databaseModel.isFromBackup || $root.enforceManualNodeSelection">
+            <label for="dynamic_mode">Allow dynamic node distribution</label>
+        </div>
+        <small class="toggle-caption">Maintain replication factor upon node failure.</small>
 
         <div class="toggle">
             <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.databaseModel.isFromBackup || $root.enforceManualNodeSelection">
