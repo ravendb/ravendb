@@ -6,14 +6,6 @@ export = getIndexesMenuItem;
 function getIndexesMenuItem(appUrls: computedAppUrls) {
     let indexesChildren = [
         new leafMenuItem({
-            title: "List of indexes",
-            nav: true,
-            route: "databases/indexes",
-            moduleId: "viewmodels/database/indexes/indexes",
-            css: 'icon-indexing',
-            dynamicHash: appUrls.indexes
-        }),
-        new leafMenuItem({
             route: 'databases/query/index(/:indexNameOrRecentQueryIndex)',
             moduleId: 'viewmodels/database/query/query',
             title: 'Query',
@@ -21,6 +13,15 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
             css: 'icon-query',
             dynamicHash: appUrls.query('')
         }),
+        new leafMenuItem({
+            title: "List of indexes",
+            nav: true,
+            route: "databases/indexes",
+            moduleId: "viewmodels/database/indexes/indexes",
+            css: 'icon-indexing',
+            dynamicHash: appUrls.indexes
+        }),
+        
         new leafMenuItem({
             route: 'databases/indexes/performance',
             moduleId: 'viewmodels/database/indexes/indexPerformance',
@@ -74,6 +75,6 @@ function getIndexesMenuItem(appUrls: computedAppUrls) {
     ];
 
     return new intermediateMenuItem("Indexes", indexesChildren, 'icon-indexing', {
-        dynamicHash: appUrls.indexes
+        dynamicHash: appUrls.query()
     });
 }
