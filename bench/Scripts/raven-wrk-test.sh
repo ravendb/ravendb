@@ -7,13 +7,13 @@ LOG="/tmp/${LOGNAME}.log"
 RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/Server/Raven.Server"
 # Warn: DATA_DIR is being removed rm -rf in this script
 DATA_DIR="$(pwd)/TestDataDir"
-RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.Authentication.RequiredForPublicNetworks=false"
+RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.UnsecuredAccessAllowed=PublicNetwork"
 TMP_FILE="/tmp/${LOGNAME}.out"
 RESULT_FILE="/tmp/${LOGNAME}.results"
 WRK_PATH="/home/adi/Sources/wrk/wrk"
 WRK_CONF="-d30 -t4 -c128 http://127.0.0.1:${PORT}"
 WRK_SCRIPT_WRITES="-s writes.lua -- 4"
-RES_MIN_WRITE_PER_SEC=3000
+RES_MIN_WRITE_PER_SEC=7500
 
 # exit code 0 for success, 2 for success but server did not shutdown in time
 # exit code 1 on error
@@ -25,8 +25,8 @@ function log
 
 function shutdownServer
 {
-	if [[ $3 -ne 0 ]]; then
-		log "About to kill process $3"
+	if [[ $1 -ne 0 ]]; then
+		log "About to kill process $1"
 		kill $1 &>> ${LOG}
 	else
 		return
@@ -116,7 +116,7 @@ PSNUM=$(jobs -p)
 
 log "About to createdb. Response:"
 curl -H "Content-Type: application/json" -X PUT -d '{"Settings": {"DataDir": "'${DATA_DIR}/Databases/'BenchmarkDB"}}' http://10.0.0.99:18123/admin/databases?name=BenchmarkDB &>> ${LOG}
-
+echo "" >> ${LOG}
 
 # TODO:
 # import data
@@ -139,10 +139,6 @@ RESULT=$(cat ${RESULT_FILE}.tmp | awk '{print $2}' | cut -f1 -d'.')
 if [[ ${RESULT} -lt ${RES_MIN_WRITE_PER_SEC} ]]; then
 	logerror "exit_code_3" "Got ${RESULT} writes per sec while minimum is: ${RES_MIN_WRITE_PER_SEC}" ${PSNUM}
 fi
-
-
-
-
 
 shutdownServer ${PSNUM}
 IS_RUNNING=$(ps -ef | awk '{print $2}' | grep "^$1$" | wc -l | awk '{print $1}')
