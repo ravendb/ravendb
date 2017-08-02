@@ -88,6 +88,7 @@ namespace Raven.Server.ServerWide.Maintenance
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateCommands = new List<UpdateTopologyCommand>();
+                List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
                     var clusterTopology = _server.GetClusterTopology(context);
@@ -112,7 +113,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats))
+                        if (UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats, ref deletions))
                         {
                             var cmd = new UpdateTopologyCommand(database)
                             {
@@ -138,18 +139,20 @@ namespace Raven.Server.ServerWide.Maintenance
                         // it and run the logic again on the next round
                     }
                 }
-
-                foreach (var command in _deletionCommands)
+                if (deletions != null)
                 {
-                    await Delete(command);
+                    foreach (var command in deletions)
+                    {
+                        await Delete(command);
+                    }
                 }
-                _deletionCommands.Clear();
             }
         }
 
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
-            Dictionary<string, ClusterNodeStatusReport> previous)
+            Dictionary<string, ClusterNodeStatusReport> previous,
+            ref List<DeleteDatabaseCommand> deletions)
         {
             //TODO: RavenDB-7914 - any change here requires generating alerts
             
@@ -235,7 +238,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         UpdateReplicationFactor = false
                     };
 
-                    _deletionCommands.Add(deletionCmd);
+                    if(deletions == null)
+                        deletions = new List<DeleteDatabaseCommand>();
+                    deletions.Add(deletionCmd);
                     return true;
                 }
 
@@ -266,7 +271,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            RemoveOtherNodesIfNeeded(dbName, topology);
+            RemoveOtherNodesIfNeeded(dbName, topology, ref deletions);
             return false;
         }
 
@@ -385,11 +390,9 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
-        private readonly List<DeleteDatabaseCommand> _deletionCommands = new List<DeleteDatabaseCommand>();
-
-        private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology)
+        private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology, ref List<DeleteDatabaseCommand> deletions)
         {
-			if (topology.Members.Count != topology.ReplicationFactor) 
+            if (topology.Members.Count >= topology.ReplicationFactor) 
                 return;
 
             if (topology.Promotables.Count  == 0 && 
@@ -411,7 +414,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 UpdateReplicationFactor = false
             };
 
-            _deletionCommands.Add(deletionCmd);
+            if(deletions == null)
+                deletions = new List<DeleteDatabaseCommand>();
+            deletions.Add(deletionCmd);
         }
 
         private enum DatabaseHealth
