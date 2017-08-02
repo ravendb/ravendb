@@ -75,7 +75,12 @@ namespace Raven.Server.Documents.Queries
                         continue;
 
                     if (selectField.GroupByKeys.Length == 1)
+                    {
                         selectFieldName = selectField.GroupByKeys[0];
+
+                        if (selectFieldKey == null)
+                            selectFieldKey = selectFieldName;
+                    }
                     else
                     {
                         selectFieldKey = selectFieldKey ?? "Key";
