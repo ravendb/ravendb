@@ -248,7 +248,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     continue;
 
                 if (TryPromote(dbName, topology, current, previous, mentorNode, promotable))
+                {
+                    topology.Promotables.Remove(promotable);
+                    topology.Members.Add(promotable);
                     return true;
+                }
             }
 
             foreach (var rehab in topology.Rehabs)
@@ -358,8 +362,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 var indexesCatchedUp = CheckIndexProgress(promotablePrevDbStats.LastEtag, promotablePrevDbStats.LastIndexStats, promotableDbStats.LastIndexStats);
                 if (indexesCatchedUp)
                 {
-                    topology.Promotables.Remove(promotable);
-                    topology.Members.Add(promotable);
                     if (_logger.IsOperationsEnabled)
                     {
                         _logger.Operations($"We promoted the database {dbName} on {promotable} to be a full member");
@@ -392,7 +394,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private void RemoveOtherNodesIfNeeded(string dbName, DatabaseTopology topology, ref List<DeleteDatabaseCommand> deletions)
         {
-            if (topology.Members.Count >= topology.ReplicationFactor) 
+            if (topology.Members.Count < topology.ReplicationFactor) 
                 return;
 
             if (topology.Promotables.Count  == 0 && 

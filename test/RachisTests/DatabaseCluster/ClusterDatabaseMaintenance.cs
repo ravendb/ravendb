@@ -264,6 +264,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task RedistrebuteDatabaseOnMultiFailure()
         {
+            DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 5;
             var dbGroupSize = 3;
             var databaseName = "RedistrebuteDatabaseOnCascadeFailure";
