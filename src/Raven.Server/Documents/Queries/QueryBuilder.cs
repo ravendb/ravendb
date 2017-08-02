@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Queries
                                 }
                                 break;
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
                         }
 
                         throw new NotSupportedException("Should not happen!");
@@ -132,7 +132,7 @@ namespace Raven.Server.Documents.Queries
                                 var valueSecondAsDouble = (double)valueSecond;
                                 return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsDouble, valueSecondAsDouble);
                             default:
-                                throw new ArgumentOutOfRangeException();
+                                throw new ArgumentOutOfRangeException(nameof(fieldType), fieldType, null);
                         }
                     }
                 case OperatorType.In:
@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries
                 var array = parameterValue as BlittableJsonReaderArray;
                 if (array != null)
                 {
-                    foreach (var item in UnwrapArray(array))
+                    foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
                     {
                         if (AreValueTokenTypesValid(expectedValueType, item.Type) == false)
                             ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
@@ -392,7 +392,7 @@ namespace Raven.Server.Documents.Queries
                     yield break;
                 }
 
-                var parameterValueType = GetValueTokenType(parameterValue);
+                var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
                 if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
                     ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
@@ -416,7 +416,7 @@ namespace Raven.Server.Documents.Queries
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
                     ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
-                var parameterValueType = GetValueTokenType(parameterValue);
+                var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
 
                 if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
                     ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Queries
                 case ValueTokenType.Null:
                     return (null, ValueTokenType.String);
                 default:
-                    throw new ArgumentOutOfRangeException();
+                    throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
             }
         }
 
@@ -505,20 +505,20 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static IEnumerable<(object Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
+        private static IEnumerable<(object Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array, string queryText, BlittableJsonReaderObject parameters)
         {
             foreach (var item in array)
             {
                 var innerArray = item as BlittableJsonReaderArray;
                 if (innerArray != null)
                 {
-                    foreach (var innerItem in UnwrapArray(innerArray))
+                    foreach (var innerItem in UnwrapArray(innerArray, queryText, parameters))
                         yield return innerItem;
 
                     continue;
                 }
 
-                yield return (item, GetValueTokenType(item));
+                yield return (item, GetValueTokenType(item, queryText, parameters));
             }
         }
 
@@ -600,7 +600,7 @@ namespace Raven.Server.Documents.Queries
             return buffer.ToString();
         }
 
-        public static ValueTokenType GetValueTokenType(object parameterValue, bool unwrapArrays = false)
+        public static ValueTokenType GetValueTokenType(object parameterValue, string queryText, BlittableJsonReaderObject parameters, bool unwrapArrays = false)
         {
             if (parameterValue == null)
                 return ValueTokenType.Null;
@@ -625,11 +625,13 @@ namespace Raven.Server.Documents.Queries
                     if (array.Length == 0)
                         return ValueTokenType.Null;
 
-                    return GetValueTokenType(array[0], unwrapArrays: true);
+                    return GetValueTokenType(array[0], queryText, parameters, unwrapArrays: true);
                 }
             }
 
-            throw new NotImplementedException();
+            ThrowUnexpectedParameterValue(parameterValue, queryText, parameters);
+
+            return default(ValueTokenType);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -701,14 +703,19 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
         }
 
-        private static void ThrowParametersWereNotProvided(string queryText)
+        public static void ThrowParametersWereNotProvided(string queryText)
         {
             throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
         }
 
-        private static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
+        public static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Value of parameter '{parameterName}' was not provided", queryText, parameters);
+        }
+
+        private static void ThrowUnexpectedParameterValue(object parameter, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Parameter value '{parameter}' of type {parameter.GetType().FullName} is not supported", queryText, parameters);
         }
 
         private enum MethodType

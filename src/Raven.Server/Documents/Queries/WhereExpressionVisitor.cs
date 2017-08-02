@@ -62,12 +62,12 @@ namespace Raven.Server.Documents.Queries
                 var parameterName = QueryExpression.Extract(QueryText, value);
 
                 if (parameters == null)
-                    throw new InvalidOperationException();
+                    QueryBuilder.ThrowParametersWereNotProvided(QueryText);
 
                 if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
-                    throw new InvalidOperationException();
+                    QueryBuilder.ThrowParameterValueWasNotProvided(parameterName, QueryText, parameters);
 
-                valueType = QueryBuilder.GetValueTokenType(parameterValue, unwrapArrays);
+                valueType = QueryBuilder.GetValueTokenType(parameterValue, QueryText, parameters, unwrapArrays);
             }
 
             return valueType;
