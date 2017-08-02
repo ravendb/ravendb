@@ -167,11 +167,11 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: csvImportUrl
         })*/
 
-        new separatorMenuItem('Stats'),
+        new separatorMenuItem('Statistics'),
         new leafMenuItem({
             route: 'databases/status',
             moduleId: 'viewmodels/database/status/statistics',
-            title: 'Stats',
+            title: 'Statistics',
             nav: true,
             css: 'icon-stats',
             dynamicHash: appUrls.status
