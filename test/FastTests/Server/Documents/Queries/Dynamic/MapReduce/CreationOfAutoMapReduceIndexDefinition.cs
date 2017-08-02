@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
@@ -70,7 +71,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Error_when_no_aggregation_field()
         {
-            var ex = Assert.Throws<InvalidOperationException>(() => new IndexQueryServerSide("FROM Users GROUP BY Location"));
+            var ex = Assert.Throws<InvalidQueryException>(() => new IndexQueryServerSide("FROM Users GROUP BY Location"));
 
             Assert.Contains("needs to have at least one aggregation operation", ex.Message);
         }

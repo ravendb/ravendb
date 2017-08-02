@@ -360,7 +360,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
         ///     or 'Adam'.
         /// </param>
-        TSelf Search(string fieldName, string searchTerms);
+        TSelf Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.
@@ -371,7 +371,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
         ///     or 'Adam'.
         /// </param>
-        TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
+        TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
         ///     If set to true, this property will send multiple index entries from the same document (assuming the index project

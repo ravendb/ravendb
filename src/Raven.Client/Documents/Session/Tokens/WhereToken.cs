@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public string FieldName { get; private set; }
         public WhereOperator WhereOperator { get; private set; }
-        public QueryOperator? QueryOperator { get; set; }
+        public SearchOperator? SearchOperator { get; set; }
         public string ParameterName { get; set; }
         public string FromParameterName { get; private set; }
         public string ToParameterName { get; private set; }
@@ -136,14 +136,14 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
-        public static WhereToken Search(string fieldName, string parameterName, QueryOperator op)
+        public static WhereToken Search(string fieldName, string parameterName, SearchOperator op)
         {
             return new WhereToken
             {
                 FieldName = fieldName,
                 ParameterName = parameterName,
                 WhereOperator = WhereOperator.Search,
-                QueryOperator = op
+                SearchOperator = op
             };
         }
 
@@ -253,7 +253,7 @@ namespace Raven.Client.Documents.Session.Tokens
                         .Append(", :")
                         .Append(ParameterName);
 
-                    if (QueryOperator == Queries.QueryOperator.And)
+                    if (SearchOperator == Queries.SearchOperator.And)
                         writer.Append(", AND");
 
                     writer.Append(")");

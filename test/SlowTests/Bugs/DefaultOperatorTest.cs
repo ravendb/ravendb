@@ -106,8 +106,7 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
-                        .UsingDefaultOperator(QueryOperator.And)
-                        .Search(x => x.Title, "one two")
+                        .Search(x => x.Title, "one two", SearchOperator.And)
                         .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
                         .ToList();
 
@@ -124,8 +123,7 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
-                        .UsingDefaultOperator(QueryOperator.And)
-                        .Search(x => x.Title, "one two")
+                        .Search(x => x.Title, "one two", SearchOperator.And)
                         .SelectFields<Blog>("Title")
                         .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
                         .ToList();

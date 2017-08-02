@@ -1336,7 +1336,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// Perform a search for documents which fields that match the searchTerms.
         /// If there is more than a single term, each of them will be checked independently.
         /// </summary>
-        public void Search(string fieldName, string searchTerms)
+        public void Search(string fieldName, string searchTerms, SearchOperator @operator = SearchOperator.Or)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 
@@ -1348,7 +1348,7 @@ If you really want to do in memory filtering on the data returned from the query
                 hasWhiteSpace ? "(" + searchTerms + ")" : searchTerms
             );
 
-            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), DefaultOperator));
+            WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
 
         /// <summary>
@@ -1651,8 +1651,30 @@ If you really want to do in memory filtering on the data returned from the query
             if (tokens.Count == 0)
                 return;
 
-            if (tokens.Last.Value is WhereToken || tokens.Last.Value is CloseSubclauseToken)
-                tokens.AddLast(DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or);
+            var lastToken = tokens.Last.Value;
+
+            if (lastToken is WhereToken == false && lastToken is CloseSubclauseToken == false)
+                return;
+
+            WhereToken lastWhere = null;
+
+            var current = tokens.Last;
+            while (current != null)
+            {
+                lastWhere = current.Value as WhereToken;
+
+                if (lastWhere != null)
+                    break;
+
+                current = current.Previous;
+            }
+
+            var token = DefaultOperator == QueryOperator.And ? QueryOperatorToken.And : QueryOperatorToken.Or;
+
+            if (lastWhere?.SearchOperator != null)
+                token = QueryOperatorToken.Or; // default to OR operator after search if AND was not specified explicitly
+
+            tokens.AddLast(token);
         }
 
         private static IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
