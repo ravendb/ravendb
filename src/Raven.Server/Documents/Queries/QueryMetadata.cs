@@ -93,7 +93,7 @@ namespace Raven.Server.Documents.Queries
                 GroupBy = new string[Query.GroupBy.Count];
 
                 for (var i = 0; i < Query.GroupBy.Count; i++)
-                    GroupBy[i] = QueryExpression.Extract(Query.QueryText, Query.GroupBy[i]);
+                    GroupBy[i] = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
             }
 
             if (Query.Select != null)
@@ -101,11 +101,11 @@ namespace Raven.Server.Documents.Queries
             else
             {
                 if (IsGroupBy)
-                    throw new InvalidOperationException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()");
+                    ThrowMissingSelectClauseInGroupByQuery(QueryText, parameters);
             }
 
             if (Query.Where != null)
-                new FillWhereFieldsAndParametersVisitor(this, Query.QueryText).Visit(Query.Where, parameters);
+                new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
 
             if (Query.OrderBy != null)
             {
@@ -114,24 +114,26 @@ namespace Raven.Server.Documents.Queries
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
                     var order = Query.OrderBy[i];
-                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract(Query.QueryText, order.Expression.Field));
+                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract(QueryText, order.Expression.Field));
 
                     switch (order.Expression.Type)
                     {
                         case OperatorType.Method:
-                            OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName);
+                            OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName, parameters);
                             break;
                         case OperatorType.Field:
                             OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
                             break;
                         default:
-                            throw new InvalidOperationException("Invalid ORDER BY expression type " + order.Expression.Type);
+                            ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type, QueryText, parameters);
+                            break;
                     }
                 }
             }
         }
 
-        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod((QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string method)
+        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod(
+            (QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string method, BlittableJsonReaderObject parameters)
         {
             if (string.Equals("random", method, StringComparison.OrdinalIgnoreCase))
             {
@@ -139,11 +141,11 @@ namespace Raven.Server.Documents.Queries
                     return (null, OrderByFieldType.Random, order.Ascending);
 
                 if (order.Expression.Arguments.Count > 1)
-                    throw new InvalidOperationException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count);
+                    throw new InvalidQueryException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
 
                 var token = order.Expression.Arguments[0] as ValueToken;
                 if (token == null)
-                    throw new InvalidOperationException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0]);
+                    throw new InvalidQueryException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0], QueryText, parameters);
 
                 var arg = QueryExpression.Extract(QueryText, token);
 
@@ -155,10 +157,10 @@ namespace Raven.Server.Documents.Queries
                 if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
                     return (null, OrderByFieldType.Score, order.Ascending);
 
-                throw new InvalidOperationException("Invalid ORDER BY score call, expected zero arguments, got " + order.Expression.Arguments.Count);
+                throw new InvalidQueryException("Invalid ORDER BY score call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
             }
 
-            throw new InvalidOperationException("Invalid ORDER BY method call " + method);
+            throw new InvalidQueryException("Invalid ORDER BY method call " + method, QueryText, parameters);
         }
 
         private void FillSelectFields(BlittableJsonReaderObject parameters)
@@ -295,6 +297,16 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unhandled expression of type {expressionType} in SELECT clause", queryText, parameters);
+        }
+
+        private static void ThrowMissingSelectClauseInGroupByQuery(string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()", queryText, parameters);
+        }
+
+        private static void ThrowInvalidOperatorTypeInOrderBy(OperatorType type, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Invalid type of operator in ORDER BY clause. Operator: {type}", queryText, parameters);
         }
 
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
