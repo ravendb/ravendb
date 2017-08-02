@@ -17,9 +17,13 @@ abstract class layoutable {
     abstract getId(): string;
 }
 
+type databaseNodeState = "valid" | "errored";
+
 class databaseNode extends layoutable {
     tag: string;
-    type: clusterNodeType;
+    type: databaseGroupNodeType;
+    responsibleNode: string;
+    state: databaseNodeState;
 
     private constructor() {
         super();
@@ -29,15 +33,16 @@ class databaseNode extends layoutable {
         return `d_${this.tag}`;
     }
 
-    static for(dto: Raven.Client.Server.Operations.NodeId, type: clusterNodeType) {
+    static for(dto: Raven.Client.Server.Operations.NodeId, type: databaseGroupNodeType) {
         const node = new databaseNode();
         node.updateWith(dto, type);
         return node;
     }
 
-    updateWith(dto: Raven.Client.Server.Operations.NodeId, type: clusterNodeType) {
+    updateWith(dto: Raven.Client.Server.Operations.NodeId, type: databaseGroupNodeType) {
         this.tag = dto.NodeTag;
         this.type = type;
+        this.responsibleNode = dto.ResponsibleNode;
     }
 }
 
@@ -236,9 +241,11 @@ class databaseGroupGraph {
             return;
         }
 
-        const links = this.findLinks(this.data.databaseNodes, this.data.tasks);
+        const colaLinks = this.findLinksForCola(this.data.databaseNodes, this.data.tasks);
 
-        this.layout(this.data.databaseNodes, this.data.tasks, links, !this.colaInitialized);
+        const visibleLinks = this.findVisibleLinks(this.data.databaseNodes, this.data.tasks);
+
+        this.layout(this.data.databaseNodes, this.data.tasks, colaLinks, !this.colaInitialized);
 
         const dbNodes = this.dbNodesContainer
             .selectAll(".db-node")
@@ -315,7 +322,7 @@ class databaseGroupGraph {
 
         const edgeNodes = this.edgesContainer
             .selectAll(".edge")
-            .data(links, x => x.source.getId() + "-" + x.target.getId());
+            .data(visibleLinks, x => x.source.getId() + "-" + x.target.getId());
 
         edgeNodes.exit()
             .remove();
@@ -347,11 +354,11 @@ class databaseGroupGraph {
                     x.trimmedName = trimmed.text;
                 });
             });
-        
+
         this.d3cola
             .nodes(nodes)
             .linkDistance(x => x.length)
-            .links(links)
+            .links(colaLinks)
             .avoidOverlaps(false);
 
         if (this.colaInitialized) {
@@ -409,7 +416,8 @@ class databaseGroupGraph {
         return scale;
     }
 
-    private findLinks(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
+    // link used in forge graph simulation
+    private findLinksForCola(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
         const links = [] as Array<cola.Link<databaseNode | taskNode>>;
 
         for (let i = 0; i < dbNodes.length; i++) {
@@ -418,6 +426,55 @@ class databaseGroupGraph {
                 target: dbNodes[(i + 1) % dbNodes.length],
             });
         }
+        
+        tasks.forEach((task) => {
+            if (task.responsibleNode) {
+                links.push({
+                    source: task.responsibleNode,
+                    target: task,
+                });
+            }
+        });
+
+        return links;
+    }
+
+    // link displayed on scroon
+    private findVisibleLinks(dbNodes: Array<databaseNode>, tasks: Array<taskNode>): Array<cola.Link<databaseNode | taskNode>> {
+        const links = [] as Array<cola.Link<databaseNode | taskNode>>;
+
+        // find member - member connections
+
+        for (let i = 0; i < dbNodes.length; i++) {
+            for (let j = 0; j < dbNodes.length; j++) {
+                if (i !== j) {
+                    const source = dbNodes[i];
+                    const target = dbNodes[j];
+
+                    if (source.type === "Member" && target.type === "Member") {
+                        links.push({
+                            source: source,
+                            target: target
+                        });
+                    }
+                }
+            }
+        }
+
+        // find promotable/rehab -> member links
+
+        for (let i = 0; i < dbNodes.length; i++) {
+            const node = dbNodes[i];
+            if (node.type !== "Member" && node.responsibleNode) {
+                const responsibleNode = dbNodes.find(x => x.tag === node.responsibleNode);
+
+                links.push({
+                    source: node,
+                    target: responsibleNode
+                });
+            }
+        }
+        
 
         tasks.forEach((task) => {
             if (task.responsibleNode) {
@@ -433,7 +490,7 @@ class databaseGroupGraph {
 
     private updateDbNodes(selection: d3.Selection<databaseNode>) {
         selection
-            .attr("class", x => "db-node " + x.type)
+            .attr("class", x => "db-node " + x.type + " " + x.state)
             .attr("transform", x => `translate(${x.x},${x.y})`);
 
         const nodeIcon = (node: databaseNode) => {
@@ -444,6 +501,8 @@ class databaseGroupGraph {
                     return "&#xe9c1;";
                 case "Watcher":
                     return "&#xe9c2;";
+                case "Rehab":
+                    return "&#xe9c4;";
             }
             return "";
         };
@@ -498,8 +557,16 @@ class databaseGroupGraph {
             .attr("transform", x => `translate(${x.x - x.width / 2},${x.y - x.height / 2})`);
     }
 
-    private updateEdges(selection: d3.Selection<cola.Link<cola.Node>>) {
+    private updateEdges(selection: d3.Selection<cola.Link<taskNode | databaseNode>>) {
         selection.attr("class", x => "edge " + ((x.target instanceof taskNode) ? x.target.state : " "));
+
+        selection.classed("errored", x => {
+            if (x.source instanceof databaseNode && x.target instanceof databaseNode) {
+                return x.source.state === "errored" || x.target.state === "errored";
+            }
+
+            return false;
+        });
         
         selection
             .attr("x1", x => x.source.x)
@@ -532,7 +599,7 @@ class databaseGroupGraph {
     private updateDatabaseNodes() {
         const newDbTags = [] as Array<string>;
         
-        const merge = (nodes: Array<Raven.Client.Server.Operations.NodeId>, type: clusterNodeType) => {
+        const merge = (nodes: Array<Raven.Client.Server.Operations.NodeId>, type: databaseGroupNodeType) => {
             nodes.forEach(node => {
                 const existing = this.data.databaseNodes.find(x => x.tag === node.NodeTag);
                 if (existing) {
@@ -547,12 +614,26 @@ class databaseGroupGraph {
 
         merge(this.databaseInfoCache.NodesTopology.Members, "Member");
         merge(this.databaseInfoCache.NodesTopology.Promotables, "Promotable");
+        merge(this.databaseInfoCache.NodesTopology.Rehabs, "Rehab");
 
         const dbsToDelete = this.data.databaseNodes.filter(x => !_.includes(newDbTags, x.tag));
 
         _.pullAll(this.data.databaseNodes, dbsToDelete);
 
         _.sortBy(this.data.databaseNodes, x => x.tag);
+
+        // clear current status
+        this.data.databaseNodes.forEach(node => {
+            node.state = "valid"; 
+        });
+        
+        _.forIn(this.databaseInfoCache.NodesTopology.Status, (status, tag) => {
+            const matchingNode = this.data.databaseNodes.find(x => x.tag === tag);
+            //TODO: update this logic once RavenDB-7998 will be completed
+            if (matchingNode) {
+                matchingNode.state = status.LastStatus === "Ok" ? "valid" : "errored";
+            }
+        });
     }
 
     private updateTasks() {
@@ -569,7 +650,6 @@ class databaseGroupGraph {
             }
         });
 
-        
         const tasksToDelete = this.data.tasks.filter(x => !_.includes(newTasksIds, x.taskId));
         _.pullAll(this.data.tasks, tasksToDelete);
         

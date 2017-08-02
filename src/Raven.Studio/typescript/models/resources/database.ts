@@ -41,8 +41,9 @@ class database {
         const nodeTag = this.clusterNodeTag();
         const inMemberList = _.some(incomingCopy.NodesTopology.Members, x => x.NodeTag === nodeTag);
         const inPromotableList = _.some(incomingCopy.NodesTopology.Promotables, x => x.NodeTag === nodeTag);
+        const inRehabList = _.some(incomingCopy.NodesTopology.Rehabs, x => x.NodeTag === nodeTag);
 
-        this.relevant(inMemberList || inPromotableList);
+        this.relevant(inMemberList || inPromotableList || inRehabList);
     }
 
     private attributeValue(attributes: any, bundleName: string) {

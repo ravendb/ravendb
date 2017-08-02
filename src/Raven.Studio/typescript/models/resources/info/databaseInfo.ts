@@ -181,13 +181,27 @@ class databaseInfo {
         const topologyDto = dto.NodesTopology;
         const members = this.mapNodes("Member", topologyDto.Members);
         const promotables = this.mapNodes("Promotable", topologyDto.Promotables);
+        const rehabs = this.mapNodes("Rehab", topologyDto.Rehabs);
 
-        this.nodes(_.concat<databaseGroupNode>(members, promotables));
+        const joinedNodes = _.concat<databaseGroupNode>(members, promotables, rehabs);
+        this.applyNodesStatuses(joinedNodes, topologyDto.Status);
+
+        this.nodes(joinedNodes);
         //TODO: consider in place update? of nodes?
     }
 
+    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.Server.Operations.DbGroupNodeStatus;}) {
+        nodes.forEach(node => {
+            if (node.tag() in statuses) {
+                const nodeStatus = statuses[node.tag()];
+                node.lastStatus(nodeStatus.LastStatus);
+                node.lastError(nodeStatus.LastError);
+            }
+        });
+    }
+
     private mapNodes(type: databaseGroupNodeType, nodes: Array<Raven.Client.Server.Operations.NodeId>): Array<databaseGroupNode> {
-        return _.map(nodes, v => databaseGroupNode.for(v.NodeTag, v.NodeUrl, type));
+        return _.map(nodes, v => databaseGroupNode.for(v.NodeTag, v.NodeUrl, v.ResponsibleNode, type));
     }
 }
 
