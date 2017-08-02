@@ -489,6 +489,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (databaseNodes.Contains(node))
                     continue;
 
+                if (FailedDatabaseInstanceOrNode(topology, node, db, current) == DatabaseHealth.Bad)
+                    continue;
+
                 if (current.TryGetValue(node, out var nodeReport) == false)
                 {
                     if (bestNode == null)
