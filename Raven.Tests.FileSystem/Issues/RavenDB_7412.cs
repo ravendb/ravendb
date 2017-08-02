@@ -18,8 +18,21 @@ namespace Raven.Tests.FileSystem.Issues
 {
     public class RavenDB_7412 : RavenFilesTestBase
     {
+        private const string FileName = "file.txt";
+
         [Fact]
         public async Task InMasterMasterSetupCanSynchronizeBackTheDelete()
+        {
+            await Test(secondary => secondary.DeleteAsync(FileName));
+        }
+
+        [Fact]
+        public async Task InMasterMasterSetupCanSynchronizeBackTheDeleteAfterDeletingByQuery()
+        {
+            await Test(secondary => secondary.DeleteByQueryAsync("__directory:/"));
+        }
+
+        private async Task Test(Func<IAsyncFilesCommands, Task> deleteOnSecondary)
         {
             var c1 = NewAsyncClient(0);
             var c2 = NewAsyncClient(1);
@@ -27,17 +40,17 @@ namespace Raven.Tests.FileSystem.Issues
             await c1.Synchronization.SetDestinationsAsync(c2.ToSynchronizationDestination());
             await c2.Synchronization.SetDestinationsAsync(c1.ToSynchronizationDestination());
 
-            await c1.UploadAsync("file.txt", CreateRandomFileStream(10));
+            await c1.UploadAsync(FileName, CreateRandomFileStream(10));
 
-            WaitForFile(c2, "file.txt");
+            WaitForFile(c2, FileName);
 
-            Assert.NotNull(await c2.DownloadAsync("file.txt"));
+            Assert.NotNull(await c2.DownloadAsync(FileName));
 
-            await c2.DeleteAsync("file.txt");
+            await deleteOnSecondary(c2);
 
-            await AssertAsync.Throws<FileNotFoundException>(() => c2.DownloadAsync("file.txt"));
+            await AssertAsync.Throws<FileNotFoundException>(() => c2.DownloadAsync(FileName));
 
-            WaitForFileDelete(c1, "file.txt");
+            WaitForFileDelete(c1, FileName);
         }
 
         private static void WaitForFile(IAsyncFilesCommands client, string fileName)
@@ -79,7 +92,7 @@ namespace Raven.Tests.FileSystem.Issues
             if (result)
                 return;
 
-            throw new TimeoutException("Could retrieve file " + fileName);
+            throw new TimeoutException("Could retrieve file " + fileName + " while it was supposed to be deleted");
         }
     }
 }
