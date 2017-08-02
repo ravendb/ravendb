@@ -149,6 +149,21 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
+        private void RaiseNoLivingNodesAlert(string alertMsg)
+        {
+            var alert = AlertRaised.Create(
+                "No living nodes in the database topology",
+                alertMsg,
+                AlertType.ClusterTopologyWarning,
+                NotificationSeverity.Warning
+            );
+
+            _server.NotificationCenter.Add(alert);
+            if (_logger.IsOperationsEnabled)
+            {
+                _logger.Operations(alertMsg);
+            }
+        }
         private bool UpdateDatabaseTopology(string dbName, DatabaseTopology topology, ClusterTopology clusterTopology,
             Dictionary<string, ClusterNodeStatusReport> current,
             Dictionary<string, ClusterNodeStatusReport> previous,
@@ -156,7 +171,6 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             //TODO: RavenDB-7914 - any change here requires generating alerts
             
-            var modifiedTopology = false;
             var hasLivingNodes = false;
             foreach (var member in topology.Members)
             {
@@ -170,25 +184,13 @@ namespace Raven.Server.ServerWide.Maintenance
                     topology.PromotablesStatus.Remove(member);
                     continue;
                 }
-           
-                if (FailedDatabaseInstanceOrNode(topology, member, dbName, current) == DatabaseHealth.Bad)
-                {
-                    if (TryMoveToRehab(dbName, topology, current, member) == false)
-                        continue;
-                    
-                    if (TryFindFitNode(member, dbName, topology, clusterTopology, current,  out var node))
-                        topology.Promotables.Add(node);
 
-                    // we only allow a single topology modification per round, so 
-                    // we abort immediately after making this change
-                    modifiedTopology = true;
-                    break;
-                }
+                if (TryMoveToRehab(dbName, topology, current, member) )
+                    return true;
             }
 
             if (hasLivingNodes == false)
             {
-                var alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable";
 
                 foreach (var rehab in topology.Rehabs)
                 {
@@ -197,28 +199,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         continue;
                     topology.Rehabs.Remove(rehab);
                     topology.Members.Add(rehab);
-                    modifiedTopology = true;
-                    alertMsg = $"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable";
-                    break;
+                    RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable");
+                    return true;
                 }
-                
-                var alert = AlertRaised.Create(
-                    "No living nodes in the database topology",
-                    alertMsg,
-                    AlertType.ClusterTopologyWarning,
-                    NotificationSeverity.Warning
-                );
-                
-                _server.NotificationCenter.Add(alert);
-                if (_logger.IsOperationsEnabled)
-                {
-                    _logger.Operations(alertMsg);
-                }
-                return modifiedTopology;
+                RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable");
             }
-
-            if (modifiedTopology)
-                return true;
 
             foreach (var promotable in topology.Promotables)
             {
@@ -255,28 +240,57 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
+            var goodMembers = GetNumberOfRespondingNodes(dbName, topology, current);
+
             foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current) == DatabaseHealth.Good)
+                var health = FailedDatabaseInstanceOrNode(topology, rehab, dbName, current);
+                switch (health)
                 {
-                    if (TryGetMentorNode(dbName, topology, clusterTopology, rehab, out var mentorNode) == false)
-                        continue;
-
-                    if (TryPromote(dbName, topology, current, previous, mentorNode, rehab))
-                    {
-                        if (_logger.IsOperationsEnabled)
+                    case DatabaseHealth.Bad:
+                        if (goodMembers < topology.ReplicationFactor && 
+                            TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
-                            _logger.Operations($"The database {dbName} on {rehab} is reachable and update, so we promote it back to member.");
+                            topology.Promotables.Add(node);
+                            return true;
                         }
-                        topology.Members.Add(rehab);
-                        topology.Rehabs.Remove(rehab);
-                        return true;
-                    }
+                        break;
+                    case DatabaseHealth.Good:
+                        if (TryGetMentorNode(dbName, topology, clusterTopology, rehab, out var mentorNode) == false)
+                            continue;
+
+                        if (TryPromote(dbName, topology, current, previous, mentorNode, rehab))
+                        {
+                            if (_logger.IsOperationsEnabled)
+                            {
+                                _logger.Operations($"The database {dbName} on {rehab} is reachable and update, so we promote it back to member.");
+                            }
+                            topology.Members.Add(rehab);
+                            topology.Rehabs.Remove(rehab);
+                            return true;
+                        }
+                        break;
                 }
             }
 
             RemoveOtherNodesIfNeeded(dbName, topology, ref deletions);
             return false;
+        }
+
+        private int GetNumberOfRespondingNodes(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current)
+        {
+            var goodMembers = topology.Members.Count;
+            foreach (var promotable in topology.Promotables)
+            {
+                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current) != DatabaseHealth.Bad)
+                    goodMembers++;
+            }
+            foreach (var rehab in topology.Rehabs)
+            {
+                if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current) != DatabaseHealth.Bad)
+                    goodMembers++;
+            }
+            return goodMembers;
         }
 
         private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
