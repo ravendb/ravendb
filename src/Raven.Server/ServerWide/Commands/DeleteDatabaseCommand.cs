@@ -9,7 +9,8 @@ namespace Raven.Server.ServerWide.Commands
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
         public bool HardDelete;
-        public string FromNode;
+        public string[] FromNodes;
+        public bool UpdateReplicationFactor = true;
 
         public DeleteDatabaseCommand() : base(null)
         {
@@ -29,23 +30,28 @@ namespace Raven.Server.ServerWide.Commands
             {
                 record.DeletionInProgress = new Dictionary<string, DeletionInProgressStatus>();
             }
-            if (string.IsNullOrEmpty(FromNode) == false)
+            if (FromNodes != null && FromNodes.Length > 0) 
             {
-                if (record.Topology.RelevantFor(FromNode) == false)
+                foreach (var node in FromNodes)
                 {
-                    DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{FromNode}' failed.");
+                    if (record.Topology.RelevantFor(node) == false)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(record.DatabaseName, $"Request to delete database from node '{node}' failed.");
+                    }
+                    record.Topology.RemoveFromTopology(node);
+                    if (UpdateReplicationFactor)
+                    {
+                        record.Topology.ReplicationFactor--;
+                    }
+                    record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
-                record.Topology.RemoveFromTopology(FromNode);
-                record.Topology.ReplicationFactor--;
-                record.DeletionInProgress[FromNode] = deletionInProgressStatus;
             }
             else
             {
                 var allNodes = record.Topology.Members.Select(m => m)
-                    .Concat(record.Topology.Promotables.Select(p => p));
-                    // TODO: we need to delete databases from watchers too but watcher nodeTag seems to be null
-                    //.Concat(record.Topology.Watchers.Select(w => w.NodeTag));
-
+                    .Concat(record.Topology.Promotables.Select(p => p))
+                    .Concat(record.Topology.Rehabs.Select(r => r));
+                  
                 foreach (var node in allNodes)
                     record.DeletionInProgress[node] = deletionInProgressStatus;
 
@@ -61,8 +67,12 @@ namespace Raven.Server.ServerWide.Commands
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(HardDelete)] = HardDelete;
-            json[nameof(FromNode)] = FromNode;
             json[nameof(RaftCommandIndex)] = RaftCommandIndex;
+            json[nameof(UpdateReplicationFactor)] = UpdateReplicationFactor;
+            if (FromNodes != null)
+            {
+              json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
+            }
         }
     }
 }

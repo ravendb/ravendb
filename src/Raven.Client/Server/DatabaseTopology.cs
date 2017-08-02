@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Http;
 using Sparrow;
@@ -69,7 +68,7 @@ namespace Raven.Client.Server
     {
         public List<string> Members = new List<string>();
         public List<string> Promotables = new List<string>();
-        public List<string> Rehab = new List<string>();
+        public List<string> Rehabs = new List<string>();
 
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
         public Dictionary<string, string> PromotablesStatus = new Dictionary<string, string>();
@@ -81,7 +80,7 @@ namespace Raven.Client.Server
         public bool RelevantFor(string nodeTag)
         {
             return Members.Contains(nodeTag) ||
-                   Rehab.Contains(nodeTag) ||
+                   Rehabs.Contains(nodeTag) ||
                    Promotables.Contains(nodeTag);
         }
         
@@ -90,13 +89,16 @@ namespace Raven.Client.Server
             var list = new List<string>();
             var destinations = new List<ReplicationNode>();
 
+            if (Members.Contains(nodeTag) == false) // if we are not a member we can't have any destinations
+                return destinations;
+
             foreach (var member in Members)
             {
                 if (member == nodeTag) //skip me
                     continue;
                 list.Add(clusterTopology.GetUrlFromTag(member));
             }
-            foreach (var promotable in Promotables.Concat(Rehab))
+            foreach (var promotable in Promotables.Concat(Rehabs))
             {
                 var url = clusterTopology.GetUrlFromTag(promotable);
                 if (WhoseTaskIsIt(new PromotableTask(promotable, url, databaseName), isPassive) == nodeTag)
@@ -111,7 +113,7 @@ namespace Raven.Client.Server
             {
                 destinations.Add(new InternalReplication
                 {
-                    NodeTag = nodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(url).nodeTag,
                     Url = url,
                     Database = databaseName
                 });
@@ -159,13 +161,13 @@ namespace Raven.Client.Server
                 {
                     yield return member;
                 }
-                foreach (var rehab in Rehab)
-                {
-                    yield return rehab;
-                }
                 foreach (var promotable in Promotables)
                 {
                     yield return promotable;
+                }
+                foreach (var rehab in Rehabs)
+                {
+                    yield return rehab;
                 }
             }
         }
@@ -176,11 +178,12 @@ namespace Raven.Client.Server
             {
                 [nameof(Members)] = new DynamicJsonArray(Members),
                 [nameof(Promotables)] = new DynamicJsonArray(Promotables),
-                [nameof(Rehab)] = new DynamicJsonArray(Rehab),
+                [nameof(Rehabs)] = new DynamicJsonArray(Rehabs),
                 [nameof(Stamp)] = Stamp.ToJson(),
                 [nameof(PromotablesStatus)] = DynamicJsonValue.Convert(PromotablesStatus),
                 [nameof(DemotionReasons)] = DynamicJsonValue.Convert(DemotionReasons),
-                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution
+                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution,
+                [nameof(ReplicationFactor)] = ReplicationFactor
             };
         }
 
@@ -188,7 +191,7 @@ namespace Raven.Client.Server
         {
             Members.RemoveAll(m => m == delDbFromNode);
             Promotables.RemoveAll(p => p == delDbFromNode);
-            Rehab.RemoveAll(p => p == delDbFromNode);
+            Rehabs.RemoveAll(r => r == delDbFromNode);
         }
 
         public string WhoseTaskIsIt(IDatabaseTask task, bool inPassiveState)
@@ -198,7 +201,7 @@ namespace Raven.Client.Server
 
             var topology = new List<string>(Members);
             topology.AddRange(Promotables);
-            topology.AddRange(Rehab);
+            topology.AddRange(Rehabs);
             topology.Sort();
 
             if (topology.Count == 0)

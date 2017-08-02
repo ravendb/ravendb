@@ -81,59 +81,64 @@ namespace Raven.Server.ServerWide.Maintenance
             Ok
         }
 
-        public readonly Dictionary<string, DatabaseStatusReport> LastReport;
+        public readonly Dictionary<string, DatabaseStatusReport> Report;
 
         public readonly Dictionary<string, DateTime> LastGoodDatabaseStatus;
 
-        public readonly ReportStatus LastReportStatus;
+        public readonly ReportStatus Status;
 
-        public readonly Exception LastError;
+        public readonly Exception Error;
 
-        public readonly DateTime LastUpdateDateTime;
+        public readonly DateTime UpdateDateTime;
         private readonly ClusterNodeStatusReport _lastSuccessfulReport;
 
-        public DateTime LastSuccessfulUpdateDateTime => _lastSuccessfulReport?.LastUpdateDateTime ?? DateTime.MinValue;
+        public DateTime LastSuccessfulUpdateDateTime => _lastSuccessfulReport?.UpdateDateTime ?? DateTime.MinValue;
 
         public ClusterNodeStatusReport(
-            Dictionary<string, DatabaseStatusReport> lastReport, 
-            ReportStatus lastReportStatus, 
-            Exception lastError, 
-            DateTime lastUpdateDateTime, 
+            Dictionary<string, DatabaseStatusReport> report, 
+            ReportStatus reportStatus, 
+            Exception error, 
+            DateTime updateDateTime, 
             ClusterNodeStatusReport lastSuccessfulReport)
         {
-            LastReport = lastReport;
-            LastReportStatus = lastReportStatus;
-            LastError = lastError;
-            LastUpdateDateTime = lastUpdateDateTime;
+            Report = report;
+            Status = reportStatus;
+            Error = error;
+            UpdateDateTime = updateDateTime;
             _lastSuccessfulReport = lastSuccessfulReport;
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
-            foreach (var dbReport in lastReport)
+            foreach (var dbReport in report)
             {
                 var dbName = dbReport.Key;
                 var dbStatus = dbReport.Value.Status;
 
-                if (lastReportStatus != ReportStatus.Ok)
-                {
-                    LastGoodDatabaseStatus[dbName] = lastSuccessfulReport.LastUpdateDateTime;
+                if (reportStatus != ReportStatus.Ok || dbStatus != DatabaseStatus.Loaded)
+                { 
+                    SetLastDbGoodTime(lastSuccessfulReport, dbName);
                 }
-                else if (dbStatus != DatabaseStatus.Loaded)
+                else
                 {
-                    DateTime lastGood = DateTime.MinValue;
-                    lastSuccessfulReport?.LastGoodDatabaseStatus.TryGetValue(dbName, out lastGood);
-                    LastGoodDatabaseStatus[dbName] = lastGood;
+                    LastGoodDatabaseStatus[dbName] = updateDateTime;
                 }
             }
+        }
+
+        private void SetLastDbGoodTime(ClusterNodeStatusReport lastSuccessfulReport, string dbName)
+        {
+            DateTime lastGood = DateTime.MinValue;
+            lastSuccessfulReport?.LastGoodDatabaseStatus.TryGetValue(dbName, out lastGood);
+            LastGoodDatabaseStatus[dbName] = lastGood;
         }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(LastReport)] = DynamicJsonValue.Convert(LastReport),
+                [nameof(Report)] = DynamicJsonValue.Convert(Report),
                 [nameof(LastGoodDatabaseStatus)] = DynamicJsonValue.Convert(LastGoodDatabaseStatus),
-                [nameof(LastReportStatus)] = LastReportStatus,
-                [nameof(LastError)] = LastError,
-                [nameof(LastUpdateDateTime)] = LastUpdateDateTime,
+                [nameof(Status)] = Status,
+                [nameof(Error)] = Error,
+                [nameof(UpdateDateTime)] = UpdateDateTime,
                 [nameof(LastSuccessfulUpdateDateTime)] = LastSuccessfulUpdateDateTime,
             };
         }

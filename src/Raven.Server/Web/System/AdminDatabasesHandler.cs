@@ -92,11 +92,13 @@ namespace Raven.Server.Web.System
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var node = GetStringQueryString("node", false);
 
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+            string errorMessage;
+            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
             ServerStore.EnsureNotPassive();
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            TransactionOperationContext context;
+            using (ServerStore.ContextPool.AllocateOperationContext(out context))
             using (context.OpenReadTransaction())
             {
                 var databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out var index);
@@ -218,9 +220,8 @@ namespace Raven.Server.Web.System
                 {
                     var factor = Math.Max(1, GetIntValueQueryString("replication-factor", required: false) ?? 0);
                     databaseRecord.Topology = topology = AssignNodesToDatabase(context, factor, name, databaseRecord.Encrypted, out nodeUrlsAddedTo);
-                    topology.ReplicationFactor = factor;
                 }
-
+                topology.ReplicationFactor = topology.Members.Count;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
                 await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
@@ -377,14 +378,14 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/periodic-backup/test-credentials", "POST", AuthorizationStatus.DatabaseAdmin)]
-        public async Task TestPeriodicBackupCredentials()
+        public async Task TestPerioidicBackupCredentials()
         {
-            // here we explicitly don't care what db I'm an admin of, since it is just a test endpoint
+            // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
             
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
-                throw new ArgumentException($"Unknown backup connection: {type}");
+                throw new ArgumentException($"Unkown backup connection: {type}");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -402,12 +403,12 @@ namespace Raven.Server.Web.System
                         break;
                     case PeriodicBackupTestConnectionType.Glacier:
                         var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
-                        using (var glacierClient = new RavenAwsGlacierClient(
+                        using (var galcierClient = new RavenAwsGlacierClient(
                             glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, 
                             glacierSettings.AwsRegionName, glacierSettings.VaultName,
                             cancellationToken: ServerStore.ServerShutdown))
                         {
-                            await glacierClient.TestConnection();
+                            await galcierClient.TestConnection();
                         }
                         break;
                     case PeriodicBackupTestConnectionType.Azure:
@@ -621,19 +622,22 @@ namespace Raven.Server.Web.System
         public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
-            var fromNode = GetStringValuesQueryString("from-node", required: false).FirstOrDefault();
+            var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                if (string.IsNullOrEmpty(fromNode) == false)
+                if (string.IsNullOrEmpty(fromNodes) == false)
                 {
                     using (context.OpenReadTransaction())
                     {
                         foreach (var databaseName in names)
                         {
-                            if (ServerStore.Cluster.ReadDatabase(context, databaseName)?.Topology.RelevantFor(fromNode) == false)
+                            foreach (var node in fromNodes)
                             {
-                                throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNode} so it can't be deleted from it");
+                                if (ServerStore.Cluster.ReadDatabase(context, databaseName)?.Topology.RelevantFor(node) == false)
+                                {
+                                    throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNodes} so it can't be deleted from it");
+                                }
                             }
                         }
                     }
@@ -642,7 +646,7 @@ namespace Raven.Server.Web.System
                 long index = -1;
                 foreach (var name in names)
                 {
-                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNode);
+                    var (newIndex, _) = await ServerStore.DeleteDatabaseAsync(name, isHardDelete, fromNodes);
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);

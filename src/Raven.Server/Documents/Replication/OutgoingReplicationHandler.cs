@@ -266,7 +266,18 @@ namespace Raven.Server.Documents.Replication
                             //if this returns false, this means either timeout or canceled token is activated                    
                             while (WaitForChanges(_parent.MinimalHeartbeatInterval, _cts.Token) == false)
                             {
-                                SendHeartbeat();
+                                // open tx
+                                // read current change vector compare to last sent
+                                // if okay, send cv
+                                using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                                using (var tx = ctx.OpenReadTransaction())
+                                {
+                                    var etag = DocumentsStorage.ReadLastEtag(tx.InnerTransaction);
+                                    if (etag == _lastSentDocumentEtag)
+                                    {
+                                        SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
+                                    }
+                                }
                             }
                             _waitForChanges.Reset();
                         }
@@ -507,12 +518,11 @@ namespace Raven.Server.Documents.Replication
         public ReplicationNode Node => Destination;
         public string DestinationFormatted => $"{Destination.Url}/databases/{Destination.Database}";
 
-        internal void SendHeartbeat()
+        internal void SendHeartbeat(string changeVector)
         {
             AddReplicationPulse(ReplicationPulseDirection.OutgoingHeartbeat);
 
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
-            using (documentsContext.OpenReadTransaction())
             using (var writer = new BlittableJsonTextWriter(documentsContext, _stream))
             {
                 try
@@ -522,8 +532,11 @@ namespace Raven.Server.Documents.Replication
                         [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
                         [nameof(ReplicationMessageHeader.ItemsCount)] = 0,
-                        [nameof(ReplicationMessageHeader.DatabaseChangeVector)] = DocumentsStorage.GetDatabaseChangeVector(documentsContext)
                     };
+                    if (changeVector != null)
+                    {
+                        heartbeat[nameof(ReplicationMessageHeader.DatabaseChangeVector)] = changeVector;
+                    }
                     documentsContext.Write(writer, heartbeat);
                     writer.Flush();
                 }

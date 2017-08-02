@@ -708,12 +708,12 @@ namespace Raven.Server.ServerWide
             tree.Delete(name);
         }
 
-        public Task<(long Etag, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string fromNode)
+        public Task<(long Etag, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes)
         {
             var deleteCommand = new DeleteDatabaseCommand(db)
             {
                 HardDelete = hardDelete,
-                FromNode = fromNode
+                FromNodes = fromNodes
             };
             return SendToLeaderAsync(deleteCommand);
         }
