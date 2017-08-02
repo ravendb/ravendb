@@ -90,6 +90,7 @@ class query extends viewModelBase {
     dirtyResult = ko.observable<boolean>();
 
     isQueriedIndexMapReduce: KnockoutComputed<boolean>;
+    isQueriedIndexDynamic: KnockoutComputed<boolean>;
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
@@ -166,11 +167,21 @@ class query extends viewModelBase {
 
             const indexes = this.indexes() || [];
             const indexItem = _.find(indexes, x => x.name == stats.IndexName);
-            return indexItem.isMapReduce;
+            return indexItem && indexItem.isMapReduce;
+        });
+
+        this.isQueriedIndexDynamic = ko.pureComputed(() => {
+            const stats = this.queryStats();
+            if (!stats || !stats.IndexName)
+                return false;
+
+            const indexes = this.indexes() || [];
+            const idx = _.find(indexes, x => x.name == stats.IndexName);
+            return !idx;
         });
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
-            return !this.isQueriedIndexMapReduce();
+            return !this.isQueriedIndexMapReduce() && !this.isQueriedIndexDynamic();
         });
 
          /* TODO
@@ -335,7 +346,7 @@ class query extends viewModelBase {
         } else if (recentQueryHash) {
             const index = this.indexes().find(x => x.name === recentQueryHash);
             if (index) {
-                let query = queryUtil.formatIndexQuery(recentQueryHash);
+                const query = queryUtil.formatIndexQuery(recentQueryHash);
                 this.criteria().queryText(query);
                 this.runQuery();
             }
