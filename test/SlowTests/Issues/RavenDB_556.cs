@@ -45,25 +45,25 @@ namespace SlowTests.Issues
                         .Where(x => x.FirstName == "John" || x.FirstName == "Paul")
                         .ToList();
 
-                    var newIdnexes = session
+                    var newIndexes = session
                         .Advanced
                         .DocumentStore
                         .Admin
                         .Send(new GetIndexNamesOperation(0, 100));
 
-                    var newIndex = newIdnexes.Except(oldIndexes).Single();
+                    var newIndex = newIndexes.Except(oldIndexes).Single();
 
                     using (var commands = session.Advanced.DocumentStore.Commands())
                     {
                         var queryResult = commands
-                            .Query(newIndex, new IndexQuery(), false, true);
+                            .Query(new IndexQuery { Query = $"FROM INDEX '{newIndex}'" }, false, true);
 
                         foreach (BlittableJsonReaderObject result in queryResult.Results)
                         {
                             string firstName;
                             Assert.True(result.TryGet("FirstName", out firstName));
                             Assert.NotNull(firstName);
-                            Assert.True(new[] {"john", "william", "paul"}.Contains(firstName));
+                            Assert.True(new[] { "john", "william", "paul" }.Contains(firstName));
                         }
                     }
                 }

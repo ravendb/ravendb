@@ -48,7 +48,7 @@ namespace SlowTests.Issues
                 definition.LockMode = IndexLockMode.LockedError;
                 definition.Fields["Name"] = new IndexFieldOptions
                 {
-                    Sort = SortOptions.Numeric
+                    Storage = FieldStorage.Yes
                 };
 
                 store.Admin.Send(new PutIndexesOperation(definition));
@@ -77,9 +77,8 @@ namespace SlowTests.Issues
                 definition.LockMode = IndexLockMode.LockedError;
                 definition.Fields["Name"] = new IndexFieldOptions
                 {
-                    Sort = SortOptions.Numeric
+                    Storage = FieldStorage.Yes
                 };
-
                 store.Admin.Send(new PutIndexesOperation(definition));
 
                 WaitForIndexing(store);

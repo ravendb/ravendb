@@ -34,10 +34,19 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     {
                         if (_indexDefinition.TryGetField(propertyName, out IndexField indexField))
                         {
-                            switch (indexField.MapReduceOperation)
+                            switch (indexField.Aggregation)
                             {
-                                case FieldMapReduceOperation.Count:
-                                case FieldMapReduceOperation.Sum:
+                                case AggregationOperation.None:
+                                    if (obj.TryGet(propertyName, out string stringValue) == false)
+                                        throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
+
+                                    aggregatedResult[propertyName] = new PropertyResult
+                                    {
+                                        ResultValue = stringValue
+                                    };
+                                    break;
+                                case AggregationOperation.Count:
+                                case AggregationOperation.Sum:
 
                                     object value;
                                     if (obj.TryGetMember(propertyName, out value) == false)
@@ -65,15 +74,8 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                                     break;
                                 //case FieldMapReduceOperation.None:
                                 default:
-                                    throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.MapReduceOperation}' to aggregate on");
+                                    throw new ArgumentOutOfRangeException($"Unhandled field type '{indexField.Aggregation}' to aggregate on");
                             }
-                        }
-                        else if (obj.TryGet(propertyName, out string stringValue))
-                        {
-                            aggregatedResult[propertyName] = new PropertyResult
-                            {
-                                ResultValue = stringValue
-                            };
                         }
 
                         if (_indexDefinition.ContainsGroupByField(propertyName) == false)

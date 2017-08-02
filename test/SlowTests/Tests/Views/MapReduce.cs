@@ -84,7 +84,7 @@ select new {
                         }
                     }
 
-                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    var q = GetUnstableQueryResult(store, commands, "blog_id = 3");
                     Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString());
                 }
             }
@@ -123,9 +123,9 @@ select new {
         {
             WaitForIndexing(store);
 
-            var q = commands.Query("CommentsCountPerBlog", new IndexQuery()
+            var q = commands.Query(new IndexQuery()
             {
-                Query = query,
+                Query = $"FROM INDEX 'CommentsCountPerBlog' WHERE {query}",
                 Start = 0,
                 PageSize = 10
             });
@@ -183,7 +183,7 @@ select new {
                         }
                     }
 
-                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    var q = GetUnstableQueryResult(store, commands, "blog_id = 3");
 
                     Assert.Equal(@"{""blog_id"":3,""comments_length"":14}", q.Results[0].ToString());
 
@@ -193,7 +193,7 @@ select new {
                         commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 
-                    q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    q = GetUnstableQueryResult(store, commands, "blog_id = 3");
 
                     Assert.Equal(@"{""blog_id"":3,""comments_length"":12}", q.Results[0].ToString());
                 }
@@ -234,11 +234,11 @@ select new {
                         }
                     }
 
-                    GetUnstableQueryResult(store, commands, "blog_id:3");
+                    GetUnstableQueryResult(store, commands, "blog_id = 3");
 
                     commands.Delete("blogs/0", null);
 
-                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    var q = GetUnstableQueryResult(store, commands, "blog_id = 3");
 
                     Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString());
                 }
@@ -278,7 +278,7 @@ select new {
                         }
                     }
 
-                    GetUnstableQueryResult(store, commands, "blog_id:3");
+                    GetUnstableQueryResult(store, commands, "blog_id = 3");
 
                     using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("{'blog_id': 7, 'comments': [{}]}")))
                     {
@@ -286,7 +286,7 @@ select new {
                         commands.Put("blogs/0", null, json, new Dictionary<string, object> { { "@collection", "Blogs" } });
                     }
 
-                    var q = GetUnstableQueryResult(store, commands, "blog_id:3");
+                    var q = GetUnstableQueryResult(store, commands, "blog_id = 3");
                     Assert.Equal(@"{""blog_id"":3,""comments_length"":11}", q.Results[0].ToString());
                 }
             }

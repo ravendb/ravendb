@@ -83,8 +83,4 @@
     <PackageReference Include="System.Threading.Timer" Version="4.3.0" />
     <PackageReference Include="System.ValueTuple" Version="4.3.1" />
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="Server\ETL\SQL" />
-    <Folder Include="Server\Operations\ETL" />
-  </ItemGroup>
 </Project>

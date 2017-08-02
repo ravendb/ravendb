@@ -50,8 +50,7 @@ namespace SlowTests.MailingList
                 const string script = @"if (this.ReferenceNumber == 'a'){ this.ReferenceNumber = 'Aa'; }";
 
                 var operation = store.Operations.Send(new PatchByIndexOperation(
-                    new Index1().IndexName,
-                    new IndexQuery() { Query = string.Empty },
+                    new IndexQuery() { Query = $"FROM INDEX '{new Index1().IndexName}'" },
                     new PatchRequest { Script = script },
                     new QueryOperationOptions { AllowStale = false, StaleTimeout = TimeSpan.MaxValue, RetrieveDetails = true }));
 

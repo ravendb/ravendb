@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries.Facets;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide;
@@ -141,7 +141,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
 
-        public override Task<FacetedQueryResult> FacetedQuery(FacetQuery query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public override Task<FacetedQueryResult> FacetedQuery(FacetQueryServerSide query, long facetSetupEtag, DocumentsOperationContext documentsContext, OperationCancelToken token)
         {
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }

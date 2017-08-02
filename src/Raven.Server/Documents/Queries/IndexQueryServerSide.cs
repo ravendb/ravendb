@@ -2,11 +2,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
+using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -15,10 +14,48 @@ namespace Raven.Server.Documents.Queries
 {
     public class IndexQueryServerSide : IndexQuery<BlittableJsonReaderObject>
     {
+        [JsonIgnore]
+        public QueryMetadata Metadata { get; private set; }
+
+        private IndexQueryServerSide()
+        {
+            // for deserialization
+        }
+
+        public IndexQueryServerSide(QueryMetadata metadata)
+        {
+            Metadata = metadata;
+        }
+
+        public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
+        {
+            Query = EscapingHelper.UnescapeLongDataString(query);
+            QueryParameters = queryParameters;
+            Metadata = new QueryMetadata(Query, queryParameters);
+        }
+
+        public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
+        {
+            var result = JsonDeserializationServer.IndexQuery(json);
+
+            if (result.PageSize == 0 && json.TryGet(nameof(PageSize), out int _) == false)
+                result.PageSize = int.MaxValue;
+
+            if (string.IsNullOrWhiteSpace(result.Query))
+                throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
+
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters);
+            return result;
+        }
+
         public static IndexQueryServerSide Create(HttpContext httpContext, int start, int pageSize, JsonOperationContext context)
         {
-            var result = new IndexQueryServerSide
+            if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
+                throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
+
+            var result = new IndexQueryServerSide()
             {
+                Query = EscapingHelper.UnescapeLongDataString(query[0]),
                 // all defaults which need to have custom value
                 Start = start,
                 PageSize = pageSize
@@ -33,8 +70,7 @@ namespace Raven.Server.Documents.Queries
                     switch (item.Key)
                     {
                         case "query":
-                            result.Query = EscapingHelper.UnescapeLongDataString(item.Value[0]);
-                            break;
+                            continue;
                         case RequestHandler.StartParameter:
                         case RequestHandler.PageSizeParameter:
                             break;
@@ -47,30 +83,11 @@ namespace Raven.Server.Documents.Queries
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
                             break;
-                        case "fetch":
-                            result.FieldsToFetch = item.Value;
-                            break;
-                        case "operator":
-                            result.DefaultOperator = "And".Equals(item.Value[0], StringComparison.OrdinalIgnoreCase) ?
-                                                            QueryOperator.And : QueryOperator.Or;
-                            break;
-                        case "defaultField":
-                            result.DefaultField = item.Value;
-                            break;
-                        case "sort":
-                            result.SortedFields = item.Value.Select(y => new SortedField(y)).ToArray();
-                            break;
-                        case "mapReduce":
-                            result.DynamicMapReduceFields = ParseDynamicMapReduceFields(item.Value);
-                            break;
                         case "include":
                             if (includes == null)
                                 includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                             includes.Add(item.Value[0]);
-                            break;
-                        case "distinct":
-                            result.IsDistinct = bool.Parse(item.Value[0]);
                             break;
                         case "transformer":
                             result.Transformer = item.Value[0];
@@ -107,41 +124,8 @@ namespace Raven.Server.Documents.Queries
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
-            if (result.Query == null)
-            {
-                result.Query = string.Empty;
-            }
-
+            result.Metadata = new QueryMetadata(result.Query, null);
             return result;
-        }
-
-        private static DynamicMapReduceField[] ParseDynamicMapReduceFields(StringValues item)
-        {
-            var mapReduceFields = new DynamicMapReduceField[item.Count];
-
-            for (int i = 0; i < item.Count; i++)
-            {
-                var mapReduceField = item[i].Split('-');
-
-                if (mapReduceField.Length != 3)
-                    throw new InvalidOperationException($"Invalid format of dynamic map-reduce field: {item[i]}");
-
-                if (Enum.TryParse(mapReduceField[1], out FieldMapReduceOperation operation) == false)
-                    throw new InvalidOperationException($"Could not parse map-reduce field operation: {mapReduceField[2]}");
-
-                var fieldName = mapReduceField[0];
-
-                if (operation == FieldMapReduceOperation.Count && string.Equals(fieldName, "Count", StringComparison.OrdinalIgnoreCase) == false)
-                    throw new InvalidOperationException($"The only valid field name for 'Count' operation is 'Count' but was '{fieldName}'.");
-
-                mapReduceFields[i] = new DynamicMapReduceField
-                {
-                    Name = fieldName,
-                    OperationType = operation,
-                    IsGroupBy = bool.Parse(mapReduceField[2]),
-                };
-            }
-            return mapReduceFields;
         }
     }
 }

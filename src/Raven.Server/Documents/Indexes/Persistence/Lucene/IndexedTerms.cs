@@ -86,7 +86,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                                     "Viewing Index Entries are a debug tool, and should not be used on indexes of this size. You might want to try Luke, instead.");
             }
 
-            var results = new DynamicJsonValue[reader.MaxDoc];
+            var results = new Dictionary<string,object>[reader.MaxDoc];
             using (var termDocs = reader.TermDocs(state))
             using (var termEnum = reader.Terms(state))
             {
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     {
                         var result = results[termDocs.Doc];
                         if (result == null)
-                            results[termDocs.Doc] = result = new DynamicJsonValue();
+                            results[termDocs.Doc] = result = new Dictionary<string, object>();
 
                         var propertyName = term.Field;
                         if (propertyName.EndsWith("_ConvertToJson") ||
@@ -111,8 +111,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             propertyName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                             continue;
 
-                        var oldValue = result[propertyName];
-                        if (oldValue != null)
+                        
+                        if (result.TryGetValue(propertyName, out var oldValue))
                         {
                             var oldValueAsArray = oldValue as DynamicJsonArray;
                             if (oldValueAsArray != null)
@@ -138,9 +138,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            return results
-                .Select(x => context.ReadObject(x, "index/entries"))
-                .ToArray();
+            var final = new BlittableJsonReaderObject[results.Length];
+            for (int i = 0; i < results.Length; i++)
+            {
+                var doc = new DynamicJsonValue();
+                foreach (var kvp in results[i])
+                {
+                    doc[kvp.Key] = kvp.Value;
+                }
+                final[i] = context.ReadObject(doc, "index/entries");
+            }
+
+            return final;
         }
 
         private static Dictionary<string, int[]> FillCache(IndexReader reader, int docBase, string field, IState state)

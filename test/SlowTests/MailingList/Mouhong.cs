@@ -109,8 +109,6 @@ namespace SlowTests.MailingList
                                    i.Letter
                                };
 
-                //Index(x => x.Weight, Raven.Abstractions.Indexing.FieldIndexing.NotAnalyzed);
-                Sort(x => x.Weight, SortOptions.Numeric);
             }
         }
     }

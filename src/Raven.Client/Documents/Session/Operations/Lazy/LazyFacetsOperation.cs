@@ -1,7 +1,10 @@
+using System;
 using System.Net.Http;
 using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
@@ -9,22 +12,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
 {
     internal class LazyFacetsOperation : ILazyOperation
     {
+        private readonly DocumentConventions _conventions;
         private readonly FacetQuery _query;
 
-        public LazyFacetsOperation(FacetQuery query)
+        public LazyFacetsOperation(DocumentConventions conventions, FacetQuery query)
         {
-            _query = query;
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
-            var method = _query.CalculateHttpMethod();
             return new GetRequest
             {
-                Url = "/queries/" + _query.IndexName,
-                Query = "?" + _query.GetQueryString(method),
-                Method = method.Method,
-                Content = method == HttpMethod.Post ? _query.GetFacetsAsJson() : null
+                Url = "/queries",
+                Query = $"?op=facets&query-hash={_query.GetQueryHash(ctx)}",
+                Method = HttpMethod.Post,
+                Content = new FacetQueryContent(_conventions, _query)
             };
         }
 
@@ -42,6 +46,23 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             }
 
             Result = JsonDeserializationClient.FacetedQueryResult((BlittableJsonReaderObject)response.Result);
+        }
+
+        private class FacetQueryContent : GetRequest.IContent
+        {
+            private readonly DocumentConventions _conventions;
+            private readonly FacetQuery _query;
+
+            public FacetQueryContent(DocumentConventions conventions, FacetQuery query)
+            {
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+                _query = query ?? throw new ArgumentNullException(nameof(query));
+            }
+
+            public void WriteContent(BlittableJsonTextWriter writer, JsonOperationContext context)
+            {
+                writer.WriteFacetQuery(_conventions, context, _query);
+            }
         }
     }
 }

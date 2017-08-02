@@ -10,14 +10,14 @@ namespace SlowTests.Tests.Querying
     {
         private static IDocumentQuery<IndexedUser> CreateUserQuery()
         {
-            return new DocumentQuery<IndexedUser>(null, "IndexName", null, null, false);
+            return new DocumentQuery<IndexedUser>(null, "IndexName", null, false);
         }
 
         [Fact]
         public void WhereEqualsSameAsUntypedCounterpart()
         {
-            Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende", false).ToString(),
-                CreateUserQuery().WhereEquals(x => x.Name, "ayende", false).ToString());
+            Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende", exact: true).ToString(),
+                CreateUserQuery().WhereEquals(x => x.Name, "ayende", exact: true).ToString());
             Assert.Equal(CreateUserQuery().WhereEquals("Name", "ayende").ToString(), CreateUserQuery()
                 .WhereEquals(x => x.Name, "ayende").ToString());
         }
@@ -48,13 +48,6 @@ namespace SlowTests.Tests.Querying
         {
             Assert.Equal(CreateUserQuery().WhereBetween("Name", "ayende", "zaphod").ToString(),
                 CreateUserQuery().WhereBetween(x => x.Name, "ayende", "zaphod").ToString());
-        }
-
-        [Fact]
-        public void WhereBetweenOrEqualSameAsUntypedCounterpart()
-        {
-            Assert.Equal(CreateUserQuery().WhereBetweenOrEqual("Name", "ayende", "zaphod").ToString(),
-                CreateUserQuery().WhereBetweenOrEqual(x => x.Name, "ayende", "zaphod").ToString());
         }
 
         [Fact]

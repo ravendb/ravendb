@@ -42,7 +42,7 @@ namespace Raven.Client.Documents.Session
         ///     Set the transformer parameters for this query
         /// </summary>
         /// <param name="transformerParameters"></param>
-        IDocumentQuery<T> SetTransformerParameters(Dictionary<string, object> transformerParameters);
+        IDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters);
 
         /// <summary>
         ///     Create the index query object for this query
@@ -158,5 +158,7 @@ namespace Raven.Client.Documents.Session
         /// Changes the return type of the query
         /// </summary>
         IDocumentQuery<TResult> OfType<TResult>();
+
+        IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
     }
 }

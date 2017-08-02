@@ -86,9 +86,9 @@ select new {
 
                     WaitForIndexing(store);
 
-                    var q = commands.Query("CommentsCountPerBlog", new IndexQuery()
+                    var q = commands.Query(new IndexQuery
                     {
-                        Query = "blog_id:3",
+                        Query = "FROM INDEX 'CommentsCountPerBlog' WHERE blog_id = 3",
                         Start = 0,
                         PageSize = 10
                     });

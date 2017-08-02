@@ -37,7 +37,6 @@ namespace SlowTests.Issues
                                 select new BarViewModel { FooName = f.Name, Number = b.Number };
 
                 StoreAllFields(FieldStorage.Yes);
-                Sort(x => x.Number, SortOptions.Numeric);
             }
         }
 

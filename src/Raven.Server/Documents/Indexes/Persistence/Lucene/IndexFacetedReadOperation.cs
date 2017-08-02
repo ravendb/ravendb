@@ -56,19 +56,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
         }
 
-        public Dictionary<string, FacetResult> FacetedQuery(FacetQuery query, JsonOperationContext context, CancellationToken token)
+        public Dictionary<string, FacetResult> FacetedQuery(FacetQueryServerSide query, JsonOperationContext context, CancellationToken token)
         {
             var results = FacetedQueryParser.Parse(query.Facets, out Dictionary<string, Facet> defaultFacets, out Dictionary<string, List<FacetedQueryParser.ParsedRange>> rangeFacets);
-
-            Validate(defaultFacets.Values);
 
             var facetsByName = new Dictionary<string, Dictionary<string, FacetValue>>();
 
             uint fieldsHash = 0;
-            if (query.IsDistinct)
+            if (query.Metadata.IsDistinct)
                 fieldsHash = CalculateQueryFieldsHash(query, context);
 
-            var baseQuery = GetLuceneQuery(query.Query, query.DefaultOperator, query.DefaultField, _analyzer);
+            var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
 
             foreach (var facet in defaultFacets.Values)
@@ -78,7 +76,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                 HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                if (query.IsDistinct)
+                if (query.Metadata.IsDistinct)
                     distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
                 foreach (var readerFacetInfo in returnedReaders)
@@ -93,7 +91,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     foreach (var kvp in termsForField)
                     {
-                        if (query.IsDistinct)
+                        if (query.Metadata.IsDistinct)
                         {
                             if (distinctItems.TryGetValue(kvp.Key, out alreadySeen) == false)
                             {
@@ -112,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         {
                             facetValue = new FacetValue
                             {
-                                Range = FacetedQueryHelper.GetRangeName(facet.Name, kvp.Key, _fields)
+                                Range = FacetedQueryHelper.GetRangeName(facet.Name, kvp.Key)
                             };
                             facetValues.Add(kvp.Key, facetValue);
                         }
@@ -135,13 +133,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>> distinctItems = null;
                 HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen = null;
-                if (query.IsDistinct)
+                if (query.Metadata.IsDistinct)
                     distinctItems = new Dictionary<string, HashSet<IndexSearcherHolder.StringCollectionValue>>();
 
                 foreach (var readerFacetInfo in returnedReaders)
                 {
                     var termsForField = IndexedTerms.GetTermsAndDocumentsFor(readerFacetInfo.Reader, readerFacetInfo.DocBase, facet.Name, _indexName, _state);
-                    if (query.IsDistinct)
+                    if (query.Metadata.IsDistinct)
                     {
                         if (distinctItems.TryGetValue(range.Key, out alreadySeen) == false)
                         {
@@ -194,22 +192,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        private static unsafe uint CalculateQueryFieldsHash(FacetQuery query, JsonOperationContext context)
+        private static unsafe uint CalculateQueryFieldsHash(FacetQueryServerSide query, JsonOperationContext context)
         {
             uint hash = 0;
 
-            foreach (var field in query.FieldsToFetch)
+            foreach (var field in query.Metadata.SelectFields)
             {
-                fixed (char* p = field)
+                fixed (char* p = field.Name)
                 {
-                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Length, hash);
+                    hash = Hashing.XXHash32.Calculate((byte*)p, sizeof(char) * field.Name.Length, hash);
                 }
             }
 
             return hash;
         }
 
-        private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQuery query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
             foreach (var facet in facets.Values)
             {
@@ -295,63 +293,52 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
-            var sortOptionsForFacet = FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields);
-            switch (sortOptionsForFacet)
+            var name = facet.AggregationField;
+            var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
+            if (rangeType == RangeType.None)
             {
-                case SortOptions.String:
-                case SortOptions.StringVal:
-                //case SortOptions.Custom: // TODO arek
-                case SortOptions.None:
-                    throw new InvalidOperationException(string.Format("Cannot perform numeric aggregation on index field '{0}'. You must set the Sort mode of the field to Int, Float, Long or Double.", FieldUtil.RemoveRangeSuffixIfNecessary(facet.AggregationField)));
-                case SortOptions.Numeric:
-                    var name = facet.AggregationField;
-                    var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
-                    if (rangeType == RangeType.None)
-                    {
-                        name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
-                        rangeType = RangeType.Double;
-                    }
+                name = FieldUtil.ApplyRangeSuffixIfNecessary(facet.AggregationField, RangeType.Double);
+                rangeType = RangeType.Double;
+            }
 
-                    long[] longs = null;
-                    double[] doubles = null;
-                    switch (rangeType)
-                    {
-                        case RangeType.Long:
-                            longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name, state);
-                            break;
-                        case RangeType.Double:
-                            doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
-                            break;
-                    }
-
-                    for (int index = 0; index < docsInQuery.Count; index++)
-                    {
-                        var doc = docsInQuery.Array[index];
-
-                        var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
-                        if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
-                        {
-                            value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
-                        {
-                            value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
-                        {
-                            value.Sum = currentVal + (value.Sum ?? 0d);
-                        }
-
-                        if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
-                        {
-                            value.Average = currentVal + (value.Average ?? 0d);
-                        }
-                    }
+            long[] longs = null;
+            double[] doubles = null;
+            switch (rangeType)
+            {
+                case RangeType.Long:
+                    longs = FieldCache_Fields.DEFAULT.GetLongs(indexReader, name, state);
+                    break;
+                case RangeType.Double:
+                    doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
                     break;
                 default:
-                    throw new ArgumentOutOfRangeException($"Not supported sort option for aggregation: {sortOptionsForFacet}");
+                    throw new InvalidOperationException("Invalid range type for " + facet.Name +", don't know how to handle " + rangeType);
+            }
+
+            for (int index = 0; index < docsInQuery.Count; index++)
+            {
+                var doc = docsInQuery.Array[index];
+
+                var currentVal = rangeType == RangeType.Long ? longs[doc - docBase] : doubles[doc - docBase];
+                if ((facet.Aggregation & FacetAggregation.Max) == FacetAggregation.Max)
+                {
+                    value.Max = Math.Max(value.Max ?? double.MinValue, currentVal);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Min) == FacetAggregation.Min)
+                {
+                    value.Min = Math.Min(value.Min ?? double.MaxValue, currentVal);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Sum) == FacetAggregation.Sum)
+                {
+                    value.Sum = currentVal + (value.Sum ?? 0d);
+                }
+
+                if ((facet.Aggregation & FacetAggregation.Average) == FacetAggregation.Average)
+                {
+                    value.Average = currentVal + (value.Average ?? 0d);
+                }
             }
         }
 
@@ -371,7 +358,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         /// <summary>
         /// This method expects both lists to be sorted
         /// </summary>
-        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQuery query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
+        private IntersectDocs GetIntersectedDocuments(ArraySegment<int> a, ArraySegment<int> b, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, bool needToApplyAggregation, JsonOperationContext context)
         {
             ArraySegment<int> n, m;
             if (a.Count > b.Count)
@@ -391,7 +378,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             double o1 = nSize + mSize;
             double o2 = nSize * Math.Log(mSize, 2);
 
-            var isDistinct = query.IsDistinct;
+            var isDistinct = query.Metadata.IsDistinct;
             var result = new IntersectDocs();
             if (needToApplyAggregation)
             {
@@ -445,19 +432,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQuery query, uint fieldsHash, JsonOperationContext context)
+        private bool IsDistinctValue(int docId, HashSet<IndexSearcherHolder.StringCollectionValue> alreadySeen, FacetQueryServerSide query, uint fieldsHash, JsonOperationContext context)
         {
-            var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.FieldsToFetch, context, _state);
+            var fields = _currentStateHolder.GetFieldsValues(docId, fieldsHash, query.Metadata.SelectFields, context, _state);
             return alreadySeen.Add(fields);
-        }
-
-        private void Validate(IEnumerable<Facet> facets)
-        {
-            foreach (var facet in facets)
-            {
-                if (FacetedQueryHelper.IsAggregationNumerical(facet.Aggregation) && FacetedQueryHelper.GetRangeTypeForAggregationType(facet.AggregationType) != RangeType.None && FacetedQueryHelper.GetSortOptionsForFacet(facet.AggregationField, _fields) == SortOptions.None)
-                    throw new InvalidOperationException(string.Format("Index '{0}' does not have sorting enabled for a numerical field '{1}'.", _indexName, facet.AggregationField));
-            }
         }
 
         public override void Dispose()

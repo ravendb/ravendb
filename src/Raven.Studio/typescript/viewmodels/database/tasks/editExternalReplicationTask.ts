@@ -32,7 +32,7 @@ class editExternalReplicationTask extends viewModelBase {
 
             new ongoingTaskInfoCommand(this.activeDatabase(), "Replication", this.taskId)
                 .execute()
-                .done((result: Raven.Client.Server.Operations.GetTaskInfoResult) => {
+                .done((result: Raven.Client.Server.Operations.OngoingTaskReplication) => { 
                     this.editedExternalReplication(new ongoingTaskReplication(result));
                     deferred.resolve();
                 })

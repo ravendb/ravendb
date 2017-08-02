@@ -9,7 +9,7 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 import database = require("models/resources/database");
 import messagePublisher = require("common/messagePublisher");
-import queryIndexCommand = require("commands/database/query/queryIndexCommand");
+import queryCommand = require("commands/database/query/queryCommand");
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
@@ -614,10 +614,9 @@ class patch extends viewModelBase {
 
                 const resultsFetcher = (skip: number, take: number) => {
                     const criteria = queryCriteria.empty();
-                    criteria.selectedIndex(selectedIndex);
                     criteria.queryText(query);
 
-                    return new queryIndexCommand(database, skip, take, criteria)
+                    return new queryCommand(database, skip, take, criteria)
                         .execute();
                 };
                 this.fetcher(resultsFetcher);

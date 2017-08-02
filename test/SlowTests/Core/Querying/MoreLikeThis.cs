@@ -31,8 +31,9 @@ namespace SlowTests.Core.Querying
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<Post, Posts_ByTitleAndContent>(new MoreLikeThisQuery()
+                    var list = session.Advanced.MoreLikeThis<Post>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{new Posts_ByTitleAndContent().IndexName}'",
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
                         MinimumTermFrequency = 0
@@ -79,7 +80,7 @@ namespace SlowTests.Core.Querying
 
                     var list = session.Advanced.MoreLikeThis<PostWithContentTransformer.Result>(new MoreLikeThisQuery()
                     {
-                        IndexName = index.IndexName,
+                        Query = $"FROM INDEX '{index.IndexName}'",
                         Transformer = transformer.TransformerName,
                         DocumentId = "posts/1",
                         MinimumDocumentFrequency = 1,
@@ -118,8 +119,9 @@ namespace SlowTests.Core.Querying
 
                     WaitForIndexing(store);
 
-                    var list = session.Advanced.MoreLikeThis<User, Users_ByName>(new MoreLikeThisQuery()
+                    var list = session.Advanced.MoreLikeThis<User>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{new Users_ByName().IndexName}'",
                         DocumentId = "users/1",
                         Includes = new[] { "AddressId" },
                         MinimumDocumentFrequency = 1,

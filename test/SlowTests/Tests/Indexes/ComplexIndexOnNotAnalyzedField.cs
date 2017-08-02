@@ -41,9 +41,9 @@ namespace SlowTests.Tests.Indexes
                     QueryResult queryResult;
                     do
                     {
-                        queryResult = commands.Query("CompaniesByPartners", new IndexQuery()
+                        queryResult = commands.Query(new IndexQuery()
                         {
-                            Query = "Partner:companies/49",
+                            Query = "FROM INDEX 'CompaniesByPartners' WHERE Partner = 'companies/49'",
                             PageSize = 10
                         });
                     } while (queryResult.IsStale);

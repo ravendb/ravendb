@@ -202,8 +202,11 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    var indexName = new DataIndex().IndexName;
+
+                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{indexName}'",
                         DocumentId = id,
                         Fields = new[] { "Body" },
                         Includes = new[] { "Body" }
@@ -389,8 +392,11 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    var indexName = new DataIndex().IndexName;
+
+                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{indexName}'",
                         DocumentId = key,
                         Fields = new[] { "Body" }
                     });
@@ -532,8 +538,11 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    var indexName = new DataIndex().IndexName;
+
+                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{indexName}'",
                         DocumentId = key,
                         Fields = new[] { "Body" },
                         MinimumDocumentFrequency = 2
@@ -570,9 +579,12 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(
+                    var indexName = new DataIndex().IndexName;
+
+                    var list = session.Advanced.MoreLikeThis<Data>(
                         new MoreLikeThisQuery()
                         {
+                            Query = $"FROM INDEX '{indexName}'",
                             DocumentId = key,
                             Fields = new[] { "Body" },
                             MinimumWordLength = 3,
@@ -619,8 +631,11 @@ namespace FastTests.Client.MoreLikeThis
 
                 using (var session = store.OpenSession())
                 {
-                    var list = session.Advanced.MoreLikeThis<Data, DataIndex>(new MoreLikeThisQuery()
+                    var indexName = new DataIndex().IndexName;
+
+                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
                     {
+                        Query = $"FROM INDEX '{indexName}'",
                         DocumentId = key,
                         StopWordsDocumentId = "Config/Stopwords",
                         MinimumDocumentFrequency = 1
@@ -704,8 +719,11 @@ namespace FastTests.Client.MoreLikeThis
         {
             using (var session = store.OpenSession())
             {
-                var list = session.Advanced.MoreLikeThis<T, TIndex>(new MoreLikeThisQuery()
+                var indexName = new TIndex().IndexName;
+
+                var list = session.Advanced.MoreLikeThis<T>(new MoreLikeThisQuery()
                 {
+                    Query = $"FROM INDEX '{indexName}'",
                     DocumentId = documentKey,
                     Fields = new[] { "Body" }
                 });
@@ -718,8 +736,11 @@ namespace FastTests.Client.MoreLikeThis
         {
             using (var session = store.OpenAsyncSession())
             {
-                var list = await session.Advanced.MoreLikeThisAsync<T, TIndex>(new MoreLikeThisQuery()
+                var indexName = new TIndex().IndexName;
+
+                var list = await session.Advanced.MoreLikeThisAsync<T>(new MoreLikeThisQuery()
                 {
+                    Query = $"FROM INDEX '{indexName}'",
                     DocumentId = documentKey,
                     Fields = new[] { "Body" }
                 });

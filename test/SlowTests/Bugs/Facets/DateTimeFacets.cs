@@ -44,11 +44,11 @@ namespace SlowTests.Bugs.Facets
                                          Name = "DateOfListing",
                                          Mode = FacetMode.Ranges,
                                          Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO NULL]", dates[3])
+                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
                                          }
                                      }
                 };
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs.Facets
             for (int i = 0; i < facetOldSchool.Count; i++)
             {
                 var o = facetOldSchool[i];
-                var n= facetsNewWay[i];
+                var n = facetsNewWay[i];
                 Assert.Equal(o.Name, n.Name);
                 Assert.Equal(o.AggregationField, n.AggregationField);
                 Assert.Equal(o.DisplayName, n.DisplayName);
@@ -121,11 +121,11 @@ namespace SlowTests.Bugs.Facets
                                          Name = "DateOfListing",
                                          Mode = FacetMode.Ranges,
                                         Ranges = new List<string>{
-                                             string.Format("[NULL TO {0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[0], dates[1]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[1], dates[2]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO {1:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff}]", dates[2], dates[3]),
-                                             string.Format("[{0:yyyy\\\\-MM\\\\-ddTHH\\\\:mm\\\\:ss.fffffff} TO NULL]", dates[3])
+                                             string.Format("[NULL TO {0:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[0], dates[1]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[1], dates[2]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO {1:yyyy-MM-ddTHH:mm:ss.fffffff}]", dates[2], dates[3]),
+                                             string.Format("[{0:yyyy-MM-ddTHH:mm:ss.fffffff} TO NULL]", dates[3])
                                          }
                                      }
                 };
@@ -146,14 +146,14 @@ namespace SlowTests.Bugs.Facets
                             .Where(exp)
                             .ToFacets(facetsNewWay);
 
-                         var facetResultsOldSchool = s.Query<Camera, CameraCostIndex>()
-                            .Where(exp)
-                            .ToFacets(facetOldSchool);
+                        var facetResultsOldSchool = s.Query<Camera, CameraCostIndex>()
+                           .Where(exp)
+                           .ToFacets(facetOldSchool);
 
                         var areFacetsEquiv = AreFacetsEquiv(facetResultsNew, facetResultsOldSchool);
                         if (areFacetsEquiv == false)
                         {
-                            
+
                         }
                         Assert.True(areFacetsEquiv);
                     }
@@ -165,13 +165,15 @@ namespace SlowTests.Bugs.Facets
         private bool AreFacetsEquiv(FacetedQueryResult left, FacetedQueryResult right)
         {
             //check if same number of ranges.
-            if(left.Results.Count != right.Results.Count 
-               // || left.Results.Select(r=> r.Key).Intersect(right.Results.Select(r=> r.Key)).Count() != left.Results.Count
-                ){
+            if (left.Results.Count != right.Results.Count
+                // || left.Results.Select(r=> r.Key).Intersect(right.Results.Select(r=> r.Key)).Count() != left.Results.Count
+                )
+            {
                 return false;
             }
             //deeper check onthe ranges.
-            if(left.Results.Sum(r=> r.Value.Values.Sum(var=> var.Hits)) != right.Results.Sum(r=> r.Value.Values.Sum(var=> var.Hits))){
+            if (left.Results.Sum(r => r.Value.Values.Sum(var => var.Hits)) != right.Results.Sum(r => r.Value.Values.Sum(var => var.Hits)))
+            {
                 return false;
             }
 

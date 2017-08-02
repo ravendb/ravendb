@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Json;

@@ -1,408 +1,525 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Diagnostics;
+using System.Globalization;
+using System.Runtime.CompilerServices;
 using System.Text;
-using System.Text.RegularExpressions;
-
 using Lucene.Net.Analysis;
-using Lucene.Net.Index;
-using Lucene.Net.QueryParsers;
 using Lucene.Net.Search;
-using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Queries.LuceneIntegration;
-using Raven.Server.Documents.Queries.Parse;
+using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Server.Utils;
+using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Queries.LuceneIntegration;
+using Sparrow.Json;
+using Query = Raven.Server.Documents.Queries.Parser.Query;
 using Version = Lucene.Net.Util.Version;
 
 namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        private const string FieldRegexVal = @"([@\w<>,]+?):";
-        private const string MethodRegexVal = @"(@\w+<[^>]+>):";
-        private const string DateTimeVal = @"\s*(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{7}Z?)";
-        private static readonly Regex FieldQuery = new Regex(FieldRegexVal, RegexOptions.Compiled);
-        private static readonly Regex UntokenizedQuery = new Regex(FieldRegexVal + @"[\s\(]*(\[\[.+?\]\])|(?<=,)\s*(\[\[.+?\]\])(?=\s*[,\)])", RegexOptions.Compiled);
-        private static readonly Regex SearchQuery = new Regex(FieldRegexVal + @"\s*(\<\<.+?\>\>)(^[\d.]+)?", RegexOptions.Compiled | RegexOptions.Singleline);
-        private static readonly Regex DateQuery = new Regex(FieldRegexVal + DateTimeVal, RegexOptions.Compiled);
-        private static readonly Regex InDatesQuery = new Regex(MethodRegexVal + @"\s*(\([^)]*" + DateTimeVal + @"[^)]*\))", RegexOptions.Compiled | RegexOptions.Singleline);
-        private static readonly Regex RightOpenRangeQuery = new Regex(FieldRegexVal + @"\[(\S+)\sTO\s(\S+)\}", RegexOptions.Compiled);
-        private static readonly Regex LeftOpenRangeQuery = new Regex(FieldRegexVal + @"\{(\S+)\sTO\s(\S+)\]", RegexOptions.Compiled);
-        private static readonly Regex CommentsRegex = new Regex(@"( //[^""]+?)$", RegexOptions.Compiled | RegexOptions.Multiline);
-
-        public static bool UseLuceneASTParser { get; set; } = true;
-
-        /* The reason that we use @emptyIn<PermittedUsers>:(no-results)
-         * instead of using @in<PermittedUsers>:()
-         * is that lucene does not access an empty () as a valid syntax.
-         */
-        private static readonly Dictionary<string, Func<string, List<string>, Query>> QueryMethods = new Dictionary<string, Func<string, List<string>, Query>>(StringComparer.OrdinalIgnoreCase)
-        {
-            {"in", (field, args) => new TermsMatchQuery(field, args)},
-            {"emptyIn", (field, args) => new TermsMatchQuery(field, args)}
-        };
-
-        public static Query BuildQuery(string query, Analyzer analyzer)
-        {
-            return BuildQuery(query, QueryOperator.Or, null, analyzer);
-        }
-
-        public static Query BuildQuery(string query, QueryOperator defaultOperator, string defaultField, Analyzer analyzer)
+        public static Lucene.Net.Search.Query BuildQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                if (UseLuceneASTParser)
-                {
-                    try
+                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer);
+
+                // The parser already throws parse exception if there is a syntax error.
+                // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
+                return luceneQuery ?? new BooleanQuery();
+            }
+        }
+
+        private static Lucene.Net.Search.Query ToLuceneQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, bool exact = false)
+        {
+            if (expression == null)
+                return new MatchAllDocsQuery();
+
+            switch (expression.Type)
+            {
+                case OperatorType.Equal:
+                case OperatorType.GreaterThan:
+                case OperatorType.LessThan:
+                case OperatorType.LessThanEqual:
+                case OperatorType.GreaterThanEqual:
                     {
-                        var parser = new LuceneQueryParser();
-                        parser.IsDefaultOperatorAnd = defaultOperator == QueryOperator.And;
-                        parser.Parse(query);
-                        var res = parser.LuceneAST.ToQuery(
-                            new LuceneASTQueryConfiguration
-                            {
-                                Analayzer = analyzer,
-                                DefaultOperator = defaultOperator,
-                                FieldName = new FieldName(defaultField ?? string.Empty)
-                            });
-                        // The parser already throws parse exception if there is a syntax error.
-                        // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
-                        return res??new BooleanQuery();
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
+                        var (value, valueType) = GetValue(fieldName, query, metadata, parameters, expression.Value);
+
+                        var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueType);
+
+                        switch (fieldType)
+                        {
+                            case LuceneFieldType.String:
+                                var valueAsString = value as string;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsString, exact);
+                                }
+                                break;
+                            case LuceneFieldType.Long:
+                                var valueAsLong = (long)value;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsLong);
+                                }
+                                break;
+                            case LuceneFieldType.Double:
+                                var valueAsDouble = (double)value;
+
+                                switch (expression.Type)
+                                {
+                                    case OperatorType.Equal:
+                                        return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.LessThan:
+                                        return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.GreaterThan:
+                                        return LuceneQueryHelper.GreaterThan(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.LessThanEqual:
+                                        return LuceneQueryHelper.LessThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.GreaterThanEqual:
+                                        return LuceneQueryHelper.GreaterThanOrEqual(luceneFieldName, termType, valueAsDouble);
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+
+                        throw new NotSupportedException("Should not happen!");
                     }
-                    catch (ParseException pe)
+                case OperatorType.Between:
                     {
-                        throw new ParseException("Could not parse: '" + query + "'", pe);
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
+                        var (valueFirst, valueFirstType) = GetValue(fieldName, query, metadata, parameters, expression.First);
+                        var (valueSecond, _) = GetValue(fieldName, query, metadata, parameters, expression.Second);
+
+                        var (luceneFieldName, fieldType, termType) = GetLuceneField(fieldName, valueFirstType);
+
+                        switch (fieldType)
+                        {
+                            case LuceneFieldType.String:
+                                var valueFirstAsString = valueFirst as string;
+                                var valueSecondAsString = valueSecond as string;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsString, valueSecondAsString, exact);
+                            case LuceneFieldType.Long:
+                                var valueFirstAsLong = (long)valueFirst;
+                                var valueSecondAsLong = (long)valueSecond;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsLong, valueSecondAsLong);
+                            case LuceneFieldType.Double:
+                                var valueFirstAsDouble = (double)valueFirst;
+                                var valueSecondAsDouble = (double)valueSecond;
+                                return LuceneQueryHelper.Between(luceneFieldName, termType, valueFirstAsDouble, valueSecondAsDouble);
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
                     }
-                }
-                var originalQuery = query;
-                try
-                {
-                    var queryParser = new RangeQueryParser(Version.LUCENE_29, defaultField ?? string.Empty, analyzer)
+                case OperatorType.In:
                     {
-                        DefaultOperator = defaultOperator == QueryOperator.Or
-                            ? QueryParser.Operator.OR
-                            : QueryParser.Operator.AND,
-                        AllowLeadingWildcard = true
-                    };
-                    query = PreProcessComments(query);
-                    query = PreProcessMixedInclusiveExclusiveRangeQueries(query);
-                    query = PreProcessUntokenizedTerms(query, queryParser);
-                    query = PreProcessSearchTerms(query);
-                    query = PreProcessDateTerms(query, queryParser);
-                    var generatedQuery = queryParser.Parse(query);
-                    generatedQuery = HandleMethods(generatedQuery, analyzer);
-                    return generatedQuery;
-                }
-                catch (ParseException pe)
-                {
-                    if (originalQuery == query)
-                        throw new ParseException("Could not parse: '" + query + "'", pe);
-                    throw new ParseException("Could not parse modified query: '" + query + "' original was: '" + originalQuery + "'", pe);
-                }
-            }
-        }
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
 
-        private static bool MightMatchComments(string query)
-        {
-            //return query.Contains("//");
-            int len = query.Length - 1;
-            for (int i = 0; i < len; i++)
-            {
-                if (query[i] == '/' && query[i + 1] == '/') return true;
-            }
-            return false;
-        }
+                        var matches = new List<string>();
+                        foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
+                            matches.Add(LuceneQueryHelper.GetTermValue(value, termType, exact));
 
-        internal static string PreProcessComments(string query)
-        {
-            // First we should check if this query might match the regex because regex are expenssive...
-            if (!MightMatchComments(query)) return query;
-            var matches = CommentsRegex.Matches(query);
-            if (matches.Count < 1)
-                return query;
-            var q = new StringBuilder(query);
-            for (int i = matches.Count - 1; i >= 0; i--)
-            {
-                var match = matches[i];
-                q.Remove(match.Index, match.Length);
-            }
-            return q.ToString();
-        }
-
-        internal static Query HandleMethods(Query query, Analyzer analyzer)
-        {
-            var termQuery = query as TermQuery;
-            if (termQuery != null && termQuery.Term.Field.StartsWith("@"))
-            {
-                return HandleMethodsForQueryAndTerm(query, termQuery.Term);
-            }
-            var pharseQuery = query as PhraseQuery;
-            if (pharseQuery != null)
-            {
-                var terms = pharseQuery.GetTerms();
-                if (terms.All(x => x.Field.StartsWith("@")) == false ||
-                    terms.Select(x => x.Field).Distinct().Count() != 1)
-                    return query;
-                return HandleMethodsForQueryAndTerm(query, terms);
-            }
-            var wildcardQuery = query as WildcardQuery;
-            if (wildcardQuery != null)
-            {
-                return HandleMethodsForQueryAndTerm(query, wildcardQuery.Term);
-            }
-            var booleanQuery = query as BooleanQuery;
-            if (booleanQuery != null)
-            {
-                foreach (var c in booleanQuery.Clauses)
-                {
-                    c.Query = HandleMethods(c.Query, analyzer);
-                }
-                if (booleanQuery.Clauses.Count == 0)
-                    return booleanQuery;
-
-                //merge only clauses that have "OR" operator between them
-                var mergeGroups = booleanQuery.Clauses.Where(clause => clause.Occur == Occur.SHOULD)
-                                                      .Select(x => x.Query)
-                                                      .OfType<IRavenLuceneMethodQuery>()
-                                                      .GroupBy(x => x.Field)
-                                                      .ToArray();
-                if (mergeGroups.Length == 0)
-                    return booleanQuery;
-
-                foreach (var mergeGroup in mergeGroups)
-                {
-                    var clauses = mergeGroup.ToArray();
-                    var first = clauses[0];
-                    foreach (var mergedClause in clauses.Skip(1))
-                    {
-                        booleanQuery.Clauses.RemoveAll(x => ReferenceEquals(x.Query, mergedClause));
+                        return new TermsMatchQuery(fieldName, matches);
                     }
-                    var ravenLuceneMethodQuery = clauses.Skip(1).Aggregate(first, (methodQuery, clause) => methodQuery.Merge(clause));
-                    booleanQuery.Clauses.First(x => ReferenceEquals(x.Query, first)).Query = (Query)ravenLuceneMethodQuery;
-                }
-                if (booleanQuery.Clauses.Count == 1)
-                    return booleanQuery.Clauses[0].Query;
-                return booleanQuery;
-            }
-            return query;
-        }
-
-        private static Regex _unescapedSplitter = new Regex("(?<!`),(?!`)", RegexOptions.Compiled);
-
-        internal static Query HandleMethodsForQueryAndTerm(Query query, Term term)
-        {
-            var field = term.Field;
-            if (TryHandlingMethodForQueryAndTerm(ref field, out Func<string, List<string>, Query> value) == false)
-                return query;
-
-            var parts = _unescapedSplitter.Split(term.Text);
-            var list = new List<string>(
-                    from part in parts
-                    where string.IsNullOrWhiteSpace(part) == false
-                    select part.Replace("`,`", ",")
-            );
-            return value(field, list);
-        }
-
-        internal static Query HandleMethodsForQueryAndTerm(Query query, Term[] terms)
-        {
-            var field = terms[0].Field;
-            if (TryHandlingMethodForQueryAndTerm(ref field, out Func<string, List<string>, Query> value) == false)
-                return query;
-
-            return value(field, terms.Select(x => x.Text).ToList());
-        }
-
-        private static bool TryHandlingMethodForQueryAndTerm(ref string field,
-            out Func<string, List<string>, Query> value)
-        {
-            value = null;
-            var indexOfFieldStart = field.IndexOf('<');
-            var indexOfFieldEnd = field.LastIndexOf('>');
-            if (indexOfFieldStart == -1 || indexOfFieldEnd == -1)
-            {
-                return false;
-            }
-            var method = field.Substring(1, indexOfFieldStart - 1);
-            field = field.Substring(indexOfFieldStart + 1, indexOfFieldEnd - indexOfFieldStart - 1);
-
-            if (QueryMethods.TryGetValue(method, out value) == false)
-            {
-                throw new InvalidOperationException("Method call " + field + " is invalid.");
-            }
-            return true;
-        }
-
-        private static bool MightMatchDateTerms(string query)
-        {
-            //d{4}-\d{2}-\d{2}T
-            //return query.Contains("//");
-            int len = query.Length - 6;
-            for (int i = 0; i < len; i++)
-            {
-                if (query[i] == '-' && query[i + 3] == '-' && query[i + 6] == 'T') return true;
-            }
-            return false;
-        }
-
-        internal static string PreProcessDateTerms(string query, RangeQueryParser queryParser)
-        {
-            // First we should check if this query might match the regex because regex are expenssive...
-            if (!MightMatchDateTerms(query)) return query;
-            var searchMatches = DateQuery.Matches(query);
-            if (searchMatches.Count > 0)
-            {
-                query = TokenReplace(query, searchMatches, queryParser.ReplaceToken);
-            }
-            searchMatches = InDatesQuery.Matches(query);
-            if (searchMatches.Count == 0)
-                return query;
-            return TokenReplace(query, searchMatches, queryParser.ReplaceDateTimeTokensInMethod);
-        }
-
-        private static string TokenReplace(string query, MatchCollection searchMatches, Func<string, string, string> replacFunc)
-        {
-            var queryStringBuilder = new StringBuilder(query);
-            for (var i = searchMatches.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
-            {
-                var searchMatch = searchMatches[i];
-                var field = searchMatch.Groups[1].Value;
-                var termReplacement = searchMatch.Groups[2].Value;
-
-                var replaceToken = replacFunc(field, termReplacement);
-                queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
-                queryStringBuilder
-                    .Insert(searchMatch.Index, field)
-                    .Insert(searchMatch.Index + field.Length, ":")
-                    .Insert(searchMatch.Index + field.Length + 1, replaceToken);
-            }
-            return queryStringBuilder.ToString();
-        }
-
-        private static bool MightMatchSearchTerms(string query)
-        {
-            //return query.Contains("<<");
-            int len = query.Length - 1;
-            for (int i = 0; i < len; i++)
-            {
-                if (query[i] == '<' && query[i + 1] == '<') return true;
-            }
-            return false;
-        }
-
-        internal static string PreProcessSearchTerms(string query)
-        {
-            // First we should check if this query might match the regex because regex are expenssive...
-            if (!MightMatchSearchTerms(query)) return query;
-            var searchMatches = SearchQuery.Matches(query);
-            if (searchMatches.Count < 1)
-                return query;
-
-            var queryStringBuilder = new StringBuilder(query);
-            for (var i = searchMatches.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
-            {
-                var searchMatch = searchMatches[i];
-                var field = searchMatch.Groups[1].Value;
-                var terms = searchMatch.Groups[2].Value.Substring(2, searchMatch.Groups[2].Length - 4);
-
-                string boost = "";
-                if (string.IsNullOrWhiteSpace(searchMatch.Groups[3].Value) == false)
-                {
-                    boost = searchMatch.Groups[3].Value;
-                }
-
-                queryStringBuilder.Remove(searchMatch.Index, searchMatch.Length);
-                queryStringBuilder.Insert(searchMatch.Index, '(');
-                var len = searchMatch.Index;
-                foreach (var term in terms.Split(new[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
-                {
-                    switch (term) // ignore invalid options
+                case OperatorType.AllIn:
                     {
-                        case "OR":
-                        case "AND":
-                        case "||":
-                        case "&&":
-                            continue;
+                        var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
+
+                        var allInQuery = new BooleanQuery();
+                        foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
+                            allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value, exact), Occur.MUST);
+
+                        return allInQuery;
+                    }
+                case OperatorType.And:
+                case OperatorType.AndNot:
+                    var andPrefix = expression.Type == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
+                    return LuceneQueryHelper.And(
+                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, exact),
+                        LucenePrefixOperator.None,
+                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, exact),
+                        andPrefix);
+                case OperatorType.Or:
+                case OperatorType.OrNot:
+                    var orPrefix = expression.Type == OperatorType.OrNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
+                    return LuceneQueryHelper.Or(
+                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, exact),
+                        LucenePrefixOperator.None,
+                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, exact),
+                        orPrefix);
+                case OperatorType.True:
+                    return new MatchAllDocsQuery();
+                case OperatorType.Method:
+                    var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
+                    var methodType = GetMethodType(methodName);
+
+                    switch (methodType)
+                    {
+                        case MethodType.Search:
+                            return HandleSearch(query, expression, metadata, parameters, analyzer);
+                        case MethodType.Boost:
+                            return HandleBoost(context, query, expression, metadata, parameters, analyzer, exact);
+                        case MethodType.StartsWith:
+                            return HandleStartsWith(query, expression, metadata, parameters);
+                        case MethodType.EndsWith:
+                            return HandleEndsWith(query, expression, metadata, parameters);
+                        case MethodType.Lucene:
+                            return HandleLucene(query, expression, metadata, parameters, analyzer);
+                        case MethodType.Exists:
+                            return HandleExists(query, expression, metadata);
+                        case MethodType.Exact:
+                            return HandleExact(context, query, expression, metadata, parameters, analyzer);
+                        default:
+                            ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                            break;
                     }
 
-                    var termQuery = new StringBuilder().Append(field).Append(':').Append(term).Append(boost).Append(' ');
-                    len += termQuery.Length;
-                    queryStringBuilder.Insert(searchMatch.Index + 1, termQuery);
-                }
-                queryStringBuilder.Insert(len, ')');
+                    break;
+                default:
+                    ThrowUnhandledExpressionOperatorType(expression.Type, metadata.QueryText, parameters);
+                    break;
             }
-            return queryStringBuilder.ToString();
+
+            Debug.Assert(false, "should never happen");
+
+            return null;
         }
 
-        private static bool MightMatchUntokenizedTerms(string query)
+        private static IEnumerable<string> GetValuesForIn(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
         {
-            //return query.Contains("[[");
-            int len = query.Length - 1;
-            for (int i = 0; i < len; i++)
+            foreach (var valueToken in expression.Values)
             {
-                if (query[i] == '[' && query[i + 1] == '[') return true;
-            }
-            return false;
-        }
-        /// <summary>
-        /// Detects untokenized fields and sets as NotAnalyzed in analyzer
-        /// </summary>
-        private static string PreProcessUntokenizedTerms(string query, RangeQueryParser queryParser)
-        {
-            // First we should check if this query might match the regex because regex are expenssive...
-            if (!MightMatchUntokenizedTerms(query)) return query;
-            var untokenizedMatches = UntokenizedQuery.Matches(query);
-            if (untokenizedMatches.Count < 1)
-                return query;
-
-            var sb = new StringBuilder(query);
-            MatchCollection fieldMatches = null;
-
-            // process in reverse order to leverage match string indexes
-            for (var i = untokenizedMatches.Count; i > 0; i--)
-            {
-                var match = untokenizedMatches[i - 1];
-
-                // specify that term for this field should not be tokenized
-                var value = match.Groups[2].Value;
-                var term = match.Groups[2];
-                string name = match.Groups[1].Value;
-                if (string.IsNullOrEmpty(value))
+                foreach (var (value, type) in GetValues(fieldName, query, metadata, parameters, valueToken))
                 {
-                    value = match.Groups[3].Value;
-                    term = match.Groups[3];
-                    if (fieldMatches == null)
-                        fieldMatches = FieldQuery.Matches(query);
-
-                    var lastField = fieldMatches.Cast<Match>().LastOrDefault(x => x.Index <= term.Index);
-                    if (lastField != null)
+                    string valueAsString;
+                    switch (type)
                     {
-                        name = lastField.Groups[1].Value;
+                        case ValueTokenType.Long:
+                            var valueAsLong = (long)value;
+                            valueAsString = valueAsLong.ToString(CultureInfo.InvariantCulture);
+                            break;
+                        case ValueTokenType.Double:
+                            var lnv = (LazyNumberValue)value;
+
+                            if (LuceneDocumentConverterBase.TryToTrimTrailingZeros(lnv, context, out var doubleAsString) == false)
+                                doubleAsString = lnv.Inner;
+
+                            valueAsString = doubleAsString.ToString();
+                            break;
+                        default:
+                            valueAsString = value?.ToString();
+                            break;
                     }
-                }
-                var rawTerm = value.Substring(2, value.Length - 4);
-                queryParser.SetUntokenized(name, Unescape(rawTerm));
 
+                    yield return valueAsString;
+                }
+            }
+        }
 
-                // introduce " " around the term
-                var startIndex = term.Index;
-                var length = term.Length - 2;
-                if (sb[startIndex + length - 1] != '"')
-                {
-                    sb.Insert(startIndex + length, '"');
-                    length += 1;
-                }
-                if (sb[startIndex + 2] != '"')
-                {
-                    sb.Insert(startIndex + 2, '"');
-                    length += 1;
-                }
-                // remove enclosing "[[" "]]" from term value (again in reverse order)
-                sb.Remove(startIndex + length, 2);
-                sb.Remove(startIndex, 2);
+        private static string ExtractIndexFieldName(string queryText, FieldToken field, QueryMetadata metadata)
+        {
+            return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+        }
+
+        private static Lucene.Net.Search.Query HandleExists(Query query, QueryExpression expression, QueryMetadata metadata)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+
+            return LuceneQueryHelper.Term(fieldName, LuceneQueryHelper.Asterisk, LuceneTermType.WildCard);
+        }
+
+        private static Lucene.Net.Search.Query HandleLucene(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                ThrowMethodExpectsArgumentOfTheFollowingType("lucene", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            var parser = new Lucene.Net.QueryParsers.QueryParser(Version.LUCENE_29, fieldName, analyzer);
+            return parser.Parse(value as string);
+        }
+
+        private static Lucene.Net.Search.Query HandleStartsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                ThrowMethodExpectsArgumentOfTheFollowingType("startsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            var valueAsString = value as string;
+            if (string.IsNullOrEmpty(valueAsString))
+                valueAsString = LuceneQueryHelper.Asterisk;
+            else
+                valueAsString += LuceneQueryHelper.Asterisk;
+
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.Prefix);
+        }
+
+        private static Lucene.Net.Search.Query HandleEndsWith(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                ThrowMethodExpectsArgumentOfTheFollowingType("endsWith", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            var valueAsString = value as string;
+            valueAsString = string.IsNullOrEmpty(valueAsString)
+                ? LuceneQueryHelper.Asterisk
+                : valueAsString.Insert(0, LuceneQueryHelper.Asterisk);
+
+            return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
+        }
+
+        private static Lucene.Net.Search.Query HandleBoost(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, bool exact)
+        {
+            var boost = float.Parse(QueryExpression.Extract(query.QueryText, (ValueToken)expression.Arguments[1]));
+            expression = (QueryExpression)expression.Arguments[0];
+
+            var q = ToLuceneQuery(context, query, expression, metadata, parameters, analyzer, exact);
+            q.Boost = boost;
+
+            return q;
+        }
+
+        private static Lucene.Net.Search.Query HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        {
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+
+            if (valueType != ValueTokenType.String)
+                ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
+
+            var valueAsString = (string)value;
+            var values = valueAsString.Split(' ');
+
+            if (values.Length == 1)
+            {
+                var nValue = values[0];
+                return LuceneQueryHelper.AnalyzedTerm(fieldName, nValue, GetTermType(nValue), analyzer);
             }
 
-            return sb.ToString();
+            var occur = Occur.SHOULD;
+            if (expression.Arguments.Count == 3)
+            {
+                var op = QueryExpression.Extract(query.QueryText, (FieldToken)expression.Arguments[2]);
+                if (string.Equals("AND", op, StringComparison.OrdinalIgnoreCase))
+                    occur = Occur.MUST;
+            }
+
+            var q = new BooleanQuery();
+            foreach (var v in values)
+                q.Add(LuceneQueryHelper.AnalyzedTerm(fieldName, v, GetTermType(v), analyzer), occur);
+
+            return q;
+
+            LuceneTermType GetTermType(string termValue)
+            {
+                if (string.IsNullOrEmpty(termValue))
+                    return LuceneTermType.String;
+
+                if (termValue[0] == LuceneQueryHelper.AsteriskChar)
+                    return LuceneTermType.WildCard;
+
+                if (termValue[termValue.Length - 1] == LuceneQueryHelper.AsteriskChar)
+                {
+                    if (termValue[termValue.Length - 2] != '\\')
+                        return LuceneTermType.Prefix;
+                }
+
+                return LuceneTermType.String;
+            }
+        }
+
+        private static Lucene.Net.Search.Query HandleExact(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        {
+            return ToLuceneQuery(context, query, (QueryExpression)expression.Arguments[0], metadata, parameters, analyzer, exact: true);
+        }
+
+        public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        {
+            if (value.Type == ValueTokenType.Parameter)
+            {
+                var parameterName = QueryExpression.Extract(query.QueryText, value);
+
+                var expectedValueType = metadata.WhereFields[fieldName];
+
+                if (parameters == null)
+                    ThrowParametersWereNotProvided(metadata.QueryText);
+
+                if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
+                    ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
+
+                var array = parameterValue as BlittableJsonReaderArray;
+                if (array != null)
+                {
+                    foreach (var item in UnwrapArray(array))
+                    {
+                        if (AreValueTokenTypesValid(expectedValueType, item.Type) == false)
+                            ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
+
+                        yield return item;
+                    }
+
+                    yield break;
+                }
+
+                var parameterValueType = GetValueTokenType(parameterValue);
+                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
+                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
+
+                yield return (parameterValue, parameterValueType);
+            }
+
+            yield return (QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars), value.Type);
+        }
+
+        public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
+        {
+            if (value.Type == ValueTokenType.Parameter)
+            {
+                var parameterName = QueryExpression.Extract(query.QueryText, value);
+
+                var expectedValueType = metadata.WhereFields[fieldName];
+
+                if (parameters == null)
+                    ThrowParametersWereNotProvided(metadata.QueryText);
+
+                if (parameters.TryGetMember(parameterName, out var parameterValue) == false)
+                    ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
+
+                var parameterValueType = GetValueTokenType(parameterValue);
+
+                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
+                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
+
+                return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
+            }
+
+            switch (value.Type)
+            {
+                case ValueTokenType.String:
+                    var valueAsString = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    return (valueAsString, ValueTokenType.String);
+                case ValueTokenType.Long:
+                    var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
+                    return (valueAsLong, ValueTokenType.Long);
+                case ValueTokenType.Double:
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value));
+                    return (valueAsDouble, ValueTokenType.Double);
+                case ValueTokenType.True:
+                    return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);
+                case ValueTokenType.False:
+                    return (LuceneDocumentConverterBase.FalseString, ValueTokenType.String);
+                case ValueTokenType.Null:
+                    return (null, ValueTokenType.String);
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
+        }
+
+        private static (string LuceneFieldName, LuceneFieldType LuceneFieldType, LuceneTermType LuceneTermType) GetLuceneField(string fieldName, ValueTokenType valueType)
+        {
+            switch (valueType)
+            {
+                case ValueTokenType.String:
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                case ValueTokenType.Double:
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble, LuceneFieldType.Double, LuceneTermType.Double);
+                case ValueTokenType.Long:
+                    return (fieldName + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong, LuceneFieldType.Long, LuceneTermType.Long);
+                case ValueTokenType.True:
+                case ValueTokenType.False:
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                case ValueTokenType.Null:
+                    return (fieldName, LuceneFieldType.String, LuceneTermType.String);
+                default:
+                    ThrowUnhandledValueTokenType(valueType);
+                    break;
+            }
+
+            Debug.Assert(false);
+
+            return (null, LuceneFieldType.String, LuceneTermType.String);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static object UnwrapParameter(object parameterValue, ValueTokenType parameterType)
+        {
+            switch (parameterType)
+            {
+                case ValueTokenType.Long:
+                    return parameterValue;
+                case ValueTokenType.Double:
+                    var dlnv = (LazyNumberValue)parameterValue;
+                    return dlnv.ToDouble(CultureInfo.InvariantCulture);
+                case ValueTokenType.String:
+                    if (parameterValue == null)
+                        return null;
+
+                    var lsv = parameterValue as LazyStringValue;
+                    if (lsv != null)
+                        return lsv.ToString();
+
+                    var lcsv = parameterValue as LazyCompressedStringValue;
+                    if (lcsv != null)
+                        return lcsv.ToString();
+
+                    return parameterValue.ToString();
+                case ValueTokenType.True:
+                    return LuceneDocumentConverterBase.TrueString;
+                case ValueTokenType.False:
+                    return LuceneDocumentConverterBase.FalseString;
+                case ValueTokenType.Null:
+                    return null;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(parameterType), parameterType, null);
+            }
+        }
+
+        private static IEnumerable<(object Value, ValueTokenType Type)> UnwrapArray(BlittableJsonReaderArray array)
+        {
+            foreach (var item in array)
+            {
+                var innerArray = item as BlittableJsonReaderArray;
+                if (innerArray != null)
+                {
+                    foreach (var innerItem in UnwrapArray(innerArray))
+                        yield return innerItem;
+
+                    continue;
+                }
+
+                yield return (item, GetValueTokenType(item));
+            }
         }
 
         public static string Unescape(string term)
@@ -417,20 +534,20 @@ namespace Raven.Server.Documents.Queries
                 return term;
             }
 
-            bool isPhrase = term.StartsWith("\"") && term.EndsWith("\"");
-            int start = 0;
-            int length = term.Length;
+            var isPhrase = term.StartsWith("\"") && term.EndsWith("\"");
+            var start = 0;
+            var length = term.Length;
             StringBuilder buffer = null;
-            char prev = '\0';
-            for (int i = start; i < length; i++)
+            var prev = '\0';
+            for (var i = start; i < length; i++)
             {
-                char ch = term[i];
+                var ch = term[i];
                 if (prev != '\\')
                 {
                     prev = ch;
                     continue;
                 }
-                prev = '\0';// reset
+                prev = '\0'; // reset
                 switch (ch)
                 {
                     case '*':
@@ -483,68 +600,126 @@ namespace Raven.Server.Documents.Queries
             return buffer.ToString();
         }
 
-        private static bool MightMatchMixedInclusiveExclusiveRangeQueries(string query)
+        public static ValueTokenType GetValueTokenType(object parameterValue, bool unwrapArrays = false)
         {
-            foreach (char c in query)
+            if (parameterValue == null)
+                return ValueTokenType.Null;
+
+            if (parameterValue is LazyStringValue || parameterValue is LazyCompressedStringValue)
+                return ValueTokenType.String;
+
+            if (parameterValue is LazyNumberValue)
+                return ValueTokenType.Double;
+
+            if (parameterValue is long)
+                return ValueTokenType.Long;
+
+            if (parameterValue is bool)
+                return (bool)parameterValue ? ValueTokenType.True : ValueTokenType.False;
+
+            if (unwrapArrays)
             {
-                if (c == '{' || c == '}') return true;
+                var array = parameterValue as BlittableJsonReaderArray;
+                if (array != null)
+                {
+                    if (array.Length == 0)
+                        return ValueTokenType.Null;
+
+                    return GetValueTokenType(array[0], unwrapArrays: true);
+                }
             }
-            return false;
+
+            throw new NotImplementedException();
         }
-        public static string PreProcessMixedInclusiveExclusiveRangeQueries(string query)
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool AreValueTokenTypesValid(ValueTokenType previous, ValueTokenType current)
         {
-            // First we should check if this query might match the regex because regex are expenssive...
-            if (!MightMatchMixedInclusiveExclusiveRangeQueries(query)) return query;
+            if (previous == ValueTokenType.Null)
+                return true;
 
-            // we need this method to support queries like [x, y} and {x, y]
-            // Lucene 4 will have a built-in support for this
+            if (current == ValueTokenType.Null)
+                return true;
 
-            StringBuilder queryStringBuilder = null;
-            var tempSb = new StringBuilder();
+            return previous == current;
+        }
 
-            var rightOpenRanges = RightOpenRangeQuery.Matches(query);
-            if (rightOpenRanges.Count > 0) // // field:[x, y} - right-open interval convert to (field: [x, y] AND NOT field:y)
-            {
-                queryStringBuilder = new StringBuilder(query);
+        private static MethodType GetMethodType(string methodName)
+        {
+            if (string.Equals(methodName, "search", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Search;
 
-                for (var i = rightOpenRanges.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
-                {
-                    var range = rightOpenRanges[i];
-                    var field = range.Groups[1].Value;
-                    var rangeStart = range.Groups[2].Value;
-                    var rangeEnd = range.Groups[3].Value;
-                    tempSb.Clear();
-                    //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeEnd)
-                    tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
-                        .Append(':').Append(rangeEnd).Append(')');
-                    queryStringBuilder.Remove(range.Index, range.Length)
-                        .Insert(range.Index, tempSb.ToString());
-                }
-            }
+            if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Boost;
 
-            var leftOpenRanges = LeftOpenRangeQuery.Matches(queryStringBuilder != null ? queryStringBuilder.ToString() : query);
+            if (string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
+                return MethodType.StartsWith;
 
-            if (leftOpenRanges.Count > 0) // field:{x, y] - left-open interval convert to (field: [x, y] AND NOT field:x)
-            {
-                if (queryStringBuilder == null)
-                    queryStringBuilder = new StringBuilder(query);
+            if (string.Equals(methodName, "endsWith", StringComparison.OrdinalIgnoreCase))
+                return MethodType.EndsWith;
 
-                for (var i = leftOpenRanges.Count - 1; i >= 0; i--) // reversing the scan so we won't affect positions of later items
-                {
-                    var range = leftOpenRanges[i];
-                    var field = range.Groups[1].Value;
-                    var rangeStart = range.Groups[2].Value;
-                    var rangeEnd = range.Groups[3].Value;
-                    tempSb.Clear();
-                    //string.Format("({0}:[{1} TO {2}] AND NOT {0}:{2})",field,rangeStart,rangeStart)
-                    tempSb.Append('(').Append(field).Append(":[").Append(rangeStart).Append(" TO ").Append(rangeEnd).Append("] AND NOT ").Append(field)
-                        .Append(':').Append(rangeStart).Append(')');
-                    queryStringBuilder.Remove(range.Index, range.Length)
-                        .Insert(range.Index, tempSb.ToString());
-                }
-            }
+            if (string.Equals(methodName, "lucene", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Lucene;
 
-            return queryStringBuilder != null ? queryStringBuilder.ToString() : query;
+            if (string.Equals(methodName, "exists", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Exists;
+
+            if (string.Equals(methodName, "exact", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Exact;
+
+            throw new NotSupportedException($"Method '{methodName}' is not supported.");
+
+        }
+
+        private static void ThrowUnhandledValueTokenType(ValueTokenType type)
+        {
+            throw new NotSupportedException($"Unhandled token type: {type}");
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, object parameterValue, ValueTokenType parameterValueType, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Expected parameter to be " + expectedValueType + " but was " + parameterValueType + ": " + parameterValue, queryText, parameters);
+        }
+
+        private static void ThrowInvalidParameterType(ValueTokenType expectedValueType, (object Value, ValueTokenType Type) item, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
+        }
+
+        private static void ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
+        }
+
+        private static void ThrowUnhandledExpressionOperatorType(OperatorType type, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Unhandled expression operator type: {type}", queryText, parameters);
+        }
+
+        private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
+        }
+
+        private static void ThrowParametersWereNotProvided(string queryText)
+        {
+            throw new InvalidQueryException("The query is parametrized but the actual values of parameters were not provided", queryText, null);
+        }
+
+        private static void ThrowParameterValueWasNotProvided(string parameterName, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Value of parameter '{parameterName}' was not provided", queryText, parameters);
+        }
+
+        private enum MethodType
+        {
+            Search,
+            Boost,
+            StartsWith,
+            EndsWith,
+            Lucene,
+            Exists,
+            Exact
         }
     }
 }

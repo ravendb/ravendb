@@ -6,6 +6,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Raven.Server.Documents.Queries.Parser;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
@@ -28,38 +29,6 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 },
             }, null));
 
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
-            {
-                new IndexField
-                {
-                    Name = "test",
-                    Storage = FieldStorage.Yes
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "location",
-                    Storage = FieldStorage.No
-                }
-            }));
-
-            Assert.Throws<ArgumentException>(() => new AutoMapReduceIndexDefinition("test", new[]
-            {
-                new IndexField
-                {
-                    Name = "test",
-                    Storage = FieldStorage.No
-                },
-            }, new[]
-            {
-                new IndexField
-                {
-                    Name = "location",
-                    Storage = FieldStorage.Yes
-                }
-            }));
-
             new AutoMapReduceIndexDefinition("test", new[]
             {
                 new IndexField
@@ -80,19 +49,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Map_all_fields()
         {
-            create_dynamic_map_reduce_mapping_for_users_collection("", new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                },
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                }
-            });
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location"));
 
             var definition = _sut.CreateAutoIndexDefinition();
 
@@ -105,90 +62,29 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         [Fact]
         public void Error_when_no_group_by_field()
         {
-            create_dynamic_map_reduce_mapping_for_users_collection("", new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Count",
-                    OperationType = FieldMapReduceOperation.Count
-                }
-            });
+            var ex = Assert.Throws<QueryParser.ParseException>(() => new IndexQueryServerSide("SELECT count() FROM Users GROUP BY"));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => _sut.CreateAutoIndexDefinition());
-
-            Assert.Contains("no group by field", ex.Message);
+            Assert.Contains("Unable to get field for GROUP BY", ex.Message);
         }
 
         [Fact]
         public void Error_when_no_aggregation_field()
         {
-            create_dynamic_map_reduce_mapping_for_users_collection("", new[]
-            {
-                new DynamicMapReduceField
-                {
-                    Name = "Location",
-                    IsGroupBy = true
-                }
-            });
+            var ex = Assert.Throws<InvalidOperationException>(() => new IndexQueryServerSide("FROM Users GROUP BY Location"));
 
-            var ex = Assert.Throws<InvalidOperationException>(() => _sut.CreateAutoIndexDefinition());
-
-            Assert.Contains("no aggregation", ex.Message);
+            Assert.Contains("needs to have at least one aggregation operation", ex.Message);
         }
 
         [Fact]
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:A*",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
-                SortedFields = new[]
-                {
-                    new SortedField("Count_L_Range"),
-                }
-            });
+            _sut = DynamicQueryMapping.Create(
+                new IndexQueryServerSide("SELECT Location, count() FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Count"));
 
             var existingDefinition = _sut.CreateAutoIndexDefinition();
 
-            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = "Location:A*",
-                DynamicMapReduceFields = new[]
-                {
-                    new DynamicMapReduceField
-                    {
-                        Name = "Count",
-                        OperationType = FieldMapReduceOperation.Count,
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Age",
-                        OperationType = FieldMapReduceOperation.Sum
-                    },
-                    new DynamicMapReduceField
-                    {
-                        Name = "Location",
-                        IsGroupBy = true
-                    }
-                },
-                SortedFields = new[]
-                {
-                    new SortedField("Age_L_Range"),
-                }
-            });
+            _sut = DynamicQueryMapping.Create(new IndexQueryServerSide(
+                "SELECT Location, count(), sum(Age) FROM Users GROUP BY Location WHERE StartsWith(Location, 'A') ORDER BY Age as long"));
 
             _sut.ExtendMappingBasedOn(existingDefinition);
 
@@ -200,19 +96,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.True(definition.ContainsField("Age"));
             Assert.True(definition.GroupByFields.ContainsKey("Location"));
 
-            Assert.Equal(SortOptions.Numeric, definition.GetField("Count").Sort);
-            Assert.Equal(SortOptions.Numeric, definition.GetField("Age").Sort);
-
-            Assert.Equal("Auto/Users/ByAgeAndCountSortByAgeCountReducedByLocation", definition.Name);
-        }
-
-        private void create_dynamic_map_reduce_mapping_for_users_collection(string query, DynamicMapReduceField[] mapReduceFields)
-        {
-            _sut = DynamicQueryMapping.Create("Users", new IndexQueryServerSide
-            {
-                Query = query,
-                DynamicMapReduceFields = mapReduceFields
-            });
+            Assert.Equal("Auto/Users/ByAgeAndCountReducedByLocation", definition.Name);
         }
     }
 }

@@ -287,7 +287,6 @@ namespace Raven.Server.ServerWide
                     // delete all values linked to database record - for subscription, etl etc.
                     CleanupDatabaseRelatedValues(context, items, databaseName);
 
-                    items.DeleteByPrimaryKeyPrefix(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
                     return;
                 }

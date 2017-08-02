@@ -29,7 +29,7 @@ namespace SlowTests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsNotAnalyzed>().WhereIn(p => p.Name, names, exact: true);
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().WhereIn(p => p.Name, names);
+                    var query = session.Advanced.DocumentQuery<Person, PersonsAnalyzed>().Search(p => p.Name, string.Join(" ", names));
                     Assert.Equal(2, query.ToList().Count());
                 }
             }
@@ -105,7 +105,7 @@ namespace SlowTests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Query<Person, PersonsNotAnalyzed>().Where(p => p.Name.In(names));
+                    var query = session.Query<Person, PersonsNotAnalyzed>().Where(p => p.Name.In(names), exact: true);
                     Assert.Equal(2, query.Count());
                 }
             }
@@ -128,7 +128,7 @@ namespace SlowTests.MailingList
 
                 using (var session = documentStore.OpenSession())
                 {
-                    var query = session.Query<Person, PersonsAnalyzed>().Where(p => p.Name.In(names));
+                    var query = session.Query<Person, PersonsAnalyzed>().Search(p => p.Name, string.Join(" ", names));
                     Assert.Equal(2, query.Count());
                 }
             }

@@ -26,19 +26,19 @@ namespace SlowTests.Server.Documents.Indexing.Auto
                 new IndexField
                 {
                     Name = "Count",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
                 new IndexField
                 {
                     Name = "TotalCount",
-                    MapReduceOperation = FieldMapReduceOperation.Count,
+                    Aggregation = AggregationOperation.Count,
                     Storage = FieldStorage.Yes
                 },
                 new IndexField
                 {
                     Name = "Age",
-                    MapReduceOperation = FieldMapReduceOperation.Sum,
+                    Aggregation = AggregationOperation.Sum,
                     Storage = FieldStorage.Yes
                 }
             }, new[]
@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}'"), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
                     var result = queryResult.Results[0].Data;
@@ -74,17 +74,11 @@ namespace SlowTests.Server.Documents.Indexing.Auto
 
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(db))
                 {
-                    var queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_L_Range:[2 TO 10]"
-                    }, context, OperationCancelToken.None);
+                    var queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count BETWEEN 2 AND 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(1, queryResult.Results.Count);
 
-                    queryResult = await mri.Query(new IndexQueryServerSide()
-                    {
-                        Query = "Count_L_Range:[10 TO NULL]"
-                    }, context, OperationCancelToken.None);
+                    queryResult = await mri.Query(new IndexQueryServerSide($"FROM INDEX '{mri.Name}' WHERE Count >= 10"), context, OperationCancelToken.None);
 
                     Assert.Equal(0, queryResult.Results.Count);
                 }

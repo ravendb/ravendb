@@ -102,13 +102,13 @@ namespace SlowTests.Tests.MultiGet
                     {
                         new GetRequest
                         {
-                            Url = "/queries/dynamic/Users",
-                            Query = "?query=Name:Ayende"
+                            Url = "/queries",
+                            Query = "?query=FROM Users WHERE Name = 'Ayende'"
                         },
                         new GetRequest
                         {
-                            Url = "/queries/dynamic/Users",
-                            Query = "?query=Name:Oren"
+                            Url = "/queries",
+                            Query = "?query=FROM Users WHERE Name = 'Oren'"
                         }
                     });
 

@@ -165,7 +165,6 @@ namespace SlowTests.MailingList
                                    //__ = globalAttributes.Select(x => CreateField(x.Name, x.Value))
                                };
 
-                Sort(x => x.Date, SortOptions.String);
 
                 Index(x => x.Interpret, FieldIndexing.Analyzed);
                 Index(x => x.Title, FieldIndexing.Analyzed);

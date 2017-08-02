@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes
             if (groupBy == null)
                 throw new ArgumentNullException(nameof(groupBy));
 
-            var reducedByFields = string.Join("And", groupBy.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
+            var reducedByFields = string.Join("And", groupBy.Select(x => x.Name).OrderBy(x => x));
 
             return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
         }
@@ -34,23 +34,26 @@ namespace Raven.Server.Documents.Indexes
             if (fields == null)
                 throw new ArgumentNullException(nameof(fields));
 
-            collection = collection == Constants.Documents.Collections.AllDocumentsCollection ? "AllDocs" : collection;
+            collection = 
+                string.Equals(collection, Constants.Documents.Collections.AllDocumentsCollection, StringComparison.OrdinalIgnoreCase) 
+                    ? "AllDocs" : collection;
 
             if (fields.Count == 0)
                 return $"Auto/{collection}";
             
-            var combinedFields = string.Join("And", fields.Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).OrderBy(x => x));
+            var combinedFields = string.Join("And", fields.Select(x => x.Name).OrderBy(x => x));
 
+            /*
             var sortOptions = fields.Where(x => x.Sort != null && x.Sort.Value != SortOptions.String && x.Sort.Value != SortOptions.None)
-                .Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name))
+                .Select(x => x.Name)
                 .ToArray();
 
-            if (sortOptions.Length > 0)
+             * if (sortOptions.Length > 0)
             {
                 combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
             }
 
-            /*
+            
             var highlighted = fields.Where(x => x.Highlighted).Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).ToArray();
             if (highlighted.Length > 0)
             {

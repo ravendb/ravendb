@@ -68,7 +68,7 @@ namespace SlowTests.Bugs.Indexing
             using (var session = store.OpenSession())
             {
                 var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, Sort = SortOptions.Numeric };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, };
                 var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
                 store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
@@ -102,9 +102,9 @@ namespace SlowTests.Bugs.Indexing
                 List<Soft> tmps = session.Advanced.DocumentQuery<Soft>("test").
                                         WaitForNonStaleResults(TimeSpan.FromHours(1))
                                         .WhereStartsWith("f_name", "s")
-                                        .OrderBy(new[] { "-f_License", "f_totaldownload" })
+                                        .OrderByDescending("f_License")
+                                        .OrderBy("f_totaldownload")
                                         .ToList();
-
 
                 Assert.Empty(tmps);
             }

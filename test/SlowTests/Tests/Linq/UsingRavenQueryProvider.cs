@@ -53,7 +53,6 @@ namespace SlowTests.Tests.Linq
                     {
                         Map = docs => from doc in docs
                             select new {doc.Name, doc.Age},
-                        SortOptions = {{x => x.Name, SortOptions.StringVal}}
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
                 store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
@@ -104,7 +103,6 @@ namespace SlowTests.Tests.Linq
                     {
                         Map = docs => from doc in docs
                                       select new { doc.Name, doc.Age },
-                        SortOptions = { { x => x.Name, SortOptions.StringVal } }
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
                     store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
@@ -491,7 +489,7 @@ namespace SlowTests.Tests.Linq
 
                     //This is the lucene query we want to mimic
                     var luceneResult = s.Advanced.DocumentQuery<OrderItem>("ByLineCost")
-                            .Where("Cost_D_Range:{1 TO NULL}")
+                            .WhereGreaterThan("Cost", 1m)
                             .SelectFields<SomeDataProjection>("Cost")
                             .ToArray();
 

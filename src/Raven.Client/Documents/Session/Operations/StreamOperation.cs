@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session.Operations
             _statistics = statistics;
         }
 
-        public StreamCommand CreateRequest(string indexName, IndexQuery query)
+        public QueryStreamCommand CreateRequest(string indexName, IndexQuery query)
         {
             _isQueryStream = true;
 
@@ -40,17 +40,8 @@ namespace Raven.Client.Documents.Session.Operations
                 throw new ArgumentException("Key cannot be null or empty index");
 
             _session.IncrementRequestCount();
-            string path;
-            if (query.Query != null && query.Query.Length > _session.Conventions.MaxLengthOfQueryUsingGetUrl)
-            {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries", includeQuery: false);
-            }
-            else
-            {
-                path = query.GetIndexQueryUrl(indexName, "streams/queries");
-            }
 
-            return new StreamCommand(path, string.IsNullOrWhiteSpace(query.Transformer) == false);
+            return new QueryStreamCommand(_session.Conventions, _session.Context, query);
         }
 
         public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)

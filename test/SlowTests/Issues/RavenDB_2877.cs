@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             {
                 new PersonsIndex().Execute(store);
 
-                store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
+                //store.Conventions.MaxLengthOfQueryUsingGetUrl = 32;
                 var offices = Enumerable.Range(1, 20).Select(x => new Office { FacilityName = "Main Offices", OfficeNumber = x });
 
                 using (var s = store.OpenSession())

@@ -21,6 +21,7 @@
     }
 
     .query-controls {
+        margin-top: 30px;
         margin-left: @line-height-computed/2;
         flex-basis: @controls-width;
         flex-shrink: 0;
@@ -34,16 +35,6 @@
         .statistics {
             align-self: flex-end;
         }
-    }
-
-    .add-filter {
-        display: none;
-        .slidein-style;
-        padding: @grid-gutter-width/2;
-        background-color: @gray-darker;
-        width: 100%;
-        position: absolute;
-        top: 100%;
     }
 }
 
@@ -87,6 +78,10 @@
     .query-title, .run-query, .query-editor {
         position: relative;
         z-index: @zindex-modal;
+    }
+
+    .run-query {
+        margin-top: 10px;
     }
 
     .query-source {        

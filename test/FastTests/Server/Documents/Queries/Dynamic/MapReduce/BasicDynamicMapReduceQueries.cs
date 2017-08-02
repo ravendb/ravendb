@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using FastTests.Server.Basic.Entities;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Static;
@@ -295,30 +294,27 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                 using (var commands = store.Commands())
                 {
-                    var command = new QueryCommand(store.Conventions, commands.Context, "dynamic/Addresses", new IndexQuery()
+                    // create auto map reduce index
+                    var command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
                     {
-                        DynamicMapReduceFields = new[]
-                        {
-                            new DynamicMapReduceField
-                            {
-                                Name = "City",
-                                ClientSideName = null,
-                                IsGroupBy = true,
-                                OperationType = FieldMapReduceOperation.None
-                            },
-                            new DynamicMapReduceField
-                            {
-                                Name = "Count",
-                                ClientSideName = "TotalCount",
-                                IsGroupBy = false,
-                                OperationType = FieldMapReduceOperation.Count
-                            }
-                        },
-                        FieldsToFetch = new[] { "City" },
+                        Query = "SELECT count() as TotalCount FROM Addresses GROUP BY City",
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
                     commands.RequestExecutor.Execute(command, commands.Context);
+
+                    // retrieve only City field
+                    command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    {
+                        Query = "SELECT City FROM Addresses GROUP BY City",
+                        WaitForNonStaleResultsAsOfNow = true
+                    });
+
+                    commands.RequestExecutor.Execute(command, commands.Context);
+
+                    var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+
+                    Assert.Equal(1, indexDefinitions.Length); // the above queries should be handled by the same auto index
 
                     var result = command.Result;
                     var results = new DynamicArray(result.Results);

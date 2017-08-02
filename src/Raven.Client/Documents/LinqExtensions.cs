@@ -19,7 +19,6 @@ using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Http;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
@@ -104,7 +103,7 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -144,7 +143,7 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = (IRavenQueryInspector)queryable;
             var q = ravenQueryInspector.GetIndexQuery(false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var query = FacetQuery.Create(q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
 
             return query;
         }
@@ -192,8 +191,8 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
-            var lazyOperation = new LazyFacetsOperation(query);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -212,8 +211,8 @@ namespace Raven.Client.Documents
         {
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(true);
-            var query = FacetQuery.Create(ravenQueryInspector.AsyncIndexQueried, q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
-            var lazyOperation = new LazyFacetsOperation(query);
+            var query = FacetQuery.Create(q, facetSetupDoc, null, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((AsyncDocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -231,8 +230,8 @@ namespace Raven.Client.Documents
 
             var ravenQueryInspector = ((IRavenQueryInspector)queryable);
             var q = ravenQueryInspector.GetIndexQuery(isAsync: false);
-            var query = FacetQuery.Create(ravenQueryInspector.IndexQueried, q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
-            var lazyOperation = new LazyFacetsOperation(query);
+            var query = FacetQuery.Create(q, null, facetsList, start, pageSize, ravenQueryInspector.Session.Conventions);
+            var lazyOperation = new LazyFacetsOperation(ravenQueryInspector.Session.Conventions, query);
 
             var documentSession = ((DocumentSession)ravenQueryInspector.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -249,8 +248,8 @@ namespace Raven.Client.Documents
         {
             var indexQuery = query.GetIndexQuery();
             var documentQuery = ((DocumentQuery<T>)query);
-            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
-            var lazyOperation = new LazyFacetsOperation(facetQuery);
+            var facetQuery = FacetQuery.Create(indexQuery, facetSetupDoc, null, start, pageSize, documentQuery.Conventions);
+            var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -272,8 +271,8 @@ namespace Raven.Client.Documents
 
             var indexQuery = query.GetIndexQuery();
             var documentQuery = (DocumentQuery<T>)query;
-            var facetQuery = FacetQuery.Create(documentQuery.IndexName, indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
-            var lazyOperation = new LazyFacetsOperation(facetQuery);
+            var facetQuery = FacetQuery.Create(indexQuery, null, facetsList, start, pageSize, documentQuery.Conventions);
+            var lazyOperation = new LazyFacetsOperation(documentQuery.Conventions, facetQuery);
 
             var documentSession = ((DocumentSession)documentQuery.Session);
             return documentSession.AddLazyOperation<FacetedQueryResult>(lazyOperation, null);
@@ -427,9 +426,9 @@ namespace Raven.Client.Documents
             var inspector = source as IRavenQueryInspector;
             if (inspector == null)
                 throw new ArgumentException("You can only use Raven Queryable with suggests");
-           
+
             SetSuggestionQueryParameters(inspector, query);
-            
+
             var lazyOperation = new LazySuggestionOperation(inspector.Session, query);
 
             var documentSession = ((DocumentSession)inspector.Session);
@@ -438,7 +437,7 @@ namespace Raven.Client.Documents
 
         private static void SetSuggestionQueryParameters(IRavenQueryInspector inspector, SuggestionQuery query, bool isAsync = false)
         {
-            query.IndexName = isAsync ? inspector.AsyncIndexQueried : inspector.IndexQueried;
+            query.IndexName = inspector.IndexName;
 
             if (string.IsNullOrEmpty(query.Field) == false && string.IsNullOrEmpty(query.Term) == false)
                 return;
@@ -448,7 +447,7 @@ namespace Raven.Client.Documents
                 throw new InvalidOperationException("Could not suggest on a query that doesn't have a single equality check");
 
             query.Field = lastEqualityTerm.Key;
-            query.Term = lastEqualityTerm.Value;
+            query.Term = lastEqualityTerm.Value.ToString();
         }
 
         /// <summary>
@@ -1193,8 +1192,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IRavenQueryable<T> Search<T>(this IQueryable<T> self, Expression<Func<T, object>> fieldSelector, string searchTerms,
                                                    decimal boost = 1,
-                                                   SearchOptions options = SearchOptions.Guess,
-                                                   EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.EscapeAll)
+                                                   SearchOptions options = SearchOptions.Guess)
         {
             var currentMethod = typeof(LinqExtensions).GetMethod("Search");
 
@@ -1207,8 +1205,7 @@ namespace Raven.Client.Documents
                                                                       fieldSelector,
                                                                       Expression.Constant(searchTerms),
                                                                       Expression.Constant(boost),
-                                                                      Expression.Constant(options),
-                                                                      Expression.Constant(escapeQueryOptions)));
+                                                                      Expression.Constant(options)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1280,6 +1277,54 @@ namespace Raven.Client.Documents
             var documentQuery = (AbstractDocumentQuery<T, AsyncDocumentQuery<T>>)self;
             var session = documentQuery.AsyncSession;
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
+        }
+        
+        public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
+        {
+            var currentMethod = GetWhereMethod(3);
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+            {
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+            }
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
+        {
+            var currentMethod = GetWhereMethod(2);
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+            {
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+            }
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
+        {
+            foreach (var method in typeof(LinqExtensions).GetMethods())
+            {
+                if (method.Name != nameof(Where))
+                    continue;
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != 3)
+                    continue;
+
+                var predicate = parameters[1];
+                var func = predicate.ParameterType.GenericTypeArguments[0];
+                if (func.GenericTypeArguments.Length != numberOfFuncArguments)
+                    continue;
+
+                return method;
+            }
+            
+            throw new InvalidOperationException("Could not find Where method.");
         }
     }
 }

@@ -215,12 +215,8 @@ namespace Raven.Server.Documents.Indexes
                 writer.WriteString((field.Name));
                 writer.WriteComma();
 
-                writer.WritePropertyName((nameof(field.Sort)));
-                writer.WriteInteger((int)(field.Sort ?? SortOptions.None));
-                writer.WriteComma();
-
-                writer.WritePropertyName((nameof(field.MapReduceOperation)));
-                writer.WriteInteger((int)(field.MapReduceOperation));
+                writer.WritePropertyName((nameof(field.Aggregation)));
+                writer.WriteInteger((int)(field.Aggregation));
 
                 writer.WriteEndObject();
 
@@ -252,22 +248,16 @@ namespace Raven.Server.Documents.Indexes
 
         public bool ContainsField(string field)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields.ContainsKey(field);
         }
 
         public IndexField GetField(string field)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields[field];
         }
 
-        public bool TryGetField(string field, out IndexField value)
+        public virtual bool TryGetField(string field, out IndexField value)
         {
-            field = FieldUtil.RemoveRangeSuffixIfNecessary(field);
-
             return MapFields.TryGetValue(field, out value);
         }
 
@@ -402,13 +392,11 @@ namespace Raven.Server.Documents.Indexes
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
                 json.TryGet(nameof(IndexField.Name), out string name);
-                json.TryGet(nameof(IndexField.Sort), out int sortOptionAsInt);
 
                 var field = new IndexField
                 {
                     Name = name,
                     Storage = FieldStorage.No,
-                    Sort = (SortOptions?)sortOptionAsInt,
                     Indexing = FieldIndexing.Default
                 };
 

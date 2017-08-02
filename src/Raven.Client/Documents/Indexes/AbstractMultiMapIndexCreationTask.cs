@@ -61,8 +61,6 @@ namespace Raven.Client.Documents.Indexes
             var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
             {
                 Indexes = Indexes,
-                SortOptions = IndexSortOptions,
-                SortOptionsStrings = IndexSortOptionsStrings,
                 Analyzers = Analyzers,
                 Reduce = Reduce,
                 Stores = Stores,

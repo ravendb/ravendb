@@ -19,15 +19,7 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IRavenQueryInspector
     {
-        /// <summary>
-        /// Get the name of the index being queried
-        /// </summary>
-        string IndexQueried { get; }
-
-        /// <summary>
-        /// Get the name of the index being queried in async queries
-        /// </summary>
-        string AsyncIndexQueried { get; }
+        string IndexName { get; }
 
         /// <summary>
         /// The query session
@@ -37,7 +29,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// The last term that we asked the query to use equals on
         /// </summary>
-        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
 
         /// <summary>
         /// Get the index query for this query

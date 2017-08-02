@@ -43,7 +43,7 @@ namespace SlowTests.MailingList.spokeypokey
                     var result = path + prop;
                     switch (result)
                     {
-                        case "Households,Members,Name":
+                        case "Households[].Members[].Name":
                             return "MembersName";
                         default:
                             return result;

@@ -33,10 +33,9 @@ namespace SlowTests.Bugs
 
                     var all = session
                         .Advanced
-                        .DocumentQuery<Foo>("dynamic/" + typeName)
+                        .DocumentQuery<Foo>(collectionName: typeName)
                         .WaitForNonStaleResults(TimeSpan.FromMilliseconds(1000))
                         .ToList();
-
                     Assert.Equal(1, all.Count);
                 }
 

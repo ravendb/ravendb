@@ -47,10 +47,5 @@ namespace Raven.Client.Documents.Linq
         IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause);
-
-        /// <summary>
-        /// Holds the original query type only when TransformWith is invoked otherwise null.
-        /// </summary>
-        Type OriginalQueryType { get; set; }
     }
 }

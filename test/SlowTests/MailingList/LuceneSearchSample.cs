@@ -44,8 +44,8 @@ namespace SlowTests.MailingList
                     var result4 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereBetween(p => p.NullableInt, (int?)0, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result4.Count, 1);
 
-                    var result5 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereBetweenOrEqual(p => p.NullableInt, (int?)1, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
-                    Assert.Equal(result5.Count, 1);
+                    //var result5 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereBetweenOrEqual(p => p.NullableInt, (int?)1, (int?)1).WaitForNonStaleResultsAsOfNow().ToList();
+                    //Assert.Equal(result5.Count, 1);
 
                     var result6 = session.Advanced.DocumentQuery<SampleIndexView, SampleSearchIndex>().WhereLessThan(p => p.NullableInt, (int?)2).WaitForNonStaleResultsAsOfNow().ToList();
                     Assert.Equal(result6.Count, 1);

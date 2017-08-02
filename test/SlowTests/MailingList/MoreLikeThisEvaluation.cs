@@ -32,8 +32,9 @@ namespace SlowTests.MailingList
                 {
                     var list = session
                         .Advanced
-                        .MoreLikeThis<Movie, MovieIndex>(new MoreLikeThisQuery()
+                        .MoreLikeThis<Movie>(new MoreLikeThisQuery
                         {
+                            Query = $"FROM INDEX '{new MovieIndex().IndexName}'",
                             DocumentId = id,
                             Fields = new[] { "Cast" },
                             MinimumTermFrequency = 1,

@@ -51,54 +51,21 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende AND Age:3"
+                            Query = "FROM Users WHERE Name = 'Ayende' AND Age = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanUseExistingExistingManualIndex()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.Admin.Send(new PutIndexesOperation(new[] {
-                                                new IndexDefinition
-                                                {
-                                                    Name = "test",
-                                                    Maps = { "from doc in docs.Users select new { doc.Name, doc.Age }" }
-                                                }}));
-
-                using (var commands = store.Commands())
-                {
-                    var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende AND Age:3"
-                        });
-
-                    Assert.Equal("test", queryResult.IndexName);
-
-                    queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende"
-                        });
-
-                    Assert.Equal("test", queryResult.IndexName);
                 }
             }
         }
@@ -110,26 +77,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:3"
+                            Query = "FROM Users WHERE Name = '3'"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM Users WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
@@ -144,26 +111,26 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:3"
+                            Query = "FROM Users WHERE Name = '3'"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM Users WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByAgeAndName", queryResult.IndexName);
@@ -177,69 +144,29 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             {
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:3"
+                            Query = "FROM Users WHERE Name = '3'"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Cars",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Age:3"
+                            Query = "FROM Cars WHERE Age = 3"
                         });
 
                     Assert.Equal("Auto/Cars/ByAge", queryResult.IndexName);
 
-                    queryResult = commands.Query("dynamic/Users",
+                    queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende"
+                            Query = "FROM Users WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("Auto/Users/ByName", queryResult.IndexName);
-                }
-            }
-        }
-        [Fact]
-        public void WillUseWiderIndex()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.Admin.Send(new PutIndexesOperation(new[] {
-                                                new IndexDefinition
-                                                {
-                                                    Name = "test",
-                                                    Maps = { "from doc in docs.Users select new { doc.Name, doc.Age }" }
-                                                }}));
-
-
-                store.Admin.Send(new PutIndexesOperation(new[] {
-                                                new IndexDefinition
-                                                {
-                                                    Name = "test2",
-                                                    Maps = { "from doc in docs.Users select new { doc.Name }" }
-                                                }}));
-
-                using (var commands = store.Commands())
-                {
-                    var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende AND Age:3"
-                        });
-
-                    Assert.Equal("test", queryResult.IndexName);
-
-                    queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende"
-                        });
-
-                    Assert.Equal("test", queryResult.IndexName);
                 }
             }
         }
@@ -266,63 +193,13 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
 
                 using (var commands = store.Commands())
                 {
-                    var queryResult = commands.Query("dynamic/Users",
+                    var queryResult = commands.Query(
                         new IndexQuery()
                         {
-                            Query = "Name:Ayende AND Age:3"
-                        });
-
-                    Assert.Equal("test", queryResult.IndexName);
-
-                    queryResult = commands.Query("test2",
-                        new IndexQuery()
-                        {
-                            Query = "Name:Ayende"
+                            Query = "FROM INDEX 'test2' WHERE Name = 'Ayende'"
                         });
 
                     Assert.Equal("test2", queryResult.IndexName);
-                }
-            }
-        }
-
-        [Fact]
-        public void WillNotSelectExistingIndexIfFieldAnalyzedSettingsDontMatch()
-        {
-            //https://groups.google.com/forum/#!topic/ravendb/DYjvNjNIiho/discussion
-            using (var store = GetDocumentStore())
-            {
-                store.Admin.Send(new PutIndexesOperation(new[] {
-                    new IndexDefinition
-                    {
-                        Name = "test",
-                        Maps = {"from doc in docs.Users select new { doc.Title, doc.BodyText }"},
-                        Fields = new Dictionary<string, IndexFieldOptions>
-                        {
-                            {"Title", new IndexFieldOptions {Indexing = FieldIndexing.Analyzed}}
-                        }
-                    }
-            }))
-            ;
-
-                using (var commands = store.Commands())
-                {
-                    var queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "Title:Matt"
-                        });
-
-                    //Because the "test" index has a field set to Analyzed (and the default is Non-Analyzed), 
-                    //it should NOT be considered a match by the query optimizer!
-                    Assert.NotEqual("test", queryResult.IndexName);
-
-                    queryResult = commands.Query("dynamic/Users",
-                        new IndexQuery()
-                        {
-                            Query = "BodyText:Matt"
-                        });
-                    //This query CAN use the existing index because "BodyText" is NOT set to analyzed
-                    Assert.Equal("test", queryResult.IndexName);
                 }
             }
         }
@@ -331,73 +208,6 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
         {
             public string StringField { get; set; }
             public int IntField { get; set; }
-        }
-
-        [Fact]
-        public void WithRangeQuery()
-        {
-            using (var store = GetDocumentStore())
-            {
-                store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
-                                         {
-                                             Name = "SomeObjects/BasicStuff",
-                                             Maps = { "from doc in docs.SomeObjects\r\nselect new { IntField = (int)doc.IntField, StringField = doc.StringField }" },
-                                             Fields = new Dictionary<string, IndexFieldOptions>
-                                             {
-                                                 { "IntField", new IndexFieldOptions { Sort = SortOptions.Numeric } }
-                                             }
-                                         }}));
-
-                using (IDocumentSession session = store.OpenSession())
-                {
-                    DateTime startedAt = DateTime.UtcNow;
-                    for (int i = 0; i < 40; i++)
-                    {
-                        var p = new SomeObject
-                        {
-                            IntField = i,
-                            StringField = "user " + i,
-                        };
-                        session.Store(p);
-                    }
-                    session.SaveChanges();
-                }
-
-                WaitForIndexing(store);
-
-                using (IDocumentSession session = store.OpenSession())
-                {
-                    QueryStatistics stats;
-                    var list = session.Query<SomeObject>()
-                        .Statistics(out stats)
-                        .Where(p => p.StringField == "user 1")
-                        .ToList();
-
-                    Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
-                }
-
-                using (IDocumentSession session = store.OpenSession())
-                {
-                    QueryStatistics stats;
-                    var list = session.Query<SomeObject>()
-                        .Statistics(out stats)
-                        .Where(p => p.IntField > 150000 && p.IntField < 300000)
-                        .ToList();
-
-                    Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
-                }
-
-                using (IDocumentSession session = store.OpenSession())
-                {
-                    QueryStatistics stats;
-                    var list = session.Query<SomeObject>()
-                        .Statistics(out stats)
-                        .Where(p => p.StringField == "user 1" && p.IntField > 150000 && p.IntField < 300000)
-                        .ToList();
-
-                    Assert.Equal("SomeObjects/BasicStuff", stats.IndexName);
-                }
-            }
         }
 
         private class BlogPost

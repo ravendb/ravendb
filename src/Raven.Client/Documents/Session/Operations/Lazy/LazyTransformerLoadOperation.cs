@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _loadTransformerOperation.WithTransformer(transformer, transformerParameters);
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             string query = "?" + string.Join("&", _ids.Select(x => "id=" + Uri.EscapeDataString(x)).ToArray());
             if (string.IsNullOrEmpty(_transformer) == false)

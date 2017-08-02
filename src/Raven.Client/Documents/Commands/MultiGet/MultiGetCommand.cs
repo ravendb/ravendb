@@ -32,41 +32,76 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Post
-            };
-
-            var commands = new List<DynamicJsonValue>();
-            foreach (var command in _commands)
-            {
-                var cacheKey = GetCacheKey(command, out string _);
-                using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out BlittableJsonReaderObject _))
+                Method = HttpMethod.Post,
+                Content = new BlittableJsonContent(stream =>
                 {
-                    var headers = new DynamicJsonValue();
-                    if (cachedChangeVector != null)
-                        headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
-
-                    foreach (var header in command.Headers)
-                        headers[header.Key] = header.Value;
-                    commands.Add(new DynamicJsonValue
+                    using (var writer = new BlittableJsonTextWriter(_context, stream))
                     {
-                        [nameof(GetRequest.Url)] = $"/databases/{node.Database}{command.Url}",
-                        [nameof(GetRequest.Query)] = $"{command.Query}",
-                        [nameof(GetRequest.Method)] = command.Method,
-                        [nameof(GetRequest.Headers)] = headers,
-                        [nameof(GetRequest.Content)] = command.Content
-                    });
-                }
-            }
+                        writer.WriteStartObject();
 
-            request.Content = new BlittableJsonContent(stream =>
-            {
-                using (var writer = new BlittableJsonTextWriter(_context, stream))
-                {
-                    writer.WriteStartObject();
-                    writer.WriteArray("Requests", commands, _context);
-                    writer.WriteEndObject();
-                }
-            });
+                        var first = true;
+                        writer.WritePropertyName("Requests");
+                        writer.WriteStartArray();
+                        foreach (var command in _commands)
+                        {
+                            if (first == false)
+                                writer.WriteComma();
+
+                            first = false;
+                            var cacheKey = GetCacheKey(command, out string _);
+                            using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out var _))
+                            {
+                                var headers = new DynamicJsonValue();
+                                if (cachedChangeVector != null)
+                                    headers["If-None-Match"] = $"\"{cachedChangeVector}\"";
+
+                                foreach (var header in command.Headers)
+                                    headers[header.Key] = header.Value;
+
+                                writer.WriteStartObject();
+
+                                writer.WritePropertyName(nameof(GetRequest.Url));
+                                writer.WriteString($"/databases/{node.Database}{command.Url}");
+                                writer.WriteComma();
+
+                                writer.WritePropertyName(nameof(GetRequest.Query));
+                                writer.WriteString(command.Query);
+                                writer.WriteComma();
+
+                                writer.WritePropertyName(nameof(GetRequest.Method));
+                                writer.WriteString(command.Method?.Method);
+                                writer.WriteComma();
+
+                                writer.WritePropertyName(nameof(GetRequest.Headers));
+                                writer.WriteStartObject();
+                                var firstInner = true;
+                                foreach (var kvp in command.Headers)
+                                {
+                                    if (firstInner == false)
+                                        writer.WriteComma();
+
+                                    firstInner = false;
+                                    writer.WritePropertyName(kvp.Key);
+                                    writer.WriteString(kvp.Value);
+                                }
+                                writer.WriteEndObject();
+                                writer.WriteComma();
+
+                                writer.WritePropertyName(nameof(GetRequest.Content));
+                                if (command.Content != null)
+                                    command.Content.WriteContent(writer, _context);
+                                else
+                                    writer.WriteNull();
+
+                                writer.WriteEndObject();
+                            }
+                        }
+                        writer.WriteEndArray();
+
+                        writer.WriteEndObject();
+                    }
+                })
+            };
 
             url = $"{_baseUrl}/multi_get";
 

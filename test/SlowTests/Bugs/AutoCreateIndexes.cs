@@ -33,7 +33,7 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var movies = s.Advanced.DocumentQuery<Movie>("Movies/ByActor")
-                        .Where("Name:Dolly")
+                        .WhereLucene("Name", "Dolly")
                         .WaitForNonStaleResults()
                         .ToList();
 

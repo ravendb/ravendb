@@ -30,7 +30,6 @@ namespace SlowTests.Issues
                     {
                         {"uid", new IndexFieldOptions()
                         {
-                            Sort = SortOptions.Numeric
                         }}
                     }
                 }));

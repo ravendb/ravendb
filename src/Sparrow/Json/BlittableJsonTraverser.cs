@@ -7,9 +7,11 @@ namespace Sparrow.Json
     public class BlittableJsonTraverser
     {
         public static BlittableJsonTraverser Default = new BlittableJsonTraverser();
+        public static BlittableJsonTraverser FlatMapReduceResults = new BlittableJsonTraverser(new char[] { }); // map-reduce results have always a flat structure, let's ignore separators
 
-        public const char PropertySeparator = '.';
-        public const char CollectionSeparator = ',';
+        private const char PropertySeparator = '.';
+        private const char CollectionSeparatorStart = '[';
+        public static readonly char[] CollectionSeparator = { CollectionSeparatorStart, ']', PropertySeparator };
 
         public static readonly char[] PropertySeparators =
         {
@@ -19,10 +21,10 @@ namespace Sparrow.Json
         private readonly char[] _separators =
         {
             PropertySeparator,
-            CollectionSeparator
+            CollectionSeparatorStart
         };
 
-        public BlittableJsonTraverser(char[] nonDefaultSeparators = null)
+        private BlittableJsonTraverser(char[] nonDefaultSeparators = null)
         {
             if (nonDefaultSeparators != null)
                 _separators = nonDefaultSeparators;
@@ -57,36 +59,37 @@ namespace Sparrow.Json
                 result = reader;
                 return true;
             }
-
-            var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
+            
 
             switch (path[indexOfFirstSeparator])
             {
                 case PropertySeparator:
+                    var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
+
                     var propertyInnerObject = reader as BlittableJsonReaderObject;
                     if (propertyInnerObject != null)
                     {
                         if (TryRead(propertyInnerObject, pathSegment, out result, out leftPath))
                             return true;
 
-                        leftPath = pathSegment;
-                        result = reader;
+                        if (result == null)
+                            result = reader;
+
                         return false;
                     }
 
                     leftPath = pathSegment;
                     result = reader;
                     return false;
-                case CollectionSeparator:
+                case CollectionSeparatorStart:
+                    leftPath = path.SubSegment(indexOfFirstSeparator + CollectionSeparator.Length);
+
                     var collectionInnerArray = reader as BlittableJsonReaderArray;
                     if (collectionInnerArray != null)
                     {
-                        leftPath = pathSegment;
-                        result = ReadArray(collectionInnerArray, pathSegment);
+                        result = ReadArray(collectionInnerArray, leftPath);
                         return true;
                     }
-
-                    leftPath = pathSegment;
                     result = reader;
                     return false;
                 default:
@@ -128,7 +131,20 @@ namespace Sparrow.Json
                     if (arrayReader != null)
                     {
                         var indexOfFirstSeparatorInSubIndex = pathSegment.IndexOfAny(_separators, 0);
-                        var subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+
+                        string subSegment;
+
+                        switch (pathSegment[indexOfFirstSeparatorInSubIndex])
+                        {
+                            case PropertySeparator:
+                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+                                break;
+                            case CollectionSeparatorStart:
+                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 3);
+                                break;
+                            default:
+                                throw new NotSupportedException($"Unhandled separator character: {pathSegment[indexOfFirstSeparatorInSubIndex]}");
+                        }
 
                         foreach (var nestedItem in ReadArray(arrayReader, subSegment))
                         {

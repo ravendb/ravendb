@@ -267,7 +267,7 @@ namespace SlowTests.MailingList
             var query =
                 session.Query<Category, CategoryIndex>()
                        .Customize(x => x.WaitForNonStaleResults())
-                       .Search(x => x.Name, text, 1, SearchOptions.Or, EscapeQueryOptions.AllowPostfixWildcard)
+                       .Search(x => x.Name, text, 1, SearchOptions.Or)
                        .OrderBy(x => x.Name)
                        .Select(x => x.Name);
 
@@ -284,7 +284,7 @@ namespace SlowTests.MailingList
             var query =
                 session.Query<Category, CategoryIndex>()
                        .Customize(x => x.WaitForNonStaleResults())
-                       .Search(x => x.Name, text, 1, SearchOptions.Or, EscapeQueryOptions.AllowPostfixWildcard)
+                       .Search(x => x.Name, text, 1, SearchOptions.Or)
                        .OrderBy(x => x.Name);
 
             var results = query.ToList();

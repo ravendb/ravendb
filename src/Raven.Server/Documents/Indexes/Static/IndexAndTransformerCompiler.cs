@@ -22,7 +22,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
 using Raven.Server.Documents.Transformers;
-using System.Collections;
+
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -101,14 +101,14 @@ namespace Raven.Server.Documents.Indexes.Static
             return index;
         }
 
-        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string,string> extentions = null)
+        private static CompilationResult CompileInternal(string originalName, string cSharpSafeName, MemberDeclarationSyntax @class, bool isIndex, Dictionary<string, string> extentions = null)
         {
             var name = cSharpSafeName + "." + Guid.NewGuid() + (isIndex ? IndexExtension : TransformerExtension);
 
             var @namespace = RoslynHelper.CreateNamespace(isIndex ? IndexNamespace : TransformerNamespace)
                 .WithMembers(SyntaxFactory.SingletonList(@class));
 
-            var res = GetUsingDirectiveAndSyntaxTrees(extentions);
+            var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
                 .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var compilation = CSharpCompilation.Create(
                 assemblyName: name + ".dll",
                 syntaxTrees: syntaxTrees,
-                references: References,
+                references: res.references,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
                 );
@@ -188,15 +188,15 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees) GetUsingDirectiveAndSyntaxTrees(Dictionary<string,string> extentions)
+        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)
             {
-                return (Usings, syntaxTrees);
+                return (Usings, syntaxTrees, References);
             }
             var @using = new HashSet<string>();
-            
+
             foreach (var ext in extentions)
             {
                 var rewrite = MethodDynamicParametersRewriter.Instance.Visit(SyntaxFactory.ParseSyntaxTree(ext.Value).GetRoot());
@@ -208,14 +208,69 @@ namespace Raven.Server.Documents.Indexes.Static
                     @using.Add(ns.Name.ToString());
                 }
             }
+            var refrences = GetRefrences();
             if (@using.Count > 0)
             {
                 //Adding using directive with duplicates to avoid O(n*m) operation and confusing code
-                var newUsing = @using.Select(x=> SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
+                var newUsing = @using.Select(x => SyntaxFactory.UsingDirective(SyntaxFactory.ParseName(x))).ToList();
                 newUsing.AddRange(Usings);
-                return (newUsing.ToArray(), syntaxTrees);
+                return (newUsing.ToArray(), syntaxTrees, refrences);
             }
-            return (Usings, syntaxTrees);
+            return (Usings, syntaxTrees, refrences);
+        }
+
+        private static MetadataReference[] GetRefrences()
+        {
+            //libsodium is a none managed dll we must exclude it from the list of dlls
+            var managedDlls = GetManagedDlls();
+            var newRefrences = new MetadataReference[References.Length + managedDlls.Length];
+            for (var i = 0; i < References.Length; i++)
+            {
+                newRefrences[i] = References[i];
+            }
+            for (int i = 0; i < managedDlls.Length; i++)
+            {
+                newRefrences[i + References.Length] = MetadataReference.CreateFromFile(managedDlls[i]);
+            }
+            return newRefrences;
+        }
+
+        private static string[] GetManagedDlls()
+        {
+            var path = Path.GetDirectoryName(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location);
+            var dlls = new List<string>();
+
+            foreach (var dll in Directory.GetFiles(path, "*.dll"))
+            {
+                if (_isDllManaged.TryGetValue(dll, out var managed) == false)
+                {
+                    managed = IsManagedAssembly(dll);
+                    // generating a new instance per 
+                    _isDllManaged = new Dictionary<string, bool>(_isDllManaged)
+                    {
+                        [dll] = managed
+                    };
+                }
+                if (managed)
+                    dlls.Add(dll);
+
+            }
+            return dlls.ToArray();
+        }
+
+        private static Dictionary<string, bool> _isDllManaged = new Dictionary<string, bool>();
+
+        private static bool IsManagedAssembly(string fileName)
+        {
+            try
+            {
+                AssemblyLoadContext.GetAssemblyName(fileName);
+                return true;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)

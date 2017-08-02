@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Operations
                 operation.Token.Cancel();
             }
 
-            if(operation?.Killable == false)
+            if (operation?.Killable == false)
                 throw new ArgumentException($"Operation {id} is unkillable");
         }
 
@@ -92,11 +92,11 @@ namespace Raven.Server.Documents.Operations
         }
 
         public Task<IOperationResult> AddOperation(
-            DocumentDatabase db,
-            string description, 
-            OperationType operationType, 
+            DocumentDatabase database,
+            string description,
+            OperationType operationType,
             Func<Action<IOperationProgress>, Task<IOperationResult>> taskFactory,
-            long id, 
+            long id,
             OperationCancelToken token = null)
         {
 
@@ -120,7 +120,7 @@ namespace Raven.Server.Documents.Operations
 
             var operation = new Operation
             {
-                Database = db,
+                Database = database,
                 Id = id,
                 Description = operationDescription,
                 Token = token,
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.Operations
             }
 
             operation.Task = taskFactory(ProgressNotification);
-            
+
             operation.Task.ContinueWith(taskResult =>
             {
                 operationDescription.EndTime = SystemTime.UtcNow;
@@ -263,7 +263,7 @@ namespace Raven.Server.Documents.Operations
             public OperationDescription Description;
 
             public OperationState State;
-            
+
             [JsonIgnore]
             public DocumentDatabase Database;
 

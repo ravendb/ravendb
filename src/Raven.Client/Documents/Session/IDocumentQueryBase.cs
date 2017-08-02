@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Session
         ///  The last term that we asked the query to use equals on
         /// </summary>
         /// <param name="isAsync"></param>
-        KeyValuePair<string, string> GetLastEqualityTerm(bool isAsync = false);
+        KeyValuePair<string, object> GetLastEqualityTerm(bool isAsync = false);
         /// <summary>
         ///     Negate the next operation
         /// </summary>
@@ -35,14 +35,16 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        TSelf AddOrder(string fieldName, bool descending = false);
+        /// <param name="ordering">ordering type.</param>
+        TSelf AddOrder(string fieldName, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Adds an ordering for a specific field to the query
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="descending">if set to <c>true</c> [descending].</param>
-        TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false);
+        /// <param name="ordering">Ordering type.</param>
+        TSelf AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Callback to get the results of the query
@@ -278,7 +280,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The fields are the names of the fields to sort, defaulting to sorting by ascending.
         ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        TSelf OrderBy(params string[] fields);
+        TSelf OrderBy(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
@@ -293,7 +295,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     The fields are the names of the fields to sort, defaulting to sorting by descending.
         ///     You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        TSelf OrderByDescending(params string[] fields);
+        TSelf OrderByDescending(string field, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the results by the specified fields
@@ -322,21 +324,6 @@ If you really want to do in memory filtering on the data returned from the query
         ///     http://lucene.apache.org/java/2_4_0/queryparsersyntax.html#Proximity%20Searches
         /// </remarks>
         TSelf Proximity(int proximity);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<param name="fieldName">The order by field name.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        TSelf AlphaNumericOrdering(string fieldName, bool descending = false);
-
-        /// <summary>
-        ///		Order the search results in alphanumeric order
-        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
-        ///		<param name="propertySelector">Property selector for the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        TSelf AlphaNumericOrdering<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false);
 
         /// <summary>
         ///     Order the search results randomly
@@ -373,11 +360,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
         ///     or 'Adam'.
         /// </param>
-        /// <param name="escapeQueryOptions">
-        ///     Terms escaping strategy. One of the following: EscapeAll, AllowPostfixWildcard,
-        ///     AllowAllWildcards, RawQuery. Default: EscapeQueryOptions.RawQuery
-        /// </param>
-        TSelf Search(string fieldName, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
+        TSelf Search(string fieldName, string searchTerms);
 
         /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.
@@ -388,11 +371,7 @@ If you really want to do in memory filtering on the data returned from the query
         ///     Space separated terms e.g. 'John Adam' means that we will look in selected field for 'John'
         ///     or 'Adam'.
         /// </param>
-        /// <param name="escapeQueryOptions">
-        ///     Terms escaping strategy. One of the following: EscapeAll, AllowPostfixWildcard,
-        ///     AllowAllWildcards, RawQuery. Default: EscapeQueryOptions.RawQuery
-        /// </param>
-        TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, EscapeQueryOptions escapeQueryOptions = EscapeQueryOptions.RawQuery);
+        TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms);
 
         /// <summary>
         ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
@@ -449,11 +428,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="count">Maximum number of items to take.</param>
         TSelf Take(int count);
-
-        /// <summary>
-        ///     Select the default field to use for this query
-        /// </summary>
-        TSelf UsingDefaultField(string field);
 
         /// <summary>
         ///     Select the default operator to use for this query
@@ -537,8 +511,9 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Filter the results from the index using the specified where clause.
         /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
         /// <param name="whereClause">Lucene-syntax based query predicate.</param>
-        TSelf Where(string whereClause);
+        TSelf WhereLucene(string fieldName, string whereClause);
 
         /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive
@@ -546,7 +521,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        TSelf WhereBetween(string fieldName, object start, object end);
+        TSelf WhereBetween(string fieldName, object start, object end, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is between the specified start and end, exclusive
@@ -554,23 +529,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="start">The start.</param>
         /// <param name="end">The end.</param>
-        TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
-
-        /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="fieldName">Name of the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        TSelf WhereBetweenOrEqual(string fieldName, object start, object end);
-
-        /// <summary>
-        ///     Matches fields where the value is between the specified start and end, inclusive
-        /// </summary>
-        /// <param name="propertySelector">Property selector for the field.</param>
-        /// <param name="start">The start.</param>
-        /// <param name="end">The end.</param>
-        TSelf WhereBetweenOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end);
+        TSelf WhereBetween<TValue>(Expression<Func<T, TValue>> propertySelector, TValue start, TValue end, bool exact = false);
 
         /// <summary>
         ///     Matches fields which ends with the specified value.
@@ -587,39 +546,17 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereEndsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
 
         /// <summary>
-        ///     Matches exact value
+        ///     Matches value
         /// </summary>
-        /// <remarks>
-        ///     Defaults to NotAnalyzed
-        /// </remarks>
-        TSelf WhereEquals(string fieldName, object value);
+        TSelf WhereEquals(string fieldName, object value, bool exact = false);
 
         /// <summary>
-        ///     Matches exact value
+        ///     Matches value
         /// </summary>
-        /// <remarks>
-        ///     Defaults to NotAnalyzed
-        /// </remarks>
-        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///     Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        TSelf WhereEquals(string fieldName, object value, bool isAnalyzed);
-
-        /// <summary>
-        ///     Matches exact value
-        /// </summary>
-        /// <remarks>
-        ///     Defaults to allow wildcards only if analyzed
-        /// </remarks>
-        TSelf WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool isAnalyzed);
-
-        /// <summary>
-        ///     Matches exact value
+        ///     Matches value
         /// </summary>
         TSelf WhereEquals(WhereParams whereParams);
 
@@ -628,66 +565,66 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThan(string fieldName, object value);
+        TSelf WhereGreaterThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereGreaterThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than or equal to the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThanOrEqual(string fieldName, object value);
+        TSelf WhereGreaterThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is greater than or equal to the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereGreaterThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Check that the field has one of the specified values
         /// </summary>
-        TSelf WhereIn(string fieldName, IEnumerable<object> values);
+        TSelf WhereIn(string fieldName, IEnumerable<object> values, bool exact = false);
 
         /// <summary>
         ///     Check that the field has one of the specified values
         /// </summary>
-        TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values);
+        TSelf WhereIn<TValue>(Expression<Func<T, TValue>> propertySelector, IEnumerable<TValue> values, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThan(string fieldName, object value);
+        TSelf WhereLessThan(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereLessThan<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than or equal to the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThanOrEqual(string fieldName, object value);
+        TSelf WhereLessThanOrEqual(string fieldName, object value, bool exact = false);
 
         /// <summary>
         ///     Matches fields where the value is less than or equal to the specified value
         /// </summary>
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
-        TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+        TSelf WhereLessThanOrEqual<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
 
         /// <summary>
         ///     Matches fields which starts with the specified value.
@@ -702,6 +639,18 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="value">The value.</param>
         TSelf WhereStartsWith<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value);
+
+        /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
+        TSelf WhereExists<TValue>(Expression<Func<T, TValue>> propertySelector);
+
+        /// <summary>
+        ///     Check if the given field exists
+        /// </summary>
+        /// <param name="fieldName">Name of the field.</param>
+        TSelf WhereExists(string fieldName);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius

@@ -94,7 +94,6 @@ namespace SlowTests.MailingList
                                  op.Quantity
                              };
 
-                Sort(x => x.Quantity, SortOptions.Numeric);
             }
         }
     }

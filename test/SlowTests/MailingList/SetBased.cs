@@ -70,8 +70,7 @@ namespace SlowTests.MailingList
                 store
                     .Operations
                     .Send(new PatchByIndexOperation(
-                        new Index1().IndexName,
-                        new IndexQuery() { Query = string.Empty },
+                        new IndexQuery { Query = $"FROM INDEX '{new Index1().IndexName}'" },
                         new PatchRequest
                         {
                             Script = "this.Privilege[0].Level = 'Gold'"

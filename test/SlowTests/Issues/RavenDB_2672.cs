@@ -61,11 +61,11 @@ namespace SlowTests.Issues
                     session.Store(new FacetSetup { Id = "facets/CameraFacets", Facets = facets });
                     session.SaveChanges();
 
-                    var e = Assert.Throws<IndexDoesNotExistException>(() => session.Query<Camera>().Where(x => x.Cost >= 100 && x.Cost <= 300).ToFacets("facets/CameraFacets"));
-                    Assert.Contains("There is no index with 'dynamic/Cameras' name.", e.Message);
+                    var e = Assert.Throws<InvalidQueryException>(() => session.Query<Camera>().Where(x => x.Cost >= 100 && x.Cost <= 300).ToFacets("facets/CameraFacets"));
+                    Assert.Contains("Facet query must be executed against static index", e.Message);
 
-                    e = Assert.Throws<IndexDoesNotExistException>(() => session.Query<Camera>("SomeIndex").Where(x => x.Cost >= 100 && x.Cost <= 300).ToFacets("facets/CameraFacets"));
-                    Assert.Contains("There is no index with 'SomeIndex' name.", e.Message);
+                    var e2 = Assert.Throws<IndexDoesNotExistException>(() => session.Query<Camera>("SomeIndex").Where(x => x.Cost >= 100 && x.Cost <= 300).ToFacets("facets/CameraFacets"));
+                    Assert.Contains("There is no index with 'SomeIndex' name.", e2.Message);
                 }
             }
         }

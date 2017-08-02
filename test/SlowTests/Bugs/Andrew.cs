@@ -4,7 +4,6 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using FastTests;
@@ -15,7 +14,7 @@ using Task = System.Threading.Tasks.Task;
 
 namespace SlowTests.Bugs
 {
-    public class Andrew :  RavenTestBase
+    public class Andrew : RavenTestBase
     {
         private class User { }
         private class Car { }
@@ -26,7 +25,7 @@ namespace SlowTests.Bugs
             {
                 Map = users =>
                     from user in users
-                    select new {A = LoadDocument<Car>("cars/1"), B = LoadDocument<Car>("cars/2"), ForceIndexRow = 1};
+                    select new { A = LoadDocument<Car>("cars/1"), B = LoadDocument<Car>("cars/2"), ForceIndexRow = 1 };
             }
         }
 
@@ -45,7 +44,7 @@ namespace SlowTests.Bugs
 
                 WaitForIndexing(store);
 
-                var firstQueryResult = store.Commands().Query("MyIndex", new IndexQuery());
+                var firstQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                 Assert.Equal(1, firstQueryResult.TotalResults);
 
@@ -75,7 +74,7 @@ namespace SlowTests.Bugs
 
                 for (int i = 0; i < 100; i++)
                 {
-                    QueryResult queryResult = store.Commands().Query("MyIndex", new IndexQuery());
+                    QueryResult queryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                     Assert.Equal(1, queryResult.TotalResults);
                 }
@@ -86,7 +85,7 @@ namespace SlowTests.Bugs
                 car2.Wait();
 
 
-                QueryResult finalQueryResult = store.Commands().Query("MyIndex", new IndexQuery());
+                QueryResult finalQueryResult = store.Commands().Query(new IndexQuery { Query = "FROM INDEX 'MyIndex'" });
 
                 Assert.Equal(1, finalQueryResult.TotalResults);
             }

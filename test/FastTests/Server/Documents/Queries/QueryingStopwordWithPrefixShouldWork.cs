@@ -33,7 +33,7 @@ namespace FastTests.Server.Documents.Queries
                     session.Store(new Foo { Bar = "Andrew" });
                     session.Store(new Foo { Bar = "boo" });
                     session.SaveChanges();
-                    Assert.Single(session.Query<Foo>("FooByBar").Search(x => x.Bar, "And*", escapeQueryOptions: EscapeQueryOptions.AllowPostfixWildcard).Customize(x => x.WaitForNonStaleResults()).ToList());
+                    Assert.Single(session.Query<Foo>("FooByBar").Search(x => x.Bar, "And*").Customize(x => x.WaitForNonStaleResults()).ToList());
                 }
             }
         }

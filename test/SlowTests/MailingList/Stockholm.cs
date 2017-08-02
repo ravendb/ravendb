@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.NotEmpty(session.Advanced.DocumentQuery<Course>()
+                    Assert.NotEmpty(session.Advanced.DocumentQuery<Course, Courses_Search2>()
                         .WaitForNonStaleResults()
                         .WhereEquals("Query", "dotNet")
                         .ToList());

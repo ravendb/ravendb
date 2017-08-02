@@ -55,7 +55,14 @@ namespace Sparrow.Utils
                         if (Interlocked.CompareExchange(ref item.InUse, 1, 0) != 0)
                             continue;
 
-                        item.Dispose();
+                        try
+                        {
+                            item.Dispose();
+                        }
+                        catch (ObjectDisposedException)
+                        {
+                            // it is possible that this has already been diposed
+                        }
 
                         parent.Value = null;
                     }

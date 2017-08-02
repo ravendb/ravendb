@@ -34,7 +34,6 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var query = session.Query<Customer>(index.IndexName)
-                    //TODO - Add when we have query with projection
                     .Select(r => new
                     {
                         Name = r.Name,
@@ -45,9 +44,6 @@ namespace SlowTests.Issues
                     while (enumerator.MoveNext())
                     {
                         Assert.Equal("John", enumerator.Current.Document.Name);
-                        //TODO - delete when we have query with projection 
-                        //Assert.Equal("Tel Aviv", enumerator.Current.Document.Address);
-                        //TODO - Add when we have query with projection 
                         Assert.Equal("Tel Aviv", enumerator.Current.Document.OtherThanName);
 
                         Assert.NotNull(enumerator.Current.Id);

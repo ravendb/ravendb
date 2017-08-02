@@ -41,8 +41,7 @@ namespace SlowTests.MailingList
                 {
                     session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                     {
-                        IndexName = "test",
-                        Query = "(IsActive:true)  AND (BookVendor:\"stroheim & romann\")",
+                        Query = "FROM INDEX 'test' WHERE (IsActive = true) AND (BookVendor = 'stroheim & romann')",
                         FacetSetupDoc = "facets/test"
                     }));
                 }

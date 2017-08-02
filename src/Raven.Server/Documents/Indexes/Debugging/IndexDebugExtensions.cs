@@ -204,11 +204,11 @@ namespace Raven.Server.Documents.Indexes.Debugging
             var idToDocIdHash = new Dictionary<long, string>();
 
             foreach (var tree in mapEntries)
-            foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(tree))
-            {
-                reduceKeys.Add(mapEntry.ReduceKeyHash);
-                idToDocIdHash[mapEntry.Id] = tree.Name.ToString();
-            }
+                foreach (var mapEntry in MapReduceIndexBase<MapReduceIndexDefinition>.GetMapEntries(tree))
+                {
+                    reduceKeys.Add(mapEntry.ReduceKeyHash);
+                    idToDocIdHash[mapEntry.Id] = tree.Name.ToString();
+                }
 
             foreach (var reduceKeyHash in reduceKeys)
             {
@@ -403,15 +403,17 @@ namespace Raven.Server.Documents.Indexes.Debugging
         {
             using (var reader = index.IndexPersistence.OpenIndexReader(context.Transaction.InnerTransaction))
             {
-                var query = new IndexQueryServerSide
+                var queryParameters = context.ReadObject(new DynamicJsonValue
                 {
-                    Query = $"{Constants.Documents.Indexing.Fields.ReduceKeyFieldName}:{reduceKeyHash}"
-                };
+                    ["p0"] = reduceKeyHash.ToString()
+                }, "query/parameters");
+                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0", queryParameters);
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
 
-                var result = reader.Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(),
-                    new MapReduceQueryResultRetriever(context, fieldsToFetch), CancellationToken.None).ToList();
+                var result = reader
+                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), new MapReduceQueryResultRetriever(context, fieldsToFetch), context, CancellationToken.None)
+                    .ToList();
 
                 if (result.Count != 1)
                     throw new InvalidOperationException("Cannot have multiple reduce results for a single reduce key");

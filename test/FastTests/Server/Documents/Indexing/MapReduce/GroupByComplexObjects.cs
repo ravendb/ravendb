@@ -53,14 +53,14 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         index.DoIndexingWork(scope, CancellationToken.None);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 
@@ -111,14 +111,14 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         index.DoIndexingWork(scope, CancellationToken.None);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Hobbies = 'music'"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 
@@ -185,7 +185,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         }
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
@@ -194,7 +194,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
 
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Location:Poland" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 
@@ -256,7 +256,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                         }
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
@@ -264,7 +264,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
 
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = @"Hobbies:music" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Hobbies IN ('music')"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 

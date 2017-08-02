@@ -50,8 +50,8 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var result = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                        new IndexQuery(),
+                var result = store.Operations.Send(new PatchByIndexOperation(
+                        new IndexQuery { Query = "FROM INDEX 'Users/ByName'"},
                         new PatchRequest
                         {
                             Script = @"this.LastName = 'Smith'"
@@ -62,7 +62,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery()))
+                result = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName'" }))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(15));
 
                 Assert.Empty(result.Details);
@@ -102,8 +102,8 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var result = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                    new IndexQuery(),
+                var result = store.Operations.Send(new PatchByIndexOperation(
+                    new IndexQuery { Query = "FROM INDEX 'Users/ByName'" },
                     new PatchRequest
                     {
                         Script = @"this.LastName = 'Smith'"
@@ -114,7 +114,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                result = store.Operations.Send(new DeleteByIndexOperation("Users/ByName", new IndexQuery(), new QueryOperationOptions { RetrieveDetails = true }))
+                result = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName'" }, new QueryOperationOptions { RetrieveDetails = true }))
                     .WaitForCompletion<BulkOperationResult>(TimeSpan.FromSeconds(30));
 
                 Assert.NotEmpty(result.Details);

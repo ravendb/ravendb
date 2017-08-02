@@ -60,7 +60,7 @@ namespace SlowTests.Tests.Faceted
                                 }
                         };
 
-            _stronglyTypedFacets = GetFacets().Facets;
+            _stronglyTypedFacets = GetFacets();
         }
 
         [Fact]
@@ -81,7 +81,7 @@ namespace SlowTests.Tests.Faceted
 
                 string firstChangeVector;
 
-                const string queryUrl = "/queries/CameraCost?facetDoc=facets%2FCameraFacets&query=Manufacturer%253A{0}&facetStart=0&facetPageSize=&op=facets";
+                const string queryUrl = "/queries?query=FROM%20INDEX%20'CameraCost'%20WHERE%20Manufacturer%20=%20'canon'&facetDoc=facets%2FCameraFacets&facetStart=0&facetPageSize=&op=facets";
 
                 var url = string.Format(queryUrl, "canon");
 

@@ -104,7 +104,7 @@ namespace SlowTests.MailingList
                     result = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
                         .Statistics(out stats)
                         .WaitForNonStaleResults()
-                        .WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
+                        //.WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
                         .OrderBy("EventDate")
                         .Take(1000)
                         .ToList();
@@ -124,7 +124,7 @@ namespace SlowTests.MailingList
                     {
                         var r = session.Advanced.DocumentQuery<TestItem>("TestItemsIndex")
                             .Statistics(out stats2)
-                            .WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
+                            //.WhereBetweenOrEqual("EventDate", DateTime.Parse("2012-03-01"), DateTime.Parse("2012-06-01"))
                             .OrderBy("EventDate")
                             .Take(take)
                             .Skip((page * take) + skip)

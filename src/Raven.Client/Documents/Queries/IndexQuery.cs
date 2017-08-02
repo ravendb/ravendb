@@ -5,190 +5,58 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
     /// <summary>
     /// All the information required to query an index
     /// </summary>
-    public class IndexQuery : IndexQuery<Dictionary<string, object>>
+    public class IndexQuery : IndexQuery<Parameters>
     {
-        public override bool Equals(IndexQuery<Dictionary<string, object>> other)
+        public override bool Equals(IndexQuery<Parameters> other)
         {
             return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
         }
 
-        /// <summary>
-        /// Gets the index query URL.
-        /// </summary>
-        public string GetIndexQueryUrl(string operationUrl, string index, string operationName, bool includeQuery = true)
+        public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            if (operationUrl.EndsWith("/"))
-                operationUrl = operationUrl.Substring(0, operationUrl.Length - 1);
-            var path = new StringBuilder()
-                .Append(operationUrl)
-                .Append("/")
-                .Append(operationName)
-                .Append("/")
-                .Append(index);
-
-            AppendQueryString(path, includeQuery);
-
-            return path.ToString();
-        }
-
-        // TODO Iftah, merge the two GetIndexQueryUrl()
-        /// <summary>
-        /// Gets the index query URL.
-        /// </summary>
-        public string GetIndexQueryUrl(string index, string operationName, bool includeQuery = true)
-        {
-            var path = new StringBuilder();
-
-            path.Append(operationName)
-                .Append("/")
-                .Append(index);
-
-            AppendQueryString(path, includeQuery);
-
-            return path.ToString();
-        }
-
-        public string GetMinimalQueryString()
-        {
-            var sb = new StringBuilder();
-            AppendMinimalQueryString(sb);
-            return sb.ToString();
-        }
-
-
-        public string GetQueryString()
-        {
-            var sb = new StringBuilder();
-            AppendQueryString(sb);
-            return sb.ToString();
-        }
-
-        public void AppendQueryString(StringBuilder path, bool includeQuery = true)
-        {
-            path.Append("?");
-
-            AppendMinimalQueryString(path, includeQuery);
-
-            if (Start != 0)
-                path.Append("&start=").Append(Start);
-
-            if (PageSizeSet)
-                path.Append("&pageSize=").Append(PageSize);
-
-            if (AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
-                path.Append("&allowMultipleIndexEntriesForSameDocumentToResultTransformer=true");
-
-            if (IsDistinct)
-                path.Append("&distinct=true");
-
-            if (ShowTimings)
-                path.Append("&showTimings=true");
-            if (SkipDuplicateChecking)
-                path.Append("&skipDuplicateChecking=true");
-
-            FieldsToFetch.ApplyIfNotNull(field => path.Append("&fetch=").Append(Uri.EscapeDataString(field)));
-            Includes.ApplyIfNotNull(include => path.AppendFormat("&include={0}", Uri.EscapeDataString(include)));
-
-            DynamicMapReduceFields.ApplyIfNotNull(field => path.Append("&mapReduce=")
-                        .Append(Uri.EscapeDataString(field.Name))
-                        .Append("-")
-                        .Append(field.OperationType)
-                        .Append("-")
-                        .Append(field.IsGroupBy));
-
-            SortedFields.ApplyIfNotNull(
-                field => path.Append("&sort=").Append(field.Descending ? "-" : "").Append(Uri.EscapeDataString(field.Field)));
-
-            if (string.IsNullOrEmpty(Transformer) == false)
+            using (var hasher = new QueryHashCalculator(ctx))
             {
-                path.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
-            }
-
-            if (TransformerParameters != null)
-            {
-                foreach (var input in TransformerParameters)
-                {
-                    path.AppendFormat("&tp-{0}={1}", input.Key, input.Value);
-                }
-            }
-
-            if (CutoffEtag != null)
-            {
-                path.Append("&cutOffEtag=").Append(CutoffEtag);
-            }
-
-            if (WaitForNonStaleResultsAsOfNow)
-            {
-                path.Append("&waitForNonStaleResultsAsOfNow=true");
-            }
-
-            if (WaitForNonStaleResultsTimeout != null)
-            {
-                path.AppendLine("&waitForNonStaleResultsTimeout=" + WaitForNonStaleResultsTimeout);
-            }
-
-            HighlightedFields.ApplyIfNotNull(field => path.Append("&highlight=").Append(field));
-            HighlighterPreTags.ApplyIfNotNull(tag => path.Append("&preTags=").Append(tag));
-            HighlighterPostTags.ApplyIfNotNull(tag => path.Append("&postTags=").Append(tag));
-
-            if (string.IsNullOrEmpty(HighlighterKeyName) == false)
-            {
-                path.AppendFormat("&highlighterKeyName={0}", Uri.EscapeDataString(HighlighterKeyName));
-            }
-
-            if (ExplainScores)
-                path.Append("&explainScores=true");
-        }
-
-        private void AppendMinimalQueryString(StringBuilder path, bool appendQuery = true)
-        {
-            if (string.IsNullOrEmpty(Query) == false && appendQuery)
-            {
-                path.Append("&query=");
-                path.Append(EscapingHelper.EscapeLongDataString(Query));
-            }
-
-            if (string.IsNullOrEmpty(DefaultField) == false)
-            {
-                path.Append("&defaultField=").Append(Uri.EscapeDataString(DefaultField));
-            }
-            if (DefaultOperator != QueryOperator.Or)
-                path.Append("&operator=AND");
-            var vars = GetCustomQueryStringVariables();
-            if (!string.IsNullOrEmpty(vars))
-            {
-                path.Append(vars.StartsWith("&") ? vars : ("&" + vars));
+                hasher.Write(Query);
+                hasher.Write (WaitForNonStaleResults);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(WaitForNonStaleResultsAsOfNow);
+                hasher.Write(AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
+                hasher.Write(DisableCaching);
+                hasher.Write(SkipDuplicateChecking);
+                hasher.Write(ShowTimings);
+                hasher.Write(ExplainScores);
+                hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
+                hasher.Write(CutoffEtag);
+                hasher.Write(Start);
+                hasher.Write(PageSize);
+                hasher.Write(Includes);
+                hasher.Write(HighlighterKeyName);
+                hasher.Write(HighlighterPreTags);
+                hasher.Write(HighlighterPostTags);
+                hasher.Write(HighlightedFields);
+                hasher.Write(QueryParameters);
+                hasher.Write(TransformerParameters);
+                hasher.Write(Transformer);
+                
+                return hasher.GetHash();
             }
         }
     }
 
-    public abstract class IndexQuery<T> : IndexQueryBase, IEquatable<IndexQuery<T>>
+    public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
         /// <summary>
         /// Parameters that will be passed to transformer (if specified).
         /// </summary>
         public T TransformerParameters { get; set; }
-
-        /// <summary>
-        /// Array of fields containing sorting information.
-        /// </summary>
-        public SortedField[] SortedFields { get; set; }
-
-        /// <summary>
-        /// Array of fields in a dynamic map reduce-query
-        /// </summary>
-        internal DynamicMapReduceField[] DynamicMapReduceFields { get; set; }
 
         /// <summary>
         /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
@@ -246,6 +114,11 @@ namespace Raven.Client.Documents.Queries
         /// An array of relative paths that specify related documents ids which should be included in a query result
         /// </summary>
         public string[] Includes { get; set; }
+        
+        /// <summary>
+        /// Indicates if it's intersect query
+        /// </summary>
+        public bool IsIntersect { get; set; }
 
         /// <summary>
         /// Gets the custom query string variables.
@@ -253,6 +126,7 @@ namespace Raven.Client.Documents.Queries
         /// <returns></returns>
         protected virtual string GetCustomQueryStringVariables()
         {
+            //TODO: Can remove this 
             return string.Empty;
         }
 
@@ -264,7 +138,6 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-                   EnumerableExtension.ContentEquals(SortedFields, other.SortedFields) &&
                    EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
                    EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
                    EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
@@ -288,7 +161,6 @@ namespace Raven.Client.Documents.Queries
             {
                 var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (SortedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
@@ -312,7 +184,7 @@ namespace Raven.Client.Documents.Queries
         }
     }
 
-    public abstract class IndexQueryBase : IIndexQuery, IEquatable<IndexQueryBase>
+    public abstract class IndexQueryBase<T> : IIndexQuery, IEquatable<IndexQueryBase<T>>
     {
         private int _pageSize = int.MaxValue;
 
@@ -322,14 +194,11 @@ namespace Raven.Client.Documents.Queries
         protected internal bool PageSizeSet { get; private set; }
 
         /// <summary>
-        /// Whether we should apply distinct operation to the query on the server side
-        /// </summary>
-        public bool IsDistinct { get; set; }
-
-        /// <summary>
         /// Actual query that will be performed (Lucene syntax).
         /// </summary>
         public string Query { get; set; }
+
+        public T QueryParameters { get; set; }
 
         /// <summary>
         /// Number of records that should be skipped.
@@ -348,14 +217,6 @@ namespace Raven.Client.Documents.Queries
                 PageSizeSet = true;
             }
         }
-
-        /// <summary>
-        /// Array of fields that will be fetched.
-        /// <para>Fetch order:</para>
-        /// <para>1. Stored index fields</para>
-        /// <para>2. Document</para>
-        /// </summary>
-        public string[] FieldsToFetch { get; set; }
 
         /// <summary>
         /// Used to calculate index staleness. When set to <c>true</c> CutOff will be set to DateTime.UtcNow on server side.
@@ -385,26 +246,12 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public long? CutoffEtag { get; set; }
 
-        /// <summary>
-        /// Default field to use when querying directly on the Lucene query
-        /// </summary>
-        public string DefaultField { get; set; }
-
-        /// <summary>
-        /// Changes the default operator mode we use for queries.
-        /// <para>When set to Or a query such as 'Name:John Age:18' will be interpreted as:</para>
-        /// <para> Name:John OR Age:18</para>
-        /// <para>When set to And the query will be interpreted as:</para>
-        ///	<para> Name:John AND Age:18</para>
-        /// </summary>
-        public QueryOperator DefaultOperator { get; set; }
-
         public override string ToString()
         {
             return Query;
         }
 
-        public virtual bool Equals(IndexQueryBase other)
+        public virtual bool Equals(IndexQueryBase<T> other)
         {
             if (ReferenceEquals(null, other))
                 return false;
@@ -415,14 +262,10 @@ namespace Raven.Client.Documents.Queries
                    PageSize == other.PageSize &&
                    string.Equals(Query, other.Query) &&
                    Start == other.Start &&
-                   IsDistinct == other.IsDistinct &&
-                   EnumerableExtension.ContentEquals(FieldsToFetch, other.FieldsToFetch) &&
                    WaitForNonStaleResultsTimeout == other.WaitForNonStaleResultsTimeout &&
                    WaitForNonStaleResultsAsOfNow.Equals(other.WaitForNonStaleResultsAsOfNow) &&
                    WaitForNonStaleResults.Equals(other.WaitForNonStaleResults) &&
-                   Equals(CutoffEtag, other.CutoffEtag) &&
-                   string.Equals(DefaultField, other.DefaultField) &&
-                   DefaultOperator == other.DefaultOperator;
+                   Equals(CutoffEtag, other.CutoffEtag);
         }
 
         public override bool Equals(object obj)
@@ -440,23 +283,19 @@ namespace Raven.Client.Documents.Queries
                 hashCode = (hashCode * 397) ^ PageSize.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Query?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ Start;
-                hashCode = (hashCode * 397) ^ (IsDistinct ? 1 : 0);
-                hashCode = (hashCode * 397) ^ (FieldsToFetch?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (WaitForNonStaleResultsTimeout != null ? WaitForNonStaleResultsTimeout.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ WaitForNonStaleResultsAsOfNow.GetHashCode();
                 hashCode = (hashCode * 397) ^ (CutoffEtag != null ? CutoffEtag.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (DefaultField?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (int)DefaultOperator;
                 return hashCode;
             }
         }
 
-        public static bool operator ==(IndexQueryBase left, IndexQueryBase right)
+        public static bool operator ==(IndexQueryBase<T> left, IndexQueryBase<T> right)
         {
             return Equals(left, right);
         }
 
-        public static bool operator !=(IndexQueryBase left, IndexQueryBase right)
+        public static bool operator !=(IndexQueryBase<T> left, IndexQueryBase<T> right)
         {
             return Equals(left, right) == false;
         }

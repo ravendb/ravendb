@@ -107,26 +107,26 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             { 
                 var taskId = addWatcherRes.TaskId;
-                var result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
+                var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
 
-                Assert.Equal(watcher.Database, result.DestinationDatabase);
-                Assert.Equal(watcher.Url, result.DestinationUrl);
-                Assert.Equal(watcher.Name, result.TaskName);
+                Assert.Equal(watcher.Database, replicationResult.DestinationDatabase);
+                Assert.Equal(watcher.Url, replicationResult.DestinationUrl);
+                Assert.Equal(watcher.Name, replicationResult.TaskName);
 
                 taskId = updateBackupResult.TaskId;
-                result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
+                var backupResult = (OngoingTaskBackup)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Backup);
 
-                Assert.Equal("Local", result.BackupDestinations[0]);
-                Assert.Equal("Azure", result.BackupDestinations[1]);
-                Assert.Equal("backup1", result.TaskName);
-                Assert.Equal(OngoingTaskState.Disabled, result.TaskState);
+                Assert.Equal("Local", backupResult.BackupDestinations[0]);
+                Assert.Equal("Azure", backupResult.BackupDestinations[1]);
+                Assert.Equal("backup1", backupResult.TaskName);
+                Assert.Equal(OngoingTaskState.Disabled, backupResult.TaskState);
 
                 taskId = addEtlREsult.TaskId;
 
-                result = await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
-                Assert.Equal(result?.DestinationDatabase, ravenConnectionString.Database);
-                Assert.Equal(result?.DestinationUrl, ravenConnectionString.Url);
-                Assert.Equal(result?.TaskName, etlConfiguration.Name);
+                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
+                Assert.Equal(etlResult?.DestinationDatabase, ravenConnectionString.Database);
+                Assert.Equal(etlResult?.DestinationUrl, ravenConnectionString.Url);
+                Assert.Equal(etlResult?.TaskName, etlConfiguration.Name);
             }
         }
 

@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Util;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -47,8 +46,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
-                var op = store.Operations.Send(new DeleteByIndexOperation("Users/ByName",
-                    new IndexQuery() { Query = "Name:Users*" },
+                var op = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
                     new QueryOperationOptions { AllowStale = false, MaxOpsPerSecond = 2000, StaleTimeout = null }));
 
                 op.WaitForCompletion(TimeSpan.FromSeconds(15));
@@ -80,8 +78,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
-                var op = store.Operations.Send(new PatchByIndexOperation("Users/ByName",
-                    new IndexQuery() { Query = "Name:Users*" },
+                var op = store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
                     new PatchRequest
                     {
                         Script = "this.Test = 'abc';"

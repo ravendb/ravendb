@@ -15,7 +15,10 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
         internal RandomFieldComparator(string field, int numHits)
         {
             _values = new int[numHits];
-            _random = new Random(field.GetHashCode());
+            _random =
+                field == null ?
+                new Random() : 
+                new Random(field.GetHashCode());
         }
 
         public override int Compare(int slot1, int slot2)

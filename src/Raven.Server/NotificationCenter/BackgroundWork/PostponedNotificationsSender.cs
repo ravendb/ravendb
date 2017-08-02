@@ -27,11 +27,6 @@ namespace Raven.Server.NotificationCenter.BackgroundWork
         protected override void InitializeWork()
         {
             _event = new AsyncManualResetEvent(CancellationToken);
-
-            CancellationToken.Register(() =>
-            {
-                _event.Set();
-            });
         }
 
         protected override async Task DoWork()

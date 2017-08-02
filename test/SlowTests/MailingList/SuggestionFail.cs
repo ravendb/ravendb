@@ -81,7 +81,7 @@ namespace SlowTests.MailingList
                 {
                     string q = "lorem";
                     var hits = session.Query<The_Search.Result, The_Search>()
-                        .Search(x => x.Query, q, escapeQueryOptions: EscapeQueryOptions.AllowAllWildcards)
+                        .Search(x => x.Query, q)
                         .As<TheArticle>();
 
 

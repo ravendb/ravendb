@@ -1,17 +1,39 @@
 using System;
 using System.Collections.Generic;
-using System.Text;
-using Raven.Client.Extensions;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries.MoreLikeThis
 {
-    public class MoreLikeThisQuery : MoreLikeThisQuery<Dictionary<string, object>>
+    public class MoreLikeThisQuery : MoreLikeThisQuery<Parameters>
     {
-        protected override void CreateRequestUri(StringBuilder uri)
+        public ulong GetQueryHash(JsonOperationContext ctx)
         {
-            base.CreateRequestUri(uri);
-
-            TransformerParameters.ApplyIfNotNull(tp => uri.AppendFormat("&tp-{0}={1}", tp.Key, tp.Value));
+            using (var hasher = new QueryHashCalculator(ctx))
+            {
+                hasher.Write(Query);
+                hasher.Write(DocumentId);
+                hasher.Write(Fields);
+                hasher.Write(MaximumDocumentFrequency);
+                hasher.Write(MaximumDocumentFrequencyPercentage);
+                hasher.Write(MaximumNumberOfTokensParsed);
+                hasher.Write(MaximumQueryTerms);
+                hasher.Write(MaximumWordLength);
+                hasher.Write(MinimumDocumentFrequency);
+                hasher.Write(MinimumTermFrequency);
+                hasher.Write(MinimumWordLength);
+                hasher.Write(PageSize);
+                hasher.Write(Includes);
+                hasher.Write(StopWordsDocumentId);
+                hasher.Write(Transformer);
+                hasher.Write(TransformerParameters);
+                hasher.Write(Boost);
+                hasher.Write(BoostFactor);
+                hasher.Write(MapGroupFields);
+                hasher.Write(BoostFactor);
+                hasher.Write(BoostFactor);
+                hasher.Write(BoostFactor);
+                return hasher.GetHash();
+            }
         }
     }
 
@@ -101,15 +123,10 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public string DocumentId { get; set; }
 
         /// <summary>
-        /// The name of the index to use for this operation
-        /// </summary>
-        public string IndexName { get; set; }
-
-        /// <summary>
         /// An additional query that the matching documents need to also
         /// match to be returned. 
         /// </summary>
-        public string AdditionalQuery { get; set; }
+        public string Query { get; set; }
 
         /// <summary>
         /// Values for the mapping group fields to use as the basis for comparison
@@ -148,64 +165,5 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         /// Whether the page size was explicitly set or still at its default value
         /// </summary>
         protected internal bool PageSizeSet { get; private set; }
-
-        protected virtual void CreateRequestUri(StringBuilder uri)
-        {
-            uri.AppendFormat("/queries/{0}?&op=morelikethis", Uri.EscapeUriString(IndexName));
-
-            if (MapGroupFields.Count > 0)
-                MapGroupFields.ApplyIfNotNull(mgf => uri.AppendFormat("&mgf-{0}={1}", mgf.Key, mgf.Value));
-            else
-            {
-                if (DocumentId == null)
-                    throw new ArgumentNullException(nameof(DocumentId), "DocumentId cannot be null");
-
-                uri.AppendFormat("&docid={0}", DocumentId);
-            }
-
-            if (string.IsNullOrWhiteSpace(AdditionalQuery) == false)
-                uri.Append("&query=").Append(Uri.EscapeDataString(AdditionalQuery));
-            if (Boost != null && Boost != DefaultBoost)
-                uri.Append("&boost=true&");
-            if (BoostFactor != null && BoostFactor != DefaultBoostFactor)
-                uri.AppendFormat("&boostFactor={0}&", BoostFactor);
-            if (MaximumQueryTerms != null && MaximumQueryTerms != DefaultMaximumQueryTerms)
-                uri.AppendFormat("&maxQueryTerms={0}&", MaximumQueryTerms);
-            if (MaximumNumberOfTokensParsed != null && MaximumNumberOfTokensParsed != DefaultMaximumNumberOfTokensParsed)
-                uri.AppendFormat("&maxNumTokens={0}&", MaximumNumberOfTokensParsed);
-            if (MaximumWordLength != null && MaximumWordLength != DefaultMaximumWordLength)
-                uri.AppendFormat("&maxWordLen={0}&", MaximumWordLength);
-            if (MinimumDocumentFrequency != null && MinimumDocumentFrequency != DefaultMinimumDocumentFrequency)
-                uri.AppendFormat("&minDocFreq={0}&", MinimumDocumentFrequency);
-            if (MaximumDocumentFrequency != null && MaximumDocumentFrequency != DefaultMaximumDocumentFrequency)
-                uri.AppendFormat("&maxDocFreq={0}&", MaximumDocumentFrequency);
-            if (MaximumDocumentFrequencyPercentage != null)
-                uri.AppendFormat("&maxDocFreqPct={0}&", MaximumDocumentFrequencyPercentage);
-            if (MinimumTermFrequency != null && MinimumTermFrequency != DefaultMinimumTermFrequency)
-                uri.AppendFormat("&minTermFreq={0}&", MinimumTermFrequency);
-            if (MinimumWordLength != null && MinimumWordLength != DefaultMinimumWordLength)
-                uri.AppendFormat("&minWordLen={0}&", MinimumWordLength);
-            if (StopWordsDocumentId != null)
-                uri.AppendFormat("&stopWords={0}&", StopWordsDocumentId);
-            if (string.IsNullOrEmpty(Transformer) == false)
-                uri.AppendFormat("&transformer={0}", Uri.EscapeDataString(Transformer));
-
-            if (PageSizeSet)
-                uri.Append("&pageSize=").Append(PageSize);
-
-            Fields.ApplyIfNotNull(f => uri.AppendFormat("&field={0}", f));
-            Includes.ApplyIfNotNull(i => uri.AppendFormat("&include={0}", i));
-        }
-
-        public string GetRequestUri()
-        {
-            if (string.IsNullOrEmpty(IndexName))
-                throw new InvalidOperationException("Index name cannot be null or empty");
-
-            var uri = new StringBuilder();
-            CreateRequestUri(uri);
-
-            return uri.ToString();
-        }
     }
 }

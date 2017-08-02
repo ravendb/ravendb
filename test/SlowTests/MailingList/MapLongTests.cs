@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -43,6 +44,18 @@ namespace SlowTests.MailingList
 
                     Assert.Equal(1, foos.Count);
                 }
+
+                using (var session = store.OpenSession())
+                {
+                    var foos =
+                        session
+                            .Query<FooIndex.Result, FooIndex>()
+                            .Where(x => x.DynamicKey >= 634553454)
+                            .OfType<Foo>()
+                            .ToList();
+
+                    Assert.Equal(1, foos.Count);
+                }
             }
         }
 
@@ -80,7 +93,7 @@ namespace SlowTests.MailingList
                                   Key = item.Key,
                                   Whatever = item.Value.Whatever,
                                   foo.Long,
-                                  _ = CreateField("DynamicKey", item.Key, false, false)
+                                  _ = CreateField("DynamicKey", Convert.ToInt64(item.Key), false, false)
                               };
             }
         }

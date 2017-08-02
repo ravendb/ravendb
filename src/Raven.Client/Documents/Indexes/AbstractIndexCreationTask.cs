@@ -241,8 +241,6 @@ namespace Raven.Client.Documents.Indexes
             {
                 Indexes = Indexes,
                 IndexesStrings = IndexesStrings,
-                SortOptionsStrings = IndexSortOptionsStrings,
-                SortOptions = IndexSortOptions,
                 Analyzers = Analyzers,
                 AnalyzersStrings = AnalyzersStrings,
                 Map = Map,
@@ -257,26 +255,6 @@ namespace Raven.Client.Documents.Indexes
                 OutputReduceToCollection = OutputReduceToCollection,
                 AdditionalSources = AdditionalSources
             }.ToIndexDefinition(Conventions);
-
-            var fields = Map.Body.Type.GenericTypeArguments.First().GetProperties();
-            foreach (var field in fields)
-            {
-                IndexFieldOptions options;
-                if (indexDefinition.Fields.TryGetValue(field.Name, out options) == false)
-                    indexDefinition.Fields[field.Name] = options = new IndexFieldOptions();
-
-                if (options.Sort.HasValue)
-                    continue;
-
-                var fieldType = field.PropertyType;
-                switch (DocumentConventions.GetRangeType(fieldType))
-                {
-                    case RangeType.Double:
-                    case RangeType.Long:
-                        options.Sort = SortOptions.Numeric;
-                        break;
-                }
-            }
 
             return indexDefinition;
         }

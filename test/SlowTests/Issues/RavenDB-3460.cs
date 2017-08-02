@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Sparrow.Json;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -13,7 +13,7 @@ namespace SlowTests.Issues
     {
         private class User
         {
-            public int Id { get; set; }
+            public string Id { get; set; }
 
             public string FirstName { get; set; }
         }
@@ -28,13 +28,13 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query("CustomersIndex", new IndexQuery() { Query = "Number:1" });
+                    var result = commands.Query(new IndexQuery { Query = "FROM INDEX 'CustomersIndex' WHERE Number=1" });
                     Assert.NotEmpty(result.Results);
                 }
             }
         }
 
-        [TimeBombedFact(2018, 9, 1, "Edge-case for special character combination in a query. (This is not a regression, this case was not handled before)")]
+        [Fact]
         public void Can_query_for_special_percentage_character()
         {
             using (var store = GetDocumentStore())
@@ -54,10 +54,17 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var queryResult = session.Query<User>()
-                                             .Where(x => x.FirstName == "%2F")
-                                             .ToList();
+                        .Where(x => x.FirstName == "%2F")
+                        .ToList();
 
-                    Assert.Equal(1, queryResult.Count);
+                    Assert.Equal(1, queryResult.Count); // passes since it was send in POST request
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var result = commands.Query(new IndexQuery { Query = "FROM Users WHERE FirstName='%2F'" });
+                    Assert.NotEmpty(result.Results);
+                    Assert.Equal(1, result.TotalResults);// passes since it was send in POST request
                 }
             }
         }
@@ -72,8 +79,16 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var result = commands.Query("CustomersIndex", new IndexQuery() { Query = "Number%3A1" });
+                    var result = commands.Query(new IndexQuery() { Query = "FROM INDEX 'CustomersIndex' WHERE Number=1" });
                     Assert.NotEmpty(result.Results);
+                }
+
+                using (var commands = store.Commands())
+                {
+                    var json = commands.RawGetJson<BlittableJsonReaderObject>("/queries?query=FROM%20INDEX%20'CustomersIndex'%20WHERE%20Number%3D1");
+
+                    Assert.True(json.TryGet("TotalResults", out int results));
+                    Assert.Equal(1, results);
                 }
             }
         }

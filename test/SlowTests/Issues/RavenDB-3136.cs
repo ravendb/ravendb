@@ -121,7 +121,6 @@ namespace SlowTests.Issues
             public SampleData_Index()
             {
                 Map = docs => from doc in docs select new { doc.StringAge, doc.IntegerAge };
-                Sort(x => x.IntegerAge, SortOptions.Numeric);
                 TermVector(x => x.IntegerAge, FieldTermVector.Yes);
                 TermVector(x => x.StringAge, FieldTermVector.Yes);
             }

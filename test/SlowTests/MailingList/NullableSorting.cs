@@ -30,7 +30,6 @@ namespace SlowTests.MailingList
                                    Price = b.Price
                                };
                 Index(b => b.Price, FieldIndexing.Default);
-                Sort(b => b.Price, SortOptions.Numeric);
             }
         }
 

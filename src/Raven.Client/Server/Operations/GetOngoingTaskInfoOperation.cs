@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Server.Operations
 {
-    public class GetOngoingTaskInfoOperation : IServerOperation<GetTaskInfoResult>
+    public class GetOngoingTaskInfoOperation : IServerOperation<OngoingTask>
     {
         private readonly string _database;
         private readonly long _taskId;
@@ -21,12 +21,12 @@ namespace Raven.Client.Server.Operations
             _type = type;
         }
 
-        public RavenCommand<GetTaskInfoResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             return new GetOngoingTaskInfoCommand(conventions, context, _database, _taskId, _type);
         }
 
-        private class GetOngoingTaskInfoCommand : RavenCommand<GetTaskInfoResult>
+        private class GetOngoingTaskInfoCommand : RavenCommand<OngoingTask>
         {
             private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
@@ -64,7 +64,28 @@ namespace Raven.Client.Server.Operations
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
                 if (response != null)
-                    Result = JsonDeserializationClient.GetTaskInfoResult(response);
+                {
+                    switch (_type)
+                    {
+                        case OngoingTaskType.Replication:
+                            Result = JsonDeserializationClient.GetOngoingTaskReplicationResult(response);
+                            break;
+                        case OngoingTaskType.RavenEtl:
+                            Result = JsonDeserializationClient.GetOngoingTaskRavenEtlResult(response);
+                            break;
+                        case OngoingTaskType.SqlEtl:
+                            Result = JsonDeserializationClient.GetOngoingTaskSqlEtlResult(response);
+                            break;
+                        case OngoingTaskType.Backup:
+                            Result = JsonDeserializationClient.GetOngoingTaskBackupResult(response);
+                            break;
+                        case OngoingTaskType.Subscription:
+                            Result = JsonDeserializationClient.GetOngoingTaskSubscriptionResult(response);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+                }
             }
 
             public override bool IsReadRequest => false;

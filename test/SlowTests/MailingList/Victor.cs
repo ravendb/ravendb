@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                 {
                     var items = s.Advanced.DocumentQuery<Item, WithDynamicIndex>()
                         .WaitForNonStaleResults()
-                        .OrderBy("-T1") //System.ArgumentException: The field 'T1' is not indexed, cannot sort on fields that are not indexed
+                        .OrderByDescending("T1") //System.ArgumentException: The field 'T1' is not indexed, cannot sort on fields that are not indexed
                         .ToList();
                     Assert.Equal(2, items.Count);
                 }

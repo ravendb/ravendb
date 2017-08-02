@@ -85,7 +85,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                         Assert.Equal(0, batchStats.ReduceErrors);
 
                         queryResult =
-                            await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                            await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
 
@@ -93,7 +93,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
 
-                        queryResult = await index.Query(new IndexQueryServerSide() { Query = "Location:Poland" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Location = 'Poland'"), context, OperationCancelToken.None);
 
                         var results = queryResult.Results;
 
@@ -193,14 +193,14 @@ select new
 
                         }
 
-                        queryResult = await index.Query(new IndexQueryServerSide(), context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}'"), context, OperationCancelToken.None);
 
                         Assert.Equal(2, queryResult.Results.Count);
 
                     }
                     using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                     {
-                        queryResult = await index.Query(new IndexQueryServerSide { Query = "Product:Milk" }, context, OperationCancelToken.None);
+                        queryResult = await index.Query(new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE Product = 'Milk'"), context, OperationCancelToken.None);
 
                         Assert.Equal(1, queryResult.Results.Count);
                         Assert.Equal("Milk", queryResult.Results[0].Data["Product"].ToString());

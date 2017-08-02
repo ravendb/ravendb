@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             _loadOperation = loadOperation;
         }
 
-        public GetRequest CreateRequest()
+        public GetRequest CreateRequest(JsonOperationContext ctx)
         {
             var idsToCheckOnServer = _ids.Where(id => _session.IsLoadedOrDeleted(id) == false);
 

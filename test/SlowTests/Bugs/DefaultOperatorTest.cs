@@ -106,9 +106,10 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
-                            .Search(x => x.Title, "one two").UsingDefaultOperator(QueryOperator.And)
-                            .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
-                            .ToList();
+                        .UsingDefaultOperator(QueryOperator.And)
+                        .Search(x => x.Title, "one two")
+                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+                        .ToList();
 
                     Assert.True(result.Count == 1);
                 }
@@ -123,10 +124,11 @@ namespace SlowTests.Bugs
                 using (var s = store.OpenSession())
                 {
                     var result = s.Advanced.DocumentQuery<Blog, BlogIndex>()
-                            .Search(x => x.Title, "one two").UsingDefaultOperator(QueryOperator.And)
-                            .SelectFields<Blog>("Title")
-                            .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
-                            .ToList();
+                        .UsingDefaultOperator(QueryOperator.And)
+                        .Search(x => x.Title, "one two")
+                        .SelectFields<Blog>("Title")
+                        .WaitForNonStaleResultsAsOfNow(TimeSpan.FromSeconds(5))
+                        .ToList();
 
                     Assert.True(result.Count == 1);
                 }

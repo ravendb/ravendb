@@ -22,8 +22,6 @@ namespace Raven.Client.Documents.Indexes
             StoresStrings = new Dictionary<string, FieldStorage>();
             Indexes = new Dictionary<Expression<Func<TReduceResult, object>>, FieldIndexing>();
             IndexesStrings = new Dictionary<string, FieldIndexing>();
-            IndexSortOptions = new Dictionary<Expression<Func<TReduceResult, object>>, SortOptions>();
-            IndexSortOptionsStrings = new Dictionary<string, SortOptions>();
             Analyzers = new Dictionary<Expression<Func<TReduceResult, object>>, string>();
             AnalyzersStrings = new Dictionary<string, string>();
             IndexSuggestions = new HashSet<Expression<Func<TReduceResult, object>>>();
@@ -58,16 +56,6 @@ namespace Raven.Client.Documents.Indexes
         /// Index storage options
         /// </summary>
         protected IDictionary<string, FieldStorage> StoresStrings { get; set; }
-
-        /// <summary>
-        /// Index sort options
-        /// </summary>
-        protected IDictionary<Expression<Func<TReduceResult, object>>, SortOptions> IndexSortOptions { get; set; }
-
-        /// <summary>
-        /// Index sort options
-        /// </summary>
-        protected Dictionary<string, SortOptions> IndexSortOptionsStrings { get; set; }
 
         /// <summary>
         /// Index suggest options
@@ -202,22 +190,6 @@ namespace Raven.Client.Documents.Indexes
         protected void TermVector(string field, FieldTermVector termVector)
         {
             TermVectorsStrings.Add(field, termVector);
-        }
-
-        /// <summary>
-        /// Register a field to be sorted
-        /// </summary>
-        protected void Sort(Expression<Func<TReduceResult, object>> field, SortOptions sort)
-        {
-            IndexSortOptions.Add(field, sort);
-        }
-
-        /// <summary>
-        /// Register a field to be sorted
-        /// </summary>
-        protected void Sort(string field, SortOptions sort)
-        {
-            IndexSortOptionsStrings.Add(field, sort);
         }
 
         /// <summary>

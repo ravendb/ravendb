@@ -27,17 +27,17 @@ namespace FastTests.Server.Documents.Queries
 
                 using (var commands = store.Commands())
                 {
-                    var users = commands.Query("dynamic/Users", new IndexQuery()
+                    var users = commands.Query(new IndexQuery
                     {
-                        Query = "Name:Arek",
+                        Query = "FROM Users WHERE Name = 'Arek'",
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     });
 
                     Assert.Equal(2, users.Results.Length);
 
-                    users = commands.Query("dynamic/Users", new IndexQuery()
+                    users = commands.Query(new IndexQuery
                     {
-                        Query = "Name:Arek",
+                        Query = "FROM Users WHERE Name = 'Arek'",
                         WaitForNonStaleResultsTimeout = TimeSpan.FromMinutes(1)
                     });
 

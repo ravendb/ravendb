@@ -162,7 +162,7 @@ namespace Raven.Client.Documents.Session
         private bool ExecuteLazyOperationsSingleStep(ResponseTimeInformation responseTimeInformation)
         {
             //WIP - Not final
-            var requests = PendingLazyOperations.Select(x => x.CreateRequest()).ToList();
+            var requests = PendingLazyOperations.Select(x => x.CreateRequest(Context)).ToList();
             var multiGetOperation = new MultiGetOperation(this);
             var multiGetCommand = multiGetOperation.CreateRequest(requests);
             RequestExecutor.Execute(multiGetCommand, Context, sessionId: _clientSessionId);

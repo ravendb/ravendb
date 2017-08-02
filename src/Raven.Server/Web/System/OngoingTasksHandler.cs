@@ -219,7 +219,7 @@ namespace Raven.Server.Web.System
                     else if (ravenEtl.Transforms.Any(x => x.Disabled))
                         taskState = OngoingTaskState.PartiallyEnabled;
                     
-                    yield return new OngoingRavenEtl
+                    yield return new OngoingTaskRavenEtl
                     {
                         TaskId = ravenEtl.TaskId,
                         TaskName = ravenEtl.Name,
@@ -253,7 +253,7 @@ namespace Raven.Server.Web.System
                     else if (sqlEtl.Transforms.Any(x => x.Disabled))
                         taskState = OngoingTaskState.PartiallyEnabled;
 
-                    yield return new OngoingSqlEtl
+                    yield return new OngoingTaskSqlEtl
                     {
                         TaskId = sqlEtl.TaskId,
                         TaskName = sqlEtl.Name,
@@ -271,8 +271,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        // Get Info about a specific task - For Edit View in studio
-        // Note: Each task should return its own specific object and Not 'GetTaskInfoResult' - see RavenDB-7712
+        // Get Info about a specific task - For Edit View in studio - Each task should return its own specific object
         [RavenAction("/databases/*/task", "GET", AuthorizationStatus.ValidUser)]
         public Task GetOngoingTaskInfo()
         {
@@ -381,7 +380,7 @@ namespace Raven.Server.Web.System
                                 SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
                                     sqlConnection.ConnectionString);
 
-                            var sqlTaskInfo = new OngoingSqlEtl
+                            var sqlTaskInfo = new OngoingTaskSqlEtl
                             {
                                 TaskId = sqlEtl.TaskId,
                                 TaskState = taskState,
@@ -419,7 +418,7 @@ namespace Raven.Server.Web.System
                                 throw new InvalidOperationException(
                                     $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
 
-                            var ravenTaskInfo = new OngoingRavenEtl
+                            var ravenTaskInfo = new OngoingTaskRavenEtl
                             {
                                 TaskId = ravenEtl.TaskId,
                                 TaskState = taskState,
@@ -606,132 +605,6 @@ namespace Raven.Server.Web.System
                 [nameof(OngoingTasksList)] = new DynamicJsonArray(OngoingTasksList.Select(x => x.ToJson())),
                 [nameof(SubscriptionsCount)] = SubscriptionsCount
             };
-        }
-    }
-
-    public abstract class OngoingTask : IDynamicJson // Common info for all tasks types - used for Ongoing Tasks List View in studio
-    {
-        public long TaskId { get; set; }
-        public OngoingTaskType TaskType { get; protected set; }
-        public NodeId ResponsibleNode { get; set; }
-        public OngoingTaskState TaskState { get; set; }
-        public OngoingTaskConnectionStatus TaskConnectionStatus { get; set; }
-        public string TaskName { get; set; }
-
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(TaskId)] = TaskId,
-                [nameof(TaskType)] = TaskType,
-                [nameof(ResponsibleNode)] = ResponsibleNode?.ToJson(),
-                [nameof(TaskState)] = TaskState,
-                [nameof(TaskConnectionStatus)] = TaskConnectionStatus,
-                [nameof(TaskName)] = TaskName
-        };
-        }
-    }
-    
-    public class OngoingTaskSubscription : OngoingTask 
-    {
-        public OngoingTaskSubscription()
-        {
-            TaskType = OngoingTaskType.Subscription;
-        }
-       
-        public string Collection { get; set; }
-        public DateTime TimeOfLastClientActivity { get; set; }
-
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(Collection)] = Collection;
-            json[nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity;
-            return json;
-        }
-    }
-
-    public class OngoingTaskReplication : OngoingTask
-    {
-        public OngoingTaskReplication()
-        {
-            TaskType = OngoingTaskType.Replication;
-        }
-
-        public string DestinationUrl { get; set; }
-        public string DestinationDatabase { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(DestinationUrl)] = DestinationUrl;
-            json[nameof(DestinationDatabase)] = DestinationDatabase;
-            return json;
-        }
-    }
-
-    public class OngoingRavenEtl : OngoingTask
-    {
-        public OngoingRavenEtl()
-        {
-            TaskType = OngoingTaskType.RavenEtl;
-        }
-
-        public string DestinationUrl { get; set; }
-
-        public string DestinationDatabase { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(DestinationUrl)] = DestinationUrl;
-            json[nameof(DestinationDatabase)] = DestinationDatabase;
-            return json;
-        }
-    }
-
-    public class OngoingSqlEtl : OngoingTask
-    {
-        public OngoingSqlEtl()
-        {
-            TaskType = OngoingTaskType.SqlEtl;
-        }
-
-        public string DestinationServer { get; set; }
-        public string DestinationDatabase { get; set; }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(DestinationServer)] = DestinationServer;
-            json[nameof(DestinationDatabase)] = DestinationDatabase;
-            return json;
-        }
-    }
-
-    public class OngoingTaskBackup : OngoingTask
-    {
-        public BackupType BackupType { get; set; }
-        public List<string> BackupDestinations { get; set; }
-        public DateTime? LastFullBackup { get; set; }
-        public DateTime? LastIncrementalBackup { get; set; }
-        public NextBackup NextBackup { get; set; }
-        
-        public OngoingTaskBackup()
-        {
-            TaskType = OngoingTaskType.Backup;
-        }
-
-        public override DynamicJsonValue ToJson()
-        {
-            var json = base.ToJson();
-            json[nameof(BackupType)] = BackupType;
-            json[nameof(BackupDestinations)] = new DynamicJsonArray(BackupDestinations);
-            json[nameof(LastFullBackup)] = LastFullBackup;
-            json[nameof(LastIncrementalBackup)] = LastIncrementalBackup;
-            json[nameof(NextBackup)] = TypeConverter.ToBlittableSupportedType(NextBackup);
-            return json;
         }
     }
 }

@@ -19,6 +19,12 @@ namespace Raven.Client.Documents.Queries
                 RegexOptions.Compiled
                 );
 
+        // for deserialization
+        private HighlightedField()
+        {
+
+        }
+
         public HighlightedField(string field, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             Field = field;

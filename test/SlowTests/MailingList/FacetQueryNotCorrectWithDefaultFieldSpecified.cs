@@ -70,9 +70,7 @@ namespace SlowTests.MailingList
             {
                 return session.Advanced.DocumentStore.Operations.Send(new GetMultiFacetsOperation(new FacetQuery()
                 {
-                    IndexName = "Product/AvailableForSale2",
-                    Query = "MyName1",
-                    DefaultField = "Any",
+                    Query = "FROM INDEX 'Product/AvailableForSale2' WHERE Any = 'MyName1'",
                     FacetSetupDoc = "facets/ProductFacets"
                 }))[0];
             }

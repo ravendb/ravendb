@@ -90,8 +90,6 @@ namespace SlowTests.Tests.DistinctFacets
                                   TotalCount = 1
                               };
                 Store(x => x.Name, FieldStorage.Yes);
-                Sort(x => x.Tag, SortOptions.Numeric);
-                Sort("TotalCount", SortOptions.Numeric);
             }
 
             public class Result

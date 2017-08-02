@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
@@ -34,7 +33,7 @@ namespace SlowTests.Issues
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new TestQueryCommand(store.Conventions, context, new Users_ByName().IndexName, new IndexQuery() { WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
+                    var command = new TestQueryCommand(store.Conventions, context, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
                     Assert.Throws<TimeoutException>(() => requestExecuter.Execute(command, context));
@@ -47,7 +46,7 @@ namespace SlowTests.Issues
 
         private class TestQueryCommand : QueryCommand
         {
-            public TestQueryCommand(DocumentConventions conventions, JsonOperationContext context, string indexName, IndexQuery indexQuery, HashSet<string> includes = null, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, context, indexName, indexQuery, includes, metadataOnly, indexEntriesOnly)
+            public TestQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, context, indexQuery, metadataOnly, indexEntriesOnly)
             {
                 Timeout = TimeSpan.FromMilliseconds(100);
             }

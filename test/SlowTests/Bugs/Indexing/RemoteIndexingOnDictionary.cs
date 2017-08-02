@@ -27,9 +27,9 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     s.Advanced.DocumentQuery<UserWithIDictionary>()
-                     .WhereEquals("NestedItems,Key", "Color")
+                     .WhereEquals("NestedItems.Key", "Color")
                      .AndAlso()
-                     .WhereGreaterThan("NestedItems,Value.Value", 10)
+                     .WhereGreaterThan("NestedItems.Value.Value", 10)
                      .ToArray();
                 }
             }

@@ -13,7 +13,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.SlowTests.Issues;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -51,7 +50,7 @@ namespace SlowTests.Issues
 
                 var e = Assert.Throws<RavenException>(() => store
                     .Operations
-                    .Send(new DeleteByIndexOperation(new People_ByName().IndexName, new IndexQuery(), options: null)).WaitForCompletion(TimeSpan.FromSeconds(15)));
+                    .Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{new People_ByName().IndexName}'" }, options: null)).WaitForCompletion(TimeSpan.FromSeconds(15)));
 
                 Assert.Contains("Cannot perform bulk operation. Query is stale.", e.Message);
             }
