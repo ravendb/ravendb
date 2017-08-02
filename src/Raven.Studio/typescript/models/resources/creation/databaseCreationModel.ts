@@ -45,6 +45,7 @@ class databaseCreationModel {
     replication = {
         replicationFactor: ko.observable<number>(2),
         manualMode: ko.observable<boolean>(false),
+        dynamicMode: ko.observable<boolean>(true),
         nodes: ko.observableArray<clusterNode>([])
     }
 
@@ -54,17 +55,11 @@ class databaseCreationModel {
     });
 
     path = {
-        indexesPath: ko.observable<string>(),
         dataPath: ko.observable<string>(),
-        journalsPath: ko.observable<string>(),
-        tempPath: ko.observable<string>()
     }
 
     pathValidationGroup = ko.validatedObservable({
         dataPath: this.path.dataPath,
-        journalsPath: this.path.journalsPath,
-        tempPath: this.path.tempPath,
-        indexesPath: this.path.indexesPath
     });
 
     encryption = {
@@ -183,8 +178,6 @@ class databaseCreationModel {
     setupValidation(databaseDoesntExist: (name: string) => boolean, maxReplicationFactor: number) {
 
         this.setupPathValidation(this.path.dataPath, "Data");
-        this.setupPathValidation(this.path.tempPath, "Temp");
-        this.setupPathValidation(this.path.journalsPath, "Journals");
 
         this.replication.nodes.extend({
             validation: [{
@@ -243,8 +236,6 @@ class databaseCreationModel {
             }
         });
 
-        this.setupPathValidation(this.path.indexesPath, "Indexes");
-
         this.encryption.key.extend({
             required: true,
             base64: true //TODO: any other validaton ?
@@ -261,13 +252,24 @@ class databaseCreationModel {
     }
 
     private topologyToDto(): Raven.Client.Server.DatabaseTopology {
-        if (this.replication.manualMode()) {
-            const nodes = this.replication.nodes();
-            return {
-                Members: nodes.map(node => node.tag())
+        let topology = null as Raven.Client.Server.DatabaseTopology;
+
+        
+        if (this.replication.dynamicMode()) {
+            topology = {
+                DynamicNodesDistribution: true
             } as Raven.Client.Server.DatabaseTopology;
         }
-        return undefined;
+        
+        if (this.replication.manualMode()) {
+            if (!topology) {
+                topology = {} as Raven.Client.Server.DatabaseTopology;
+            }
+            
+            const nodes = this.replication.nodes();
+            topology.Members = nodes.map(node => node.tag());
+        }
+        return topology;
     }
 
     useRestorePoint(restorePoint: Raven.Server.Documents.PeriodicBackup.RestorePoint) {
@@ -281,9 +283,6 @@ class databaseCreationModel {
         const securedSettings: dictionary<string> = {};
 
         settings[configuration.core.dataDirectory] = _.trim(this.path.dataPath()) || null;
-        settings[configuration.storage.tempPath] = _.trim(this.path.tempPath()) || null;
-        settings[configuration.storage.journalsStoragePath] = _.trim(this.path.journalsPath()) || null;
-        settings[configuration.indexing.storagePath] = _.trim(this.path.indexesPath()) || null;
 
         return {
             DatabaseName: this.name(),
@@ -297,20 +296,14 @@ class databaseCreationModel {
 
     toRestoreDocumentDto(): Raven.Client.Server.PeriodicBackup.RestoreBackupConfiguration {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
-        const tempPath = _.trim(this.path.tempPath()) || null;
-        const journalsStoragePath = _.trim(this.path.journalsPath()) || null;
-        const indexingStoragePath = _.trim(this.path.indexesPath()) || null;
 
         return {
             DatabaseName: this.name(),
             BackupLocation: this.backupLocation(),
             LastFileNameToRestore: this.lastFileNameToRestore(),
             DataDirectory: dataDirectory,
-            JournalsStoragePath: journalsStoragePath,
-            IndexingStoragePath: indexingStoragePath,
-            TempPath: tempPath,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
-        };
+        } as Raven.Client.Server.PeriodicBackup.RestoreBackupConfiguration;
     }
 }
 
