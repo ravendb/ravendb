@@ -289,7 +289,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 //at this stage we can be already disposed, so ...
-                _reconnectAttemptTimer.Change(minDiff, TimeSpan.FromDays(1));
+                _reconnectAttemptTimer?.Change(minDiff, TimeSpan.FromDays(1));
             }
             catch (ObjectDisposedException)
             {
