@@ -137,10 +137,10 @@ namespace Raven.Client.Http
 
             Array.Clear(state.FastestRecords,0, state.Failures.Length);
 
-            Interlocked.Exchange(ref state.SpeedTestMode, 2);
+            Interlocked.Increment(ref state.SpeedTestMode);
         }
 
-        public bool InSpeedTestPhase => _state.SpeedTestMode == 2;
+        public bool InSpeedTestPhase => _state.SpeedTestMode > 0;
 
         public void RecordFastest(int index, ServerNode node)
         {
@@ -160,31 +160,38 @@ namespace Raven.Client.Http
             if (Interlocked.Increment(ref stateFastest[index]) >= 10)
             {
                 SelectFastest(state, index);
-                return;
             }
 
-            var total = 0;
-            int maxIndex = 0;
-            var maxValue = 0;
-            for (int i = 0; i < stateFastest.Length; i++)
-            {
-                total += stateFastest[i];
-                if (maxValue < stateFastest[i])
-                {
-                    maxIndex = i;
-                    maxValue = stateFastest[i];
-                }
-            }
-            if (total < 100)
+            if (Interlocked.Increment(ref state.SpeedTestMode) <= state.Nodes.Count * 10)
                 return;
 
+            //too many concurrent speed tests are happening
+            var maxIndex = FindMaxIndex(state);
             SelectFastest(state, maxIndex);
+        }
+
+        private static int FindMaxIndex(NodeSelectorState state)
+        {
+            var stateFastest = state.FastestRecords;
+            var maxIndex = 0;
+            var maxValue = 0;
+
+            for (var i = 0; i < stateFastest.Length; i++)
+            {
+                if (maxValue >= stateFastest[i])
+                    continue;
+                maxIndex = i;
+                maxValue = stateFastest[i];
+            }
+
+            return maxIndex;
         }
 
         private void SelectFastest(NodeSelectorState state, int index)
         {
             state.Fastest = index;
-            Interlocked.CompareExchange(ref state.SpeedTestMode, 0, 2);
+            Interlocked.Exchange(ref state.SpeedTestMode, 0);
+
             _updateFastestNodeTimer.Change(TimeSpan.FromMinutes(1), Timeout.InfiniteTimeSpan);
         }
 
