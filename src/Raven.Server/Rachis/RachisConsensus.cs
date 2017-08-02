@@ -122,6 +122,8 @@ namespace Raven.Server.Rachis
         public event EventHandler<StateTransition> StateChanged;
 
         private string _tag;
+        private string _clusterId;
+
         public TransactionContextPool ContextPool { get; private set; }
         private StorageEnvironment _persistentState;
         internal Logger Log;
@@ -130,7 +132,7 @@ namespace Raven.Server.Rachis
 
         public long CurrentTerm { get; private set; }
         public string Tag => _tag;
-
+        public string ClusterId => _clusterId;
         public string Url;
 
         private static readonly Slice GlobalStateSlice;
@@ -257,7 +259,7 @@ namespace Raven.Server.Rachis
                             SetTopology(this, context, topology);
                         }
                     }
-
+                    _clusterId = topology.TopologyId;
                     InitializeState(context);
 
                     tx.Commit();
@@ -694,7 +696,6 @@ namespace Raven.Server.Rachis
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
-
                     if (_tag == "?")
                     {
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -714,6 +715,7 @@ namespace Raven.Server.Rachis
                                 "Rejecting connection from confused server, this is likely an old server trying to connect to us, or bad network configuration.");
                         }
                     }
+                    _clusterId = initialMessage.TopologyId;
 
                     switch (initialMessage.InitialMessageType)
                     {
