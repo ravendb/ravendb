@@ -250,8 +250,8 @@
                         <h3>Group by</h3>
                     </div>
                     <div class="flex-grow flex-vertical">
-                        <div class="flex-horizontal flex-content-center flex-content-center">
-                            <div class="panel" data-bind="foreach: editedIndex().reduceFields">
+                        <div class="flex-horizontal flex-content-center flex-content-center" data-bind="foreach: editedIndex().reduceFields">
+                            <div class="panel">
                                 <div class="padding padding-xs text-center bg-info small">Reduce key</div>
                                 <div class=" padding padding-sm flex-vertical" data-bind="template: { name: 'field-template-auto-index'}"></div>
                             </div>
