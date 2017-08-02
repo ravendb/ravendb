@@ -1,6 +1,7 @@
 @db-group-task-node-bg: #39434f;
 @db-group-member-color: #6ebf3a;
 @db-group-task-name-color: @gray-light;
+@db-group-node-failure-color: #f93e3a;
 
 #databaseGroupGraphContainer {
     min-height: 400px;
@@ -9,6 +10,7 @@
         .node-bg {
             fill: @db-group-member-color;
             cursor: move;
+            transition: .2s fill ease-in-out;
         }
 
         .node-tag {
@@ -24,6 +26,12 @@
             font-size: 34px;
             fill: white;
             pointer-events: none;
+        }
+
+        &.errored {
+            .node-bg {
+                fill: @db-group-node-failure-color;
+            }
         }
     }
 
@@ -85,6 +93,11 @@
             stroke-width: 2px;
             stroke: @db-group-task-node-bg;
             transition: .2s stroke ease-in-out;
+
+
+            &.errored {
+                stroke: @db-group-node-failure-color;
+            }
 
             &.Disabled {
                 stroke: @brand-warning;
