@@ -42,16 +42,12 @@ class recentQueriesStorage {
     }
 
     static removeRecentQueryByQueryText(db: database, queryText: string) {
-        recentQueriesStorage.removeIndexFromRecentQueriesByName(db.name, queryText);
-    }
-
-    private static removeIndexFromRecentQueriesByName(dbName: string, queryText: string) {
-        const localStorageName = recentQueriesStorage.getLocalStorageKey(dbName);
+        const localStorageName = recentQueriesStorage.getLocalStorageKey(db.name);
         const recentQueriesFromLocalStorage: storedQueryDto[] = this.getRecentQueriesFromLocalStorage(localStorageName);
         if (recentQueriesFromLocalStorage == null)
             return;
 
-        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.queryText != queryText);
+        const newRecentQueries = recentQueriesFromLocalStorage.filter((query: storedQueryDto) => query.queryText !== queryText);
         localStorage.setObject(localStorageName, newRecentQueries);
     }
 
