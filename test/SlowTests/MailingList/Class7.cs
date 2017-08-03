@@ -44,7 +44,7 @@ namespace SlowTests.MailingList
                             .ToList();
                     });
 
-                    Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
+                    Assert.Contains("The field 'Surname' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
                 }
 
                 using (var session = store.OpenSession())
@@ -57,7 +57,7 @@ namespace SlowTests.MailingList
                            .ToList();
                     });
 
-                    Assert.Contains("The field 'Surname' is not indexed, cannot sort on fields that are not indexed", e.InnerException.Message);
+                    Assert.Contains("The field 'Surname' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
                 }
             }
         }
