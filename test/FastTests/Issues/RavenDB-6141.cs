@@ -4,18 +4,29 @@ using FastTests.Utils;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
+using Raven.Server.Utils;
 using Xunit;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_6141 : NoDisposalNeeded
+    public class RavenDB_6141 : IDisposable
     {
-        private string _rootPathString = LinuxTestUtils.RunningOnPosix ? @"/" : @"C:\";
+        private readonly string _rootPathString = LinuxTestUtils.RunningOnPosix ? @"/" : @"C:\";
+
+        private readonly string _emptySettingFile;
+
+        public RavenDB_6141()
+        {
+            _emptySettingFile = Path.Combine(Path.GetTempPath(), "settings.json");
+            using (var f = File.CreateText(_emptySettingFile))
+                f.Write("{}");
+        }
 
         [Fact]
         public void Default_database_path_settings()
         {
-            var config = new RavenConfiguration("foo", ResourceType.Database, customConfigPath: "missing file " +  Guid.NewGuid());
+            var config = new RavenConfiguration("foo", ResourceType.Database, _emptySettingFile);
+
             config.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             config.Initialize();
@@ -31,7 +42,7 @@ namespace FastTests.Issues
 
             // actual configuration is created in the following manner
 
-            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server,customConfigPath: "missing file " + Guid.NewGuid()), "foo",
+            config = RavenConfiguration.CreateFrom(new RavenConfiguration(null, ResourceType.Server), "foo",
                 ResourceType.Database);
 
             config.Initialize();
@@ -53,7 +64,7 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.RunInMemory), "true");
 
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), $@"{_rootPathString}Deployment");
-            
+
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.TempPath), $@"{_rootPathString}temp");
             server.SetSetting(RavenConfiguration.GetKey(x => x.Storage.JournalsStoragePath), $@"{_rootPathString}Journals");
 
@@ -126,7 +137,7 @@ namespace FastTests.Issues
             server.SetSetting(RavenConfiguration.GetKey(x => x.Core.DataDirectory), @"APPDRIVE:\RavenData");
 
             server.Initialize();
-            
+
             var rootPath = Path.GetPathRoot(AppContext.BaseDirectory);
 
             Assert.Equal(new PathSetting($@"{rootPath}RavenData").FullPath, server.Core.DataDirectory.FullPath);
@@ -165,6 +176,12 @@ namespace FastTests.Issues
         {
             Assert.False(new PathSetting("~\\Items\\").FullPath.EndsWith(@"\\"));
             Assert.False(new PathSetting("~/Items/").FullPath.EndsWith(@"/"));
+        }
+
+        public void Dispose()
+        {
+            if (_emptySettingFile != null)
+                IOExtensions.DeleteFile(_emptySettingFile);
         }
     }
 }
