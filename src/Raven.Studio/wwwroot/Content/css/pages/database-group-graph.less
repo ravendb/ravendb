@@ -1,7 +1,6 @@
 @db-group-task-node-bg: #39434f;
 @db-group-member-color: #6ebf3a;
 @db-group-task-name-color: @gray-light;
-@db-group-node-failure-color: #f93e3a;
 
 #databaseGroupGraphContainer {
     min-height: 400px;
@@ -28,9 +27,15 @@
             pointer-events: none;
         }
 
-        &.errored {
+        &.state-danger {
             .node-bg {
-                fill: @db-group-node-failure-color;
+                fill: @brand-danger;
+            }
+        }
+
+        &.state-warning {
+            .node-bg {
+                fill: @brand-warning;
             }
         }
     }
@@ -95,13 +100,17 @@
             transition: .2s stroke ease-in-out;
 
 
-            &.errored {
-                stroke: @db-group-node-failure-color;
-            }
-
             &.Disabled {
                 stroke: @brand-warning;
                 stroke-dasharray: 3,3;
+            }
+
+            &.warning {
+                stroke: @brand-warning;
+            }
+
+            &.errored {
+                stroke: @brand-danger;
             }
         }
     }

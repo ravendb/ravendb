@@ -23,8 +23,8 @@ class databaseNode extends layoutable {
     tag: string;
     type: databaseGroupNodeType;
     responsibleNode: string;
-    state: databaseNodeState;
-
+    status: Raven.Client.Server.Operations.DatabasePromotionStatus;
+    
     private constructor() {
         super();
     }
@@ -43,6 +43,17 @@ class databaseNode extends layoutable {
         this.tag = dto.NodeTag;
         this.type = type;
         this.responsibleNode = dto.ResponsibleNode;
+    }
+
+    getStateClass() {
+        switch (this.status) {
+            case "NotRespondingMovedToRehab":
+                return "state-danger";
+            case "Ok":
+                return "state-success";
+            default:
+                return "state-warning";
+        }
     }
 }
 
@@ -490,7 +501,7 @@ class databaseGroupGraph {
 
     private updateDbNodes(selection: d3.Selection<databaseNode>) {
         selection
-            .attr("class", x => "db-node " + x.type + " " + x.state)
+            .attr("class", x => "db-node " + x.type + " " + x.getStateClass())
             .attr("transform", x => `translate(${x.x},${x.y})`);
 
         const nodeIcon = (node: databaseNode) => {
@@ -560,9 +571,18 @@ class databaseGroupGraph {
     private updateEdges(selection: d3.Selection<cola.Link<taskNode | databaseNode>>) {
         selection.attr("class", x => "edge " + ((x.target instanceof taskNode) ? x.target.state : " "));
 
+        
         selection.classed("errored", x => {
             if (x.source instanceof databaseNode && x.target instanceof databaseNode) {
-                return x.source.state === "errored" || x.target.state === "errored";
+                return x.source.getStateClass() === "state-danger" || x.target.getStateClass() === "state-danger";
+            }
+
+            return false;
+        });
+
+        selection.classed("warning", x => {
+            if (x.source instanceof databaseNode && x.target instanceof databaseNode) {
+                return x.source.getStateClass() === "state-warning" || x.target.getStateClass() === "state-warning";
             }
 
             return false;
@@ -624,14 +644,14 @@ class databaseGroupGraph {
 
         // clear current status
         this.data.databaseNodes.forEach(node => {
-            node.state = "valid"; 
+            node.status = "Ok"; 
         });
         
         _.forIn(this.databaseInfoCache.NodesTopology.Status, (status, tag) => {
             const matchingNode = this.data.databaseNodes.find(x => x.tag === tag);
             //TODO: update this logic once RavenDB-7998 will be completed
             if (matchingNode) {
-                matchingNode.state = status.LastStatus === "Ok" ? "valid" : "errored";
+                matchingNode.status = status.LastStatus;
             }
         });
     }

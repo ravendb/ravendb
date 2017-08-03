@@ -1,4 +1,5 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
+import generalUtils = require("common/generalUtils");
 
 class databaseGroupNode {
     tag = ko.observable<string>();
@@ -6,8 +7,12 @@ class databaseGroupNode {
     type = ko.observable<databaseGroupNodeType>();
     responsibleNode = ko.observable<string>();
 
-    lastStatus = ko.observable<string>();
+    lastStatus = ko.observable<Raven.Client.Server.Operations.DatabasePromotionStatus>();
     lastError = ko.observable<string>();
+    lastErrorShort = ko.pureComputed(() => {
+        const longError = this.lastError();
+        return generalUtils.trimMessage(longError);
+    });
 
     cssIcon = ko.pureComputed(() => {
         const type = this.type();
@@ -25,12 +30,25 @@ class databaseGroupNode {
     });
 
     badgeClass = ko.pureComputed(() => {
-        return this.lastStatus() === "Ok" ? "state-success" : "state-danger";
+        switch (this.lastStatus()) {
+            case "Ok":
+                return "state-success";
+            case "NotRespondingMovedToRehab":
+                return "state-danger";
+            default:
+                return "state-warning";
+        }
     });
 
     badgeText = ko.pureComputed(() => {
-        //TODO: update me
-        return this.lastStatus() === "Ok" ? "Active" : "Invalid";
+        switch (this.lastStatus()) {
+            case "Ok":
+                return "Active";
+            case "NotRespondingMovedToRehab":
+                return "Error";
+            default:
+                return "Catching up";
+        }
     });
 
     static for(tag: string, serverUrl: string, responsibleNode: string, type: databaseGroupNodeType) {
