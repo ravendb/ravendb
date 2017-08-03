@@ -212,13 +212,17 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(ravenEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled;;
+                    var taskState = OngoingTaskState.Enabled;
 
                     if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
                         taskState = OngoingTaskState.Disabled;
                     else if (ravenEtl.Transforms.Any(x => x.Disabled))
                         taskState = OngoingTaskState.PartiallyEnabled;
-                    
+
+                    if (databaseRecord.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
+                        throw new InvalidOperationException(
+                            $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
+
                     yield return new OngoingTaskRavenEtl
                     {
                         TaskId = ravenEtl.TaskId,
@@ -230,8 +234,8 @@ namespace Raven.Server.Web.System
                             NodeTag = tag,
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
-                        DestinationUrl = ravenEtl.Connection.Url,
-                        DestinationDatabase = ravenEtl.Connection.Database,
+                        DestinationUrl = connection.Url,
+                        DestinationDatabase = connection.Database,
                     };
                 }
             }
@@ -242,16 +246,19 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
-                    var (database, server) =
-                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
-                            sqlEtl.Connection.ConnectionString);
-
                     var taskState = OngoingTaskState.Enabled; 
 
                     if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
                         taskState = OngoingTaskState.Disabled;
                     else if (sqlEtl.Transforms.Any(x => x.Disabled))
                         taskState = OngoingTaskState.PartiallyEnabled;
+
+                    if (databaseRecord.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
+                        throw new InvalidOperationException(
+                            $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
+
+                    var (database, server) =
+                        SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName, sqlConnection.ConnectionString);
 
                     yield return new OngoingTaskSqlEtl
                     {
@@ -363,38 +370,7 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            tag = dbTopology?.WhoseTaskIsIt(sqlEtl, ServerStore.IsPassive());
-                            var taskState = OngoingTaskState.Enabled;
-
-                            if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
-                                taskState = OngoingTaskState.Disabled;
-                            else if (sqlEtl.Transforms.Any(x => x.Disabled))
-                                taskState = OngoingTaskState.PartiallyEnabled;
-
-                            if (record.SqlConnectionStrings.TryGetValue(sqlEtl.ConnectionStringName, out var sqlConnection) == false)
-                                throw new InvalidOperationException(
-                                    $"Could not find connection string named '{sqlEtl.ConnectionStringName}' in the database record for '{sqlEtl.Name}' ETL");
-
-
-                            var (database, server) =
-                                SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString(sqlEtl.FactoryName,
-                                    sqlConnection.ConnectionString);
-
-                            var sqlTaskInfo = new OngoingTaskSqlEtl
-                            {
-                                TaskId = sqlEtl.TaskId,
-                                TaskState = taskState,
-                                TaskName = sqlEtl.Name,
-                                ResponsibleNode = new NodeId
-                                {
-                                    NodeTag = tag,
-                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                DestinationServer = server,
-                                DestinationDatabase = database
-                            };
-
-                            WriteResult(context, sqlTaskInfo);
+                            WriteResult(context, sqlEtl.ToJson());
                             break;
 
                         case OngoingTaskType.RavenEtl:
@@ -405,34 +381,8 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-
-                            tag = dbTopology?.WhoseTaskIsIt(ravenEtl, ServerStore.IsPassive());
-                            taskState = OngoingTaskState.Enabled;
-
-                            if (ravenEtl.Disabled || ravenEtl.Transforms.All(x => x.Disabled))
-                                taskState = OngoingTaskState.Disabled;
-                            else if (ravenEtl.Transforms.Any(x => x.Disabled))
-                                taskState = OngoingTaskState.PartiallyEnabled;
-
-                            if (record.RavenConnectionStrings.TryGetValue(ravenEtl.ConnectionStringName, out var connection) == false)
-                                throw new InvalidOperationException(
-                                    $"Could not find connection string named '{ravenEtl.ConnectionStringName}' in the database record for '{ravenEtl.Name}' ETL");
-
-                            var ravenTaskInfo = new OngoingTaskRavenEtl
-                            {
-                                TaskId = ravenEtl.TaskId,
-                                TaskState = taskState,
-                                TaskName = ravenEtl.Name,
-                                ResponsibleNode = new NodeId
-                                {
-                                    NodeTag = tag,
-                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                                },
-                                DestinationUrl = connection.Url,
-                                DestinationDatabase = connection.Database
-                            };
-
-                            WriteResult(context, ravenTaskInfo);
+                            
+                            WriteResult(context, ravenEtl.ToJson());
                             break;
                             
                         case OngoingTaskType.Subscription:

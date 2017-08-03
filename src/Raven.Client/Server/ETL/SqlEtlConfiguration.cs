@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Server.ETL.SQL;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.ETL
 {
@@ -84,6 +85,20 @@ namespace Raven.Client.Server.ETL
                     throw new NotSupportedException($"Factory '{FactoryName}' is not supported");
             }
         }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var result = base.ToJson();
+
+            result[nameof(FactoryName)] = FactoryName;
+            result[nameof(ParameterizeDeletes)] = ParameterizeDeletes;
+            result[nameof(ForceQueryRecompile)] = ForceQueryRecompile;
+            result[nameof(QuoteTables)] = QuoteTables;
+            result[nameof(CommandTimeout)] = CommandTimeout;
+            result[nameof(SqlTables)] = new DynamicJsonArray(SqlTables.Select(x => x.ToJson()));
+            
+            return result;
+        }
     }
 
     public class SqlEtlTable
@@ -96,6 +111,16 @@ namespace Raven.Client.Server.ETL
         {
             return string.Equals(TableName, other.TableName) && string.Equals(DocumentIdColumn, other.DocumentIdColumn, StringComparison.OrdinalIgnoreCase) &&
                    InsertOnlyMode == other.InsertOnlyMode;
+        }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue()
+            {
+                [nameof(TableName)] = TableName,
+                [nameof(DocumentIdColumn)] = DocumentIdColumn,
+                [nameof(InsertOnlyMode)] = InsertOnlyMode,
+            };
         }
     }
 }
