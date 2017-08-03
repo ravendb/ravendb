@@ -100,14 +100,14 @@
     <Folder Include="ServerWide\Maintenance" />
   </ItemGroup>
   <ItemGroup>
-    <None Update="settings_posix.json">
+    <None Update="Properties\Settings\settings_posix.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
+    </None>
+    <None Update="settings.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="settings_debug.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
-    <None Update="settings_windows.json">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    <None Update="Properties\Settings\settings_windows.json">
+      <CopyToOutputDirectory>Never</CopyToOutputDirectory>
     </None>
   </ItemGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
