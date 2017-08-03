@@ -40,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new FullTextSearchOnAutoIndex())
+                using (var test = new SlowTests.Server.Replication.ReplicationResolveToDatabase())
                 {
                     try
                     {
-                        test.CanUseFullTextSearchInAutoIndex().Wait();
+                        test.ResolveToTombstone().Wait();
                     }
                     catch (Exception e)
                     {

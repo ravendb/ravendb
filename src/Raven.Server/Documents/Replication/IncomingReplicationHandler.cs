@@ -1008,6 +1008,9 @@ namespace Raven.Server.Documents.Replication
                                         case ConflictStatus.Conflict:
                                             if (_incoming._log.IsInfoEnabled)
                                                 _incoming._log.Info($"Conflict check resolved to Conflict operation, resolving conflict for doc = {item.Id}, with change vector = {item.ChangeVector}");
+                                            // if the conflict is going to ber resolved locally, that means that we have local work to do
+                                            // that we need to distribute to our siblings
+                                            IsIncomingReplication = false;
                                             _incoming._conflictManager.HandleConflictForDocument(context, item.Id, item.Collection, item.LastModifiedTicks, document, rcvdChangeVector, conflictingVector, item.Flags);
                                             break;
                                         case ConflictStatus.AlreadyMerged:

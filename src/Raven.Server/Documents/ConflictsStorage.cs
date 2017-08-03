@@ -672,6 +672,15 @@ namespace Raven.Server.Documents
                     ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, expectedChangeVector);
 
                     var collectionName = ResolveConflictAndAddTombstone(context, changeVector, conflicts, out long etag);
+                    // TODO: Do not send here strings. Use lazy strings instead.
+                    context.Transaction.AddAfterCommitNotification(new DocumentChange
+                    {
+                        Type = DocumentChangeTypes.Delete,
+                        Id = lowerId.ToString(),
+                        ChangeVector = changeVector,
+                        CollectionName = collectionName.Name,
+                        IsSystemDocument = collectionName.IsSystem,
+                    });
                     return new DeleteOperationResult
                     {
                         Collection = collectionName,
