@@ -33,6 +33,7 @@ namespace Raven.Server.Web.System
                 }
                 using (var tcpClient = new TcpClient())
                 {
+                    TcpUtils.SetTimeouts(tcpClient, ServerStore.Engine.TcpConnectionTimeout);
                     result = await ConnectToClientNodeAsync(connectionInfo.Result, tcpClient);
                 }
             }

@@ -181,6 +181,12 @@ namespace Raven.Server.Rachis
             private set => _electionTimeout = value;
         }
 
+        public TimeSpan TcpConnectionTimeout
+        {
+            get => _tcpConnectionTimeout;
+            private set => _tcpConnectionTimeout = value;
+        }
+
         public TimeoutEvent Timeout { get; private set; }
 
         public TimeSpan OperationTimeout
@@ -222,7 +228,8 @@ namespace Raven.Server.Rachis
 
                 OperationTimeout = configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
                 ElectionTimeout = configuration.Cluster.ElectionTimeout.AsTimeSpan;
-
+                TcpConnectionTimeout = configuration.Cluster.TcpConnectionTimeout.AsTimeSpan;
+                
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _operationTimeout);
                 DebuggerAttachedTimeout.LongTimespanIfDebugging(ref _electionTimeout);
 
@@ -1392,6 +1399,7 @@ namespace Raven.Server.Rachis
         private long _leaderTime;
         private TimeSpan _operationTimeout;
         private TimeSpan _electionTimeout;
+        private TimeSpan _tcpConnectionTimeout;
 
         public void ReportLeaderTime(long leaderTime)
         {
