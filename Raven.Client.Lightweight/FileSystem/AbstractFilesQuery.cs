@@ -622,7 +622,7 @@ namespace Raven.Client.FileSystem
 
             if (isReversed)
             {
-                var hasEscaping = result.IndexOf("\\");
+                var hasEscaping = result.IndexOf('\\');
                 var arr = result.Reverse().ToArray();
                 if (hasEscaping < 0)
                     return new string(arr);
@@ -634,10 +634,13 @@ namespace Raven.Client.FileSystem
 
         private string SwapEscaping(char[] arr)
         {
+            //need to make sure we don't bubble escaping &\\\\ should become \\&\\ and not \\\\&
+            var swaped = new HashSet<int>();
             for (var i = 1; i < arr.Length; i++)
             {
-                if (arr[i] == '\\' && RavenQuery.IsEscapedChar(arr[i - 1]))
+                if (arr[i] == '\\' && RavenQuery.IsEscapedChar(arr[i - 1]) && swaped.Contains(arr[i - 1]) == false)
                 {
+                    swaped.Add(i);
                     arr[i] = arr[i - 1];
                     arr[i - 1] = '\\';
                 }
