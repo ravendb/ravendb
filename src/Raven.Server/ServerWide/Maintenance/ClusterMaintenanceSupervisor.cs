@@ -135,7 +135,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response";
                 _tcpClient = new TcpClient();
-
+                TcpUtils.SetTimeouts(_tcpClient, _parent._server.Engine.TcpConnectionTimeout);
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
             }
 
@@ -176,6 +176,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             {
                                 _tcpClient?.Dispose();
                                 _tcpClient = new TcpClient();
+                                TcpUtils.SetTimeouts(_tcpClient, _parent._server.Engine.TcpConnectionTimeout);
                                 tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
                                     _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                             }

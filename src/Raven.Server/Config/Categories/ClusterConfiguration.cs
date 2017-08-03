@@ -54,5 +54,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.TimeBeforeAddingReplicaInSec")]
         public TimeSetting AddReplicaTimeout{ get; set; }
 
+        [Description("Tcp connection read/write timeout.")]
+        [DefaultValue(15 * 1000)]
+        [TimeUnit(TimeUnit.Milliseconds)]
+        [ConfigurationEntry("Cluster.TcpTimeout")]
+        public TimeSetting TcpConnectionTimeout { get; set; }
+
     }
 }

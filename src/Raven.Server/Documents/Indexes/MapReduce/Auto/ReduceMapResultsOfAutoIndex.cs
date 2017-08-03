@@ -78,7 +78,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             }
                         }
 
-                        if (_indexDefinition.ContainsGroupByField(propertyName) == false)
+                        if (_indexDefinition.GroupByFields.ContainsKey(propertyName) == false)
                         {
                             // we want to reuse existing entry to get a reduce key
 

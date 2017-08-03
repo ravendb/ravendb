@@ -142,7 +142,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (field.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
                     {
-                        explanations?.Add(new Explanation(indexName, $"The following is analyzed {indexField.Name}, while the query asks for non analyzed values"));
+                        explanations?.Add(new Explanation(indexName, $"The following field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
                     }
                 }
@@ -199,22 +199,40 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            if (query.GroupByFields.All(definition.ContainsGroupByField) == false)
+            foreach (var groupByField in query.GroupByFields)
             {
-                if (explanations != null)
+                if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
-                    var missingFields = query.GroupByFields.Where(x => definition.ContainsGroupByField(x) == false);
-                    explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
-                }
+                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
+                        return false;
+                    }
 
-                return false;
+                    if (groupByField.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following group by field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (explanations != null)
+                    {
+                        var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x.Name) == false);
+                        explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
+                    }
+                    
+                    return false;
+                }
             }
+
 
             if (query.GroupByFields.Length != definition.GroupByFields.Count)
             {
                 if (explanations != null)
                 {
-                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Contains(x.Key) == false);
+                    var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Name).Contains(x.Key) == false);
                     explanations?.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 

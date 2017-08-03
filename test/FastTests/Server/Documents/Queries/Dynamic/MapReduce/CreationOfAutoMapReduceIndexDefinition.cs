@@ -69,11 +69,9 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
         }
 
         [Fact]
-        public void Error_when_no_aggregation_field()
+        public void Can_be_no_aggregation_field_in_dynamic_group_by()
         {
-            var ex = Assert.Throws<InvalidQueryException>(() => new IndexQueryServerSide("FROM Users GROUP BY Location"));
-
-            Assert.Contains("needs to have at least one aggregation operation", ex.Message);
+            new IndexQueryServerSide("FROM Users GROUP BY Location");
         }
 
         [Fact]
