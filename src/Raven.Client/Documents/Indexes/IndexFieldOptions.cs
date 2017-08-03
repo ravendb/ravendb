@@ -13,8 +13,6 @@ namespace Raven.Client.Documents.Indexes
 
         public SpatialOptions Spatial { get; set; }
 
-        public string FullTextSearchField { get; set; }
-
         public string Analyzer { get; set; }
 
         public bool? Suggestions { get; set; }
@@ -25,7 +23,6 @@ namespace Raven.Client.Documents.Indexes
                    && Indexing == other.Indexing
                    && TermVector == other.TermVector
                    && Equals(Spatial, other.Spatial)
-                   && Equals(FullTextSearchField, other.FullTextSearchField)
                    && string.Equals(Analyzer, other.Analyzer, StringComparison.OrdinalIgnoreCase)
                    && Suggestions == other.Suggestions;
         }
@@ -56,7 +53,6 @@ namespace Raven.Client.Documents.Indexes
                 hashCode = (hashCode * 397) ^ TermVector.GetHashCode();
                 hashCode = (hashCode * 397) ^ (Spatial?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (Analyzer != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(Analyzer) : 0);
-                hashCode = (hashCode * 397) ^ (FullTextSearchField != null ? StringComparer.OrdinalIgnoreCase.GetHashCode(FullTextSearchField) : 0);
                 hashCode = (hashCode * 397) ^ Suggestions.GetHashCode();
                 return hashCode;
             }

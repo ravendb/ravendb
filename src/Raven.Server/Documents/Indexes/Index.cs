@@ -2022,13 +2022,6 @@ namespace Raven.Server.Documents.Indexes
             {
                 AssertKnownField(field);
             }
-            if (metadata.FullTextSeachFields != null)
-            {
-                foreach (var field in metadata.FullTextSeachFields)
-                {
-                    AssertKnownField(field);
-                }
-            }
 
             if (metadata.OrderBy != null)
             {

@@ -52,8 +52,6 @@ class indexFieldOptions {
 
     analyzer = ko.observable<string>();
 
-    fullTextSearchField = ko.observable<string>();
-
     indexing = ko.observable<Raven.Client.Documents.Indexes.FieldIndexing>();
     effectiveIndexing = this.effectiveComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
     defaultIndexing = this.defaultComputed(x => x.indexing(), labelMatcher(indexFieldOptions.Indexing));
@@ -188,7 +186,6 @@ class indexFieldOptions {
             Storage: "No",
             Indexing: "Default",
             Analyzer: "StandardAnalyzer",
-            FullTextSearchField: null,
             Suggestions: false,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: "No"
@@ -205,7 +202,6 @@ class indexFieldOptions {
             Sort: null,
             Analyzer: null,
             Suggestions: null,
-            FullTextSearchField: null,
             Spatial: null as Raven.Client.Documents.Indexes.Spatial.SpatialOptions,
             TermVector: null
         } as Raven.Client.Documents.Indexes.IndexFieldOptions;
@@ -221,7 +217,6 @@ class indexFieldOptions {
 
     toDto(): Raven.Client.Documents.Indexes.IndexFieldOptions {
         return {
-            FullTextSearchField: this.fullTextSearchField(),
             Analyzer: this.analyzer(),
             Indexing: this.indexing(),
             Storage: this.storage(),

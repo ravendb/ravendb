@@ -80,17 +80,18 @@ namespace Raven.Server.ServerWide.Commands.Indexes
 
             var result = new Dictionary<string, AutoIndexDefinition.AutoIndexFieldOptions>();
             foreach (var kvp in fields)
+            {
                 result[kvp.Key] = new AutoIndexDefinition.AutoIndexFieldOptions
                 {
                     TermVector = kvp.Value.TermVector,
                     Storage = kvp.Value.Storage,
                     Indexing = kvp.Value.Indexing,
                     Analyzer = kvp.Value.Analyzer,
-                    FullTextSearchField = kvp.Value.FullTextSearchField,
                     Spatial = null,
                     Suggestions = null,
                     MapReduceOperation = kvp.Value.Aggregation
                 };
+            }
 
             return result;
         }

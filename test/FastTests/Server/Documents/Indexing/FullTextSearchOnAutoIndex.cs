@@ -1,7 +1,8 @@
-﻿using System.Threading.Tasks;
+﻿using System.Linq;
+using System.Threading.Tasks;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Session;
 using Xunit;
-using System.Linq;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -29,18 +30,28 @@ namespace FastTests.Server.Documents.Indexing
 
                 using (var s = store.OpenAsyncSession())
                 {
+                    QueryStatistics stats;
+
                     var count = await s.Query<User>()
+                        .Statistics(out stats)
                         .Search(u => u.Name, "Ayende")
                         .CountAsync();
+
                     Assert.Equal(1, count);
+                    Assert.Equal("Auto/Users/ByAnalyzed(Name)", stats.IndexName);
                 }
 
                 using (var s = store.OpenAsyncSession())
                 {
+                    QueryStatistics stats;
+
                     var count = await s.Query<User>()
+                        .Statistics(out stats)
                         .Where(u => u.Name == "Ayende")
                         .CountAsync();
+
                     Assert.Equal(0, count);
+                    Assert.Equal("Auto/Users/ByName", stats.IndexName);
                 }
             }
         }

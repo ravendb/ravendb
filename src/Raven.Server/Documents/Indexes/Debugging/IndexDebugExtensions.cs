@@ -431,27 +431,16 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.MapReduce:
                     return ((MapReduceIndex)self).Compiled.OutputFields;
                 case IndexType.AutoMap:
-                    var mapList = new List<string>();
-                    foreach (var mapping in ((AutoMapIndex)self).Definition.MapFields)
-                    {
-                        mapList.Add(mapping.Key);
-                        if (mapping.Value.FullTextSearchField != null)
-                            mapList.Add(mapping.Value.FullTextSearchField);
-                    }
-                    return mapList.ToArray();
+                    return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:
                     var mapReduceList = new List<string>();
                     foreach (var mapping in ((AutoMapReduceIndex)self).Definition.MapFields)
                     {
                         mapReduceList.Add(mapping.Key);
-                        if (mapping.Value.FullTextSearchField != null)
-                            mapReduceList.Add(mapping.Value.FullTextSearchField);
                     }
                     foreach (var mapping in ((AutoMapReduceIndex)self).Definition.GroupByFields)
                     {
                         mapReduceList.Add(mapping.Key);
-                        if (mapping.Value.FullTextSearchField != null)
-                            mapReduceList.Add(mapping.Value.FullTextSearchField);
                     }
                     return mapReduceList.ToArray();
 

@@ -138,7 +138,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.In:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName].Type).LuceneTermType;
 
                         var matches = new List<string>();
                         foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.AllIn:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName]).LuceneTermType;
+                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName].Type).LuceneTermType;
 
                         var allInQuery = new BooleanQuery();
                         foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
@@ -317,7 +317,6 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-
             string fieldName;
             if(expression.Arguments[0] is FieldToken ft)
                 fieldName = ExtractIndexFieldName(query.QueryText, ft, metadata);
@@ -330,11 +329,8 @@ namespace Raven.Server.Documents.Queries
             
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
-
-            if (metadata.IsDynamic)
-            {
-                fieldName = "search(" + fieldName + ")";
-            }
+            
+            Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
             var valueAsString = (string)value;
             var values = valueAsString.Split(' ');
@@ -388,7 +384,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-                var expectedValueType = metadata.WhereFields[fieldName];
+                var expectedValueType = metadata.WhereFields[fieldName].Type;
 
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
@@ -426,7 +422,7 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-                var expectedValueType = metadata.WhereFields[fieldName];
+                var expectedValueType = metadata.WhereFields[fieldName].Type;
 
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);

@@ -41,25 +41,13 @@ namespace Raven.Server.Documents.Indexes
             if (fields.Count == 0)
                 return $"Auto/{collection}";
             
-            var combinedFields = string.Join("And", fields.Select(x => x.Name).OrderBy(x => x));
-
-            /*
-            var sortOptions = fields.Where(x => x.Sort != null && x.Sort.Value != SortOptions.String && x.Sort.Value != SortOptions.None)
-                .Select(x => x.Name)
-                .ToArray();
-
-             * if (sortOptions.Length > 0)
+            var combinedFields = string.Join("And", fields.Select(x =>
             {
-                combinedFields = $"{combinedFields}SortBy{string.Join(string.Empty, sortOptions.OrderBy(x => x))}";
-            }
+                if (x.Indexing == FieldIndexing.Analyzed)
+                    return $"Analyzed({x.Name})";
 
-            
-            var highlighted = fields.Where(x => x.Highlighted).Select(x => IndexField.ReplaceInvalidCharactersInFieldName(x.Name)).ToArray();
-            if (highlighted.Length > 0)
-            {
-                combinedFields = $"{combinedFields}Highlight{string.Join(string.Empty, highlighted.OrderBy(x => x))}";
-            }
-            */
+                return x.Name;
+            }).OrderBy(x => x));
 
             string formattableString = $"Auto/{collection}/By{combinedFields}";
             if (formattableString.Length > 256)
