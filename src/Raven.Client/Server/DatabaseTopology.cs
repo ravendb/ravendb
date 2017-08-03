@@ -4,6 +4,7 @@ using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json.Parsing;
 using System.Linq;
+using Raven.Client.Server.Operations;
 
 namespace Raven.Client.Server
 {
@@ -71,7 +72,7 @@ namespace Raven.Client.Server
         public List<string> Rehabs = new List<string>();
 
         public Dictionary<string, string> DemotionReasons = new Dictionary<string, string>();
-        public Dictionary<string, string> PromotablesStatus = new Dictionary<string, string>();
+        public Dictionary<string, DatabasePromotionStatus> PromotablesStatus = new Dictionary<string, DatabasePromotionStatus>();
 
         public LeaderStamp Stamp;
         public bool DynamicNodesDistribution = true;

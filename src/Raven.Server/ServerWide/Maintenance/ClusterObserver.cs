@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.Server;
+using Raven.Client.Server.Operations;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -295,6 +296,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
         {
+            if (topology.DynamicNodesDistribution == false)
+                return false;
+
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) && 
                 nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&
@@ -332,7 +336,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = nodeStats?.Status.ToString();
+            topology.PromotablesStatus[member] = DatabasePromotionStatus.NotRespondingMovedToRehab;
 
             if (_logger.IsOperationsEnabled)
             {
@@ -390,7 +394,11 @@ namespace Raven.Server.ServerWide.Maintenance
                     _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the indexes are not up-to-date.\n");
                 }
 
-                topology.PromotablesStatus[promotable] = "node is not ready to be promoted, because the indexes are not up-to-date";
+                if (topology.PromotablesStatus[promotable] != DatabasePromotionStatus.IndexNotUpToDate)
+                {
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.IndexNotUpToDate;
+                    return true;
+                }
             }
             else
             {
@@ -399,9 +407,14 @@ namespace Raven.Server.ServerWide.Maintenance
                     _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
                                  $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
                 }
-                topology.PromotablesStatus[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
-                                                         $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, " +
-                                                         $"node's change vector : {promotableDbStats.LastChangeVector}";
+//                topology.PromotablesStatus[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
+//                                                         $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, " +
+//                                                         $"node's change vector : {promotableDbStats.LastChangeVector}";
+                if (topology.PromotablesStatus[promotable] != DatabasePromotionStatus.ChangeVectorNotMerged)
+                {
+                    topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
+                    return true;
+                }
             }
             return false;
         }

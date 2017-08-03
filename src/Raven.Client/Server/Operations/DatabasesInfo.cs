@@ -111,9 +111,19 @@ namespace Raven.Client.Server.Operations
         }
     }
 
+    public enum DatabasePromotionStatus
+    {
+        WaitingForFirstPromotion,
+        NotRespondingMovedToRehab,
+        IndexNotUpToDate,
+        ChangeVectorNotMerged,
+        WaitingForResponse,
+        Ok
+    }
+
     public class DbGroupNodeStatus : IDynamicJson
     {
-        public string LastStatus;
+        public DatabasePromotionStatus LastStatus;
         public string LastError;
 
         public DynamicJsonValue ToJson()
