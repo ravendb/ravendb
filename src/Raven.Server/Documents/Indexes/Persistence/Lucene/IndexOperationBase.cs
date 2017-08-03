@@ -46,11 +46,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 var fieldName = field.Key;
 
-                if (field.Value.FullTextSearchField != null)
-                {
-                    AddStandardAnalyzer(field.Value.FullTextSearchField);
-                }
-
                 switch (field.Value.Indexing)
                 {
                     case FieldIndexing.NotAnalyzed:

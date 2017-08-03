@@ -201,11 +201,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 instance.Add(GetOrCreateField(path, stringValue, null, null, storage, indexing, termVector));
                 newFields++;
-                if (field.FullTextSearchField != null)
-                {
-                    instance.Add(GetOrCreateField(field.FullTextSearchField, stringValue, null, null, storage, Field.Index.ANALYZED, termVector));
-                    newFields++;
-                }
                 return newFields;
             }
 
@@ -219,11 +214,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
                 instance.Add(GetOrCreateField(path, null, lazyStringValue, null, storage, indexing, termVector));
                 newFields++;
-                if (field.FullTextSearchField != null)
-                {
-                    instance.Add(GetOrCreateField(field.FullTextSearchField, lazyStringValue, null, null, storage, Field.Index.ANALYZED, termVector));
-                    newFields++;
-                }
                 return newFields;
             }
 

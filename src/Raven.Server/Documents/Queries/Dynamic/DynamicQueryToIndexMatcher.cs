@@ -132,7 +132,21 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             foreach (var field in query.MapFields)
             {
-                if (definition.ContainsField(field.Name) == false)
+                if (definition.TryGetField(field.Name, out var indexField))
+                {
+                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                    }
+
+                    if (field.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
+                    {
+                        explanations?.Add(new Explanation(indexName, $"The following is analyzed {indexField.Name}, while the query asks for non analyzed values"));
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                    }
+                }
+                else
                 {
                     explanations?.Add(new Explanation(indexName, $"The following field is missing: {field.Name}"));
                     currentBestState = DynamicQueryMatchType.Partial;

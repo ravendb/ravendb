@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries
             CanCache = true;
             foreach (var kvp in WhereFields)
             {
-                if (kvp.Value != ValueTokenType.Null)
+                if (kvp.Value.Type != ValueTokenType.Null)
                     continue;
 
                 CanCache = false;
@@ -61,11 +61,9 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string QueryText;
 
-        public HashSet<string> FullTextSeachFields;
-
         public readonly HashSet<string> IndexFieldNames = new HashSet<string>();
 
-        public readonly Dictionary<string, ValueTokenType> WhereFields = new Dictionary<string, ValueTokenType>(StringComparer.OrdinalIgnoreCase);
+        public readonly Dictionary<string, WhereField> WhereFields = new Dictionary<string, WhereField>(StringComparer.OrdinalIgnoreCase);
 
         public string[] GroupBy;
 
@@ -77,11 +75,10 @@ namespace Raven.Server.Documents.Queries
 
         private void AddSearchField(string fieldName, ValueTokenType value)
         {
-            if (FullTextSeachFields == null)
-                FullTextSeachFields = new HashSet<string>();
             var indexFieldName = GetIndexFieldName(fieldName);
-            FullTextSeachFields.Add(indexFieldName);
-            WhereFields[indexFieldName] = value;
+
+            IndexFieldNames.Add(indexFieldName);
+            WhereFields[indexFieldName] = new WhereField(value, isFullTextSearch: true);
         }
 
         private void AddExistField(string fieldName)
@@ -94,7 +91,7 @@ namespace Raven.Server.Documents.Queries
             var indexFieldName = GetIndexFieldName(fieldName);
 
             IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = value;
+            WhereFields[indexFieldName] = new WhereField(value, isFullTextSearch: false);
         }
 
         private void Build(BlittableJsonReaderObject parameters)

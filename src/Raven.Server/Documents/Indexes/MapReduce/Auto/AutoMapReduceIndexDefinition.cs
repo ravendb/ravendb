@@ -73,8 +73,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 writer.WritePropertyName(nameof(field.Name));
                 writer.WriteString(field.Name);
                 writer.WriteComma();
-                writer.WritePropertyName(nameof(field.FullTextSearchField));
-                writer.WriteString(field.FullTextSearchField);
                 writer.WriteEndObject();
 
                 first = false;
@@ -155,7 +153,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 json.TryGet(nameof(IndexField.Name), out string name);
                 json.TryGet(nameof(IndexField.Aggregation), out int aggregationAsInt);
-                json.TryGet(nameof(IndexField.FullTextSearchField), out string fts);
 
                 var field = new IndexField
                 {
@@ -163,7 +160,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Storage = FieldStorage.Yes,
                     Indexing = FieldIndexing.Default,
                     Aggregation = (AggregationOperation)aggregationAsInt,
-                    FullTextSearchField = fts
                 };
 
                 mapFields[i] = field;
