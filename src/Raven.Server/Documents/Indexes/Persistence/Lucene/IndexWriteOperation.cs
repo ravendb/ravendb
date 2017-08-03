@@ -6,6 +6,7 @@ using Lucene.Net.Index;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Exceptions;
@@ -44,7 +45,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             try
             {
-                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), index.Definition.MapFields);
+                var definitionFields = index.Definition.MapFields;
+
+                if (index.Definition is AutoMapReduceIndexDefinition autoMapReduceDef)
+                    definitionFields = autoMapReduceDef.MapAndGroupByFields;
+
+
+                _analyzer = CreateAnalyzer(() => new LowerCaseKeywordAnalyzer(), definitionFields);
             }
             catch (Exception e)
             {
