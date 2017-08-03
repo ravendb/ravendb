@@ -106,11 +106,6 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.Select != null)
                 FillSelectFields(parameters);
-            else
-            {
-                if (IsGroupBy)
-                    ThrowMissingSelectClauseInGroupByQuery(QueryText, parameters);
-            }
 
             if (Query.Where != null)
                 new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
@@ -305,11 +300,6 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unhandled expression of type {expressionType} in SELECT clause", queryText, parameters);
-        }
-
-        private static void ThrowMissingSelectClauseInGroupByQuery(string queryText, BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException("Query having GROUP BY needs to have at least one aggregation operation defined in SELECT such as count() or sum()", queryText, parameters);
         }
 
         private static void ThrowInvalidOperatorTypeInOrderBy(OperatorType type, string queryText, BlittableJsonReaderObject parameters)

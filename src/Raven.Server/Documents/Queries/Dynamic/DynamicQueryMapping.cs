@@ -46,9 +46,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 ).ToArray());
             }
 
-            if (MapFields.Length == 0)
-                throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no aggregation specified.");
-
             if (GroupByFields.Length == 0)
                 throw new InvalidOperationException("Invalid dynamic map-reduce query mapping. There is no group by field specified.");
 
@@ -138,45 +135,48 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IsMapReduce = true;
 
-                foreach (var field in query.Metadata.SelectFields)
+                if (query.Metadata.SelectFields != null)
                 {
-                    if (field.IsGroupByKey == false)
+                    foreach (var field in query.Metadata.SelectFields)
                     {
-                        var fieldName = field.Name;
+                        if (field.IsGroupByKey == false)
+                        {
+                            var fieldName = field.Name;
 
-                        if (mapFields.TryGetValue(fieldName, out var existingField) == false)
-                        {
-                            switch (field.AggregationOperation)
+                            if (mapFields.TryGetValue(fieldName, out var existingField) == false)
                             {
-                                case AggregationOperation.None:
-                                    break;
-                                case AggregationOperation.Count:
-                                case AggregationOperation.Sum:
-                                    mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
-                                    break;
-                                default:
-                                    ThrowUnknownAggregationOperation(field.AggregationOperation);
-                                    break;
+                                switch (field.AggregationOperation)
+                                {
+                                    case AggregationOperation.None:
+                                        break;
+                                    case AggregationOperation.Count:
+                                    case AggregationOperation.Sum:
+                                        mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
+                                        break;
+                                    default:
+                                        ThrowUnknownAggregationOperation(field.AggregationOperation);
+                                        break;
+                                }
                             }
-                        }
-                        else if (field.AggregationOperation != AggregationOperation.None)
-                        {
-                            existingField.AggregationOperation = field.AggregationOperation;
+                            else if (field.AggregationOperation != AggregationOperation.None)
+                            {
+                                existingField.AggregationOperation = field.AggregationOperation;
+                            }
+                            else
+                            {
+                                Debug.Assert(query.Metadata.GroupBy.Contains(fieldName));
+                                // the field was specified in GROUP BY and WHERE
+                                // let's remove it since GROUP BY fields are passed separately
+
+                                mapFields.Remove(fieldName);
+                            }
                         }
                         else
                         {
-                            Debug.Assert(query.Metadata.GroupBy.Contains(fieldName));
-                            // the field was specified in GROUP BY and WHERE
-                            // let's remove it since GROUP BY fields are passed separately
-
-                            mapFields.Remove(fieldName);
-                        }
-                    }
-                    else
-                    {
-                        foreach (var groupBy in field.GroupByKeys)
-                        {
-                            mapFields.Remove(groupBy);
+                            foreach (var groupBy in field.GroupByKeys)
+                            {
+                                mapFields.Remove(groupBy);
+                            }
                         }
                     }
                 }
