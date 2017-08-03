@@ -103,6 +103,9 @@
     <None Update="settings_posix.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="settings_debug.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="settings_windows.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
