@@ -36,6 +36,14 @@ namespace Raven.Abstractions.Util
             return EscapeInternal(term, allowWildcards, makePhrase, false);
         }
 
+
+        public static bool IsEscapedChar(char c)
+        {
+            return escapeChars.Contains(c);
+        }
+
+        private static HashSet<char> escapeChars = new HashSet<char> {'*', '?', '+', '-', '&', '|', '!', '(', ')', '{', '}', '[', ']', '^', '~', '/', ':','\"','\\'};
+
         public static string EscapeInternal(string term, bool allowWildcards, bool makePhrase, bool nested)
         {
             // method doesn't allocate a StringBuilder unless the string requires escaping
