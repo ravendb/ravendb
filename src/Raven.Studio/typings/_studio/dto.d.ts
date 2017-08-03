@@ -143,6 +143,11 @@ interface availableConfigurationSection {
     validationGroup?: KnockoutValidationGroup;
 }
 
+interface storageReportDto {
+    BasePath: string;
+    Results: storageReportItemDto[];
+}
+
 interface storageReportItemDto {
     Name: string;
     Type: string;
