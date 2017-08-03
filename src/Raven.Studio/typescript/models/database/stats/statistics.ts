@@ -2,7 +2,7 @@
 import indexStatistics = require("models/database/stats/indexStatistics");
 
 class statistics {
-    dataBaseId: string;
+    databaseId: string;
     lastDocEtag?: number;
     countOfIndexes: string;
     countOfDocuments: string;
@@ -14,7 +14,7 @@ class statistics {
     indexesByType = ko.observableArray<indexesWithType>(); 
     
     constructor(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexStats: Raven.Client.Documents.Indexes.IndexStats[]) {
-        this.dataBaseId = dbStats.DatabaseId; 
+        this.databaseId = dbStats.DatabaseId; 
         this.lastDocEtag = dbStats.LastDocEtag;
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
