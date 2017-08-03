@@ -252,20 +252,11 @@ class databaseCreationModel {
     }
 
     private topologyToDto(): Raven.Client.Server.DatabaseTopology {
-        let topology = null as Raven.Client.Server.DatabaseTopology;
+        const topology = {
+            DynamicNodesDistribution: this.replication.dynamicMode()
+        } as Raven.Client.Server.DatabaseTopology;
 
-        
-        if (this.replication.dynamicMode()) {
-            topology = {
-                DynamicNodesDistribution: true
-            } as Raven.Client.Server.DatabaseTopology;
-        }
-        
         if (this.replication.manualMode()) {
-            if (!topology) {
-                topology = {} as Raven.Client.Server.DatabaseTopology;
-            }
-            
             const nodes = this.replication.nodes();
             topology.Members = nodes.map(node => node.tag());
         }
