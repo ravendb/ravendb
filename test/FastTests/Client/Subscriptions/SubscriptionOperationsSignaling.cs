@@ -225,7 +225,8 @@ namespace FastTests.Client.Subscriptions
                 }
 
                 var innerException = Assert.Throws<AggregateException>(()=> task .Wait()).InnerException;
-                Assert.IsType<InvalidCastException>(innerException);
+                Assert.IsType<SubscriberErrorException>(innerException);
+                Assert.IsType<InvalidCastException>(innerException.InnerException);
             }
         }
     }

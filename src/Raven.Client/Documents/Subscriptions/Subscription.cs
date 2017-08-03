@@ -480,7 +480,7 @@ namespace Raven.Client.Documents.Subscriptions
                                         }
 
                                         if (_options.IgnoreSubscriberErrors == false)
-                                            throw;
+                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription {SubscriptionId}",ex);
                                     }
 
                                 }
@@ -639,6 +639,9 @@ namespace Raven.Client.Documents.Subscriptions
                     }
                     catch (Exception e)
                     {
+                        if (e == ex)
+                            throw e;
+
                         throw new AggregateException(e, ex);
                     }
                 }
@@ -663,6 +666,7 @@ namespace Raven.Client.Documents.Subscriptions
                 case DatabaseDoesNotExistException _:
                 case AuthorizationException _:
                 case AllTopologyNodesDownException _:
+                case SubscriberErrorException _:
                 case RavenException _:
                     _processingCts.Cancel();
                     return false;
