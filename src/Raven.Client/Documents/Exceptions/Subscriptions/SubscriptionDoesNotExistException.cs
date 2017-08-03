@@ -11,21 +11,12 @@ namespace Raven.Client.Documents.Exceptions.Subscriptions
 {
     public class SubscriptionDoesNotExistException : SubscriptionException
     {
-        public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.NotFound;
-
-        public SubscriptionDoesNotExistException() : base(RelevantHttpStatusCode)
+        public SubscriptionDoesNotExistException(string message) : base(message)
         {
         }
 
-        public SubscriptionDoesNotExistException(string message)
-            : base(message, RelevantHttpStatusCode)
+        public SubscriptionDoesNotExistException(string message, Exception inner) : base(message, inner)
         {
         }
-
-        public SubscriptionDoesNotExistException(string message, Exception inner)
-            : base(message, inner, RelevantHttpStatusCode)
-        {
-        }
-
     }
 }

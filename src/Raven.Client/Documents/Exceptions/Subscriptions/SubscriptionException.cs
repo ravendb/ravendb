@@ -12,23 +12,15 @@ namespace Raven.Client.Documents.Exceptions.Subscriptions
 {
     public abstract class SubscriptionException : RavenException
     {
-        protected SubscriptionException(HttpStatusCode httpResponseCode)
-        {
-            ResponseStatusCode = httpResponseCode;
-        }
-
-        protected SubscriptionException(string message, HttpStatusCode httpResponseCode)
+        protected SubscriptionException(string message)
             : base(message)
         {
-            ResponseStatusCode = httpResponseCode;
         }
 
-        protected SubscriptionException(string message, Exception inner, HttpStatusCode httpResponseCode)
+        protected SubscriptionException(string message, Exception inner)
             : base(message, inner)
         {
-            ResponseStatusCode = httpResponseCode;
         }
-
-        public HttpStatusCode ResponseStatusCode { get; private set; }
+        
     }
 }
