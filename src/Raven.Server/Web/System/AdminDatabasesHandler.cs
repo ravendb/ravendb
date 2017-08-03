@@ -119,7 +119,7 @@ namespace Raven.Server.Web.System
 
                     databaseRecord.Topology.Promotables.Add(node);
                     databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[node] = "Waiting for first promotion";
+                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
                 //The case were we don't care where the database will be added to
@@ -143,7 +143,7 @@ namespace Raven.Server.Web.System
 
                     databaseRecord.Topology.Promotables.Add(newNode);
                     databaseRecord.Topology.DemotionReasons[newNode] = "Joined the Db-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[newNode] = "Waiting for first promotion";
+                    databaseRecord.Topology.PromotablesStatus[newNode] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;

@@ -377,7 +377,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
-                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = "Ok" };
+                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = DatabasePromotionStatus.Ok };
                 }
 
                 foreach (var promotable in topology.Promotables)
