@@ -69,7 +69,7 @@ namespace SlowTests.Issues
                     }
                 });
 
-                Assert.Contains("The field 'LastName' is not indexed, cannot query on fields that are not indexed", e.InnerException.Message);
+                Assert.Contains("The field 'LastName' is not indexed, cannot query/sort on fields that are not indexed", e.InnerException.Message);
 
                 store.Admin.Send(new StartIndexingOperation());
 
