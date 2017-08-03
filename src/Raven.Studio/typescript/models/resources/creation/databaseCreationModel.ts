@@ -4,6 +4,7 @@ import configuration = require("configuration");
 import clusterNode = require("models/database/cluster/clusterNode");
 import getRestorePointsCommand = require("commands/resources/getRestorePointsCommand");
 import viewHelpers = require("common/helpers/view/viewHelpers");
+import generalUtils = require("common/generalUtils");
 import recentError = require("common/notifications/models/recentError");
 
 class databaseCreationModel {
@@ -139,7 +140,7 @@ class databaseCreationModel {
                 })
                 .fail((response: JQueryXHR) => {
                     const messageAndOptionalException = recentError.tryExtractMessageAndException(response.responseText);
-                    this.backupDirectoryError(recentError.trimMessage(messageAndOptionalException.message));
+                    this.backupDirectoryError(generalUtils.trimMessage(messageAndOptionalException.message));
                     this.lastFailedBackupDirectory = this.backupDirectory();
                     this.backupDirectory.valueHasMutated();
                 })

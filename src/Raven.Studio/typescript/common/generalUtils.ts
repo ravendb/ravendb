@@ -174,6 +174,22 @@ class genUtils {
 
     /***  String Methods ***/
 
+    static trimMessage(message: string) {
+        if (!message) {
+            return message;
+        }
+        const lineBreakIdx = Math.min(message.indexOf("\r"), message.indexOf("\r"));
+        if (lineBreakIdx !== -1 && lineBreakIdx < 256) {
+            return message.substr(0, lineBreakIdx);
+        }
+
+        if (message.length < 256) {
+            return message;
+        }
+
+        return message.substr(0, 256) + "...";
+    }
+    
     static formatAsCommaSeperatedString(input: number, digitsAfterDecimalPoint: number) {
         const parts = input.toString().split(".");
         parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ",");

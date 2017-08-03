@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts" />
 
 import abstractNotification = require("common/notifications/models/abstractNotification");
+import generalUtils = require("common/generalUtils");
 
 class recentError extends abstractNotification {
 
@@ -29,7 +30,7 @@ class recentError extends abstractNotification {
 
     private initObservables() {
         this.hasDetails = ko.pureComputed(() => !!this.details());
-        this.shortMessage = ko.pureComputed(() => recentError.trimMessage(this.message()));
+        this.shortMessage = ko.pureComputed(() => generalUtils.trimMessage(this.message()));
     }
 
     static tryExtractMessageAndException(details: string): { message: string, error: string } {
@@ -47,22 +48,6 @@ class recentError extends abstractNotification {
         } catch (e) {
             return { message: details, error: null };
         }
-    }
-
-    static trimMessage(message: string) {
-        if (!message) {
-            return message;
-        }
-        const lineBreakIdx = Math.min(message.indexOf("\r"), message.indexOf("\r"));
-        if (lineBreakIdx !== -1 && lineBreakIdx < 256) {
-            return message.substr(0, lineBreakIdx);
-        }
-
-        if (message.length < 256) {
-            return message;
-        }
-
-        return message.substr(0, 256) + "...";
     }
 
     static create(severity: Raven.Server.NotificationCenter.Notifications.NotificationSeverity, title: string, details: string, httpStatus: string) {
