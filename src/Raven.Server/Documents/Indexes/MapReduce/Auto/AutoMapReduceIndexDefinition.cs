@@ -11,16 +11,25 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
     public class AutoMapReduceIndexDefinition : IndexDefinitionBase
     {
         public readonly Dictionary<string, IndexField> GroupByFields;
+        
+        public readonly Dictionary<string, IndexField> MapAndGroupByFields;
 
         public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
             : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
         {
-            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x, StringComparer.OrdinalIgnoreCase); ;
-        }
+            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x);
+            
+            MapAndGroupByFields = new Dictionary<string, IndexField>(MapFields.Count + GroupByFields.Count);
 
-        public bool ContainsGroupByField(string field)
-        {
-            return GroupByFields.ContainsKey(field);
+            foreach (var field in MapFields)
+            {
+                MapAndGroupByFields[field.Key] = field.Value;
+            }
+            
+            foreach (var field in GroupByFields)
+            {
+                MapAndGroupByFields[field.Key] = field.Value;
+            }
         }
 
         public override bool TryGetField(string field, out IndexField value)
@@ -72,7 +81,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 writer.WritePropertyName(nameof(field.Name));
                 writer.WriteString(field.Name);
+
                 writer.WriteComma();
+
+                writer.WritePropertyName(nameof(field.Indexing));
+                writer.WriteString(field.Indexing.ToString());
+
                 writer.WriteEndObject();
 
                 first = false;
@@ -175,12 +189,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                 var json = jsonArray.GetByIndex<BlittableJsonReaderObject>(i);
 
                 json.TryGet(nameof(IndexField.Name), out string name);
+                json.TryGet(nameof(IndexField.Indexing), out string indexing);
 
                 var field = new IndexField
                 {
                     Name = name,
                     Storage = FieldStorage.Yes,
-                    Indexing = FieldIndexing.Default
+                    Indexing = (FieldIndexing)Enum.Parse(typeof(FieldIndexing), indexing)
                 };
 
                 groupByFields[i] = field;

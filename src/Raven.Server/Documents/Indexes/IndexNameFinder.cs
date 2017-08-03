@@ -21,7 +21,13 @@ namespace Raven.Server.Documents.Indexes
             if (groupBy == null)
                 throw new ArgumentNullException(nameof(groupBy));
 
-            var reducedByFields = string.Join("And", groupBy.Select(x => x.Name).OrderBy(x => x));
+            var reducedByFields = string.Join("And", groupBy.Select(x =>
+            {
+                if (x.Indexing == FieldIndexing.Analyzed)
+                    return $"Analyzed({x.Name})";
+
+                return x.Name;
+            }).OrderBy(x => x));
 
             return $"{FindName(collection, fields)}ReducedBy{reducedByFields}";
         }

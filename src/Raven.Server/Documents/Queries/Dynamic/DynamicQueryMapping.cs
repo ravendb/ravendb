@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public DynamicQueryMappingItem[] MapFields { get; private set; } = new DynamicQueryMappingItem[0];
 
-        public string[] GroupByFields { get; private set; } = new string[0];
+        public DynamicQueryMappingItem[] GroupByFields { get; private set; } = new DynamicQueryMappingItem[0];
 
         public string[] HighlightedFields { get; private set; }
 
@@ -64,11 +64,18 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     return indexField;
                 }).ToArray(),
                 GroupByFields.Select(field =>
-                    new IndexField
+                {
+                    var indexField = new IndexField
                     {
-                        Name = field,
+                        Name = field.Name,
                         Storage = FieldStorage.No,
-                    }).ToArray());
+                    };
+                    
+                    if (field.IsFullTextSearch)
+                        indexField.Indexing = FieldIndexing.Analyzed;
+
+                    return indexField;
+                }).ToArray());
         }
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
@@ -135,6 +142,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 result.IsMapReduce = true;
 
+                var groupByFields = query.Metadata.GroupBy;
+                
                 if (query.Metadata.SelectFields != null)
                 {
                     foreach (var field in query.Metadata.SelectFields)
@@ -164,7 +173,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             }
                             else
                             {
-                                Debug.Assert(query.Metadata.GroupBy.Contains(fieldName));
+                                Debug.Assert(groupByFields.Contains(fieldName));
                                 // the field was specified in GROUP BY and WHERE
                                 // let's remove it since GROUP BY fields are passed separately
 
@@ -181,7 +190,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     }
                 }
 
-                result.GroupByFields = query.Metadata.GroupBy;
+                result.GroupByFields = new DynamicQueryMappingItem[groupByFields.Length];
+
+                for (int i = 0; i < groupByFields.Length; i++)
+                {
+                    var groupByField = groupByFields[i];
+                    
+                    var mapping = new DynamicQueryMappingItem(groupByField, AggregationOperation.None);
+                    
+                    if (query.Metadata.WhereFields.TryGetValue(groupByField, out var whereField) && whereField.IsFullTextSearch)
+                        mapping.IsFullTextSearch = true;
+                    
+                    result.GroupByFields[i] = mapping;
+                }
             }
 
             result.MapFields = mapFields.Values.ToArray();
