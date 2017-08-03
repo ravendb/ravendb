@@ -103,18 +103,15 @@ namespace Raven.Server.Config
         {
             if (string.IsNullOrEmpty(customConfigPath) == false)
             {
-                    _configBuilder.AddJsonFile(customConfigPath, optional: true);
-                // if we were specified a non existing file, don't use the defaults
-                return;
+                if (File.Exists(customConfigPath) == false)
+                    throw new FileNotFoundException("Custom configuration file has not been found.", customConfigPath);
+                    
+                _configBuilder.AddJsonFile(customConfigPath, optional: true);
+            } 
+            else 
+            {
+                _configBuilder.AddJsonFile("settings.json", optional: true);
             }
-
-            var platformPostfix = "windows";
-            if (PlatformDetails.RunningOnPosix)
-                platformPostfix = "posix";
-
-            _configBuilder.AddJsonFile($"settings_{platformPostfix}.json", optional: true);
-            _configBuilder.AddJsonFile("settings_debug.json", optional: true);
-            _configBuilder.AddJsonFile("settings.json", optional: true);
         }
 
         private void AddEnvironmentVariables()

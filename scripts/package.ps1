@@ -145,18 +145,16 @@ function CreatePackageServerLayout ( $projectDir, $serverOutDir, $packageDir, $s
     write-host "Create package server directory layout..."
 
     if ($spec.IsUnix) { 
-       $settingsFileName = "settings_posix.json" 
+       $settingsFileName = "settings.posix.json" 
     } else { 
-       $settingsFileName = "settings_windows.json" 
+       $settingsFileName = "settings.windows.json" 
     }
 
-    $settingsFilePath = [io.path]::combine($serverOutDir, $settingsFileName)
+    $settingsFilePath = [io.path]::combine($projectDir, "src", "Raven.Server", "Properties", "Settings", $settingsFileName)
     $settingsTargetPath = [io.path]::combine($serverOutDir, "settings.json")
 
-    $settingsFilesToRemovePath = [io.path]::combine($serverOutDir, "settings_*.json")
+    Copy-Item -Force "$settingsFilePath" $settingsTargetPath
 
-    Move-Item "$settingsFilePath" $settingsTargetPath
-    Remove-Item "$settingsFilesToRemovePath"
     Copy-Item "$serverOutDir" -Recurse -Destination "$packageDir"
 }
 
