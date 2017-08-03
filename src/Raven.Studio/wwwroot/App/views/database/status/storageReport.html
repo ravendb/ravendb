@@ -6,7 +6,7 @@
         <div class="chart"></div>
     </div>
 
-    <h4>Current path:</h4>
+    <h4>Current path: <span data-bind="text: basePath"></span></h4>
     <div class="current-path">
         <span data-bind="foreach: currentPath">
             <a href="#" data-bind="click: _.partial($root.onClick, $data, false), attr: { class: type }">

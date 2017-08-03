@@ -8,9 +8,9 @@ class getStorageReportCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<resultsDto<storageReportItemDto>> {
+    execute(): JQueryPromise<storageReportDto> {
         const url = endpoints.databases.storage.debugStorageReport;
-        return this.query<resultsDto<storageReportItemDto>>(url, null, this.db)
+        return this.query<storageReportDto>(url, null, this.db)
             .fail((response: JQueryXHR) => this.reportError("Failed to load storage report", response.responseText, response.statusText));
     }
 }

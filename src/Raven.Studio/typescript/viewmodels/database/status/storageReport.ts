@@ -17,6 +17,7 @@ class storageReport extends viewModelBase {
 
     static readonly animationLegth = 200;
 
+    basePath: string;
     private rawData = [] as storageReportItemDto[];
 
     private currentPath: KnockoutComputed<Array<storageReportItem>>;
@@ -52,6 +53,7 @@ class storageReport extends viewModelBase {
         return new getStorageReportCommand(this.activeDatabase())
             .execute()
             .done(result => {
+                this.basePath = result.BasePath;
                 this.rawData = result.Results;
             });
     }
