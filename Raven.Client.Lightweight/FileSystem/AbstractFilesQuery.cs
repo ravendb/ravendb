@@ -621,9 +621,28 @@ namespace Raven.Client.FileSystem
             var result = TransformToEqualValue(whereParams);
 
             if (isReversed)
-                return new string(result.Reverse().ToArray());
+            {
+                var hasEscaping = result.IndexOf("\\");
+                var arr = result.Reverse().ToArray();
+                if (hasEscaping < 0)
+                    return new string(arr);
+                return SwapEscaping(arr);
+            }
             else
                 return result;
+        }
+
+        private string SwapEscaping(char[] arr)
+        {
+            for (var i = 1; i < arr.Length; i++)
+            {
+                if (arr[i] == '\\' && RavenQuery.IsEscapedChar(arr[i - 1]))
+                {
+                    arr[i] = arr[i - 1];
+                    arr[i - 1] = '\\';
+                }
+            }
+            return new string(arr);
         }
 
         private string TransformToEqualValue(WhereParams whereParams)
