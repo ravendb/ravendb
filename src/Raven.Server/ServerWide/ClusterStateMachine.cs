@@ -769,6 +769,7 @@ namespace Raven.Server.ServerWide
             Stream stream = null;
             try
             {
+                TcpUtils.SetTimeouts(tcpClient, _parent.TcpConnectionTimeout);
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
                 stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, this._parent.ClusterCertificate);
 

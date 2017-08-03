@@ -13,6 +13,13 @@ namespace Raven.Client.Documents
 {
     internal static class TcpUtils
     {
+
+        internal static void SetTimeouts(TcpClient client, TimeSpan timeout)
+        {
+            client.SendTimeout = (int)timeout.TotalMilliseconds;
+            client.ReceiveTimeout = (int)timeout.TotalMilliseconds;
+        }
+
         internal static async Task ConnectSocketAsync(TcpConnectionInfo connection, TcpClient tcpClient, Logger log)
         {
             var uri = new Uri(connection.Url);

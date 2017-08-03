@@ -313,6 +313,7 @@ namespace Tests.Infrastructure
             {
                 var tcpInfo = new Uri(url);
                 var tcpClient = new TcpClient();
+                TcpUtils.SetTimeouts(tcpClient, _parent.TcpConnectionTimeout);
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
                 return tcpClient.GetStream();
             }
