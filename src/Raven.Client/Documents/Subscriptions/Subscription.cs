@@ -287,7 +287,7 @@ namespace Raven.Client.Documents.Subscriptions
 
         private async Task<Stream> ConnectToServer()
         {
-            var command = new GetTcpInfoCommand("Subscription/" + _dbName);
+            var command = new GetTcpInfoCommand("Subscription/" + _dbName, _dbName);
 
             JsonOperationContext context;
             var requestExecutor = _store.GetRequestExecutor(_dbName);
@@ -649,15 +649,6 @@ namespace Raven.Client.Documents.Subscriptions
         {
             switch (ex)
             {
-                case SubscriptionInUseException _:
-                case SubscriptionDoesNotExistException _:
-                case SubscriptionClosedException _:
-                case SubscriptionInvalidStateException _:
-                case DatabaseDoesNotExistException _:
-                case AuthorizationException _:
-                case AllTopologyNodesDownException _:
-                    _processingCts.Cancel();
-                    return false;
                 case SubscriptionDoesNotBelongToNodeException se:
                     var requestExecutor = _store.GetRequestExecutor(_dbName);
                     var nodeToRedirectTo = requestExecutor.TopologyNodes
@@ -665,6 +656,16 @@ namespace Raven.Client.Documents.Subscriptions
                     _redirectNode = nodeToRedirectTo ?? throw new AggregateException(ex,
                                         new InvalidOperationException($"Could not redirect to {se.AppropriateNode}, because it was not found in local topology, even after retrying"));
                     return true;
+                case SubscriptionInUseException _:
+                case SubscriptionDoesNotExistException _:
+                case SubscriptionClosedException _:
+                case SubscriptionInvalidStateException _:
+                case DatabaseDoesNotExistException _:
+                case AuthorizationException _:
+                case AllTopologyNodesDownException _:
+                case RavenException _:
+                    _processingCts.Cancel();
+                    return false;
                 default:
                     return true;
             }

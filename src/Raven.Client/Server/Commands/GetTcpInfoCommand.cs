@@ -8,15 +8,30 @@ namespace Raven.Client.Server.Commands
     public class GetTcpInfoCommand : RavenCommand<TcpConnectionInfo>
     {
         private readonly string _tag;
+        private string _dbName;
 
         public GetTcpInfoCommand(string tag)
         {
             _tag = tag;
         }
 
+        public GetTcpInfoCommand(string tag, string dbName = null) : this(tag)
+        {
+            _dbName = dbName;
+        }
+
         public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
         {
-            url = $"{node.Url}/info/tcp?tag={_tag}";
+            if (string.IsNullOrEmpty(_dbName))
+            {
+                url = $"{node.Url}/info/tcp?tag={_tag}";
+
+            }
+            else
+            {
+                url = $"{node.Url}/databases/{_dbName}/info/tcp?tag={_tag}";
+                
+            }
             RequestedNode = node;
             var request = new HttpRequestMessage
             {
