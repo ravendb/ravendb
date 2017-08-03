@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.ETL
 {
@@ -18,6 +19,15 @@ namespace Raven.Client.Server.ETL
         public override bool UsingEncryptedCommunicationChannel()
         {
             return Connection.Url?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == true;
+        }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var result = base.ToJson();
+
+            result[nameof(LoadRequestTimeoutInSec)] = LoadRequestTimeoutInSec;
+
+            return result;
         }
     }
 }
