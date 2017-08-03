@@ -857,7 +857,6 @@ namespace Raven.Server
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
                             msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ServerAdmin";
                             return false;
-                        case TcpConnectionHeaderMessage.OperationTypes.BulkInsert:
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
                             if (auth.CanAccess(header.DatabaseName, requireAdmin: false))

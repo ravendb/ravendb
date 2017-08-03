@@ -315,6 +315,9 @@ namespace Raven.Client.Documents.Subscriptions
                 var uri = new Uri(command.Result.Url);
 
                 _tcpClient = new TcpClient();
+                if (requestExecutor.DefaultTimeout != null)
+                    TcpUtils.SetTimeouts(_tcpClient, requestExecutor.DefaultTimeout.Value);
+
                 await _tcpClient.ConnectAsync(uri.Host, uri.Port).ConfigureAwait(false);
 
                 _tcpClient.NoDelay = true;

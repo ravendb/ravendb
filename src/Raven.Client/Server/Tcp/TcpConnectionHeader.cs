@@ -5,7 +5,6 @@
         public enum OperationTypes
         {
             None,
-            BulkInsert,
             Subscription,
             Replication,
             Cluster,
