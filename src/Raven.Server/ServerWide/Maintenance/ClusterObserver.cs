@@ -466,7 +466,7 @@ namespace Raven.Server.ServerWide.Maintenance
             var hasCurrent = current.TryGetValue(node, out var currentNodeStats);
 
             // Wait until we have more info
-            if (hasCurrent == false || currentNodeStats.LastSuccessfulUpdateDateTime == DateTime.MinValue)
+            if (hasCurrent == false)
                 return DatabaseHealth.NotEnoughInfo;
 
             // if server is down we should reassign
