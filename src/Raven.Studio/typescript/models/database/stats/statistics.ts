@@ -3,6 +3,7 @@ import indexStatistics = require("models/database/stats/indexStatistics");
 
 class statistics {
     databaseId: string;
+    databaseChangeVector: string;
     lastDocEtag?: number;
     countOfIndexes: string;
     countOfDocuments: string;
@@ -15,6 +16,7 @@ class statistics {
     
     constructor(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexStats: Raven.Client.Documents.Indexes.IndexStats[]) {
         this.databaseId = dbStats.DatabaseId; 
+        this.databaseChangeVector = dbStats.DatabaseChangeVector;
         this.lastDocEtag = dbStats.LastDocEtag;
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
