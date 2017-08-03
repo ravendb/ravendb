@@ -93,13 +93,14 @@ namespace FastTests.Client.Subscriptions
                 {
                     var acceptedSubscriptionList = new BlockingCollection<Thing>();
 
-                    GC.KeepAlive(acceptedSubscription.Run(u =>
+                    var firstSubscriptionTask = acceptedSubscription.Run(u =>
                     {
                         foreach (var item in u.Items)
                         {
                             acceptedSubscriptionList.Add(item.Result);
                         }
-                    }));
+                    });
+                    GC.KeepAlive(firstSubscriptionTask);
 
 
                     Thing thing;
