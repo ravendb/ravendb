@@ -2,11 +2,13 @@
 import indexStatistics = require("models/database/stats/indexStatistics");
 
 class statistics {
-    dataBaseId: string;
+    databaseId: string;
+    databaseChangeVector: string;
     lastDocEtag?: number;
     countOfIndexes: string;
     countOfDocuments: string;
     countOfTransformers: string;
+    countOfAttachments: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
 
@@ -14,11 +16,16 @@ class statistics {
     indexesByType = ko.observableArray<indexesWithType>(); 
     
     constructor(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexStats: Raven.Client.Documents.Indexes.IndexStats[]) {
-        this.dataBaseId = dbStats.DatabaseId; 
+        this.databaseId = dbStats.DatabaseId; 
+        this.databaseChangeVector = dbStats.DatabaseChangeVector;
         this.lastDocEtag = dbStats.LastDocEtag;
-        this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
+        this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfTransformers = dbStats.CountOfTransformers.toLocaleString();
+        this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
+        if (dbStats.CountOfAttachments > 0 && dbStats.CountOfAttachments !== dbStats.CountOfUniqueAttachments) {
+            this.countOfAttachments += " (" + dbStats.CountOfUniqueAttachments.toLocaleString() + " unique)";
+        }
         this.is64Bit = dbStats.Is64Bit;
         
         // 1. Create the array with all indexes that we got from the endpoint

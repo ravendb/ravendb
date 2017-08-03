@@ -20,6 +20,7 @@ class manageDatabaseGroup extends viewModelBase {
     nodes: KnockoutComputed<databaseGroupNode[]>;
     additionalNodes: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
+    expandedDetails = ko.observableArray<string>([]);
 
     spinners = {
         addNode: ko.observable<boolean>(false)
@@ -28,7 +29,7 @@ class manageDatabaseGroup extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("addNode", "deleteNodeFromGroup");
+        this.bindToCurrentInstance("addNode", "deleteNodeFromGroup", "toggleExpand");
 
         this.initObservables();
     }
@@ -118,6 +119,14 @@ class manageDatabaseGroup extends viewModelBase {
                         .execute();
                 }
             });
+    }
+
+    toggleExpand(tag: string) {
+        if (_.includes(this.expandedDetails(), tag)) {
+            this.expandedDetails.remove(tag);
+        } else {
+            this.expandedDetails.push(tag);
+        }
     }
 
 }

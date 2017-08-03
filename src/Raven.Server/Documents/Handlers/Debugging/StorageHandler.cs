@@ -21,8 +21,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
 
+                    writer.WritePropertyName("BasePath");
+                    writer.WriteString(Database.Configuration.Core.DataDirectory.FullPath);
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Results");
                     writer.WriteStartArray();
                     var first = true;
                     foreach (var env in Database.GetAllStoragesEnvironment())

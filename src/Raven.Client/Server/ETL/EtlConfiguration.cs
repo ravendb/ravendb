@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Server.ETL
 {
@@ -77,6 +79,26 @@ namespace Raven.Client.Server.ETL
         public override string ToString()
         {
             return Name;
+        }
+
+        public virtual DynamicJsonValue ToJson()
+        {
+            var result = new DynamicJsonValue
+            {
+                [nameof(TaskId)] = TaskId,
+                [nameof(Name)] = Name,
+                [nameof(ConnectionStringName)] = ConnectionStringName,
+                [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => new DynamicJsonValue()
+                {
+                    [nameof(x.Name)] = x.Name,
+                    [nameof(x.Script)] = x.Script,
+                    [nameof(x.Collections)] = new DynamicJsonArray(x.Collections),
+                    [nameof(x.ApplyToAllDocuments)] = x.ApplyToAllDocuments,
+                    [nameof(x.Disabled)] = x.Disabled
+                }))
+            };
+
+            return result;
         }
     }
 }
