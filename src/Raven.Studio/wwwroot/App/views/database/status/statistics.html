@@ -7,10 +7,16 @@
 
     <div class="stats-list margin-bottom">
         <div class="row flex-row" data-bind="with: stats">
-            <div class="col-sm-12 col-xl-6">
+            <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
                     <div class="name"><i class="icon-database"></i> <span>Database Id</span></div>
                     <div class="value long"><span data-bind="text: databaseId"></span></div>
+                </div>
+            </div>
+            <div class="col-sm-9 col-xl-9">
+                <div class="stats-item">
+                    <div class="name">Database Change Vector</div>
+                    <div class="value long"><span data-bind="text: databaseChangeVector"></span></div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
