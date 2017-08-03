@@ -11,21 +11,12 @@ namespace Raven.Client.Documents.Exceptions.Subscriptions
 {
     public class SubscriptionInUseException : SubscriptionException
     {
-        public static HttpStatusCode RelevantHttpStatusCode = HttpStatusCode.Gone;
-
-        public SubscriptionInUseException() : base(RelevantHttpStatusCode)
+        public SubscriptionInUseException(string message) : base(message)
         {
         }
 
-        public SubscriptionInUseException(string message)
-            : base(message, RelevantHttpStatusCode)
+        public SubscriptionInUseException(string message, Exception inner) : base(message, inner)
         {
         }
-
-        public SubscriptionInUseException(string message, Exception inner)
-            : base(message, inner, RelevantHttpStatusCode)
-        {
-        }
-
     }
 }
