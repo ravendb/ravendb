@@ -111,7 +111,11 @@
                 <hr class="small" />
                 <dl class="dl-horizontal small" data-bind="with: metadata">
                     <dt>Change Vector:</dt>
-                    <dd data-bind="text: changeVector, attr: { title: changeVector }"></dd>
+                    <dd>
+                        <span data-bind="foreach: $root.changeVector">
+                            <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                        </span>
+                    </dd>
                     <dt>Modified:</dt>
                     <dd data-bind="text: lastModifiedFullDate, attr: { title: lastModifiedFullDate }"></dd>
                     <dt>Size:</dt>

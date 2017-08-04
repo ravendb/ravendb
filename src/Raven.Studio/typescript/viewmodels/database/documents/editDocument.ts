@@ -25,6 +25,7 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import connectedDocuments = require("viewmodels/database/documents/editDocumentConnectedDocuments");
 import timeHelpers = require("common/timeHelpers");
 import getDocumentAtRevisionCommand = require("commands/database/documents/getDocumentAtRevisionCommand");
+import changeVectorUtils = require("common/changeVectorUtils");
 
 import eventsCollector = require("common/eventsCollector");
 
@@ -39,6 +40,7 @@ class editDocument extends viewModelBase {
     document = ko.observable<document>();
     documentText = ko.observable("");
     metadata: KnockoutComputed<documentMetadata>;
+    changeVector: KnockoutComputed<changeVectorItem[]>;
     lastModifiedAsAgo: KnockoutComputed<string>;
     latestRevisionUrl: KnockoutComputed<string>;
     attachmentsCount: KnockoutComputed<number>;
@@ -281,6 +283,16 @@ class editDocument extends viewModelBase {
         });
 
         this.metadata = ko.pureComputed<documentMetadata>(() => this.document() ? this.document().__metadata : null);
+        
+        this.changeVector = ko.pureComputed(() => {
+            const meta = this.metadata();
+            if (!meta || !meta.changeVector()) {
+                return [];
+            }
+            const vector = meta.changeVector();
+
+            return changeVectorUtils.formatChangeVector(vector, changeVectorUtils.shouldUseLongFormat([vector]));
+        });
 
         this.isConflictDocument = ko.computed(() => {
             const metadata = this.metadata();
