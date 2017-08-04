@@ -13,7 +13,7 @@ function Help () {
     Write-Host " - build only Ubuntu 16.04 artifacts"
     
     Write-Host -NoNewline -ForegroundColor Cyan "-Rpi"
-    Write-Host " - build only Raspberry Pie artifacts"
+    Write-Host " - build only Raspberry Pi artifacts"
 
     Write-Host -NoNewline -ForegroundColor Cyan "-DontRebuildStudio"
     Write-Host " - skip building studio if it was build before"

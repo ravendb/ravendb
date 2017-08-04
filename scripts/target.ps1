@@ -30,7 +30,7 @@ $TARGET_SPECS = (
     },
     @{
         "Name"      = "raspberry-pi";
-        "Runtime"   = "";
+        "Runtime"   = "linux-arm";
         "PkgType"   = "tar.bz2";
         "IsUnix"    = $True;
         "TargetId" = "rpi"

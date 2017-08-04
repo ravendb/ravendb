@@ -28,8 +28,12 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="..\Sparrow\bin\Release\$(TargetFramework)\Sparrow.dll">
-      <PackagePath>lib/$(TargetFramework)/</PackagePath>
+    <Content Include="..\Sparrow\bin\Release\netstandard1.3\Sparrow.dll">
+      <PackagePath>lib/netstandard1.3/</PackagePath>
+      <Pack>true</Pack>
+    </Content>
+    <Content Include="..\Sparrow\bin\Release\netstandard2.0\Sparrow.dll">
+      <PackagePath>lib/netstandard2.0/</PackagePath>
       <Pack>true</Pack>
     </Content>
   </ItemGroup>
@@ -45,12 +49,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.5">
     <PackageReference Include="Microsoft.CSharp" Version="4.4.0" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />
-    <PackageReference Include="System.Security.Cryptography.Cng" Version="4.4.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.4">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
-    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" />
+    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" Version="4.4.0" />
+    <PackageReference Include="System.Security.Cryptography.Cng" Version="4.4.0" />
   </ItemGroup>
   <ItemGroup Condition="$(TargetFramework) == 'netstandard1.3'">
     <PackageReference Include="System.Diagnostics.Contracts" Version="4.3.0" />

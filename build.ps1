@@ -17,7 +17,6 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
-. '.\scripts\arm.ps1'
 . '.\scripts\archive.ps1'
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
