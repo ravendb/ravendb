@@ -243,8 +243,8 @@ namespace Raven.Server.Web.System
 
         private DatabaseTopology AssignNodesToDatabase(
             TransactionOperationContext context,
-            int factor, 
-            string name, 
+            int factor,
+            string name,
             bool isEncrypted,
             out List<string> nodeUrlsAddedTo)
         {
@@ -310,10 +310,10 @@ namespace Raven.Server.Web.System
                 beforeSetupConfiguration: readerObject =>
                 {
                     readerObject.TryGet(
-                        nameof(PeriodicBackupConfiguration.FullBackupFrequency), 
+                        nameof(PeriodicBackupConfiguration.FullBackupFrequency),
                         out string fullBackupFrequency);
                     readerObject.TryGet(
-                        nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency), 
+                        nameof(PeriodicBackupConfiguration.IncrementalBackupFrequency),
                         out string incrementalBackupFrequency);
 
                     var parsedFullBackupFrequency = VerifyBackupFrequency(fullBackupFrequency);
@@ -326,7 +326,7 @@ namespace Raven.Server.Web.System
                                                     $"incremental backup cron expression: {incrementalBackupFrequency}");
                     }
 
-                    readerObject.TryGet(nameof(PeriodicBackupConfiguration.LocalSettings), 
+                    readerObject.TryGet(nameof(PeriodicBackupConfiguration.LocalSettings),
                         out BlittableJsonReaderObject localSettings);
 
                     if (localSettings == null)
@@ -381,7 +381,7 @@ namespace Raven.Server.Web.System
         public async Task TestPerioidicBackupCredentials()
         {
             // here we explictily don't care what db I'm an admin of, since it is just a test endpoint
-            
+
             var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
 
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
@@ -404,7 +404,7 @@ namespace Raven.Server.Web.System
                     case PeriodicBackupTestConnectionType.Glacier:
                         var glacierSettings = JsonDeserializationClient.GlacierSettings(connectionInfo);
                         using (var galcierClient = new RavenAwsGlacierClient(
-                            glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey, 
+                            glacierSettings.AwsAccessKey, glacierSettings.AwsSecretKey,
                             glacierSettings.AwsRegionName, glacierSettings.VaultName,
                             cancellationToken: ServerStore.ServerShutdown))
                         {
@@ -414,7 +414,7 @@ namespace Raven.Server.Web.System
                     case PeriodicBackupTestConnectionType.Azure:
                         var azureSettings = JsonDeserializationClient.AzureSettings(connectionInfo);
                         using (var azureClient = new RavenAzureClient(
-                            azureSettings.AccountName, azureSettings.AccountKey, 
+                            azureSettings.AccountName, azureSettings.AccountKey,
                             azureSettings.StorageContainer, cancellationToken: ServerStore.ServerShutdown))
                         {
                             await azureClient.TestConnection();
@@ -518,7 +518,8 @@ namespace Raven.Server.Web.System
 #pragma warning restore 4014
                 {
                     using (returnContextToPool)
-                    using (token){ }
+                    using (token)
+                    { }
                 });
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -532,7 +533,7 @@ namespace Raven.Server.Web.System
                 throw;
             }
         }
-        
+
         private async Task DatabaseConfigurations(Func<TransactionOperationContext, string,
             BlittableJsonReaderObject, Task<(long, object)>> setupConfigurationFunc,
             string debug,
@@ -543,11 +544,11 @@ namespace Raven.Server.Web.System
 
             if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
                 return;
-            
+
             if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
-            
+
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -675,6 +676,31 @@ namespace Raven.Server.Web.System
             await ToggleDisableDatabases(disableRequested: false);
         }
 
+        [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.ServerAdmin)]
+        public async Task ToggleDynamicNodeAssignment()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var enable = GetBoolValueQueryString("enable");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+
+                DatabaseRecord databaseRecord;
+                long index;
+                using (context.OpenReadTransaction())
+                    databaseRecord = ServerStore.Cluster.ReadDatabase(context, name, out index);
+
+                if (enable == databaseRecord.Topology.DynamicNodesDistribution)
+                    return;
+
+                databaseRecord.Topology.DynamicNodesDistribution = enable;
+
+                var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
+                await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
+            }
+        }
+
+
         private async Task ToggleDisableDatabases(bool disableRequested)
         {
             var names = GetStringValuesQueryString("name");
@@ -744,7 +770,7 @@ namespace Raven.Server.Web.System
         [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
-       
+
             var id = GetLongQueryString("id", required: false);
 
             if (id == null)
@@ -754,7 +780,7 @@ namespace Raven.Server.Web.System
 
                 return;
             }
-            
+
             await DatabaseConfigurations((_, databaseName, etlConfiguration) => ServerStore.UpdateEtl(_, databaseName, id.Value, etlConfiguration), "etl-update",
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
@@ -783,7 +809,7 @@ namespace Raven.Server.Web.System
                     var console = new AdminJsConsole(Server);
                     if (console.Log.IsOperationsEnabled)
                     {
-                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert?? "None"}");
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
 
                     result = console.ApplyServerScript(adminJsScript);
@@ -801,7 +827,7 @@ namespace Raven.Server.Web.System
                     var console = new AdminJsConsole(database);
                     if (console.Log.IsOperationsEnabled)
                     {
-                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert?? "None"}");
+                        console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
                     result = console.ApplyScript(adminJsScript);
                 }
@@ -856,7 +882,7 @@ namespace Raven.Server.Web.System
         public async Task UpdateConflictResolver()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            
+
             if (TryGetAllowedDbs(name, out var _, requireAdmin: true) == false)
                 return;
 
@@ -895,10 +921,10 @@ namespace Raven.Server.Web.System
         public async Task RemoveConnectionString()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            
+
             if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
                 return;
-            
+
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
             var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
