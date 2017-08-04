@@ -8,6 +8,7 @@ import databaseGroupNode = require("models/resources/info/databaseGroupNode");
 import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabaseFromNodeCommand");
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
+import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -24,7 +25,7 @@ class manageDatabaseGroup extends viewModelBase {
 
     spinners = {
         addNode: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -69,7 +70,7 @@ class manageDatabaseGroup extends viewModelBase {
         this.graph.init($("#databaseGroupGraphContainer"));
     }
 
-    refresh() {
+    private refresh() {
         return $.when<any>(this.fetchDatabaseInfo(), this.fetchOngoingTasks());
     }
     
@@ -94,6 +95,11 @@ class manageDatabaseGroup extends viewModelBase {
     private onDatabaseInfoFetched(dbInfoDto: Raven.Client.Server.Operations.DatabaseInfo) {
         const dbInfo = new databaseInfo(dbInfoDto);
         this.currentDatabaseInfo(dbInfo);
+        
+        dbInfo.dynamicNodesDistribution.subscribe((dynamic) => {
+            new toggleDynamicNodeAssignmentCommand(this.activeDatabase().name, dynamic)
+                .execute();
+        });
     }
 
     addNode() {

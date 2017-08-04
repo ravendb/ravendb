@@ -51,6 +51,7 @@ namespace Raven.Client.Server.Operations
 
         public NodesTopology NodesTopology { get; set; }
         public int ReplicationFactor { get; set; }
+        public bool DynamicNodesDistribution { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -79,7 +80,8 @@ namespace Raven.Client.Server.Operations
                 [nameof(IndexingStatus)] = IndexingStatus.ToString(),
 
                 [nameof(NodesTopology)] = NodesTopology?.ToJson(),
-                [nameof(ReplicationFactor)] = ReplicationFactor
+                [nameof(ReplicationFactor)] = ReplicationFactor,
+                [nameof(DynamicNodesDistribution)] = DynamicNodesDistribution
             };
         }
     }

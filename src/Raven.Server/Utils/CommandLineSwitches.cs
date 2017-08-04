@@ -107,7 +107,8 @@ namespace Raven.Server.Utils
                 throw new CommandParsingException(_app, "Service name must have maximum length of 256 characters.");
 
             if (PlatformDetails.RunningOnPosix == false && Daemon)
-                throw new CommandParsingException(_app, "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
+                throw new CommandParsingException(_app,
+                    "Switch \"--daemon\" is not supported on Windows. Use --register-service switch to register the service and services.msc for service management.");
         }
 
         private static bool ParseSwitchOption(CommandOption opt)

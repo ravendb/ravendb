@@ -1,16 +1,16 @@
 /// QRCode
-declare var QRCode: any;
+declare const QRCode: any;
 
 /// Sortable
-declare var Sortable: any;
+declare const Sortable: any;
 
 ///
 /// JSZip
 ///
 
-declare var JSZipUtils: {
+declare const JSZipUtils: {
     getBinaryContent: any;
-}
+};
 
 declare module "jszip-utils" {
     export = JSZipUtils;
@@ -26,7 +26,7 @@ declare module 'cola' {
 ///
 /// Using *any* as official typings are broken
 
-declare var Favico: any;
+declare const Favico: any;
 
 ///
 /// jQuery: 
