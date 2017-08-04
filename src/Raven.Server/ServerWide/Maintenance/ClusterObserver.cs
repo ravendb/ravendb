@@ -275,6 +275,10 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             RemoveOtherNodesIfNeeded(dbName, topology, ref deletions);
+
+            if (topology.Stamp.Index == -1)
+                return true;
+
             return false;
         }
 

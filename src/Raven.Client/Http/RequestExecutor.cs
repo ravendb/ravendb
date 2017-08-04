@@ -242,6 +242,9 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
+                    if (command.Result.Etag == -1)
+                        throw new InvalidOperationException($"Uninitialized topology ({nameof(Topology.Etag)}: -1)");
+
                     var serverHash = ServerHash.GetServerHash(node.Url, _databaseName);
 
                     TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
