@@ -243,7 +243,7 @@ namespace Raven.Client.Http
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
                     if (command.Result.Etag == -1)
-                        throw new InvalidOperationException($"Uninitialized topology ({nameof(Topology.Etag)}: -1)");
+                        throw new InvalidOperationException($"Uninitialized topology ({nameof(Topology.Etag)}: -1) the cluster supervisor still haven't approved the assignment of nodes, will retry again later");
 
                     var serverHash = ServerHash.GetServerHash(node.Url, _databaseName);
 
