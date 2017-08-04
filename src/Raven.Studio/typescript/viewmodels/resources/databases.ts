@@ -28,14 +28,14 @@ class databases extends viewModelBase {
     filters = {
         searchText: ko.observable<string>(),
         localOnly: ko.observable<string>()
-    }
+    };
 
     selectionState: KnockoutComputed<checkbox>;
     selectedDatabases = ko.observableArray<string>([]);
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
-    }
+    };
 
     private static compactView = ko.observable<boolean>(false);
     compactView = databases.compactView;
