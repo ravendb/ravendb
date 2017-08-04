@@ -16,10 +16,15 @@
                         <i class="icon-plus"></i>
                         <span>Add node to group</span>
                     </button>
-                   <button class="btn btn-default" data-bind="click: refresh">
-                       <i class="icon-refresh"></i>
-                       <span>Refresh</span>
-                   </button>
+                    <div class="dropdown">
+                        <button class="btn btn-default dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
+                                aria-expanded="true">
+                            <i class="icon-settings"></i><span>Settings</span>
+                            <span class="caret"></span>
+                        </button>
+                        <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'db-group-settings-template' }">
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="scroll flex-grow" data-bind="foreach: nodes">
@@ -136,3 +141,18 @@
         </div>
     </div>
 </div>
+
+<script type="text/html" id="db-group-settings-template">
+    <div class="row settings-item">
+        <div class="col-xs-offset-1 col-xs-8">
+            <div class="control-label">Allow dynamic node distribution</div>
+        </div>
+        <div class="col-xs-3">
+            <div class="toggle">
+                <input type="checkbox" class="styled" data-bind="checked: currentDatabaseInfo().dynamicNodesDistribution">
+                <label></label>
+            </div>
+        </div>
+    </div>
+    
+</script>

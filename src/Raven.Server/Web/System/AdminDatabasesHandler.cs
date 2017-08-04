@@ -677,7 +677,7 @@ namespace Raven.Server.Web.System
         }
 
         [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.ServerAdmin)]
-        public async Task ToggleDynamicNodeAssignment()
+        public async Task ToggleDynamicNodeDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var enable = GetBoolValueQueryString("enable", required: true) ?? true;
@@ -697,6 +697,8 @@ namespace Raven.Server.Web.System
 
                 var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
                 await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
+                
+                NoContentStatus();
             }
         }
 

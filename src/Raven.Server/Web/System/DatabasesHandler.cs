@@ -432,9 +432,10 @@ namespace Raven.Server.Web.System
                 IndexingStatus = indexingStatus,
 
                 NodesTopology = nodesTopology,
-                ReplicationFactor = topology?.ReplicationFactor ?? -1
+                ReplicationFactor = topology?.ReplicationFactor ?? -1,
+                DynamicNodesDistribution = topology?.DynamicNodesDistribution ?? false
             };
-
+            
             var doc = databaseInfo.ToJson();
             context.Write(writer, doc);
         }
