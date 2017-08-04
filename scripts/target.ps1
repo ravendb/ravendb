@@ -1,14 +1,14 @@
 $TARGET_SPECS = (
     @{
         "Name"      = "windows-x64";
-        "Runtime"   = "win10-x64";
+        "Runtime"   = "win7-x64";
         "PkgType"   = "zip";
         "IsUnix"    = $False;
         "TargetId" = "win-x64";
     },
     @{
         "Name"      = "windows-x86";
-        "Runtime"   = "win10-x86";
+        "Runtime"   = "win7-x86";
         "Arch"      = "x86";
         "PkgType"   = "zip";
         "IsUnix"    = $False;
