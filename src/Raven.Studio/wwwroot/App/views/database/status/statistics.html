@@ -16,7 +16,11 @@
             <div class="col-sm-9 col-xl-9">
                 <div class="stats-item">
                     <div class="name">Database Change Vector</div>
-                    <div class="value long"><span data-bind="text: databaseChangeVector"></span></div>
+                    <div class="value long">
+                        <span data-bind="foreach: databaseChangeVector">
+                            <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                        </span>
+                    </div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">

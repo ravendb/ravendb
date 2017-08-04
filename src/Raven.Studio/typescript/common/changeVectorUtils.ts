@@ -4,9 +4,8 @@ import pluralizeHelpers = require("common/helpers/text/pluralizeHelpers");
 
 class changeVectorUtils {
 
-    static shouldUseLongFormat(conflict:Raven.Client.Documents.Commands.GetConflictsResult) {
-        
-        const parsedVectors = _.flatMap(conflict.Results, x => changeVectorUtils.parse(x.ChangeVector));
+    static shouldUseLongFormat(changeVectors: string[]) {
+        const parsedVectors = _.flatMap(changeVectors, x => changeVectorUtils.parse(x));
         
         const byTag = _.groupBy(parsedVectors, x => x.tag);
         
