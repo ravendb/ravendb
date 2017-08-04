@@ -290,6 +290,21 @@ namespace Raven.Server.Documents.Replication
                                     {
                                         SendHeartbeat(DocumentsStorage.GetDatabaseChangeVector(ctx));
                                     }
+                                    else
+                                    {
+                                        // we have updates that we need to send to the other side
+                                        // let's do that.. 
+                                        // this can happen if we got replication from another node
+                                        // that we need to send to it. Note that we typically
+                                        // will wait for the other node to send the data directly to
+                                        // our destination, but if it doesn't, we'll step in.
+                                        // In this case, we try to limit congestion in the network and
+                                        // only send updates that we have gotten from someone else after
+                                        // a certain time, to let the other side tell us that it already
+                                        // got it. Note that this is merely an optimization to reduce network
+                                        // traffic. It is fine to have the same data come from different sources.
+                                        break;
+                                    }
                                 }
                             }
                             _waitForChanges.Reset();
