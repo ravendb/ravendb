@@ -427,7 +427,9 @@ namespace Raven.Server.Utils
                 Environment.NewLine +
                 $" PID {Process.GetCurrentProcess().Id}, {IntPtr.Size * 8} bits, {ProcessorInfo.ProcessorCount} Cores, Arch: {RuntimeInformation.OSArchitecture}" +
                 Environment.NewLine +
-                $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory",
+                $" {memoryInfo.TotalPhysicalMemory} Physical Memory, {memoryInfo.AvailableMemory} Available Memory" +
+                Environment.NewLine +
+                $" {RuntimeSettings.Describe()}",
                 ConsoleColor.Cyan, cli);
 
             var bitsNum = IntPtr.Size * 8;

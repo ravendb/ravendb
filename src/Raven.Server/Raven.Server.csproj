@@ -121,4 +121,9 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
+  <PropertyGroup>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+    <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
+    <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+  </PropertyGroup>
 </Project>
