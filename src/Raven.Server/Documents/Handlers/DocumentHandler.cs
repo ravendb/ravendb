@@ -425,9 +425,9 @@ namespace Raven.Server.Documents.Handlers
             {
                 var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
-                var doc = await context.ReadForDiskAsync(RequestBodyStream(), id);
+                var doc = context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
-                if (id.EndsWith("/"))
+                if (id[id.Length-1] == '/')
                 {
                     var (_, clusterId) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
                     id = clusterId;
@@ -435,7 +435,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringQueryString("If-Match", false));
 
-                var cmd = new MergedPutCommand(doc, id, changeVector, Database);
+                var cmd = new MergedPutCommand(await doc, id, changeVector, Database);
 
                 await Database.TxMerger.Enqueue(cmd);
 
