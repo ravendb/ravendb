@@ -522,7 +522,7 @@ namespace FastTests
                 customSettings = new ConcurrentDictionary<string, string>();
             
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
-            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl ?? "https://" + Environment.MachineName + ":8080";
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
             
             if (doNotReuseServer)
                 DoNotReuseServer(customSettings);

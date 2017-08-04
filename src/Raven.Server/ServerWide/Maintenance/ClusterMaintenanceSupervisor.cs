@@ -111,7 +111,6 @@ namespace Raven.Server.ServerWide.Maintenance
             public string ClusterTag { get; }
             public string Url { get; }
 
-            private TcpClient _tcpClient;
             public ClusterNodeStatusReport ReceivedReport = new ClusterNodeStatusReport(
                 new Dictionary<string, DatabaseStatusReport>(), ClusterNodeStatusReport.ReportStatus.WaitingForResponse,
                 null, DateTime.MinValue, null);
@@ -134,8 +133,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 _cts = CancellationTokenSource.CreateLinkedTokenSource(token);
                 _token = _cts.Token;
                 _readStatusUpdateDebugString = $"ClusterMaintenanceServer/{ClusterTag}/UpdateState/Read-Response";
-                _tcpClient = new TcpClient();
-                TcpUtils.SetTimeouts(_tcpClient, _parent._server.Engine.TcpConnectionTimeout);
                 _log = LoggingSource.Instance.GetLogger<ClusterNode>(clusterTag);
             }
 
@@ -161,7 +158,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (_log.IsInfoEnabled)
                         _log.Info($"ClusterMaintenanceSupervisor() => Failed to add to cluster node key = {ClusterTag}", e);
                 }
-
                 while (_token.IsCancellationRequested == false)
                 {
                     var internalTaskCancellationToken = CancellationTokenSource.CreateLinkedTokenSource(_token);
@@ -172,14 +168,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             needToWait = false; // avoid tight loop if there was timeout / error
                             await TimeoutManager.WaitFor(onErrorDelayTime, _token);
 
-                            if (_tcpClient.Connected == false)
-                            {
-                                _tcpClient?.Dispose();
-                                _tcpClient = new TcpClient();
-                                TcpUtils.SetTimeouts(_tcpClient, _parent._server.Engine.TcpConnectionTimeout);
-                                tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
-                                    _parent._server.RavenServer.ServerCertificateHolder.Certificate);
-                            }
+                            tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
+                                _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                         }
 
                         if (tcpConnection == null)
@@ -187,8 +177,9 @@ namespace Raven.Server.ServerWide.Maintenance
                             needToWait = true;
                             continue;
                         }
-
-                        using (var connection = await ConnectToClientNodeAsync(tcpConnection))
+                        using (var tcpClient = new TcpClient())
+                        using (_cts.Token.Register(tcpClient.Dispose))
+                        using (var connection = await ConnectToClientNodeAsync(tcpConnection, tcpClient))
                         {
                             while (_token.IsCancellationRequested == false)
                             {
@@ -254,15 +245,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo)
+            private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
             {
-                await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, _tcpClient, _log);
-                return await TcpUtils.WrapStreamWithSslAsync(_tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
-            }
-
-            private async Task<Stream> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo)
-            {
-                var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo);
+                TcpUtils.SetTimeouts(tcpClient, _parent._server.Engine.TcpConnectionTimeout);
+                await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, _log);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
@@ -331,7 +318,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 try
                 {
                     _cts.Cancel();
-                    _tcpClient?.Dispose();
                 }
                 catch
                 {

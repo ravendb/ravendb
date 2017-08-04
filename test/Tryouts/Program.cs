@@ -40,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationResolveToDatabase())
+                using (var test = new SlowTests.Client.Subscriptions.CriteriaScript())
                 {
                     try
                     {
-                        test.ResolveToTombstone().Wait();
+                        test.BasicCriteriaTest_WithSsl().Wait();
                     }
                     catch (Exception e)
                     {
