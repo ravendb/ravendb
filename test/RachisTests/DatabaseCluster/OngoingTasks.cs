@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
@@ -22,10 +23,22 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize);
             ModifyOngoingTaskResult addWatcherRes;
             UpdatePeriodicBackupOperationResult updateBackupResult;
-            AddEtlOperationResult addEtlREsult;
+            AddEtlOperationResult addRavenEtlResult;
+            AddEtlOperationResult addSqlEtlResult;
             RavenEtlConfiguration etlConfiguration;
+            SqlEtlConfiguration sqlConfiguration;
             ExternalReplication watcher;
-            RavenConnectionString ravenConnectionString;
+            SqlConnectionString sqlConnectionString;
+
+            var sqlScript = @"
+var orderData = {
+    Id: __document_id,
+    OrderLinesCount: this.OrderLines.length,
+    TotalCost: 0
+};
+
+loadToOrders(orderData);
+";
 
             using (var store = new DocumentStore
             {
@@ -72,13 +85,12 @@ namespace RachisTests.DatabaseCluster
 
                 updateBackupResult = await store.Admin.Server.SendAsync(new UpdatePeriodicBackupOperation(backupConfig, store.Database));
 
-                ravenConnectionString = new RavenConnectionString()
+                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(new RavenConnectionString
                 {
                     Name = "cs",
                     Url = "http://127.0.0.1:8080",
                     Database = "Northwind",
-                };
-                store.Admin.Server.Send(new PutConnectionStringOperation<RavenConnectionString>(ravenConnectionString, store.Database));
+                }, store.Database));
 
                 etlConfiguration = new RavenEtlConfiguration()
                 {
@@ -88,12 +100,44 @@ namespace RachisTests.DatabaseCluster
                     {
                         new Transformation()
                         {
-                            Collections = {"Users"}
+                            Name = "loadAll",
+                            Collections = {"Users"},
+                            Script = "loadToUsers(this)"
                         }
                     }
                 };
 
-                addEtlREsult = store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
+                addRavenEtlResult = store.Admin.Server.Send(new AddEtlOperation<RavenConnectionString>(etlConfiguration, store.Database));
+
+                sqlConnectionString = new SqlConnectionString
+                {
+                    Name = "abc",
+                    ConnectionString = @"Data Source=localhost\sqlexpress;Integrated Security=SSPI;Connection Timeout=3" + $";Initial Catalog=SqlReplication-{store.Database};"
+                };
+                store.Admin.Server.Send(new PutConnectionStringOperation<SqlConnectionString>(sqlConnectionString, store.Database));
+
+
+                sqlConfiguration = new SqlEtlConfiguration()
+                {
+                    Name = "abc",
+                    ConnectionStringName = "abc",
+                    FactoryName = "System.Data.SqlClient",
+                    SqlTables =
+                    {
+                        new SqlEtlTable {TableName = "Orders", DocumentIdColumn = "Id", InsertOnlyMode = false},
+                        new SqlEtlTable {TableName = "OrderLines", DocumentIdColumn = "OrderId", InsertOnlyMode = false},
+                    },
+                    Transforms =
+                    {
+                        new Transformation()
+                        {
+                            Name = "OrdersAndLines",
+                            Collections =  new List<string> {"Orders"},
+                            Script = sqlScript
+                        }
+                    }
+                };
+                addSqlEtlResult = store.Admin.Server.Send(new AddEtlOperation<SqlConnectionString>(sqlConfiguration, store.Database));
             }
 
             using (var store = new DocumentStore
@@ -121,12 +165,26 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal("backup1", backupResult.TaskName);
                 Assert.Equal(OngoingTaskState.Disabled, backupResult.TaskState);
 
-                taskId = addEtlREsult.TaskId;
+                taskId = addRavenEtlResult.TaskId;
 
                 var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
-                Assert.Equal(etlResult?.DestinationDatabase, ravenConnectionString.Database);
-                Assert.Equal(etlResult?.DestinationUrl, ravenConnectionString.Url);
-                Assert.Equal(etlResult?.TaskName, etlConfiguration.Name);
+                Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
+                Assert.Equal("tesst", etlResult.Configuration.Name);
+                Assert.Equal("loadAll", etlResult.Configuration.Transforms[0].Name);
+                Assert.Equal("loadToUsers(this)", etlResult.Configuration.Transforms[0].Script);
+                Assert.Equal("Users", etlResult.Configuration.Transforms[0].Collections[0]);
+                Assert.Equal(etlConfiguration.Name, etlResult?.TaskName);
+
+                taskId = addSqlEtlResult.TaskId;
+
+                var sqlResult = (OngoingTaskSqlEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.SqlEtl);
+                Assert.Equal("abc", sqlResult.Configuration.ConnectionStringName);
+                Assert.Equal("abc", sqlResult.Configuration.Name);
+                Assert.Equal("OrdersAndLines", sqlResult.Configuration.Transforms[0].Name);
+                Assert.Equal(sqlScript, sqlResult.Configuration.Transforms[0].Script);
+                Assert.Equal("Orders", sqlResult.Configuration.Transforms[0].Collections[0]);
+                Assert.NotNull(sqlResult.Configuration.SqlTables);
+                Assert.Equal(sqlConfiguration.Name, sqlResult?.TaskName);
             }
         }
 

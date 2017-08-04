@@ -14,12 +14,10 @@ using Raven.Client.Server.ETL.SQL;
 using Raven.Client.Server.Operations;
 using Raven.Client.Server.PeriodicBackup;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -370,7 +368,12 @@ namespace Raven.Server.Web.System
                                 break;
                             }
 
-                            WriteResult(context, sqlEtl.ToJson());
+                            WriteResult(context, new OngoingTaskSqlEtl
+                            {
+                                TaskId = sqlEtl.TaskId,
+                                TaskName = sqlEtl.Name,
+                                Configuration = sqlEtl
+                            });
                             break;
 
                         case OngoingTaskType.RavenEtl:
@@ -382,7 +385,12 @@ namespace Raven.Server.Web.System
                                 break;
                             }
                             
-                            WriteResult(context, ravenEtl.ToJson());
+                            WriteResult(context, new OngoingTaskRavenEtl
+                            {
+                                TaskId = ravenEtl.TaskId,
+                                TaskName = ravenEtl.Name,
+                                Configuration = ravenEtl
+                            });
                             break;
                             
                         case OngoingTaskType.Subscription:
