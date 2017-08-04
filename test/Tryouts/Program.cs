@@ -40,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new RavenDB_8031())
+                using (var test = new SlowTests.Client.Subscriptions.TestSubscriptionOnDisabledDatabase())
                 {
                     try
                     {
-                        test.Can_talk_to_db_if_it_was_created_after_document_store_initialization().Wait();
+                        test.Run().Wait();
                     }
                     catch (Exception e)
                     {

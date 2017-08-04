@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Server.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -58,7 +59,7 @@ namespace SlowTests.Client.Subscriptions
 
                 store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, true));
 
-                await Assert.ThrowsAsync<AggregateException>(async () => await subscriptionTask);
+                await Assert.ThrowsAsync<DatabaseDisabledException>(async () => await subscriptionTask);
 
                 store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, false));
 
