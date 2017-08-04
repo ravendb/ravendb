@@ -64,6 +64,7 @@ var paths = {
         "spin.js/spin.js",
         "google-analytics/index.js",
         "qrcode.js/qrcode.js",
+        "cronstrue/dist/cronstrue.min.js",
         "favico.js/favico.js"
     ]
 };
