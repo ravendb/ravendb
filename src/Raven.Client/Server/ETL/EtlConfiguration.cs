@@ -85,7 +85,6 @@ namespace Raven.Client.Server.ETL
         {
             var result = new DynamicJsonValue
             {
-                [nameof(TaskId)] = TaskId,
                 [nameof(Name)] = Name,
                 [nameof(ConnectionStringName)] = ConnectionStringName,
                 [nameof(Transforms)] = new DynamicJsonArray(Transforms.Select(x => new DynamicJsonValue()

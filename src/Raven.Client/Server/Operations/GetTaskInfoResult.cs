@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Server.ETL;
 using Raven.Client.Server.PeriodicBackup;
 using Sparrow.Json.Parsing;
 
@@ -100,11 +101,15 @@ namespace Raven.Client.Server.Operations
 
         public string DestinationDatabase { get; set; }
 
+        public RavenEtlConfiguration Configuration { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(DestinationUrl)] = DestinationUrl;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
             return json;
         }
     }
@@ -117,13 +122,19 @@ namespace Raven.Client.Server.Operations
         }
 
         public string DestinationServer { get; set; }
+
         public string DestinationDatabase { get; set; }
+
+        public SqlEtlConfiguration Configuration { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
+
             json[nameof(DestinationServer)] = DestinationServer;
             json[nameof(DestinationDatabase)] = DestinationDatabase;
+            json[nameof(Configuration)] = Configuration?.ToJson();
+
             return json;
         }
     }
