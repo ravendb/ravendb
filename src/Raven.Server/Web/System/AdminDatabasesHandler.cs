@@ -680,7 +680,7 @@ namespace Raven.Server.Web.System
         public async Task ToggleDynamicNodeAssignment()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var enable = GetBoolValueQueryString("enable");
+            var enable = GetBoolValueQueryString("enable", required: true) ?? true;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
