@@ -153,7 +153,7 @@ class conflicts extends viewModelBase {
             .then(([conflictsDto]: [Raven.Client.Documents.Commands.GetConflictsResult], [mergeResult]: [Raven.Server.Utils.ConflictResolverAdvisor.MergeResult]) => {
                 this.currentConflict(conflictsDto);
 
-                const useLongFormat = changeVectorUtils.shouldUseLongFormat(conflictsDto);
+                const useLongFormat = changeVectorUtils.shouldUseLongFormat(conflictsDto.Results.map(x => x.ChangeVector));
                 
                 this.conflictItems(conflictsDto.Results.map(x => new conflictItem(x, useLongFormat)));
 

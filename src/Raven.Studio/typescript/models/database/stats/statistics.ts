@@ -1,9 +1,10 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import indexStatistics = require("models/database/stats/indexStatistics");
+import changeVectorUtils = require("common/changeVectorUtils");
 
 class statistics {
     databaseId: string;
-    databaseChangeVector: string;
+    databaseChangeVector: changeVectorItem[];
     lastDocEtag?: number;
     countOfIndexes: string;
     countOfDocuments: string;
@@ -16,8 +17,9 @@ class statistics {
     indexesByType = ko.observableArray<indexesWithType>(); 
     
     constructor(dbStats: Raven.Client.Documents.Operations.DatabaseStatistics, indexStats: Raven.Client.Documents.Indexes.IndexStats[]) {
-        this.databaseId = dbStats.DatabaseId; 
-        this.databaseChangeVector = dbStats.DatabaseChangeVector;
+        this.databaseId = dbStats.DatabaseId;
+
+        this.databaseChangeVector = changeVectorUtils.formatChangeVector(dbStats.DatabaseChangeVector, changeVectorUtils.shouldUseLongFormat([dbStats.DatabaseChangeVector]));
         this.lastDocEtag = dbStats.LastDocEtag;
         this.countOfDocuments = dbStats.CountOfDocuments.toLocaleString();
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
