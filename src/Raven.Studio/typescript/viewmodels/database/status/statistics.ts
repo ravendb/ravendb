@@ -33,7 +33,7 @@ class statistics extends viewModelBase {
     }
    
     fetchStats(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        var db = this.activeDatabase();
+        const db = this.activeDatabase();
 
         const dbStatsTask = new getDatabaseStatsCommand(db)
             .execute();
