@@ -1677,7 +1677,7 @@ If you really want to do in memory filtering on the data returned from the query
             tokens.AddLast(token);
         }
 
-        private static IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
+        private IEnumerable<object> TransformEnumerable(string fieldName, IEnumerable<object> values)
         {
             foreach (var value in values)
             {
@@ -1823,7 +1823,7 @@ If you really want to do in memory filtering on the data returned from the query
             return func;
         }
 
-        private static object TransformValue(WhereParams whereParams, bool forRange = false)
+        private object TransformValue(WhereParams whereParams, bool forRange = false)
         {
             if (whereParams.Value == null)
                 return null;
@@ -1869,26 +1869,11 @@ If you really want to do in memory filtering on the data returned from the query
             if (result != null)
                 return result(whereParams.Value);
 
+            string strVal;
+            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out strVal))
+                return strVal;
+
             return whereParams.Value;
-
-            //if (whereParams.Value is ValueType)
-            //    return RavenQuery.Escape(Convert.ToString(whereParams.Value, CultureInfo.InvariantCulture), false, true);
-
-            //string strVal;
-            //if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, QueryValueConvertionType.Range, out strVal))
-            //    return strVal;
-
-            //var stringWriter = new StringWriter();
-            //_conventions.CreateSerializer().Serialize(stringWriter, whereParams.Value);
-
-            //var sb = stringWriter.GetStringBuilder();
-            //if (sb.Length > 1 && sb[0] == '"' && sb[sb.Length - 1] == '"')
-            //{
-            //    sb.Remove(sb.Length - 1, 1);
-            //    sb.Remove(0, 1);
-            //}
-
-            //return RavenQuery.Escape(sb.ToString(), false, true);
         }
 
         private string AddQueryParameter(object value)
