@@ -131,6 +131,10 @@ namespace Sparrow.Json
             if (obj is decimal)
                 return ((decimal)this).Equals((decimal)obj);
 
+            if (obj is LazyStringValue l && 
+                l.Length == 3) // checking for 3 as optimization
+                return Inner.Equals(l); // this is to match NaN
+
             return false;
         }
 

@@ -40,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Client.Subscriptions.TestSubscriptionOnDisabledDatabase())
+                using (var test = new SlowTests.MailingList.ValerioBorioni())
                 {
                     try
                     {
-                        test.Run().Wait();
+                        test.RavenJValue_recognize_NAN_Float_isEqual_to_NAN_String();
                     }
                     catch (Exception e)
                     {
