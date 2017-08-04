@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             {
                 Map = persons => from person in persons
                                  let metadata = MetadataFor(person)
-                                 from name in metadata.Value<string>("Names").Split(',')
+                                 from name in metadata.Value<string>("Names").Split(',', StringSplitOptions.None)
                                  select new
                                  {
                                      CurrentName = person.Name,

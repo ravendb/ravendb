@@ -3,7 +3,6 @@ using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using System.Runtime.CompilerServices;
-using DotNetCross.Memory;
 
 namespace Sparrow.Compression
 {

@@ -26,7 +26,7 @@ namespace FastTests.Issues
         {
             var sb = new StringBuilder();
 
-            foreach (var commandType in GetCommands(new[] { typeof(RavenCommand<>).Assembly(), typeof(RavenServer).Assembly() }))
+            foreach (var commandType in GetCommands(new[] { typeof(RavenCommand<>).Assembly, typeof(RavenServer).Assembly }))
             {
                 foreach (var property in commandType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {

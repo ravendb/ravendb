@@ -1,8 +1,5 @@
 ﻿using System;
-using System.ComponentModel;
 using System.Threading;
-using Sparrow;
-using Sparrow.Utils;
 using Xunit;
 
 namespace FastTests.Sparrow
@@ -18,11 +15,11 @@ namespace FastTests.Sparrow
             {
                 try
                 {
-                    Assert.True(Threading.GetCurrentThreadPriority() == ThreadPriority.Normal);
-                    Threading.SetCurrentThreadPriority(ThreadPriority.Lowest);
+                    Assert.True(Thread.CurrentThread.Priority == ThreadPriority.Normal);
+                    Thread.CurrentThread.Priority = ThreadPriority.Lowest;
                     lock (this)
                     {
-                        threadPriority = Threading.GetCurrentThreadPriority();
+                        threadPriority = Thread.CurrentThread.Priority;
                     }
                 }
                 catch (Exception ex)

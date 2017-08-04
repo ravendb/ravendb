@@ -201,7 +201,8 @@ namespace Raven.Client.Documents.Linq
                 return;
 
 
-            if (_subClauseDepth > 0) _documentQuery.OpenSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.OpenSubclause();
             _subClauseDepth++;
 
             // negate optimization : (RavenDB-3973).  in order to disable you may just set isNotEqualCheckBoundsToAndAlsoLeft & Right to "false" 
@@ -232,7 +233,8 @@ namespace Raven.Client.Documents.Linq
 
 
             _subClauseDepth--;
-            if (_subClauseDepth > 0) _documentQuery.CloseSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.CloseSubclause();
         }
 
         private bool TryHandleBetween(BinaryExpression andAlso)
@@ -309,7 +311,8 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitOrElse(BinaryExpression orElse)
         {
-            if (_subClauseDepth > 0) _documentQuery.OpenSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.OpenSubclause();
             _subClauseDepth++;
 
             VisitExpression(orElse.Left);
@@ -317,7 +320,8 @@ namespace Raven.Client.Documents.Linq
             VisitExpression(orElse.Right);
 
             _subClauseDepth--;
-            if (_subClauseDepth > 0) _documentQuery.CloseSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.CloseSubclause();
         }
 
         private void VisitEquals(BinaryExpression expression)
@@ -453,9 +457,8 @@ namespace Raven.Client.Documents.Linq
             return info.Type;
         }
 
-        private static readonly Regex CastingRemover = new Regex(@"(?<!\\)[\(\)]",
-                RegexOptions.Compiled
-            );
+        private static readonly Regex CastingRemover = new Regex(@"(?<!\\)[\(\)]", RegexOptions.Compiled);
+        private static readonly Regex ConvertRemover = new Regex(@"^(Convert\((.+)\,.*\))", RegexOptions.Compiled);
 
         /// <summary>
         /// Gets member info for the specified expression and the path to that expression
@@ -480,6 +483,10 @@ namespace Raven.Client.Documents.Linq
             var result = _linqPathProvider.GetPath(expression);
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+
+            var convertMatch = ConvertRemover.Match(result.Path);
+            if (convertMatch.Success)
+                result.Path = result.Path.Replace(convertMatch.Groups[1].Value, convertMatch.Groups[2].Value);
             result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
             result.Path = CastingRemover.Replace(result.Path, string.Empty); // removing cast remains
 
@@ -1984,9 +1991,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((FieldToFetch)obj);
         }
 

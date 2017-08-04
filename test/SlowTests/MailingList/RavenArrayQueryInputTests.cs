@@ -25,7 +25,7 @@ namespace SlowTests.MailingList
             public TestTransformer()
             {
                 TransformResults = documents => from d in documents
-                                                let index = Array.IndexOf(Parameter("array").Value<string>().Split(','), d.Id)
+                                                let index = Array.IndexOf(Parameter("array").Value<string>().Split(',', StringSplitOptions.None), d.Id)
                                                 orderby index
                                                 select d;
             }

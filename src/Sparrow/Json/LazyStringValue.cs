@@ -15,8 +15,10 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue x, LazyStringValue y)
         {
-            if (x == y) return true;
-            if (x == null || y == null) return false;
+            if (x == y)
+                return true;
+            if (x == null || y == null)
+                return false;
             return x.Equals(y);
         }
 
@@ -38,8 +40,10 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(LazyStringValue x, LazyStringValue y)
         {
-            if (x == y) return true;
-            if (x == null || y == null) return false;
+            if (x == y)
+                return true;
+            if (x == null || y == null)
+                return false;
             return x.CompareTo(y) == 0;
         }
 
@@ -115,7 +119,7 @@ namespace Sparrow.Json
             if (_string != null)
                 return string.Equals(_string, other, StringComparison.Ordinal);
 
-            var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);          
+            var sizeInBytes = Encodings.Utf8.GetMaxByteCount(other.Length);
 
             if (_lazyStringTempComparisonBuffer == null || _lazyStringTempComparisonBuffer.Length < other.Length)
                 _lazyStringTempComparisonBuffer = new byte[Bits.NextPowerOf2(sizeInBytes)];
@@ -127,7 +131,7 @@ namespace Sparrow.Json
                 if (Size != tmpSize)
                     return false;
 
-                return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;                
+                return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;
             }
         }
 
@@ -220,14 +224,14 @@ namespace Sparrow.Json
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator string(LazyStringValue self)
-        {            
+        {
             if (self == null)
                 return null;
 #if DEBUG
             if (self.IsDisposed)
                 self.ThrowAlreadyDisposed();
 #endif
-            return self._string ?? 
+            return self._string ??
                 (self._string = Encodings.Utf8.GetString(self._buffer, self._size));
         }
 
@@ -286,7 +290,7 @@ namespace Sparrow.Json
             else
                 return (int)Hashing.XXHash64.CalculateInline(Buffer, (ulong)Size);
         }
-        
+
         public override string ToString()
         {
             return (string)this; // invoke the implicit string conversion
@@ -317,7 +321,7 @@ namespace Sparrow.Json
 
         private void ThrowAlreadyDisposed()
         {
-           throw new ObjectDisposedException(nameof(LazyStringValue));
+            throw new ObjectDisposedException(nameof(LazyStringValue));
         }
 
         public void Dispose()
@@ -379,6 +383,18 @@ namespace Sparrow.Json
             return ToString().EndsWith(value, comparisonType);
         }
 
+#if !NETSTANDARD1_3
+        public bool EndsWith(string value, bool ignoreCase, CultureInfo culture)
+        {
+            return ToString().EndsWith(value, ignoreCase, culture);
+        }
+#endif
+
+        public bool EndsWith(char value)
+        {
+            return EndsWith(value.ToString());
+        }
+
         public int IndexOf(char value)
         {
             return IndexOf(value, 0, Length);
@@ -430,6 +446,26 @@ namespace Sparrow.Json
         public int IndexOf(string value)
         {
             return ToString().IndexOf(value, StringComparison.Ordinal);
+        }
+
+        public int IndexOf(string value, int startIndex)
+        {
+            return ToString().IndexOf(value, startIndex);
+        }
+
+        public int IndexOf(string value, int startIndex, int count)
+        {
+            return ToString().IndexOf(value, startIndex, count);
+        }
+
+        public int IndexOf(string value, int startIndex, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, startIndex, comparisonType);
+        }
+
+        public int IndexOf(string value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().IndexOf(value, startIndex, count, comparisonType);
         }
 
         public int IndexOf(string value, StringComparison comparisonType)
@@ -525,6 +561,26 @@ namespace Sparrow.Json
             return ToString().LastIndexOf(value, comparisonType);
         }
 
+        public int LastIndexOf(string value, int startIndex)
+        {
+            return ToString().LastIndexOf(value, startIndex);
+        }
+
+        public int LastIndexOf(string value, int startIndex, int count)
+        {
+            return ToString().LastIndexOf(value, startIndex, count);
+        }
+
+        public int LastIndexOf(string value, int startIndex, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, startIndex, comparisonType);
+        }
+
+        public int LastIndexOf(string value, int startIndex, int count, StringComparison comparisonType)
+        {
+            return ToString().LastIndexOf(value, startIndex, count, comparisonType);
+        }
+
         public int LastIndexOfAny(char[] anyOf)
         {
             return LastIndexOfAny(anyOf, Length, Length);
@@ -599,6 +655,16 @@ namespace Sparrow.Json
             return ToString().Replace(oldValue, newValue);
         }
 
+        public string Replace(string oldValue, string newValue, bool ignoreCase, CultureInfo culture)
+        {
+            throw new NotSupportedException();
+        }
+
+        public string Replace(string oldValue, string newValue, StringComparison comparisonType)
+        {
+            throw new NotSupportedException();
+        }
+
         public string Substring(int startIndex)
         {
             return ToString().Substring(startIndex);
@@ -608,9 +674,35 @@ namespace Sparrow.Json
         {
             return ToString().Substring(startIndex, length);
         }
-        public string[] Split(params char[] separator)
+
+        public string[] Split(char separator, StringSplitOptions options = StringSplitOptions.None)
         {
-            return ToString().Split(separator);
+            return Split(new[] { separator }, options);
+        }
+
+        public string[] Split(char separator, int count, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return ToString().Split(new[] { separator }, count, options);
+        }
+
+        public string[] Split(string separator, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return Split(new[] { separator }, options);
+        }
+
+        public string[] Split(string separator, int count, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return ToString().Split(new[] { separator }, count, options);
+        }
+
+        public string[] Split(char[] separator)
+        {
+            return ToString().Split(separator, StringSplitOptions.None);
+        }
+
+        public string[] Split(char[] separator, int count)
+        {
+            return ToString().Split(separator, count, StringSplitOptions.None);
         }
 
         public string[] Split(char[] separator, StringSplitOptions options)
@@ -618,19 +710,19 @@ namespace Sparrow.Json
             return ToString().Split(separator, options);
         }
 
-        public string[] Split(char[] separator, int count)
-        {
-            return ToString().Split(separator, count);
-        }
-
         public string[] Split(char[] separator, int count, StringSplitOptions options)
         {
             return ToString().Split(separator, count, options);
         }
 
-        public string[] Split(string[] separator, StringSplitOptions options)
+        public string[] Split(string[] separator, StringSplitOptions options = StringSplitOptions.None)
         {
             return ToString().Split(separator, options);
+        }
+
+        public string[] Split(string[] separator, int count, StringSplitOptions options = StringSplitOptions.None)
+        {
+            return ToString().Split(separator, count, options);
         }
 
         public bool StartsWith(string value)
@@ -665,6 +757,35 @@ namespace Sparrow.Json
             return Memory.Compare(Buffer, value.Buffer, value.Size) == 0;
         }
 
+        public bool StartsWith(string value, StringComparison comparisionType)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+            return ToString().StartsWith(value, comparisionType);
+        }
+
+#if !NETSTANDARD1_3
+        public bool StartsWith(string value, bool ignoreCase, CultureInfo culture)
+        {
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
+
+            if (value.Length > Size)
+                return false;
+
+            return ToString().StartsWith(value, ignoreCase, culture);
+        }
+#endif
+
+        public bool StartsWith(char value)
+        {
+            return StartsWith(value.ToString());
+        }
+
         public char[] ToCharArray()
         {
             return ToString().ToCharArray();
@@ -680,6 +801,13 @@ namespace Sparrow.Json
             return ToString().ToLower();
         }
 
+#if !NETSTANDARD1_3
+        public string ToLower(CultureInfo culture)
+        {
+            return ToString().ToLower(culture);
+        }
+#endif
+
         public string ToLowerInvariant()
         {
             return ToString().ToLowerInvariant();
@@ -690,6 +818,13 @@ namespace Sparrow.Json
             return ToString().ToUpper();
         }
 
+#if !NETSTANDARD1_3
+        public string ToUpper(CultureInfo culture)
+        {
+            return ToString().ToUpper(culture);
+        }
+#endif
+
         public string ToUpperInvariant()
         {
             return ToString().ToUpperInvariant();
@@ -698,6 +833,11 @@ namespace Sparrow.Json
         public string Trim()
         {
             return ToString().Trim();
+        }
+
+        public string Trim(char trimChar)
+        {
+            return ToString().Trim(trimChar);
         }
 
         public string Trim(params char[] trimChars)
@@ -710,6 +850,11 @@ namespace Sparrow.Json
             return ToString().TrimEnd();
         }
 
+        public string TrimEnd(char trimChar)
+        {
+            return ToString().TrimEnd(trimChar);
+        }
+
         public string TrimEnd(params char[] trimChars)
         {
             return ToString().TrimEnd(trimChars);
@@ -718,6 +863,11 @@ namespace Sparrow.Json
         public string TrimStart()
         {
             return ToString().TrimStart();
+        }
+
+        public string TrimStart(char trimChar)
+        {
+            return ToString().TrimStart(trimChar);
         }
 
         public string TrimStart(params char[] trimChars)
@@ -731,7 +881,7 @@ namespace Sparrow.Json
                 ThrowAlreadyDisposed();
 
             var maxCharCount = Encodings.Utf8.GetMaxCharCount(Length);
-            if(_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < maxCharCount)
+            if (_lazyStringTempBuffer == null || _lazyStringTempBuffer.Length < maxCharCount)
                 _lazyStringTempBuffer = new char[Bits.NextPowerOf2(maxCharCount)];
 
             fixed (char* pChars = _lazyStringTempBuffer)
@@ -739,7 +889,7 @@ namespace Sparrow.Json
                 var chars = Encodings.Utf8.GetChars(_buffer, Length, pChars, _lazyStringTempBuffer.Length);
                 Array.Reverse(_lazyStringTempBuffer, 0, chars);
                 return new string(_lazyStringTempBuffer, 0, chars);
-            }    
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
