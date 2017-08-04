@@ -19,19 +19,23 @@ import messagePublisher = require("common/messagePublisher");
 
 import document = require("models/database/documents/document");
 import saveDocumentCommand = require("commands/database/documents/saveDocumentCommand");
+import changeVectorUtils = require("common/changeVectorUtils");
 
 class conflictItem {
 
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
+    changeVector = ko.observable<changeVectorItem[]>();
 
-    constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict) {
+    constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict, useLongChangeVectorFormat: boolean) {
         //TODO: use change vector? probably yes - latest db id from change vector allows us to get information on which node the modification was made. 
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             
             this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
             this.deletedMarker(false);
+            
+            this.changeVector(changeVectorUtils.formatChangeVector(dto.ChangeVector, useLongChangeVectorFormat));
         } else {
             this.deletedMarker(true);
         }
@@ -148,7 +152,10 @@ class conflicts extends viewModelBase {
         $.when<any>(this.loadConflictItemsForDocument(documentId), this.loadSuggestedConflictResolution(documentId))
             .then(([conflictsDto]: [Raven.Client.Documents.Commands.GetConflictsResult], [mergeResult]: [Raven.Server.Utils.ConflictResolverAdvisor.MergeResult]) => {
                 this.currentConflict(conflictsDto);
-                this.conflictItems(conflictsDto.Results.map(x => new conflictItem((x))));
+
+                const useLongFormat = changeVectorUtils.shouldUseLongFormat(conflictsDto);
+                
+                this.conflictItems(conflictsDto.Results.map(x => new conflictItem(x, useLongFormat)));
 
                 (mergeResult.Document as any)["@metadata"] = mergeResult.Metadata;
                 const serializedResolution = JSON.stringify(mergeResult.Document, null, 4);
