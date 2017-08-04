@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -101,6 +102,8 @@ namespace Raven.Server
 
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
+
+                            Console.WriteLine(RuntimeSettings.Describe());
 
                             if (CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
