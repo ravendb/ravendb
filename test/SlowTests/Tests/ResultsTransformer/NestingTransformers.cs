@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -87,7 +88,7 @@ namespace SlowTests.Tests.ResultsTransformer
             public CallMultipleTransformerPerAllItems()
             {
                 TransformResults = products => from doc in products
-                                               from result in TransformWith(Parameter("transformers").Value<string>().Split(';'), doc)
+                                               from result in TransformWith(Parameter("transformers").Value<string>().Split(';', StringSplitOptions.None), doc)
                                                select result;
             }
         }

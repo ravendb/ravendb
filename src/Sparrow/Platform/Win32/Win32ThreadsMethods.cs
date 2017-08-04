@@ -6,12 +6,6 @@ namespace Sparrow
     public static class Win32ThreadsMethods
     {
         [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
-        public static extern int SetThreadPriority(IntPtr hThread, int nPriority);
-
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
-        public static extern ThreadPriority GetThreadPriority(IntPtr hThread);
-
-        [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
         public static extern uint GetCurrentThreadId();
 
         [DllImport("kernel32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
@@ -22,15 +16,6 @@ namespace Sparrow
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr GetCurrentThread();
-    }
-
-    public enum ThreadPriority
-    {
-        Lowest = -2,
-        BelowNormal = -1,
-        Normal = 0,
-        AboveNormal = 1,
-        Highest = 2
     }
 
     [Flags]

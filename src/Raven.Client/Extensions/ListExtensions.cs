@@ -4,9 +4,12 @@ namespace Raven.Client.Extensions
 {
     internal static class ListExtensions
     {
-        public static HashSet<T> ToHashSet<T>(this IEnumerable<T> items)
+        public static void ForEach<T>(this IEnumerable<T> source, Action<T> action)
         {
-            return new HashSet<T>(items);
+            foreach (var element in source)
+            {
+                action(element);
+            }
         }
     }
 }

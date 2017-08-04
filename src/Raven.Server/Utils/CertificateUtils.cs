@@ -97,7 +97,7 @@ namespace Raven.Server.Utils
             store.Save(stream, new char[0], random);
             var convertedCertificate =
                 new X509Certificate2(
-                    stream.ToArray(), null,
+                    stream.ToArray(), (string)null,
                     X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
             stream.Position = 0;
 

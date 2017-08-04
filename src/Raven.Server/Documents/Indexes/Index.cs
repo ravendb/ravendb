@@ -944,11 +944,11 @@ namespace Raven.Server.Documents.Indexes
                     throw new NotSupportedException($"Unknown priority: {priority}");
             }
 
-            var currentPriority = Threading.GetCurrentThreadPriority();
+            var currentPriority = Thread.CurrentThread.Priority;
             if (currentPriority == newPriority)
                 return;
 
-            Threading.TrySettingCurrentThreadPriority(newPriority);
+            Thread.CurrentThread.Priority = newPriority;
         }
 
         private void HandleLogsApplied()

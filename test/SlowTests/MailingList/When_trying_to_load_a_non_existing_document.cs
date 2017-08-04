@@ -68,7 +68,7 @@ namespace SlowTests.MailingList
                 TransformResults = students => from student in students
                                                select new
                                                {
-                                                   StudentId = student.Id.ToString().Split('/')[1]
+                                                   StudentId = student.Id.ToString().Split('/', StringSplitOptions.None)[1]
                                                };
             }
         }

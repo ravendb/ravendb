@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
-using Lucene.Net;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;

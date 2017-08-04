@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.ETL
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
-                Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
+                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 NativeMemory.EnsureRegistered();
                 Run();
             })

@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
     public static class DbProviderFactoryExtensions
     {
-        public static DbCommandBuilder CreateCommandBuilder(this DbProviderFactory factory)
+        public static DbCommandBuilder InitializeCommandBuilder(this DbProviderFactory factory)
         {
             if (factory is SqlClientFactory)
                 return new DbCommandBuilder

@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
-using DotNetCross.Memory;
 using Sparrow.Binary;
 using Sparrow.Json.Parsing;
 

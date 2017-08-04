@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
         private static ValueTypeAccessor CreateGetMethodForValueType(PropertyInfo prop, Type type)
         {
-            var binder = Binder.GetMember(CSharpBinderFlags.None, prop.Name, type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
+            var binder = Microsoft.CSharp.RuntimeBinder.Binder.GetMember(CSharpBinderFlags.None, prop.Name, type, new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) });
             return new ValueTypeAccessor(CallSite<Func<CallSite, object, object>>.Create(binder));
         }
 
