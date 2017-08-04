@@ -171,7 +171,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         new leafMenuItem({
             route: 'databases/status',
             moduleId: 'viewmodels/database/status/statistics',
-            title: 'Statistics',
+            title: 'Stats',
             nav: true,
             css: 'icon-stats',
             dynamicHash: appUrls.status
