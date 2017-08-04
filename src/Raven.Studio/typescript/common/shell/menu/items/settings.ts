@@ -5,7 +5,15 @@ import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
-    var items: menuItem[] = [
+    const items: menuItem[] = [
+        new leafMenuItem({
+            route: 'databases/manageDatabaseGroup',
+            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            title: 'Manage database group',
+            nav: true,
+            css: 'icon-topology',
+            dynamicHash: appUrls.manageDatabaseGroup
+        }),
         new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
@@ -82,14 +90,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-custom-functions',
             dynamicHash: appUrls.customFunctionsEditor
         }),
-        new leafMenuItem({
-            route: 'databases/manageDatabaseGroup',
-            moduleId: 'viewmodels/resources/manageDatabaseGroup',
-            title: 'Manage database group',
-            nav: false,
-            css: 'icon-topology',
-            dynamicHash: appUrls.manageDatabaseGroup
-        }),
+        
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',
