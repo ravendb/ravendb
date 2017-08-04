@@ -14,6 +14,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Server;
 using Raven.Client.Server.Tcp;
 using Raven.Client.Util;
+using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -161,7 +162,8 @@ namespace Raven.Server.Documents.Replication
                             if (response.ReplyType == ReplicationMessageReply.ReplyType.Error)
                             {
                                 var exception = new InvalidOperationException(response.Reply.Exception);
-                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)))
+                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException))||
+                                    response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
                                 {
                                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
                                     DatabaseDoesNotExistException.ThrowWithMessageAndException(Destination.Database, response.Reply.Message, exception);
@@ -174,13 +176,23 @@ namespace Raven.Server.Documents.Replication
                         catch (DatabaseDoesNotExistException e)
                         {
                             var msg = $"Failed to parse initial server replication response, because there is no database named {_database.Name} " +
-                                      "on the other end. " +
-                                      "In order for the replication to work, a database with the same name needs to be created at the destination";
+                                      "on the other end. ";
+                            if (_external)
+                                msg += "In order for the replication to work, a database with the same name needs to be created at the destination";
+
+                            var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
+                            if(young)
+                                msg += "This can happen if the other node wasn't yet notified about being assigned this database and should be resolved shortly.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
                             AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
-                            AddAlertOnFailureToReachOtherSide(msg, e);
+
+                            // won't add an alert on young connections
+                            // because it may take a few seconds for the other side to be notified by
+                            // the cluster that it has this db.
+                            if (young == false)
+                                AddAlertOnFailureToReachOtherSide(msg, e);
 
                             throw;
                         }
@@ -680,6 +692,8 @@ namespace Raven.Server.Documents.Replication
         }
 
         private int _disposed;
+        private readonly DateTime _startedAt = DateTime.UtcNow;
+
         public void Dispose()
         {
             //There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
