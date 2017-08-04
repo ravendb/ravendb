@@ -32,6 +32,7 @@ class createDatabase extends dialogViewModelBase {
     disableReplicationFactorInput: KnockoutComputed<boolean>;
     selectionState: KnockoutComputed<checkbox>;
     disableSavingKeyData: KnockoutComputed<boolean>; 
+    canUseDynamicOption: KnockoutComputed<boolean>; 
 
     getDatabaseByName(name: string): database {
         return databasesManager.default.getDatabaseByName(name);
@@ -50,7 +51,7 @@ class createDatabase extends dialogViewModelBase {
         super();
 
         this.databaseModel.isFromBackup = isFromBackup;
-        
+
         this.bindToCurrentInstance("showAdvancedConfigurationFor", "toggleSelectAll", "copyEncryptionKeyToClipboard");
     }
 
@@ -99,6 +100,13 @@ class createDatabase extends dialogViewModelBase {
 
     protected initObservables() {
 
+        this.canUseDynamicOption = ko.pureComputed(() => {
+            const fromBackup = this.databaseModel.isFromBackup;
+            const enforceManual = this.enforceManualNodeSelection();
+            const replicationFactor = this.databaseModel.replication.replicationFactor();
+            return !fromBackup && !enforceManual && replicationFactor !== 1;
+        });
+
         // hide advanced if respononding bundle was unchecked
         this.databaseModel.configurationSections.forEach(section => {
             section.enabled.subscribe(enabled => {
@@ -130,7 +138,10 @@ class createDatabase extends dialogViewModelBase {
         });
 
         this.enforceManualNodeSelection = ko.pureComputed(() => {
-            return this.databaseModel.getEncryptionConfigSection().enabled();
+            const fromBackup = this.databaseModel.isFromBackup;
+            const encryptionEnabled = this.databaseModel.getEncryptionConfigSection().enabled();
+
+            return encryptionEnabled || fromBackup;
         });
 
         this.disableReplicationFactorInput = ko.pureComputed(() => {
