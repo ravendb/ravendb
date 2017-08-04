@@ -45,6 +45,11 @@ interface metadataAwareDto {
     '@metadata'?: documentMetadataDto;
 }
 
+interface changeVectorItem {
+    fullFormat: string;
+    shortFormat: string;
+}
+
 interface IndexErrorPerDocument {
     Document: string;
     Error: string;

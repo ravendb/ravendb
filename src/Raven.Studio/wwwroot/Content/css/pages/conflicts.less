@@ -4,6 +4,17 @@
         position: relative;
     }
 
+    .conflicted-files-cv {
+        height: 30px;
+        flex-basis: 30px;
+        flex-shrink: 1;
+        
+        & > div {
+            flex-grow: 1;
+            flex-shrink: 0;
+        }
+    }
+    
     .conflicted-files {
         margin-bottom: @grid-gutter-width/4;
         flex-basis: 40%;

@@ -8,13 +8,21 @@
         
         <h2 data-bind="text: 'Resolving conflict for: ' + documentId()"></h2>
 
+        <div class="conflicted-files-cv flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
+            <div>Change vector:
+                <span data-bind="foreach: changeVector">
+                   <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+               </span>
+            </div>
+        </div>
+        
         <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
             <div class="file">
                 <pre data-bind="visible: !deletedMarker()"><code data-bind="html: formattedValue"></code></pre>
                 <pre data-bind="visible: deletedMarker()"><code>Document was removed.</code></pre>
             </div>
         </div>
-        
+
         <div class="margin-bottom">
             <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save</span></button>
             <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
