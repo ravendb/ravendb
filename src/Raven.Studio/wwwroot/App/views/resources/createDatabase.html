@@ -119,13 +119,13 @@
         </div>
         
         <div class="toggle">
-            <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, disable: $root.databaseModel.isFromBackup || $root.enforceManualNodeSelection">
+            <input class="styled" type="checkbox" id="dynamic_mode" data-bind="checked: dynamicMode, enable: $root.canUseDynamicOption">
             <label for="dynamic_mode">Allow dynamic node distribution</label>
         </div>
         <small class="toggle-caption">Maintain replication factor upon node failure.</small>
 
         <div class="toggle">
-            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.databaseModel.isFromBackup || $root.enforceManualNodeSelection">
+            <input class="styled" type="checkbox" id="manual_mode" data-bind="checked: manualMode, disable: $root.enforceManualNodeSelection">
             <label for="manual_mode">Set replication nodes manually</label>
         </div>
         <small class="toggle-caption" data-bind="visible: !manualMode()">Replication nodes will be selected randomly among cluster's nodes.</small>

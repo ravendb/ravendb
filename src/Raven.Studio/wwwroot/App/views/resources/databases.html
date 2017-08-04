@@ -127,7 +127,7 @@
                         </div>
                         <div class="dbgroup-node-type flex-horizontal" data-bind="foreach: nodes">
                             <div>
-                                <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank' },
+                                <a data-bind="attr: { href: $root.createAllDocumentsUrlObservableForNode($parent, $data), target: tag() === $root.clusterManager.localNodeTag() ? undefined : '_blank', title: type() },
                                               css: { 'link-disabled': $parent.isBeingDeleted }">
                                     <i data-bind="attr: { class: cssIcon }"></i>
                                     <span data-bind="text: 'Node ' + tag()"></span>

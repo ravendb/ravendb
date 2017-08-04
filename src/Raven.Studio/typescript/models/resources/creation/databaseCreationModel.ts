@@ -102,6 +102,12 @@ class databaseCreationModel {
             this.replication.replicationFactor(nodes.length);
         });
 
+        this.replication.replicationFactor.subscribe(factor => {
+            if (factor === 1) {
+                this.replication.dynamicMode(false);
+            }
+        });
+
         let isFirst = true;
         this.isFocusOnBackupDirectory.subscribe(hasFocus => {
             if (isFirst) {
