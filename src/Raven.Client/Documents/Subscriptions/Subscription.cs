@@ -640,7 +640,7 @@ namespace Raven.Client.Documents.Subscriptions
                     catch (Exception e)
                     {
                         if (e == ex)
-                            throw e;
+                            throw;
 
                         throw new AggregateException(e, ex);
                     }
