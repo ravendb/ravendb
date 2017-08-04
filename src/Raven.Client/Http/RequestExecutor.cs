@@ -242,9 +242,6 @@ namespace Raven.Client.Http
 
                     await ExecuteAsync(node, null, context, command, shouldRetry: false).ConfigureAwait(false);
 
-                    if (command.Result.Etag == -1)
-                        throw new InvalidOperationException($"Uninitialized topology ({nameof(Topology.Etag)}: -1) the cluster supervisor still haven't approved the assignment of nodes, will retry again later");
-
                     var serverHash = ServerHash.GetServerHash(node.Url, _databaseName);
 
                     TopologyLocalCache.TrySavingTopologyToLocalCache(serverHash, command.Result, context);
@@ -423,7 +420,12 @@ namespace Raven.Client.Http
 
             _nodeSelector = new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes?.ToList() ?? new List<ServerNode>(),
+                Nodes = TopologyNodes?.ToList() ?? initialUrls.Select(url =>new ServerNode
+                {
+                    Url = url,
+                    Database = _databaseName,
+                    ClusterTag = "!"
+                }).ToList(),
                 Etag = TopologyEtag
             });
 
@@ -820,16 +822,16 @@ namespace Raven.Client.Http
 
         private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e, int? sessionId)
         {
+            if (command.FailedNodes == null)
+                command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
+
+            await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
+
             if (nodeIndex.HasValue == false)
             {
                 //We executed request over a node not in the topology. This means no failover...
                 return false;
             }
-
-            if (command.FailedNodes == null)
-                command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
-
-            await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
             SpawnHealthChecks(chosenNode, nodeIndex.Value);
 

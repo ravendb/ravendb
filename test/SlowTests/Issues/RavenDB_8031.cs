@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions;
 using Raven.Client.Server;
 using Raven.Client.Server.Operations;
 using Xunit;
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
                     Database = dbName
                 }.Initialize())
                 {
-                    Assert.Throws<InvalidOperationException>(() => store2.Admin.Send(new GetStatisticsOperation()));
+                    Assert.Throws<RavenException>(() => store2.Admin.Send(new GetStatisticsOperation()));
 
                     store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(dbName)));
 
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < 20; i++)
                         {
-                            await Task.Delay(500);
+                            await Task.Delay(50);
 
                             try
                             {
