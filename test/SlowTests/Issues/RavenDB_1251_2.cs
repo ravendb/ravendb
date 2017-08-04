@@ -1,17 +1,14 @@
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Document;
-using Raven.Client.Linq;
-using Raven.Imports.Newtonsoft.Json;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Xunit;
 
-namespace Raven.Tests.Issues
+namespace SlowTests.Issues
 {
     public class RavenDB_1251_2 : RavenTestBase
     {
@@ -23,10 +20,10 @@ namespace Raven.Tests.Issues
         [Fact]
         public void Duration_Can_Sort_By_Range_Value()
         {
-            using (var documentStore = NewDocumentStore())
+            using (var documentStore = GetDocumentStore())
             {
-                documentStore.Conventions.CustomizeJsonSerializer = x => x.Converters = new JsonConverterCollection(x.Converters) { new DurationConverter() };
-                documentStore.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter, SortOptions.Long, usesRangeField: true);
+                documentStore.Conventions.CustomizeJsonSerializer = s => s.Converters.Add(new DurationConverter());
+                documentStore.Conventions.RegisterQueryValueConverter<Duration>(DurationQueryValueConverter);
 
                 using (var session = documentStore.OpenSession())
                 {
@@ -44,9 +41,9 @@ namespace Raven.Tests.Issues
                     var d = new Duration(TimeSpan.FromHours(-1.5));
 
                     var q = session.Query<Foo>()
-                                   .Customize(x => x.WaitForNonStaleResults())
-                                   .Where(x => x.Bar > d)
-                                   .OrderByDescending(x => x.Bar);
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.Bar > d)
+                        .OrderByDescending(x => x.Bar);
                     Debug.WriteLine(q);
                     var result = q.ToList();
 
@@ -75,8 +72,9 @@ namespace Raven.Tests.Issues
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                return obj is Duration && Equals((Duration) obj);
+                if (ReferenceEquals(null, obj))
+                    return false;
+                return obj is Duration && Equals((Duration)obj);
             }
 
             public override int GetHashCode()
@@ -126,7 +124,7 @@ namespace Raven.Tests.Issues
 
             public int CompareTo(object obj)
             {
-                return CompareTo((Duration) obj);
+                return CompareTo((Duration)obj);
             }
         }
 
@@ -148,7 +146,7 @@ namespace Raven.Tests.Issues
 
                 if (reader.TokenType == JsonToken.String)
                 {
-                    var value = (string) reader.Value;
+                    var value = (string)reader.Value;
                     if (value == "")
                     {
                         if (objectType != typeof(Duration?))
@@ -168,18 +166,18 @@ namespace Raven.Tests.Issues
 
                 if (!(value is Duration))
                     throw new ArgumentException(string.Format("Unexpected value when converting. Expected {0}, got {1}.", typeof(Duration).FullName,
-                                                              value.GetType().FullName));
+                        value.GetType().FullName));
 
-                var timeSpan = new TimeSpan(((Duration) value).Ticks);
+                var timeSpan = new TimeSpan(((Duration)value).Ticks);
                 serializer.Serialize(writer, timeSpan);
             }
         }
 
-        public static bool DurationQueryValueConverter(string name, Duration value, QueryValueConvertionType type, out string strValue)
+        public static bool DurationQueryValueConverter(string name, Duration value, bool forRange, out string strValue)
         {
-            strValue = type == QueryValueConvertionType.Range
-                           ? NumberUtil.NumberToString(value.Ticks)
-                           : "\"" + value + "\"";
+            strValue = forRange
+                ? NumberUtil.NumberToString(value.Ticks)
+                : "\"" + value + "\"";
 
             return true;
         }

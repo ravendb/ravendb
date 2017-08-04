@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Conventions
     /// </summary>
     public class DocumentConventions : QueryConventions
     {
-        public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, QueryValueConvertionType convertionType, out string strValue);
+        public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
 
         internal static DocumentConventions Default = new DocumentConventions();
 
@@ -35,6 +35,8 @@ namespace Raven.Client.Documents.Conventions
 
         private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
+
+        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters = new List<(Type, TryConvertValueForQueryDelegate<object>)>();
 
         protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
 
@@ -501,6 +503,43 @@ namespace Raven.Client.Documents.Conventions
             foreach (var @interface in type.GetInterfaces())
                 foreach (var propertyInfo in GetPropertiesForType(@interface))
                     yield return propertyInfo;
+        }
+
+        public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
+        {
+            int index;
+            for (index = 0; index < _listOfQueryValueConverters.Count; index++)
+            {
+                var entry = _listOfQueryValueConverters[index];
+                if (entry.Type.IsAssignableFrom(typeof(T)))
+                {
+                    break;
+                }
+            }
+
+            _listOfQueryValueConverters.Insert(index, (typeof(T), Actual));
+
+            bool Actual(string name, object value, bool forRange, out string strValue)
+            {
+                if (value is T)
+                    return converter(name, (T)value, forRange, out strValue);
+                strValue = null;
+                return false;
+            }
+        }
+
+        public bool TryConvertValueForQuery(string fieldName, object value, bool forRange, out string strValue)
+        {
+            foreach (var queryValueConverter in _listOfQueryValueConverters)
+            {
+                if (queryValueConverter.Type.IsInstanceOfType(value) == false)
+                    continue;
+                
+                return queryValueConverter.Convert(fieldName, value, forRange, out strValue);
+            }
+
+            strValue = null;
+            return false;
         }
     }
 }
