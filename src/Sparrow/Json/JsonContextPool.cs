@@ -1,6 +1,4 @@
-﻿using Sparrow.LowMemory;
-
-namespace Sparrow.Json
+﻿namespace Sparrow.Json
 {
     public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {
