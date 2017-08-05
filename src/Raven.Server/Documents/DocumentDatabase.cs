@@ -706,7 +706,8 @@ namespace Raven.Server.Documents
         {
             lock (this)
             {
-                Debug.Assert(Name == record.DatabaseName);
+                Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
+                    $"{Name} != {record.DatabaseName}");
 
                 if (LastDatabaseRecordIndex >= index)
                 {

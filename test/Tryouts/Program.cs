@@ -40,11 +40,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationOfConflicts())
+                using (var test = new SlowTests.Client.Subscriptions.TestSubscriptionOnDisabledDatabase())
                 {
                     try
                     {
-                        test.ReplicateAConflictOnThreeDBsAndResolve().Wait();
+                        test.Run().Wait();
                     }
                     catch (Exception e)
                     {
