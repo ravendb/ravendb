@@ -492,6 +492,8 @@ namespace Sparrow.Json
                     builder.ReadObjectDocument();
                     var result = await webSocket.ReceiveAsync(bytes.Buffer, cancellationToken);
 
+                    EnsureNotDisposed();
+
                     if (result.MessageType == WebSocketMessageType.Close)
                         return null;
                     bytes.Valid = result.Count;
@@ -560,6 +562,7 @@ namespace Sparrow.Json
                     if (bytes.Valid == bytes.Used)
                     {
                         var read = stream.Read(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
+                        EnsureNotDisposed();
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
@@ -627,6 +630,9 @@ namespace Sparrow.Json
                     if (bytes.Valid == bytes.Used)
                     {
                         var read = await webSocket.ReceiveAsync(bytes.Buffer, token);
+
+                        EnsureNotDisposed();
+
                         if (read.Count == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read.Count;
@@ -646,6 +652,17 @@ namespace Sparrow.Json
             finally
             {
                 DisposeIfNeeded(generation, parser, builder);
+            }
+        }
+
+        private void EnsureNotDisposed()
+        {
+            if (_disposed)
+            {
+#if DEBUG
+                // not sure what should we put here.
+#endif
+                ThrowObjectDisposed();
             }
         }
 
@@ -681,6 +698,9 @@ namespace Sparrow.Json
                         var read = token.HasValue
                             ? await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length, token.Value)
                             : await stream.ReadAsync(bytes.Buffer.Array, bytes.Buffer.Offset, bytes.Length);
+
+                        EnsureNotDisposed();
+
                         if (read == 0)
                             throw new EndOfStreamException("Stream ended without reaching end of json content");
                         bytes.Valid = read;
