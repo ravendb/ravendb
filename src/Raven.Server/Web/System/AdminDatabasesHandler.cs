@@ -17,6 +17,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Raven.Client.Server;
 using Raven.Client.Server.Commands;
@@ -148,8 +149,9 @@ namespace Raven.Server.Web.System
 
                 databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
-                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
 
+                await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
+                
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -204,13 +206,13 @@ namespace Raven.Server.Web.System
                 {
                     throw new BadRequestException("Database document validation failed.", e);
                 }
+                var clusterTopology = ServerStore.GetClusterTopology(context);
 
                 DatabaseTopology topology;
                 if (databaseRecord.Topology?.Members?.Count > 0)
                 {
                     topology = databaseRecord.Topology;
                     ValidateClusterMembers(context, topology, databaseRecord);
-                    var clusterTopology = ServerStore.GetClusterTopology(context);
                     foreach (var member in topology.Members)
                     {
                         nodeUrlsAddedTo.Add(clusterTopology.GetUrlFromTag(member));
@@ -223,7 +225,8 @@ namespace Raven.Server.Web.System
                 }
                 topology.ReplicationFactor = topology.Members.Count;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
-                await ServerStore.Cluster.WaitForIndexNotification(newIndex);
+
+                await WaitForExecutionOnRelevantNodes(context, clusterTopology, databaseRecord.Topology.Members, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -238,6 +241,38 @@ namespace Raven.Server.Web.System
                     });
                     writer.Flush();
                 }
+            }
+        }
+
+        private async Task WaitForExecutionOnRelevantNodes(TransactionOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
+        {
+            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            var waitingTasks = new List<Task>();
+            var executors = new List<ClusterRequestExecutor>();
+            foreach (var member in members)
+            {
+                var url = clusterTopology.GetUrlFromTag(member);
+                var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
+                executors.Add(requester);
+                waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
+            }
+
+            await Task.WhenAll(waitingTasks);
+
+            foreach (var clusterRequestExecutor in executors)
+            {
+                clusterRequestExecutor.Dispose();
+            }
+        }
+
+        private async Task WaitForExecutionOnSpecificNode(TransactionOperationContext context, ClusterTopology clusterTopology, string node, long index)
+        {
+            await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
+
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ServerCertificateHolder.Certificate))
+            {
+                await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
         }
 
