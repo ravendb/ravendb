@@ -53,6 +53,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
+        public SubscriptionState SubscriptionState;
 
         public long SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
@@ -90,7 +91,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (translation == null)
                     throw new SubscriptionClosedException("Cannot find any subscription with the name " + _options.SubscriptionName);
 
-                if (translation.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
                     throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
 
                 if (_options.SubscriptionId > 0 && _options.SubscriptionId != id)
@@ -111,7 +112,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
-            await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
@@ -349,18 +350,17 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
-            var subscription = TcpConnection.DocumentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(_options.SubscriptionName);
 
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
-            using (RegisterForNotificationOnNewDocuments(subscription.Criteria))
+            using (RegisterForNotificationOnNewDocuments(SubscriptionState.Criteria))
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
-                var startEtag = GetStartEtagForSubscription(docsContext, subscription);
+                var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
 
                 string lastChangeVector = null;
 
-                var patch = SetupFilterScript(subscription.Criteria);
+                var patch = SetupFilterScript(SubscriptionState.Criteria);
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -379,12 +379,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
+                            foreach (var result in fetcher.GetDataToSend(docsContext, SubscriptionState, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector)
+                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVector)
                                     ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVector);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -464,7 +464,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
+                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, SubscriptionState.Criteria.Collection);
 
                             if (globalEtag > startEtag)
                                 continue;
