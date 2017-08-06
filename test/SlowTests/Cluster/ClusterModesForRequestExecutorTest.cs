@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -25,6 +23,238 @@ namespace SlowTests.Cluster
         {
             public string Id { get; set; }
             public string Name { get; set; }
+        }
+
+        private string ReplacePort(string urlWithPort, int port)
+        {
+            var url = urlWithPort.Substring(0, urlWithPort.LastIndexOf(":", StringComparison.Ordinal));
+            return $"{url}:{port}";
+        }
+
+        [Fact]
+        public async Task ProxyServer_should_work()
+        {
+            var port = GetPort();
+            int serverPort = 10000;
+            using (var proxy = new ProxyServer(ref serverPort, port))
+            using (var server = GetNewServer(GetServerSettingsForPort(false, out var _, port)))
+            {
+                Servers.Add(server);
+
+                var databaseName = "ProxyServer_should_work" + Guid.NewGuid();
+                using (var documentStore = new DocumentStore
+                {
+                    Database = databaseName,
+                    Urls = new[] { ReplacePort(server.WebUrls[0], serverPort) }
+                })
+                {
+                    documentStore.Initialize();
+
+                    var (raftIndex, _) = await CreateDatabaseInCluster(databaseName, 1, server.WebUrls[0]);
+                    await WaitForRaftIndexToBeAppliedInCluster(raftIndex, TimeSpan.FromSeconds(10));
+
+                    var totalReadBeforeChanges = proxy.TotalRead;
+                    var totalWriteBeforeChanges = proxy.TotalWrite;
+
+                    using (var session = documentStore.OpenSession())
+                    {
+                        session.Store(new { Foo = "Bar" }, "foo/bar");
+                        session.SaveChanges();
+                    }
+
+                    using (var session = documentStore.OpenSession())
+                    {
+                        var doc = session.Load<object>("foo/bar");
+                        Assert.NotNull(doc);
+
+                        Assert.True(proxy.TotalRead > 0);
+                        Assert.True(proxy.TotalWrite > 0);
+
+                        Assert.True(proxy.TotalRead > totalReadBeforeChanges);
+                        Assert.True(proxy.TotalWrite > totalWriteBeforeChanges);
+                    }
+                }
+            }
+        }
+
+        [Fact]
+        public async Task Fastst_node_should_choose_the_node_without_delay()
+        {
+            NoTimeouts();
+            var databaseName = "Fastst_node_should_choose_the_node_without_delay" + Guid.NewGuid();
+
+            var (leader, serversToProxies) = await CreateRaftClusterWithProxiesAndGetLeader(3);
+            var followers = Servers.Where(x => x.ServerStore.IsLeader() == false).ToArray();
+
+            var conventionsForLoadBalancing = new DocumentConventions
+            {
+                ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
+            };
+
+            //set proxies with delays to all servers except follower2
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = new[] { ReplacePort(leader.WebUrls[0], serversToProxies[leader].Port) },
+                Database = databaseName,
+                Conventions = conventionsForLoadBalancing
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                var leaderRequestExecutor = leaderStore.GetRequestExecutor();
+
+                //make sure we have updated topology --> more deterministic test
+                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                {
+                    ClusterTag = leader.ServerStore.NodeTag,
+                    Database = databaseName,
+                    Url = leader.WebUrls[0]
+                }, 5000);
+
+                ApplyProxiesOnRequestExecutor(serversToProxies, leaderRequestExecutor);
+
+                //wait until all nodes in database cluster are members (and not promotables)
+                //GetTopologyCommand -> does not retrieve promotables
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var topology = new Topology();
+                    while (topology.Nodes?.Count != 3)
+                    {
+                        var topologyGetCommand = new GetTopologyCommand();
+                        await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context).ConfigureAwait(false);
+                        topology = topologyGetCommand.Result;
+                        Thread.Sleep(50);
+                    }
+                }
+
+                //set delays to all servers except follower2
+                foreach (var server in Servers)
+                {
+                    if (server == followers[1])
+                        continue;
+
+                    serversToProxies[server].ConnectionDelay = 300;
+                }
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User { Name = "John Dow" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                while (leaderRequestExecutor.InSpeedTestPhase)
+                {
+                    using (var session = leaderStore.OpenSession())
+                    {
+                        session.Load<User>("users/1");
+                    }
+                }
+
+                var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
+                var follower2Proxy = ReplacePort(followers[1].WebUrls[0], serversToProxies[followers[1]].Port);
+
+                Assert.Equal(follower2Proxy, fastest.Url);
+
+            }
+        }
+
+        [Fact]
+        public async Task Fastst_node_should_choose_the_preferred_node()
+        {
+            var databaseName = "Fastst_node_should_choose_the_preferred_node" + Guid.NewGuid();
+
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            var conventionsForLoadBalancing = new DocumentConventions
+            {
+                ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
+            };
+
+            //set proxies with delays to all servers except follower2
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+                Conventions = conventionsForLoadBalancing
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                var leaderRequestExecutor = leaderStore.GetRequestExecutor();
+
+                //make sure we have updated topology --> more deterministic test
+                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
+                {
+                    ClusterTag = leader.ServerStore.NodeTag,
+                    Database = databaseName,
+                    Url = leader.WebUrls[0]
+                }, 5000);
+
+
+                //wait until all nodes in database cluster are members (and not promotables)
+                //GetTopologyCommand -> does not retrieve promotables
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var topology = new Topology();
+                    while (topology.Nodes?.Count != 3)
+                    {
+                        var topologyGetCommand = new GetTopologyCommand();
+                        await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context).ConfigureAwait(false);
+                        topology = topologyGetCommand.Result;
+                        Thread.Sleep(50);
+                    }
+                }
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User { Name = "John Dow" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                while (leaderRequestExecutor.InSpeedTestPhase)
+                {
+                    using (var session = leaderStore.OpenSession())
+                    {
+                        session.Load<User>("users/1");
+                    }
+                }
+
+                var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
+                var preferred = leaderRequestExecutor.GetPreferredNode().Result.Item2;
+
+                Assert.Equal(preferred.Url, fastest.Url);
+
+            }
+        }
+
+        private void ApplyProxiesOnRequestExecutor(Dictionary<RavenServer, ProxyServer> serversToProxies, RequestExecutor requestExecutor)
+        {
+            void ApplyProxies(Topology topology)
+            {
+                if (topology == null)
+                    return;
+                for (var i = 0; i < topology.Nodes.Count; i++)
+                {
+                    var node = topology.Nodes[i];
+                    var kvp = serversToProxies.FirstOrDefault(x => x.Key.ServerStore.NodeTag == node.ClusterTag);
+                    Assert.NotNull(kvp);
+
+                    node.Url = ReplacePort(node.Url, kvp.Value.Port);
+
+                    topology.Nodes[i] = node;
+                }
+            }
+
+            if (requestExecutor.Topology != null)
+            {
+                ApplyProxies(requestExecutor.Topology);
+            }
+
+            requestExecutor.TopologyUpdated += ApplyProxies;
         }
 
         [Fact]

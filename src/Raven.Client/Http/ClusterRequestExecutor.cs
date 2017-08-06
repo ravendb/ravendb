@@ -125,6 +125,8 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
+
+                    OnTopologyUpdated(newTopology);
                 }
             }
             finally
