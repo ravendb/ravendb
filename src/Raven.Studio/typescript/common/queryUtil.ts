@@ -9,7 +9,9 @@ import document = require("models/database/documents/document");
 
 class queryUtil {
 
-    static readonly DynamicPrefix = "dynamic/";
+    static readonly AutoPrefix = "auto/";
+    static readonly DynamicPrefix = "collection/";
+    static readonly AllDocs = "AllDocs";
 
     /**
      * Escapes lucene single term
@@ -39,7 +41,7 @@ class queryUtil {
 
         // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
         // Fields don't show for All Documents.
-        const isAllDocumentsDynamicQuery = indexName === "All Documents" || indexName === "dynamic";
+        const isAllDocumentsDynamicQuery = indexName === this.AllDocs;
         if (!isAllDocumentsDynamicQuery) {
 
             //if index is not dynamic, get columns using index definition, else get it using first index result
