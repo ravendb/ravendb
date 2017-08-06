@@ -56,7 +56,6 @@ class editSqlReplication extends viewModelBase {
         super();
 
         aceEditorBindingHandler.install();
-        this.appUrls = appUrl.forCurrentDatabase();
         this.sqlReplicationName = ko.computed(() => (!!this.editedReplication() && !this.isEditingNewReplication()) ? this.editedReplication().name() : null);
     }
 

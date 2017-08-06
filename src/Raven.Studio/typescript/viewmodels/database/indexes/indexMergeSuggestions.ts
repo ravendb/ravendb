@@ -15,11 +15,6 @@ class indexMergeSuggestions extends viewModelBase {
     unmergables = ko.observableArray<{ indexName: string; reason: string; }>();
     /* TODOidleOrAbandonedIndexes = ko.observableArray<indexStatisticsDto>();
     notUsedForLastWeek = ko.observableArray<indexStatisticsDto>();*/
-    
-    constructor() {
-        super();
-        this.appUrls = appUrl.forCurrentDatabase();
-    }
 
     canActivate(args: any) :any {
         var deferred = $.Deferred();

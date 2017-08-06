@@ -24,7 +24,6 @@ class exploration extends viewModelBase {
 
     constructor() {
         super();
-        this.appUrls = appUrl.forCurrentDatabase();
         aceEditorBindingHandler.install();
     }
 

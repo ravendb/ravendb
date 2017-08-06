@@ -123,8 +123,6 @@ class query extends viewModelBase {
     constructor() {
         super();
 
-        this.appUrls = appUrl.forCurrentDatabase();
-
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
