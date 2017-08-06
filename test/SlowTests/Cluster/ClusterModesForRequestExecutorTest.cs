@@ -194,7 +194,7 @@ namespace SlowTests.Cluster
 
                 DisposeServerAndWaitForFinishOfDisposal(leader);
             
-                var failedRequests = new HashSet<(string, HttpRequestException)>();
+                var failedRequests = new HashSet<(string, Exception)>();
 
                 requestExecutor.FailedRequest += (url, e) => failedRequests.Add((url, e));
 

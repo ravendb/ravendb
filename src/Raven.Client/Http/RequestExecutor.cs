@@ -105,14 +105,14 @@ namespace Raven.Client.Http
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
         public event Action<string> SucceededRequest;
-        public event Action<string, HttpRequestException> FailedRequest;
+        public event Action<string, Exception> FailedRequest;
 
         protected void OnSucceededRequest(string url)
         {
             SucceededRequest?.Invoke(url);
         }
 
-        protected void OnFailedRequest(string url, HttpRequestException e)
+        protected void OnFailedRequest(string url, Exception e)
         {
             FailedRequest?.Invoke(url, e);
         }
@@ -562,7 +562,17 @@ namespace Raven.Client.Http
                             catch (OperationCanceledException e)
                             {
                                 if (cts.IsCancellationRequested && token.IsCancellationRequested == false) // only when we timed out
-                                    throw new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
+                                {
+                                    var timeoutException = new TimeoutException($"The request for {request.RequestUri} failed with timeout after {timeout}", e);
+                                    if (shouldRetry == false)
+                                        throw timeoutException;
+
+                                    sp.Stop();
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionId).ConfigureAwait(false) == false)
+                                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
+
+                                    return;
+                                }
                                 throw;
                             }
                         }
@@ -820,7 +830,7 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e, int? sessionId)
+        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e, int? sessionId)
         {
             if (command.FailedNodes == null)
                 command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
@@ -908,7 +918,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, new GetStatisticsCommand(debugTag: "failure=check"), shouldRetry: false);
         }
 
-        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, HttpRequestException e)
+        private static async Task AddFailedResponseToCommand<TResult>(ServerNode chosenNode, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (response != null)
             {
