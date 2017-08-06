@@ -289,7 +289,9 @@ namespace Rachis.Behaviors
             }
 
             if (Engine.PersistentState.VotedFor != null && Engine.PersistentState.VotedFor != req.From &&
-                Engine.PersistentState.VotedForTerm >= req.Term)
+                Engine.PersistentState.VotedForTerm >= req.Term  &&
+                //This is the case where we voted for a node and right after were not able to communicate to is
+                DateTime.UtcNow - LastHeartbeatTime < TimeSpan.FromMilliseconds(10 * Engine.Options.ElectionTimeout))
             {
                 var msg = string.Format("Rejecting request vote because already voted for {0} in term {1}",
                     Engine.PersistentState.VotedFor, req.Term);
