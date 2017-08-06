@@ -170,29 +170,38 @@ namespace Raven.Server.Routing
             {
                 message = "This server requires client certificate for authentication, but none was provided by the client";
             }
-            else if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
-            {
-                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not on the allowed list of certificates that can access this server";
-            }
-            else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
-            {
-                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not authorized to access " + (database ?? "the server");
-            }
-            else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
-            {
-                message = "The provided client certificate " + feature.Certificate.FriendlyName + " does not have ServerAdmin level to access " + (database ?? "the server");
-            }
-            else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
-            {
-                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is expired on " + feature.Certificate.NotAfter;
-            }
-            else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
-            {
-                message = "The provided client certificate " + feature.Certificate.FriendlyName + " is not yet valid because it starts on " + feature.Certificate.NotBefore;
-            }
             else
             {
-                message = "Access to this server was denied, but the reason why is confidential, you did not see this message and your memory will self destruct in 5 seconds.";
+                var name = feature.Certificate.FriendlyName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = feature.Certificate.Subject;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = feature.Certificate.ToString(false);
+
+                if (feature.Status == RavenServer.AuthenticationStatus.UnfamiliarCertificate)
+                {
+                    message = "The provided client certificate '" + name + "' is not on the allowed list of certificates that can access this server";
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.Allowed)
+                {
+                    message = "The provided client certificate '" + name + "' is not authorized to access " + (database ?? "the server");
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
+                {
+                    message = "The provided client certificate '" + name + "' does not have ServerAdmin level to access " + (database ?? "the server");
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
+                {
+                    message = "The provided client certificate '" + name + "' is expired on " + feature.Certificate.NotAfter;
+                }
+                else if (feature.Status == RavenServer.AuthenticationStatus.NotYetValid)
+                {
+                    message = "The provided client certificate '" + name + "' is not yet valid because it starts on " + feature.Certificate.NotBefore;
+                }
+                else
+                {
+                    message = "Access to this server was denied, but the reason why is confidential, you did not see this message and your memory will self destruct in 5 seconds.";
+                }
             }
             context.Response.StatusCode = (int)HttpStatusCode.Forbidden;
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
