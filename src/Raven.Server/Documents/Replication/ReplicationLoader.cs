@@ -38,7 +38,6 @@ namespace Raven.Server.Documents.Replication
 
         public readonly DocumentDatabase Database;
         private volatile bool _isInitialized;
-        private bool _isInitializedOutgoingReplications;
 
         private readonly Timer _reconnectAttemptTimer;
         internal readonly int MinimalHeartbeatInterval;
@@ -348,17 +347,10 @@ namespace Raven.Server.Documents.Replication
             _isInitialized = true;
         }
 
-
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
         {
             HandleConflictResolverChange(newRecord);
             HandleTopologyChange(newRecord);
-
-            if (_isInitializedOutgoingReplications == false)
-            {
-                InitializeOutgoingReplications();
-                _isInitializedOutgoingReplications = true;
-            }
         }
 
         private void HandleConflictResolverChange(DatabaseRecord newRecord)
@@ -385,6 +377,8 @@ namespace Raven.Server.Documents.Replication
             if (newRecord == null || _server.IsPassive())
             {
                 DropOutgoingConnections(Destinations, ref instancesToDispose);
+                _internalDestinations.Clear();
+                _externalDestinations.Clear();
                 _destinations.Clear();
                 return;
             }
@@ -429,14 +423,15 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleInternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
-            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, GetClusterTopology(),_server.IsPassive());
+            var clusterTopology = GetClusterTopology();
+            var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, clusterTopology, _server.IsPassive());
             var internalConnections = DatabaseTopology.InternalReplicationChanges(_internalDestinations, newInternalDestinations);
 
             if (internalConnections.removeDestinations.Count > 0)
             {
                 var removed = internalConnections.removeDestinations.Select(r => new InternalReplication
                 {
-                    NodeTag = _server.NodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
                     Url = r,
                     Database = Database.Name
                 });
@@ -447,7 +442,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var added = internalConnections.addDestinations.Select(r => new InternalReplication
                 {
-                    NodeTag = _server.NodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
                     Url = r,
                     Database = Database.Name
                 });
