@@ -247,22 +247,27 @@ namespace Raven.Server.Web.System
         private async Task WaitForExecutionOnRelevantNodes(TransactionOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
-
-            var waitingTasks = new List<Task>();
             var executors = new List<ClusterRequestExecutor>();
-            foreach (var member in members)
+            try
             {
-                var url = clusterTopology.GetUrlFromTag(member);
-                var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
-                executors.Add(requester);
-                waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
+
+                var waitingTasks = new List<Task>();
+                foreach (var member in members)
+                {
+                    var url = clusterTopology.GetUrlFromTag(member);
+                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
+                    executors.Add(requester);
+                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
+                }
+
+                await Task.WhenAll(waitingTasks);
             }
-
-            await Task.WhenAll(waitingTasks);
-
-            foreach (var clusterRequestExecutor in executors)
+            finally
             {
-                clusterRequestExecutor.Dispose();
+                foreach (var clusterRequestExecutor in executors)
+                {
+                    clusterRequestExecutor.Dispose();
+                }
             }
         }
 
