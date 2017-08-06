@@ -16,6 +16,7 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Server;
+using Raven.Client.Server.Commands;
 using Raven.Client.Server.ETL;
 using Raven.Client.Server.Operations;
 using Raven.Server.Commercial;
@@ -1339,6 +1340,19 @@ namespace Raven.Server.ServerWide
                 Debug.Assert(tcpStatusTask.IsCompleted);
                 return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(webUrls[0], tcpStatusTask.Result.Port);
             }
+        }
+
+        public DynamicJsonValue GetTcpInfoAndCertificates()
+        {
+            var tcpServerUrl = NodeTcpServerUrl;
+            if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
+                tcpServerUrl = tcpServerUrl.Remove(15, 8);
+
+            return new DynamicJsonValue
+            {
+                [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
+                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ServerCertificateHolder.CertificateForClients,
+            };
         }
 
         public DynamicJsonValue GetLogDetails(TransactionOperationContext context, int max = 100)
