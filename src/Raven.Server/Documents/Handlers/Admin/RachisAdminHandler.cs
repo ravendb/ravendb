@@ -62,6 +62,33 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
+        [RavenAction("/admin/cluster/observer", "GET", AuthorizationStatus.ServerAdmin)]
+        public Task GetObserverDecisions()
+        {
+            SetupCORSHeaders();
+
+            if (ServerStore.IsLeader())
+            {
+                var db = GetStringQueryString("db");
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var res = ServerStore.Observer.ReadDecisionsForDatabase(context, db);
+                    var json = new DynamicJsonValue
+                    {
+                        ["Iteration"] = res.Iteration,
+                        ["Commands"] = new DynamicJsonArray(res.Commands)
+                    };
+                    context.Write(writer, json);
+                    writer.Flush();
+                    return Task.CompletedTask;
+                }
+            }
+            RedirectToLeader();
+            return Task.CompletedTask;
+        }
+
         [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.ServerAdmin)]
         public Task GetLogs()
         {

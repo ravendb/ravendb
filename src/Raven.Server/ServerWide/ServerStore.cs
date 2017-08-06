@@ -148,6 +148,8 @@ namespace Raven.Server.ServerWide
             return ClusterMaintenanceSupervisor?.GetStats();
         }
 
+        internal ClusterObserver Observer { get; set; }
+
         public async Task ClusterMaintenanceSetupTask()
         {
             while (true)
@@ -161,7 +163,7 @@ namespace Raven.Server.ServerWide
                         continue;
                     }
                     using (ClusterMaintenanceSupervisor = new ClusterMaintenanceSupervisor(this, _engine.Tag, _engine.CurrentTerm))
-                    using (new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
+                    using (Observer = new ClusterObserver(this, ClusterMaintenanceSupervisor, _engine, ContextPool, ServerShutdown))
                     {
                         var oldNodes = new Dictionary<string, string>();
                         while (_engine.LeaderTag == NodeTag)
@@ -203,7 +205,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
+        
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
