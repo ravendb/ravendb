@@ -58,6 +58,8 @@ namespace Raven.Client.Http
 
         public readonly HttpCache Cache = new HttpCache();
 
+        public Topology Topology => _nodeSelector?.Topology;
+
         public IReadOnlyList<ServerNode> TopologyNodes => _nodeSelector?.Topology.Nodes;
 
         private Timer _updateTopologyTimer;
@@ -106,6 +108,7 @@ namespace Raven.Client.Http
 
         public event Action<string> SucceededRequest;
         public event Action<string, Exception> FailedRequest;
+        public event Action<Topology> TopologyUpdated;
 
         protected void OnSucceededRequest(string url)
         {
@@ -120,7 +123,6 @@ namespace Raven.Client.Http
         protected RequestExecutor(string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
         {
             _readBalanceBehavior = conventions.ReadBalanceBehavior;
-
             _databaseName = databaseName;
             Certificate = certificate;
 
@@ -141,6 +143,11 @@ namespace Raven.Client.Http
             }
 
             _httpClient = lazyClient.Value;
+        }
+
+        public void ForceUpdateTopology(Topology topology)
+        {
+            _nodeSelector.OnUpdateTopology(topology, true);
         }
 
         public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -265,6 +272,7 @@ namespace Raven.Client.Http
                     }
 
                     TopologyEtag = _nodeSelector.Topology.Etag;
+                    OnTopologyUpdated(command.Result);
                 }
             }
             finally
@@ -669,6 +677,8 @@ namespace Raven.Client.Http
                 }
             }
         }
+
+        public bool InSpeedTestPhase => _nodeSelector.InSpeedTestPhase;
 
         private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
         {
@@ -1121,6 +1131,11 @@ namespace Raven.Client.Http
                     Etag = TopologyEtag
                 });
             }
+        }
+
+        protected void OnTopologyUpdated(Topology newTopology)
+        {
+            TopologyUpdated?.Invoke(newTopology);
         }
     }
 }
