@@ -102,6 +102,8 @@ namespace Raven.Client
 
             public const int MaxDatabaseNameLength = 128;
 
+            public const string UnchangedSubscriptionsChangeVecotr = "DoNotChange";
+
             public class Metadata
             {
                 private Metadata()

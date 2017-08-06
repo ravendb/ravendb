@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (InitialChangeVector == "DoNotChange")
+                        if (InitialChangeVector == Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
                         {
                             receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
                             modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
