@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +15,7 @@ namespace SlowTests.Client.Subscriptions
 {
     public class TestSubscriptionOnDisabledDatabase:RavenTestBase
     {
-        public TimeSpan ReasonableWaitTime = TimeSpan.FromSeconds(25);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
 
         [Fact]
         public async Task Run()
@@ -54,7 +55,7 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
 
-                Assert.True(mre.WaitOne(ReasonableWaitTime));
+                Assert.True(mre.WaitOne(_reasonableWaitTime));
                 mre.Reset();
 
                 store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, true));
@@ -89,7 +90,7 @@ namespace SlowTests.Client.Subscriptions
                         session.Store(new User { Name = i.ToString() });
                     session.SaveChanges();
                 }
-                Assert.True(mre.WaitOne(ReasonableWaitTime));
+                Assert.True(mre.WaitOne(_reasonableWaitTime));
             }
         }
     }
