@@ -13,13 +13,52 @@
                             </div>
                         </div>
 
+                        <div class="<!--btn-group fix-float-issue--> btn-group-sm " role="group">
+                            <div class="dropdown">
+                                <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <span data-bind="text: selectedIndexLabel"></span>
+                                    <span class="caret"></span>
+                                </button>
+                                <div class="dropdown-menu">
+                                    <ul class="menu max-height">
+
+                                        <!-- ko foreach: indexes -->
+                                        <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
+                                        <!-- /ko -->
+                                        <li class="divider" data-bind="visible: collections().length"></li>
+                                        <!-- ko foreach: collections -->
+                                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'collection/' + name)">
+                                            <a href="#">
+                                                <span data-bind="text: 'collection/' + name"></span>
+                                            </a>
+                                        </li>
+                                        <!-- /ko -->
+                                        <li class="divider"></li>
+                                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'AllDocs')">
+                                            <a href="#">
+                                                <span>All Documents</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
+                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
+                            <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
+                            <div class="btn-group btn-group-sm has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }">
+                                <a class="btn btn-default" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
+                            </div>
+                            <div class="btn-group btn-group-sm has-disable-reason"  data-bind="attr: { 'data-original-title': isMapReduceIndex() ? '' : 'Available only for map/reduce indexes' }">
+                                <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isMapReduceIndex() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i><span>Map/Reduce Visualizer</span></a>
+                            </div>
+                        </div>
                         <div class="btn-group btn-group-sm pull-right" role="group">
                             <div class="dropdown">
                                 <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                    data-bind="enable: recentQueries().length">
-    <i class="icon-recent"></i><span>Recent</span>
-                                                        <span class="caret"></span>
-                                                    </button>
+                                        data-bind="enable: recentQueries().length">
+                                    <i class="icon-recent"></i><span>Recent</span>
+                                    <span class="caret"></span>
+                                </button>
                                 <div class="dropdown-menu" role="menu">
                                     <ul class="menu max-height" data-bind="foreach: recentQueries">
                                         <li>
@@ -46,16 +85,15 @@
                                 </div>
                             </div>
                             <div class="dropdown">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
-                                    aria-expanded="true">
-                                <i class="icon-settings"></i><span>Settings</span>
-                                <span class="caret"></span>
-                            </button>
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-settings"></i><span>Settings</span>
+                                    <span class="caret"></span>
+                                </button>
                                 <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
                                 </div>
                             </div>
                         </div>
-                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
+                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', completer:queryCompleter, completerHostObject: $root }"></pre>
                     </div>
                     <div class="query-controls">
                         <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
@@ -201,7 +239,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
                 <label></label>
             </div>
         </div>
@@ -234,7 +272,7 @@
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>
                 customColumns: currentColumnsParams,
-                isIndexMapReduce: isIndexMapReduce,
+                isMapReduceIndex: isMapReduceIndex,
                 selectedIndices: selectedResultIndices
                 --
                     <div id="queryResultsGrid"

@@ -52,11 +52,6 @@ type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<doc
 
 class query extends viewModelBase {
 
-    static readonly autoPrefix = "auto/";
-
-    // TODO: use a static dynamic prefix with the slash. Note: the index name of 'dynamic/All Documents is actually 'dynamic'
-    //static readonly dynamicPrefix = "dynamic/"; 
-
     static readonly ContainerSelector = "#queryContainer";
     static readonly $body = $("body");
 
@@ -89,14 +84,23 @@ class query extends viewModelBase {
     staleResult: KnockoutComputed<boolean>;
     dirtyResult = ko.observable<boolean>();
 
-    isQueriedIndexMapReduce: KnockoutComputed<boolean>;
-    isQueriedIndexDynamic: KnockoutComputed<boolean>;
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
+    isMapReduceIndex: KnockoutComputed<boolean>;
+    isDynamicIndex: KnockoutComputed<boolean>;
+    isAutoIndex: KnockoutComputed<boolean>;
+    isStaticIndexSelected: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
 
-    queryTextHasFocus = ko.observable<boolean>(false);
+    initialSelectedIndex: string;
+    selectedIndex: KnockoutComputed<string>;
+    selectedIndexLabel: KnockoutComputed<string>;
+    hasEditableIndex: KnockoutComputed<boolean>;
 
+    editIndexUrl: KnockoutComputed<string>;
+    indexPerformanceUrl: KnockoutComputed<string>;
+    termsUrl: KnockoutComputed<string>;
+    visualizerUrl: KnockoutComputed<string>;
     rawJsonUrl = ko.observable<string>();
     csvUrl = ko.observable<string>();
 
@@ -104,7 +108,6 @@ class query extends viewModelBase {
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
 
     private customFunctionsContext: object;
-
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -133,6 +136,67 @@ class query extends viewModelBase {
     }
 
     private initObservables() {
+        this.selectedIndex = ko.pureComputed(() => {
+            const stats = this.queryStats();
+            if (!stats) {
+                return this.initialSelectedIndex;
+            }
+
+            return stats.IndexName;
+        });
+        this.selectedIndexLabel = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            return (indexName === "AllDocs") ? "All Documents" : indexName;
+        });
+
+        this.hasEditableIndex = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            return indexName ? !indexName.startsWith(queryUtil.DynamicPrefix) : false;
+        });
+
+        this.editIndexUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
+        this.indexPerformanceUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.selectedIndex()) : null);
+        this.termsUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
+        this.visualizerUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.selectedIndex()) : null);
+
+        this.isMapReduceIndex = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            if (!indexName)
+                return false;
+
+            const indexes = this.indexes() || [];
+            const currentIndex = indexes.find(i => i.name === indexName);
+            return !!currentIndex && currentIndex.isMapReduce;
+        });
+        this.isAutoIndex = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            if (!indexName)
+                return false;
+
+            return indexName.startsWith(queryUtil.AutoPrefix);
+        });
+
+        this.isStaticIndexSelected = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            if (!indexName)
+                return false;
+
+            return !indexName.startsWith(queryUtil.DynamicPrefix);
+        });
+
+        this.isDynamicIndex = ko.pureComputed(() => {
+            let indexName = this.selectedIndex();
+            if (!indexName)
+                return false;
+
+            const indexes = this.indexes() || [];
+            const currentIndex = indexes.find(i => i.name === indexName);
+            return !currentIndex;
+        });
+
+        this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
+            return !this.isMapReduceIndex() && !this.isDynamicIndex();
+        });
 
         this.containsAsterixQuery = ko.pureComputed(() => this.criteria().queryText().includes("*.*"));
 
@@ -155,31 +219,12 @@ class query extends viewModelBase {
         criteria.showFields.subscribe(() => this.runQuery());   
       
         criteria.indexEntries.subscribe((checked) => {
-            this.runQuery();
-        });  
-
-        this.isQueriedIndexMapReduce = ko.pureComputed(() => {
-            const stats = this.queryStats();
-            if (!stats || !stats.IndexName)
-                return false;
-
-            const indexes = this.indexes() || [];
-            const indexItem = _.find(indexes, x => x.name == stats.IndexName);
-            return indexItem && indexItem.isMapReduce;
-        });
-
-        this.isQueriedIndexDynamic = ko.pureComputed(() => {
-            const stats = this.queryStats();
-            if (!stats || !stats.IndexName)
-                return false;
-
-            const indexes = this.indexes() || [];
-            const idx = _.find(indexes, x => x.name == stats.IndexName);
-            return !idx;
-        });
-
-        this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
-            return !this.isQueriedIndexMapReduce() && !this.isQueriedIndexDynamic();
+            if (checked && this.isDynamicIndex()) {
+                criteria.indexEntries(false);
+            } else {
+                // run index entries option only if not dynamic index
+                this.runQuery();
+            }
         });
 
          /* TODO
@@ -191,7 +236,7 @@ class query extends viewModelBase {
 
         this.enableDeleteButton = ko.computed(() => {
             var currentIndex = this.indexes().find(i => i.name === this.selectedIndex());
-            var isMapReduce = this.isIndexMapReduce();
+            var isMapReduce = this.isMapReduceIndex();
             var isDynamic = this.isDynamicIndex();
             return !!currentIndex && !isMapReduce && !isDynamic;
         });*/
@@ -329,37 +374,51 @@ class query extends viewModelBase {
             });
     }
 
-    selectInitialQuery(recentQueryHash: string) {
-        if (!recentQueryHash)
-            return;
-
-        if (recentQueryHash.indexOf("recentquery-") === 0) {
-            const hash = parseInt(recentQueryHash.substr("recentquery-".length), 10);
+    selectInitialQuery(indexNameOrRecentQueryHash: string) {
+        if (!indexNameOrRecentQueryHash) {
+            // if no index exists ==> use the default All Documents
+            this.setSelectedIndex(queryUtil.AllDocs);
+        } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
+            indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix)) {
+            this.setSelectedIndex(indexNameOrRecentQueryHash);
+        } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
+            const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             const matchingQuery = this.recentQueries().find(q => q.hash === hash);
             if (matchingQuery) {
                 this.runRecentQuery(matchingQuery);
             } else {
                 this.navigate(appUrl.forQuery(this.activeDatabase()));
             }
-        } else if (recentQueryHash) {
-            const index = this.indexes().find(x => x.name === recentQueryHash);
-            if (index) {
-                const query = queryUtil.formatIndexQuery(recentQueryHash);
-                this.criteria().queryText(query);
-                this.runQuery();
-            }
-            else {
-                messagePublisher.reportError(`Could not find recent query: ${recentQueryHash}`);
-            }
+        } else if (indexNameOrRecentQueryHash) {
+            messagePublisher.reportError(`Could not find index or recent query: ${indexNameOrRecentQueryHash}`);
+            // fallback to All Documents, but show error
+            this.setSelectedIndex(queryUtil.AllDocs);
         }
     }
 
-    static getIndexUrlPartFromIndexName(indexNameOrCollectionName: string) {
-        if (indexNameOrCollectionName === "All Documents") {
-            return "dynamic";
+    setSelectedIndex(indexName: string) {
+        this.initialSelectedIndex = indexName;
+        this.criteria().setSelectedIndex(indexName);
+        this.uiTransformer(null);
+        this.uiTransformerParameters([]);
+
+        this.columnsSelector.reset();
+
+        if (this.isDynamicIndex() && this.criteria().indexEntries()) {
+            this.criteria().indexEntries(false);
+            this.indexEntrieStateWasTrue = true; // save the state..
         }
 
-        return indexNameOrCollectionName;
+        if ((!this.isDynamicIndex() && this.indexEntrieStateWasTrue)) {
+            this.criteria().indexEntries(true);
+            this.indexEntrieStateWasTrue = false;
+        }
+
+        this.runQuery();
+
+        const indexQuery = indexName;
+        const url = appUrl.forQuery(this.activeDatabase(), indexQuery);
+        this.updateUrl(url);
     }
 
     private generateQuerySummary() {
@@ -371,7 +430,6 @@ class query extends viewModelBase {
 
     runQuery() {
         eventsCollector.default.reportEvent("query", "run");
-        this.queryTextHasFocus(false);
         this.querySummary(this.generateQuerySummary());
         const criteria = this.criteria();
 
@@ -397,6 +455,8 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
+                        queryUtil.fetchIndexFields(this.activeDatabase(), this.selectedIndex(), this.indexFields);
+
                         //TODO: this.indexSuggestions([]);
                         /* TODO
                         if (queryResults.totalResultCount == 0) {
@@ -473,10 +533,6 @@ class query extends viewModelBase {
         }
 
         this.runQuery();
-
-        /* TODO
-        queryUtil.fetchIndexFields(this.activeDatabase(), storedQuery.indexName, this.indexFields);
-        */
     }
 
     private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {
@@ -556,9 +612,7 @@ class query extends viewModelBase {
     }
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        /* TODO
-        queryUtil.queryCompleter(this.indexFields, this.criteria().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
-        */
+        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
         callback([], []);
     }
 
@@ -578,9 +632,8 @@ class query extends viewModelBase {
 
     private promptDeleteDocsMatchingQuery(resultCount: number) {
         const criteria = this.criteria();
-        const stats = this.queryStats();
         const db = this.activeDatabase();
-        const viewModel = new deleteDocumentsMatchingQueryConfirm(stats.IndexName, criteria.queryText(), resultCount, db);
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), criteria.queryText(), resultCount, db);
         app.showBootstrapDialog(viewModel)
            .done((result) => {
                 if (result) {

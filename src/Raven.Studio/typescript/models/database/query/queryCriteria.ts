@@ -2,11 +2,12 @@
 
 import genUtils = require("common/generalUtils");
 import querySort = require("models/database/query/querySort");
+import queryUtil = require("common/queryUtil");
 
 class queryCriteria {
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
-    queryText = ko.observable<string>("");
+    queryText = ko.observable<string>("from @all_docs");
     transformer = ko.observable<string>();
     transformerParameters = ko.observableArray<transformerParamDto>();
 
@@ -85,6 +86,15 @@ class queryCriteria {
     }
 
     setSelectedIndex(indexName: string) {
+        let rql = "from ";
+        if (indexName.startsWith(queryUtil.DynamicPrefix)) {
+            rql += indexName.substring(queryUtil.DynamicPrefix.length);
+        } else if (indexName === queryUtil.AllDocs) {
+            rql += "@all_docs";
+        } else {
+            rql += "index '" + indexName + "'";
+        }
+        this.queryText(rql);
         this.transformer(null);
         this.transformerParameters([]);
     }
