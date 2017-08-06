@@ -60,6 +60,9 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                         if (InitialChangeVector == Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
                         {
+                            if (receivedSubscriptionState.Modifications == null)
+                                receivedSubscriptionState.Modifications = new DynamicJsonValue();
+
                             receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
                             modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
                         }
