@@ -88,6 +88,7 @@ namespace Raven.Server.Web.System
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
                 var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, store.IsPassive());
+                
                 yield return new OngoingTaskSubscription
                 {
                     // Supply only needed fields for List View  
@@ -100,7 +101,8 @@ namespace Raven.Server.Web.System
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     TaskId = subscriptionState.SubscriptionId,
                     Collection = subscriptionState.Criteria.Collection,
-                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity
+                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
+                    LastChangeVecotr = subscriptionState.ChangeVector
                 };
             }
         }
