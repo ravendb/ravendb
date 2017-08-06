@@ -42,8 +42,8 @@
                                     </ul>
                                 </div>
                             </div>
-                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isAutoIndex()" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
-                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isAutoIndex" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
+                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isStaticIndexSelected" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
+                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isStaticIndexSelected()" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
                             <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
                             <div class="btn-group btn-group-sm has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }">
                                 <a class="btn btn-default" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
