@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -12,6 +13,9 @@ using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Sparrow.Collections;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Utils;
 using static Raven.Server.ServerWide.Maintenance.DatabaseStatus;
@@ -55,6 +59,23 @@ namespace Raven.Server.ServerWide.Maintenance
             _observe = Run(_cts.Token);
         }
 
+        private readonly ConcurrentDictionary<string, List<CommandBase>> _decisionsLog = new ConcurrentDictionary<string, List<CommandBase>>();
+        private long _iteration;
+        public (List<DynamicJsonValue> Commands, long Iteration) ReadDecisionsForDatabase(JsonOperationContext ctx, string dbName)
+        {
+            if (_decisionsLog.ContainsKey(dbName))
+            {
+                var list = new List<DynamicJsonValue>();
+
+                foreach (var cmd in _decisionsLog[dbName])
+                {
+                    list.Add(cmd.ToJson(ctx));
+                }
+                return (list, _iteration);
+            }
+            return (new List<DynamicJsonValue>(), _iteration);
+        }
+
         public async Task Run(CancellationToken token)
         {
             var prevStats = new Dictionary<string, ClusterNodeStatusReport>();
@@ -65,6 +86,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var newStats = _maintenance.GetStats();
                     await AnalyzeLatestStats(newStats, prevStats);
+                    _iteration++;
                     prevStats = newStats;
                     await delay;
                 }
@@ -84,7 +106,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public async Task AnalyzeLatestStats(
             Dictionary<string, ClusterNodeStatusReport> newStats,
-            Dictionary<string, ClusterNodeStatusReport> prevStats)
+            Dictionary<string, ClusterNodeStatusReport> prevStats
+            )
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -131,6 +154,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     try
                     {
+                        if(_decisionsLog.ContainsKey(command.DatabaseName) == false)
+                            _decisionsLog[command.DatabaseName] = new List<CommandBase>();
+                        
+                        _decisionsLog[command.DatabaseName].Add(command);
+
                         await UpdateTopology(command);
                     }
                     catch (ConcurrencyException)
@@ -144,6 +172,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     foreach (var command in deletions)
                     {
+                        if (_decisionsLog.ContainsKey(command.DatabaseName) == false)
+                            _decisionsLog[command.DatabaseName] = new List<CommandBase>();
+                        _decisionsLog[command.DatabaseName].Add(command);
+
                         await Delete(command);
                     }
                 }
@@ -196,7 +228,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var rehab in topology.Rehabs)
                 {
                     //TODO: RavenDB-7911 - Find the most up to date rehab node
-                    if(FailedDatabaseInstanceOrNode(topology,rehab, dbName, current) != DatabaseHealth.Good)
+                    if(FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current) != DatabaseHealth.Good)
                         continue;
                     topology.Rehabs.Remove(rehab);
                     topology.Members.Add(rehab);
@@ -208,7 +240,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
                         continue;
@@ -241,11 +273,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
             }
 
-            var goodMembers = GetNumberOfRespondingNodes(dbName, topology, current);
+            var goodMembers = GetNumberOfRespondingNodes(clusterTopology, dbName, topology, current);
 
             foreach (var rehab in topology.Rehabs)
             {
-                var health = FailedDatabaseInstanceOrNode(topology, rehab, dbName, current);
+                var health = FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current);
                 switch (health)
                 {
                     case DatabaseHealth.Bad:
@@ -278,17 +310,17 @@ namespace Raven.Server.ServerWide.Maintenance
             return false;
         }
 
-        private int GetNumberOfRespondingNodes(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current)
+        private int GetNumberOfRespondingNodes(ClusterTopology clusterTopology, string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current)
         {
             var goodMembers = topology.Members.Count;
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(topology, promotable, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, promotable, dbName, current) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode(topology, rehab, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             return goodMembers;
@@ -456,12 +488,15 @@ namespace Raven.Server.ServerWide.Maintenance
             Good,
         }
 
-        private DatabaseHealth FailedDatabaseInstanceOrNode(
+        private DatabaseHealth FailedDatabaseInstanceOrNode(ClusterTopology clusterTopology,
             DatabaseTopology topology, string node, string db,
             Dictionary<string, ClusterNodeStatusReport> current)
         {
             if (topology.DynamicNodesDistribution == false)
                 return DatabaseHealth.DontCare;
+
+            if(clusterTopology.Contains(node) == false) // this node is no longer part of the *Cluster* topology and need to be replaced.
+                return DatabaseHealth.Bad;
 
             var hasCurrent = current.TryGetValue(node, out var currentNodeStats);
 
@@ -502,7 +537,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (databaseNodes.Contains(node))
                     continue;
 
-                if (FailedDatabaseInstanceOrNode(topology, node, db, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, node, db, current) == DatabaseHealth.Bad)
                     continue;
 
                 if (current.TryGetValue(node, out var nodeReport) == false)
