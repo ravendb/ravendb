@@ -60,6 +60,7 @@ namespace Raven.Client.Server.Operations
 
         public string Collection { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
+        public string LastChangeVecotr { get; set; }
 
 
         public override DynamicJsonValue ToJson()
