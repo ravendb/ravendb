@@ -17,6 +17,38 @@ namespace RachisTests.DatabaseCluster
 {
     public class ReplicationTests : ReplicationTestsBase
     {
+
+        [Fact]
+        public async Task WaitForCommandToApply()
+        {
+            var clusterSize = 5;
+            var databaseName = GetDatabaseName();
+            var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
+            using (var store = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName
+            }.Initialize())
+            {
+                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                doc.Topology = new DatabaseTopology
+                {
+                    Members = new List<string>
+                    {
+                        "B"
+                    }
+                };
+                var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
+                Assert.NotEqual(res.Topology.Members.First(), leader.ServerStore.NodeTag);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User());
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
