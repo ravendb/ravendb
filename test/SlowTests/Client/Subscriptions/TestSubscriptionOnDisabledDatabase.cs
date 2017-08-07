@@ -38,14 +38,6 @@ namespace SlowTests.Client.Subscriptions
                     }
                 });
 
-
-                using (var session = store.OpenSession())
-                {
-                    for (var i = 0; i < 30; i++)
-                        session.Store(new User { Name = i.ToString() });
-                    session.SaveChanges();
-                }
-
                 var mre = new ManualResetEvent(false);
 
                 subscription.AfterAcknowledgment += batch =>
@@ -55,6 +47,14 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
 
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 30; i++)
+                        session.Store(new User { Name = i.ToString() });
+                    session.SaveChanges();
+                }
+               
                 Assert.True(mre.WaitOne(_reasonableWaitTime));
                 mre.Reset();
 
