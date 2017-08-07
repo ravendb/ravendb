@@ -3,7 +3,6 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Org.BouncyCastle.Utilities.Collections;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {

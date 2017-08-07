@@ -45,7 +45,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 Name = subscriptionCreationOptions.Name,
                 Criteria =  subscriptionCreationOptions.CreateOptions(_store.GetRequestExecutor(database).Conventions),
-                ChangeVector = subscriptionCreationOptions.ChangeVector,
+                ChangeVector = subscriptionCreationOptions.ChangeVector
             };
 
             return CreateAsync(subscriptionCreationDto, database);
@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new InvalidOperationException("Cannot open a subscription if options are null");
             
             var subscription = new Subscription<T>(options, _store, database);
-            subscription.OnDisposed  += (sender) => _subscriptions.TryRemove(sender);
+            subscription.OnDisposed  += sender => _subscriptions.TryRemove(sender);
             _subscriptions.Add(subscription);
 
             return subscription;

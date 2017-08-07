@@ -1,7 +1,6 @@
 using System;
 using System.Diagnostics;
 using System.Text;
-using Raven.Client.Extensions;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication

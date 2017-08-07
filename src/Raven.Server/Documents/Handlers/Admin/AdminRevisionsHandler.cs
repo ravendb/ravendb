@@ -6,7 +6,7 @@
 
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Raven.Client.Documents.Exceptions.Revisions;
+using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 

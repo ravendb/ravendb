@@ -4,7 +4,6 @@ using Lucene.Net.Util;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Extensions;
-using Raven.Server.Documents.Indexes;
 
 namespace Raven.Server.Documents.Queries.Faceted
 {

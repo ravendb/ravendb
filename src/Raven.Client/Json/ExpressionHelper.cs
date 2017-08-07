@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Linq.Expressions;
 using System.Reflection;
-using Sparrow;
 
 namespace Raven.Client.Json
 {

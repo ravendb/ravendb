@@ -10,7 +10,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
@@ -34,7 +34,7 @@ using Sparrow.Logging;
 using Voron;
 using Voron.Exceptions;
 using Voron.Impl.Backup;
-using DatabaseInfo = Raven.Client.Server.Operations.DatabaseInfo;
+using DatabaseInfo = Raven.Client.ServerWide.Operations.DatabaseInfo;
 using Size = Raven.Client.Util.Size;
 
 namespace Raven.Server.Documents

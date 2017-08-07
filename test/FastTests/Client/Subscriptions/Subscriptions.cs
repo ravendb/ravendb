@@ -2,9 +2,9 @@
 using System.Collections.Concurrent;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Xunit;
 using Sparrow;
 

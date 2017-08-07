@@ -3,14 +3,14 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Exceptions.Documents.Compilation;
 
 namespace Raven.Client.Documents.Indexes
 {
     /// <summary>
     /// Generate index definition from linq expressions
     /// </summary>
-    public static class IndexDefinitionHelper
+    internal static class IndexDefinitionHelper
     {
         /// <summary>
         /// Perform the actual generation

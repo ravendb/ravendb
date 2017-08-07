@@ -5,10 +5,9 @@
 // -----------------------------------------------------------------------
 
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Revisions;
+using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;

@@ -1,9 +1,7 @@
 ﻿using System;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

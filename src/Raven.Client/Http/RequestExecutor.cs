@@ -22,8 +22,8 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.Commands;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -408,7 +408,7 @@ namespace Raven.Client.Http
                     await UpdateTopologyAsync(new ServerNode
                     {
                         Url = url,
-                        Database = _databaseName,
+                        Database = _databaseName
                     }, Timeout.Infinite)
                         .ConfigureAwait(false);
 
@@ -428,7 +428,7 @@ namespace Raven.Client.Http
 
             _nodeSelector = new NodeSelector(new Topology
             {
-                Nodes = TopologyNodes?.ToList() ?? initialUrls.Select(url =>new ServerNode
+                Nodes = TopologyNodes?.ToList() ?? initialUrls.Select(url => new ServerNode
                 {
                     Url = url,
                     Database = _databaseName,
@@ -522,7 +522,7 @@ namespace Raven.Client.Http
         {
             var request = CreateRequest(chosenNode, command, out string url);
 
-            using (var cachedItem = GetFromCache(context, command, request, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
+            using (var cachedItem = GetFromCache(context, command, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedChangeVector != null)
                 {
@@ -576,7 +576,7 @@ namespace Raven.Client.Http
                                         throw timeoutException;
 
                                     sp.Stop();
-                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionId).ConfigureAwait(false) == false)
+                                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
                                         throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
 
                                     return;
@@ -603,7 +603,7 @@ namespace Raven.Client.Http
                         throw;
 
                     sp.Stop();
-                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e, sessionId).ConfigureAwait(false) == false)
+                    if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
                         throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, e);
 
                     return;
@@ -636,7 +636,7 @@ namespace Raven.Client.Http
                             if (command.FailedNodes.Count == 1)
                             {
                                 var node = command.FailedNodes.First();
-                                throw ExceptionDispatcher.Get(node.Value, response.StatusCode);
+                                throw node.Value;
                             }
 
                             throw new AllTopologyNodesDownException("Received unsuccessful response from all servers and couldn't recover from it.",
@@ -760,7 +760,7 @@ namespace Raven.Client.Http
             throw new InvalidOperationException($"Maximum request timeout is set to '{GlobalHttpClientTimeout}' but was '{timeout}'.");
         }
 
-        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
+        private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
             if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
@@ -815,7 +815,7 @@ namespace Raven.Client.Http
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:
                 case HttpStatusCode.ServiceUnavailable:
-                    await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null, sessionId).ConfigureAwait(false);
+                    await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, null).ConfigureAwait(false);
                     break;
                 case HttpStatusCode.Conflict:
                     await HandleConflict(context, response).ConfigureAwait(false);
@@ -848,10 +848,10 @@ namespace Raven.Client.Http
             return serverStream;
         }
 
-        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e, int? sessionId)
+        private async Task<bool> HandleServerDown<TResult>(string url, ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, Exception e)
         {
             if (command.FailedNodes == null)
-                command.FailedNodes = new Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema>();
+                command.FailedNodes = new Dictionary<ServerNode, Exception>();
 
             await AddFailedResponseToCommand(chosenNode, context, command, request, response, e).ConfigureAwait(false);
 
@@ -948,43 +948,37 @@ namespace Raven.Client.Http
                     ms.Position = 0;
                     using (var responseJson = context.ReadForMemory(ms, "RequestExecutor/HandleServerDown/ReadResponseContent"))
                     {
-                        command.FailedNodes.Add(chosenNode, JsonDeserializationClient.ExceptionSchema(responseJson));
+                        command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(JsonDeserializationClient.ExceptionSchema(responseJson), response.StatusCode));
                     }
                 }
                 catch
                 {
                     // we failed to parse the error
                     ms.Position = 0;
-                    command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
+                    command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
                     {
                         Url = request.RequestUri.ToString(),
                         Message = "Got unrecognized response from the server",
                         Error = new StreamReader(ms).ReadToEnd(),
                         Type = "Unparseable Server Response"
-                    });
+                    }, response.StatusCode));
                 }
                 return;
             }
             //this would be connections that didn't have response, such as "couldn't connect to remote server"
-            command.FailedNodes.Add(chosenNode, new ExceptionDispatcher.ExceptionSchema
+            command.FailedNodes.Add(chosenNode, ExceptionDispatcher.Get(new ExceptionDispatcher.ExceptionSchema
             {
                 Url = request.RequestUri.ToString(),
                 Message = e.Message,
                 Error = e.ToString(),
                 Type = e.GetType().FullName
-            });
+            }, HttpStatusCode.InternalServerError));
         }
-
-        private static void ThrowEmptyTopology()
-        {
-            throw new InvalidOperationException("Empty database topology, this shouldn't happen.");
-        }
-
 
         protected bool _disposed;
         protected Task _firstTopologyUpdate;
         protected string[] _lastKnownUrls;
-        private HttpClient _httpClient;
+        private readonly HttpClient _httpClient;
 
         public virtual void Dispose()
         {

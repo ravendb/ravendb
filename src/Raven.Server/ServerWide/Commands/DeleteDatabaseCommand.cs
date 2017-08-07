@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands

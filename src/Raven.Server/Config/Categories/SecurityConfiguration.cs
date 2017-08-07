@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Config.Categories

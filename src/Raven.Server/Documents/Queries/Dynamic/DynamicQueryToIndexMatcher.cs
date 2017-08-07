@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Queries.Sorting;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {

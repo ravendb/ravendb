@@ -181,7 +181,7 @@ namespace Raven.Client.Documents.Transformers
             {
                 Name = TransformerName,
                 TransformResults = IndexDefinitionHelper.PruneToFailureLinqQueryAsStringToWorkableCode<TFrom, object>(
-                    TransformResults, Conventions, "results", translateIdentityProperty: false),
+                    TransformResults, Conventions, "results", translateIdentityProperty: false)
             };
 
             if (prettify)

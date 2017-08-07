@@ -98,17 +98,14 @@ namespace Raven.Client.Util
                 object value;
                 if (_locks.TryGetValue(key, out value) == false)
                 {
-                    TVal val;
-                    _items.TryRemove(key, out val); // just to be on the safe side
+                    _items.TryRemove(key, out _); // just to be on the safe side
                     Interlocked.Increment(ref _version);
                     return;
                 }
                 lock (value)
                 {
-                    object o;
-                    _locks.TryRemove(key, out o);
-                    TVal val;
-                    _items.TryRemove(key, out val);
+                    _locks.TryRemove(key, out _);
+                    _items.TryRemove(key, out _);
                     Interlocked.Increment(ref _version);
                 }
             }
@@ -142,8 +139,7 @@ namespace Raven.Client.Util
             using (_globalLocker.EnterReadLock())
             {
                 var result = _items.TryRemove(key, out val);
-                object value;
-                _locks.TryRemove(key, out value);
+                _locks.TryRemove(key, out _);
 
                 Interlocked.Increment(ref _version);
                 return result;

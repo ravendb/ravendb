@@ -9,7 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Http;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Replication
             new ConcurrentQueue<TaskCompletionSource<object>>();
 
         internal readonly ServerStore _server;
-      
+
         public List<ReplicationNode> Destinations => _destinations;
         private List<ReplicationNode> _destinations = new List<ReplicationNode>();
         public ConflictSolver ConflictSolverConfig;
@@ -343,7 +343,7 @@ namespace Raven.Server.Documents.Replication
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             ConflictResolver.RunConflictResolversOnce();
-            
+
             _isInitialized = true;
         }
 
@@ -360,7 +360,7 @@ namespace Raven.Server.Documents.Replication
                 ConflictSolverConfig = null;
                 return;
             }
-                
+
             var conflictSolverChanged = ConflictSolverConfig?.ConflictResolutionChanged(newRecord.ConflictSolverConfig) ?? true;
             if (conflictSolverChanged)
             {
@@ -406,15 +406,15 @@ namespace Raven.Server.Documents.Replication
 
         private void HandleExternalReplication(DatabaseRecord newRecord, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
-            var changes = ExternalReplication.FindExternalConnectionChanges(_externalDestinations, newRecord.ExternalReplication);
-            if (changes.removeDestinations.Count > 0)
+            var changes = ExternalReplication.FindChanges(_externalDestinations, newRecord.ExternalReplication);
+            if (changes.RemovedDestiantions.Count > 0)
             {
-                var removed = _externalDestinations.Where(n => changes.removeDestinations.Contains(n.Url + "@" + n.Database));
+                var removed = _externalDestinations.Where(n => changes.RemovedDestiantions.Contains(n.Url + "@" + n.Database));
                 DropOutgoingConnections(removed, ref instancesToDispose);
             }
-            if (changes.addDestinations.Count > 0)
+            if (changes.AddedDestinations.Count > 0)
             {
-                var added = newRecord.ExternalReplication.Where(n => changes.addDestinations.Contains(n.Url + "@" + n.Database));
+                var added = newRecord.ExternalReplication.Where(n => changes.AddedDestinations.Contains(n.Url + "@" + n.Database));
                 StartOutgoingConnections(added.ToList());
             }
             _externalDestinations.Clear();
@@ -425,11 +425,11 @@ namespace Raven.Server.Documents.Replication
         {
             var clusterTopology = GetClusterTopology();
             var newInternalDestinations = newRecord.Topology?.GetDestinations(_server.NodeTag, Database.Name, clusterTopology, _server.IsPassive());
-            var internalConnections = DatabaseTopology.InternalReplicationChanges(_internalDestinations, newInternalDestinations);
+            var internalConnections = DatabaseTopology.FindChanges(_internalDestinations, newInternalDestinations);
 
-            if (internalConnections.removeDestinations.Count > 0)
+            if (internalConnections.RemovedDestiantions.Count > 0)
             {
-                var removed = internalConnections.removeDestinations.Select(r => new InternalReplication
+                var removed = internalConnections.RemovedDestiantions.Select(r => new InternalReplication
                 {
                     NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
                     Url = r,
@@ -438,9 +438,9 @@ namespace Raven.Server.Documents.Replication
 
                 DropOutgoingConnections(removed, ref instancesToDispose);
             }
-            if (internalConnections.addDestinations.Count > 0)
+            if (internalConnections.AddedDestinations.Count > 0)
             {
-                var added = internalConnections.addDestinations.Select(r => new InternalReplication
+                var added = internalConnections.AddedDestinations.Select(r => new InternalReplication
                 {
                     NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
                     Url = r,
@@ -474,7 +474,7 @@ namespace Raven.Server.Documents.Replication
                 _log.Info("Finished initialization of outgoing replications..");
         }
 
-        private  void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, ref List<OutgoingReplicationHandler> instancesToDispose)
+        private void DropOutgoingConnections(IEnumerable<ReplicationNode> connectionsToRemove, ref List<OutgoingReplicationHandler> instancesToDispose)
         {
             var outgoingChanged = _outgoing.Where(o => connectionsToRemove.Contains(o.Destination)).ToList();
             if (outgoingChanged.Count == 0)
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.Replication
                 _outgoing.TryRemove(instance);
                 _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
                 _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
-                if(info != null)
+                if (info != null)
                     _reconnectQueue.TryRemove(info);
             }
         }
@@ -610,7 +610,7 @@ namespace Raven.Server.Documents.Replication
                 TaskExecutor.Complete(result);
             }
         }
-        
+
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
         {
             _incomingLastActivityTime.AddOrUpdate(instance.ConnectionInfo, DateTime.UtcNow, (_, __) => DateTime.UtcNow);

@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -97,15 +96,17 @@ namespace SlowTests.Issues
 
         private async Task CreateDatabaseInCluster(IDocumentStore store, string node)
         {
-            var record = MultiDatabase.CreateDatabaseDocument(_database);
-
-            record.Topology = new DatabaseTopology
+            var record = new DatabaseRecord(_database)
             {
-                Members = new List<string>
+                Topology = new DatabaseTopology
                 {
-                    node
+                    Members = new List<string>
+                    {
+                        node
+                    }
                 }
             };
+
 
             var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(record));
 

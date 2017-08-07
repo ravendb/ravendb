@@ -1,11 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Net;
 using System.Net.Sockets;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Server.Commands;
-using Raven.Client.Server.Tcp;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Utils;

@@ -1,7 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance

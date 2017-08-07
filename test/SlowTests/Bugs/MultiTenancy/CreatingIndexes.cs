@@ -10,8 +10,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Test");
+                var doc = new DatabaseRecord("Test");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.Database = "Test";
 

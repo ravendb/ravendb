@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +9,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 

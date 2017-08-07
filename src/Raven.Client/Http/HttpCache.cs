@@ -108,7 +108,7 @@ namespace Raven.Client.Http
                 Size = result.Size,
                 Allocation = mem,
                 LastServerUpdate = SystemTime.UtcNow,
-                Cache = this,
+                Cache = this
             };
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {

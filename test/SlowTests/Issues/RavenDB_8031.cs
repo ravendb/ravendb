@@ -5,8 +5,8 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Issues

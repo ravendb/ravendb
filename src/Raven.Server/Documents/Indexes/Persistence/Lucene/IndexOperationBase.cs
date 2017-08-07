@@ -8,7 +8,6 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Parser;

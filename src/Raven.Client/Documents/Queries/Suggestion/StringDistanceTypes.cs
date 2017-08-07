@@ -33,6 +33,6 @@ namespace Raven.Client.Documents.Queries.Suggestion
         /// <summary>
         /// NGram distance algorithm
         /// </summary>
-        NGram,
+        NGram
     }
 }

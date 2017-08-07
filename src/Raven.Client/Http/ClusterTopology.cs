@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Http
@@ -164,7 +163,7 @@ namespace Raven.Client.Http
                 [nameof(LastSent)] = LastSent,
                 [nameof(LastReply)] = LastReply,
                 [nameof(LastSentMessage)] = LastSentMessage,
-                [nameof(LastMatchingIndex)] = LastMatchingIndex,
+                [nameof(LastMatchingIndex)] = LastMatchingIndex
             };
         }
     }

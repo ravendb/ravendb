@@ -1,8 +1,6 @@
-﻿using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
-using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
+﻿using Raven.Client.Json.Converters;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

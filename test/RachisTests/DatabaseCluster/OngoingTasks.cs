@@ -3,12 +3,12 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ConnectionStrings;
-using Raven.Client.Server.Operations.ETL;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Client.ServerWide.Operations.ETL;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Xunit;
 
 namespace RachisTests.DatabaseCluster
@@ -46,7 +46,7 @@ loadToOrders(orderData);
                 Database = databaseName
             }.Initialize())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
@@ -149,7 +149,7 @@ loadToOrders(orderData);
                     DisableTopologyUpdates = true
                 }
             }.Initialize())
-            { 
+            {
                 var taskId = addWatcherRes.TaskId;
                 var replicationResult = (OngoingTaskReplication)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.Replication);
 
@@ -167,7 +167,7 @@ loadToOrders(orderData);
 
                 taskId = addRavenEtlResult.TaskId;
 
-                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);              
+                var etlResult = (OngoingTaskRavenEtl)await GetTaskInfo((DocumentStore)store, taskId, OngoingTaskType.RavenEtl);
                 Assert.Equal("cs", etlResult.Configuration.ConnectionStringName);
                 Assert.Equal("tesst", etlResult.Configuration.Name);
                 Assert.Equal("loadAll", etlResult.Configuration.Transforms[0].Name);
@@ -203,7 +203,7 @@ loadToOrders(orderData);
                 Database = databaseName
             }.Initialize())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var doc = new DatabaseRecord(databaseName);
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)

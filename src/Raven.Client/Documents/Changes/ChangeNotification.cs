@@ -90,7 +90,7 @@ namespace Raven.Client.Documents.Changes
         BulkInsertError = 16,
         DeleteOnTombstoneReplication = 32,
         Conflict = 64,
-        Common = Put | Delete,
+        Common = Put | Delete
     }
 
     [Flags]

@@ -1,8 +1,8 @@
 ﻿using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
@@ -35,7 +35,7 @@ namespace RachisTests
                 Database = databaseName
             }.Initialize())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var doc = new DatabaseRecord(databaseName);
                 var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
 
                 int numberOfInstances = 0;

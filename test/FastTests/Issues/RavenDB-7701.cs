@@ -1,6 +1,6 @@
 ﻿using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace FastTests.Issues
@@ -12,7 +12,7 @@ namespace FastTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("test");
+                var doc = new DatabaseRecord("test");
 
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 

@@ -749,6 +749,22 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
             writer.WriteComma();
 
+            writer.WritePropertyName(nameof(indexDefinition.AdditionalSources));
+            writer.WriteStartObject();
+            isFirstInternal = true;
+            foreach (var kvp in indexDefinition.AdditionalSources)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteString(kvp.Value);
+            }
+            writer.WriteEndObject();
+            writer.WriteComma();
+
             writer.WritePropertyName(nameof(indexDefinition.IsTestIndex));
             writer.WriteBool(indexDefinition.IsTestIndex);
             writer.WriteComma();

@@ -1,5 +1,5 @@
-﻿using Raven.Client.Server;
-using Raven.Client.Server.Expiration;
+﻿using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Expiration;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 

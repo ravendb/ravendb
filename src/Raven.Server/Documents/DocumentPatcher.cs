@@ -1,12 +1,9 @@
 ﻿using System;
 using Jint;
 using Jint.Native;
-using Raven.Client;
-using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 

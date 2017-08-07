@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -38,7 +34,7 @@ namespace Raven.Client.Documents.Operations
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethods.Head,
+                Method = HttpMethods.Head
             };
 
             if (_changeVector != null)

@@ -1,7 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations.Configuration;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations.Configuration;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations.Configuration;
 using Xunit;
 
 namespace SlowTests.Issues

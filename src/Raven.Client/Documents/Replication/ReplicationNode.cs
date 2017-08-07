@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Replication
             {
                 [nameof(Database)] = Database,
                 [nameof(Url)] = Url,
-                [nameof(Disabled)] = Disabled,
+                [nameof(Disabled)] = Disabled
             };
 
             return json;

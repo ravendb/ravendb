@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;

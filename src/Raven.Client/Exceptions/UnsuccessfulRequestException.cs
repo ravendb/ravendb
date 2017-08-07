@@ -4,12 +4,9 @@ namespace Raven.Client.Exceptions
 {
     public class UnsuccessfulRequestException : Exception
     {
-        public UnsuccessfulRequestException(string msg, ExceptionDispatcher.ExceptionSchema exceptionInfo)
-            : base(msg + " Request to a server has failed. Reason: " + exceptionInfo.Message)
+        public UnsuccessfulRequestException(string msg, Exception exception)
+            : base(msg + " Request to a server has failed. Reason: " + exception.Message, exception)
         {
-            ExceptionInfo = exceptionInfo;
         }
-
-        public ExceptionDispatcher.ExceptionSchema ExceptionInfo { get; }
     }
 }

@@ -17,7 +17,6 @@ using System.Linq;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
 using StringSegment = Sparrow.StringSegment;

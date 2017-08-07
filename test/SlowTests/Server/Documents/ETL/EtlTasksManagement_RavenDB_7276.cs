@@ -1,7 +1,7 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ETL;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ETL;
 using Xunit;
 
 namespace SlowTests.Server.Documents.ETL

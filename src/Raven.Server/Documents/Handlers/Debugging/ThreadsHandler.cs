@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.Server.Debugging;
+using Raven.Client.ServerWide.Debugging;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;

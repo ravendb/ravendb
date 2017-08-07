@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;

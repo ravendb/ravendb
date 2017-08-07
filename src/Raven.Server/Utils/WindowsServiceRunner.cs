@@ -1,13 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Runtime.Loader;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
 using DasMulli.Win32.ServiceUtils;
 using Raven.Server.Config;
 using Sparrow.Logging;

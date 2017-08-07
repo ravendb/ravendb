@@ -1,5 +1,5 @@
 ﻿using Raven.Client.Documents.Indexes;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Indexes

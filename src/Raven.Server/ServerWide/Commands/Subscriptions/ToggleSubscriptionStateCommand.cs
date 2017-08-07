@@ -2,7 +2,7 @@ using System;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;

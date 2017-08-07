@@ -5,7 +5,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis

@@ -4,7 +4,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Binary;
@@ -14,7 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
-using Raven.Client.Server.Revisions;
+using Raven.Client.ServerWide.Revisions;
 using static Raven.Server.Documents.DocumentsStorage;
 
 namespace Raven.Server.Documents

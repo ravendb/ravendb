@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -31,7 +30,7 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
-        public Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema> FailedNodes;
+        public Dictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
         public int AuthenticationRetries;

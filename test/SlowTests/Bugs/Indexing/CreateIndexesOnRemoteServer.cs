@@ -1,11 +1,9 @@
-﻿using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.Indexing
@@ -17,7 +15,7 @@ namespace SlowTests.Bugs.Indexing
         {
             DoNotReuseServer();
             const string name = "CreateIndexesOnRemoteServer_1";
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
+            var doc = new DatabaseRecord(name);
 
             using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name })
             {

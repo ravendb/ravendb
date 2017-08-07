@@ -4,7 +4,7 @@ using System.Diagnostics;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.Raven.Enumerators;
 using Raven.Server.ServerWide;

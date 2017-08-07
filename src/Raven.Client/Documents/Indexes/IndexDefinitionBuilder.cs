@@ -10,8 +10,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes

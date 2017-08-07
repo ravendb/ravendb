@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Commands
         {
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Get
             };
 
             var pathBuilder = new StringBuilder(node.Url);

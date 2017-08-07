@@ -5,8 +5,6 @@ using System.Text;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;

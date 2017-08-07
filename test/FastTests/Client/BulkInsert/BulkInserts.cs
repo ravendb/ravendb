@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.BulkInsert;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert

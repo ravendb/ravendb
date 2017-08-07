@@ -13,7 +13,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws

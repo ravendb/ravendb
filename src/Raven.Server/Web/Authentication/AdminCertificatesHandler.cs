@@ -1,23 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Server.Operations.Certificates;
-using Raven.Server.Documents.Handlers.Admin;
-using Raven.Server.Json;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
-using Sparrow;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.Authentication
 {

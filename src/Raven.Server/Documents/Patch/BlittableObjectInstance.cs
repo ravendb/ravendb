@@ -1,17 +1,13 @@
 ﻿using Jint.Native.Object;
 using System;
 using System.Collections.Generic;
-using System.Text;
 using Jint;
 using Jint.Runtime.Descriptors;
 using Sparrow.Json;
 using Jint.Native.Function;
-using Jint.Runtime.Environments;
 using Jint.Native;
 using Jint.Native.Array;
 using Jint.Runtime;
-using Sparrow.Json.Parsing;
-using System.Linq;
 
 
 namespace Raven.Server.Documents.Patch

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;

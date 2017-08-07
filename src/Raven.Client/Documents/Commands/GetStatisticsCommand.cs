@@ -27,7 +27,7 @@ namespace Raven.Client.Documents.Commands
                 url += "?" + DebugTag;
             return new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Get
             };
         }
 

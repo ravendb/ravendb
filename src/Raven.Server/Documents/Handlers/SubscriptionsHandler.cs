@@ -10,8 +10,8 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 

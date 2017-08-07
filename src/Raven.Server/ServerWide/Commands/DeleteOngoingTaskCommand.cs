@@ -1,6 +1,6 @@
 ﻿using System.Diagnostics;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 

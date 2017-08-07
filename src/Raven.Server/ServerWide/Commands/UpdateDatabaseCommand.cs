@@ -1,4 +1,4 @@
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

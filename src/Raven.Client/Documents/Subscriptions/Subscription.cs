@@ -12,18 +12,17 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server.Commands;
-using Raven.Client.Server.Tcp;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Json;
@@ -331,7 +330,7 @@ namespace Raven.Client.Documents.Subscriptions
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = databaseName,
+                    DatabaseName = databaseName
                 }));
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
