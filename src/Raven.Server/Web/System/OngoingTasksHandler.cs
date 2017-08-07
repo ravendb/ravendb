@@ -102,7 +102,7 @@ namespace Raven.Server.Web.System
                     TaskId = subscriptionState.SubscriptionId,
                     Collection = subscriptionState.Criteria.Collection,
                     TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
-                    LastChangeVecotr = subscriptionState.ChangeVector
+                    LastChangeVector = subscriptionState.ChangeVector
                 };
             }
         }

@@ -36,7 +36,8 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             const state: Raven.Client.Server.Operations.OngoingTaskState = dtoEditModel.Disabled ? 'Disabled' : 'Enabled';
             const emptyNodeId: Raven.Client.Server.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
 
-            const dtoListModel: Raven.Client.Server.Operations.OngoingTaskSubscription = {
+            
+const dtoListModel: Raven.Client.Server.Operations.OngoingTaskSubscription = {
                 Collection: dtoEditModel.Criteria.Collection,
                 TimeOfLastClientActivity: dto.TimeOfLastClientActivity,
                 ResponsibleNode: emptyNodeId,
@@ -44,7 +45,8 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
                 TaskId: dtoEditModel.SubscriptionId,
                 TaskName: dtoEditModel.SubscriptionName,
                 TaskState: state,
-                TaskType: 'Subscription'
+                TaskType: 'Subscription',
+                LastChangeVector:  dtoEditModel.ChangeVector
             };
 
             super.update(dtoListModel);
