@@ -38,8 +38,8 @@ namespace Sparrow.Json
         {
             public PathCacheHolder(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> path, FastDictionary<int, object, NumericEqualityComparer> byIndex)
             {
-                this.Path = path;
-                this.ByIndex = byIndex;
+                Path = path;
+                ByIndex = byIndex;
             }
             
             public readonly FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> Path;

@@ -2,7 +2,7 @@
 
 namespace Voron.Platform.Posix
 {
-    [StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential)]
     public unsafe struct sysinfo_t
     {
         public long  uptime;             /* Seconds since boot */

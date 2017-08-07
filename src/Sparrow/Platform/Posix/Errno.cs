@@ -1,7 +1,4 @@
-﻿using System;
-using System.Runtime.InteropServices;
-
-namespace Sparrow
+﻿namespace Sparrow
 {
     public enum Errno
     {

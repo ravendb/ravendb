@@ -1,11 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow.Binary
 {
@@ -19,8 +16,8 @@ namespace Sparrow.Binary
 
         public PtrBitVector(void* bits, int numberOfBits)
         {
-            this.Bits = (byte*)bits;
-            this.Count = numberOfBits;
+            Bits = (byte*)bits;
+            Count = numberOfBits;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -66,7 +63,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = ByteForBit(idx);
             byte mask = BitInByte(idx);
@@ -77,7 +74,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx, bool value)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = ByteForBit(idx);
             byte mask = BitInByte(idx);
@@ -90,7 +87,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Get(int idx)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = ByteForBit(idx);
             byte mask = BitInByte(idx);
@@ -102,7 +99,7 @@ namespace Sparrow.Binary
             Debug.Assert(BitConverter.IsLittleEndian);
 
             ulong* ptr = (ulong*)Bits;
-            int count = this.Count;
+            int count = Count;
             int words = count / BitVector.BitsPerWord;
 
             ulong value;
@@ -154,7 +151,7 @@ namespace Sparrow.Binary
         public string ToDebugString()
         {
             var builder = new StringBuilder();
-            for (int i = 0; i < this.Count; i++)
+            for (int i = 0; i < Count; i++)
                 builder.Append(this[i] ? "1" : "0");
 
             return builder.ToString();

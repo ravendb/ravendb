@@ -179,7 +179,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return this.Inner.ToString();
+            return Inner.ToString();
         }
 
         public string ToString(string format)

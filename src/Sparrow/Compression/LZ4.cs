@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using Sparrow.Global;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;

@@ -1,11 +1,8 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow.Binary
 {
@@ -37,17 +34,17 @@ namespace Sparrow.Binary
             unchecked
             {
                 var builder = new StringBuilder();
-                if (this.Count <= BitsPerWord)
+                if (Count <= BitsPerWord)
                 {
-                    for (int i = 0; i < this.Count; i++)
+                    for (int i = 0; i < Count; i++)
                         builder.Append(this[i] ? 1 : 0);
                 }
                 else
                 {
-                    int words = NumberOfWordsForBits(this.Count);
+                    int words = NumberOfWordsForBits(Count);
                     for (int i = 0; i < words; i++)
                     {
-                        ulong v = this.GetWord(i);
+                        ulong v = GetWord(i);
 
                         builder.Append(v.ToString("X16"));
                         builder.Append(" ");
@@ -77,17 +74,17 @@ namespace Sparrow.Binary
 
         public BitVector(int size)
         {
-            this.Count = size;
-            this.Bits = new ulong[size % BitVector.BitsPerWord == 0 ? size / BitVector.BitsPerWord : size / BitVector.BitsPerWord + 1];            
+            Count = size;
+            Bits = new ulong[size % BitsPerWord == 0 ? size / BitsPerWord : size / BitsPerWord + 1];            
         }
 
         protected BitVector(int size, params ulong[] values)
         {
-            if (size / BitVector.BitsPerWord > values.Length)
+            if (size / BitsPerWord > values.Length)
                 throw new ArgumentException("The values passed as parameters does not have enough bits to fill the vector size.", nameof(values));
 
-            this.Count = size;    
-            this.Bits = values;
+            Count = size;    
+            Bits = values;
         }
 
         public int Count
@@ -105,7 +102,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
@@ -116,7 +113,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Set(int idx, bool value)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
@@ -129,7 +126,7 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Get(int idx)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             uint word = WordForBit(idx);
             ulong mask = BitInWord(idx);
@@ -139,11 +136,11 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetByte(int idx)
         {
-            int positionInWord = idx % BitVector.BytesPerWord;
+            int positionInWord = idx % BytesPerWord;
             
-            ulong word = GetWord(idx / BitVector.BytesPerWord);
-            word <<= BitVector.BitsPerByte * positionInWord;
-            word >>= BitVector.BitsPerByte * (BitVector.BytesPerWord - 1);
+            ulong word = GetWord(idx / BytesPerWord);
+            word <<= BitsPerByte * positionInWord;
+            word >>= BitsPerByte * (BytesPerWord - 1);
             
             return (int)word;
         }
@@ -160,22 +157,22 @@ namespace Sparrow.Binary
             unsafe
             {
                 byte x = value ? (byte)0xFF : (byte)0x00;
-                fixed (ulong* array = this.Bits)
-                    Memory.SetInline((byte*)array, x, this.Bits.Length * sizeof(ulong));
+                fixed (ulong* array = Bits)
+                    Memory.SetInline((byte*)array, x, Bits.Length * sizeof(ulong));
             }
         }
 
         public void Fill(bool value, int from, int to)
         {
-            Contract.Requires(from >= 0 && from < this.Count);
-            Contract.Requires(to >= 0 && to < this.Count);
+            Contract.Requires(from >= 0 && from < Count);
+            Contract.Requires(to >= 0 && to < Count);
             Contract.Requires(from <= to);
 
             // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
             unchecked
             {
-                int bFrom = from / BitVector.BitsPerWord;
-                int bTo = to / BitVector.BitsPerWord;
+                int bFrom = from / BitsPerWord;
+                int bTo = to / BitsPerWord;
 
                 if (bFrom == bTo)
                 {
@@ -190,24 +187,24 @@ namespace Sparrow.Binary
                     byte x = value ? (byte)0xFF : (byte)0x00;
                     unsafe
                     {
-                        fixed (ulong* array = this.Bits)
+                        fixed (ulong* array = Bits)
                             Memory.SetInline((byte*)(array + bFrom + 1), x, bTo);
                     }
 
-                    if (from % BitVector.BitsPerWord != 0)
+                    if (from % BitsPerWord != 0)
                     {
                         if (value)
-                            Bits[bFrom] |= (ulong)(-1L) << from % BitVector.BitsPerWord;
+                            Bits[bFrom] |= (ulong)(-1L) << from % BitsPerWord;
                         else
-                            Bits[bFrom] &= (1UL << from % BitVector.BitsPerWord) - 1;
+                            Bits[bFrom] &= (1UL << from % BitsPerWord) - 1;
                     }
 
-                    if (to % BitVector.BitsPerWord != 0)
+                    if (to % BitsPerWord != 0)
                     {
                         if (value)
-                            Bits[bTo] |= 1UL << to % BitVector.BitsPerWord - 1;
+                            Bits[bTo] |= 1UL << to % BitsPerWord - 1;
                         else
-                            Bits[bTo] &= (ulong)(-1L) << to % BitVector.BitsPerWord;
+                            Bits[bTo] &= (ulong)(-1L) << to % BitsPerWord;
                     }
                 }
             }
@@ -218,12 +215,12 @@ namespace Sparrow.Binary
             // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
 
             for (int i = 0; i < Bits.Length; i++)
-                Bits[i] ^= BitVector.Ones;
+                Bits[i] ^= Ones;
         }
 
         public void Flip(int idx)
         {
-            Contract.Requires(idx >= 0 && idx < this.Count);
+            Contract.Requires(idx >= 0 && idx < Count);
 
             // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
 
@@ -236,16 +233,16 @@ namespace Sparrow.Binary
 
         public void Flip(int from, int to)
         {
-            Contract.Requires(from >= 0 && from < this.Count);
-            Contract.Requires(to >= 0 && to < this.Count);
+            Contract.Requires(from >= 0 && from < Count);
+            Contract.Requires(to >= 0 && to < Count);
             Contract.Requires(from <= to);
 
             // TODO: Avoid touching bits outside of the valid ones. (keep them as Zeroes)
 
             unchecked
             {
-                int bTo = to / BitVector.BitsPerWord;
-                int bFrom = from / BitVector.BitsPerWord;
+                int bTo = to / BitsPerWord;
+                int bFrom = from / BitsPerWord;
                 if (bTo == bFrom)
                 {
                     if (from == to)
@@ -254,30 +251,30 @@ namespace Sparrow.Binary
                     }
                     else
                     {
-                        ulong mask = Ones << BitVector.BitsPerWord - (to - from);
+                        ulong mask = Ones << BitsPerWord - (to - from);
                         Bits[bFrom] ^= mask >> from;
                     }
                         
                 }
                 else
                 {
-                    int start = (from + BitVector.BitsPerWord - 1) / BitVector.BitsPerWord;
+                    int start = (from + BitsPerWord - 1) / BitsPerWord;
 
-                    ulong mask = BitVector.Ones;
+                    ulong mask = Ones;
                     for (int i = bTo; i-- != start; )
                         Bits[i] ^= mask;
 
-                    if (from % BitVector.BitsPerWord != 0)
-                        Bits[bFrom] ^= (1UL << (BitVector.BitsPerWord - from) % BitVector.BitsPerWord) - 1;
-                    if (to % BitVector.BitsPerWord != 0)
-                        Bits[bTo] ^= Ones << BitVector.BitsPerWord - (to % BitVector.BitsPerWord);
+                    if (from % BitsPerWord != 0)
+                        Bits[bFrom] ^= (1UL << (BitsPerWord - from) % BitsPerWord) - 1;
+                    if (to % BitsPerWord != 0)
+                        Bits[bTo] ^= Ones << BitsPerWord - (to % BitsPerWord);
                 }
             }
         }
 
         public void Clear()
         {
-            Array.Clear(this.Bits, 0, this.Bits.Length);
+            Array.Clear(Bits, 0, Bits.Length);
         }
 
         public BitVector And(BitVector v)
@@ -491,7 +488,7 @@ namespace Sparrow.Binary
                 Memory.Copy((byte*)newValuePtr, (byte*)values, length * sizeof(ulong));
             }
 
-            return new BitVector(length * BitsPerWord + prefixAdjustment * BitVector.BitsPerByte, newValue);
+            return new BitVector(length * BitsPerWord + prefixAdjustment * BitsPerByte, newValue);
         }
 
         public static unsafe BitVector Of(bool prefixFree, uint* values, int length)
@@ -512,7 +509,7 @@ namespace Sparrow.Binary
             if (length % 2 == 1)
                 newValue[lastLong] = (ulong)values[length - 1] << 32;
 
-            return new BitVector(length * BitVector.BitsPerWord / 2 + prefixAdjustment * 2 * BitVector.BitsPerByte, newValue);
+            return new BitVector(length * BitsPerWord / 2 + prefixAdjustment * 2 * BitsPerByte, newValue);
         }
 
         public unsafe static BitVector Of(bool prefixFree, ushort* values, int length)
@@ -542,7 +539,7 @@ namespace Sparrow.Binary
                 default: break;
             }
 
-            return new BitVector(valueLength * BitVector.BitsPerWord / 4, newValue);
+            return new BitVector(valueLength * BitsPerWord / 4, newValue);
         }
 
         public unsafe static BitVector Of(bool prefixFree, byte* values, int length)
@@ -591,10 +588,10 @@ namespace Sparrow.Binary
                 }
                 while (bytesLeft > 0);
 
-                newValue[lastLong] = lastValue << ((8 - length % sizeof(ulong)) * BitVector.BitsPerByte);
+                newValue[lastLong] = lastValue << ((8 - length % sizeof(ulong)) * BitsPerByte);
             }
 
-            return new BitVector((length + prefixAdjustment) * BitVector.BitsPerByte, newValue);
+            return new BitVector((length + prefixAdjustment) * BitsPerByte, newValue);
         }
 
 
@@ -614,13 +611,13 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ulong BitInWord(int idx)
         {
-            return 0x8000000000000000UL >> (idx % (int)BitVector.BitsPerWord);
+            return 0x8000000000000000UL >> (idx % (int)BitsPerWord);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static uint Bit(int idx)
         {
-            Contract.Requires(idx < BitVector.BitsPerWord);
+            Contract.Requires(idx < BitsPerWord);
 
             return WordMask & (uint)idx;
         }
@@ -651,13 +648,13 @@ namespace Sparrow.Binary
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int CompareToInline(BitVector other, out int equalBits)
         {
-            var srcKey = this.Count;
+            var srcKey = Count;
             var otherKey = other.Count;
             var length = Math.Min(srcKey, otherKey);
 
             unsafe
             {
-                fixed (ulong* srcPtr = this.Bits)
+                fixed (ulong* srcPtr = Bits)
                 fixed (ulong* destPtr = other.Bits)
                 {
                     int wholeBytes = length / BitsPerWord;
@@ -680,10 +677,10 @@ namespace Sparrow.Binary
                         return 0;
                     }
 
-                    if (leftover > BitVector.BitsPerWord)
-                        leftover = BitVector.BitsPerWord;
+                    if (leftover > BitsPerWord)
+                        leftover = BitsPerWord;
 
-                    int shift = BitVector.BitsPerWord - leftover;
+                    int shift = BitsPerWord - leftover;
 
                     ulong thisWord = ((*bpx) >> shift);
                     ulong otherWord = ((*bpy) >> shift);
@@ -695,7 +692,7 @@ namespace Sparrow.Binary
                         return 0;
                     }
 
-                    int differentBit = Sparrow.Binary.Bits.MostSignificantBit(cmp);
+                    int differentBit = Binary.Bits.MostSignificantBit(cmp);
 
                     equalBits = from + leftover - (differentBit + 1);
                     return thisWord > otherWord ? 1 : -1;
@@ -713,8 +710,8 @@ namespace Sparrow.Binary
 
         public BitVector SubVector(int start, int length)
         {
-            Contract.Requires(start >= 0 && start < this.Count);
-            Contract.Requires(length >= 0 && start + length < this.Count);
+            Contract.Requires(start >= 0 && start < Count);
+            Contract.Requires(length >= 0 && start + length < Count);
 
             var subVector = new BitVector(length);
             if ( start % BitsPerWord == 0 )
@@ -724,7 +721,7 @@ namespace Sparrow.Binary
 
                 unsafe
                 {
-                    fixed (ulong* sourcePtr = this.Bits)
+                    fixed (ulong* sourcePtr = Bits)
                     fixed (ulong* destPtr = subVector.Bits)
                     {
                         Memory.Copy((byte*)destPtr, (byte*)(sourcePtr + startWord), totalWords * sizeof(ulong));
@@ -735,7 +732,7 @@ namespace Sparrow.Binary
                 if ( remainder != 0 )
                 {
                     int shift = BitsPerWord - remainder;
-                    ulong value = this.Bits[startWord + totalWords];
+                    ulong value = Bits[startWord + totalWords];
                     value = (value >> shift) << shift;
 
                     subVector.Bits[totalWords] = value;
@@ -744,25 +741,25 @@ namespace Sparrow.Binary
             else
             {
                 // The cost to optimize this case is high and we are not using it. 
-                BitVector.BitwiseCopySlow(this, start, subVector, 0, length);
+                BitwiseCopySlow(this, start, subVector, 0, length);
             }            
             return subVector;
         }
 
         public bool IsPrefix(BitVector other)
         {
-            if (this.Count > other.Count)
+            if (Count > other.Count)
                 return false;
 
             int equalBits;
             CompareToInline(other, out equalBits);
 
-            return equalBits == this.Count;
+            return equalBits == Count;
         }
 
         public bool IsPrefix(BitVector other, int length)
         {
-            if (length > this.Count || length > other.Count)
+            if (length > Count || length > other.Count)
                 return false;
 
             int equalBits;
@@ -773,13 +770,13 @@ namespace Sparrow.Binary
 
         public bool IsProperPrefix(BitVector other)
         {
-            if (this.Count >= other.Count)
+            if (Count >= other.Count)
                 return false;
 
             int equalBits;
             CompareToInline(other, out equalBits);
 
-            return equalBits == this.Count && equalBits != other.Count;
+            return equalBits == Count && equalBits != other.Count;
         }
 
         public bool Equals(BitVector other)
@@ -794,7 +791,7 @@ namespace Sparrow.Binary
         public string ToBinaryString()
         {
             var builder = new StringBuilder();
-            for ( int i = 0; i < this.Count; i++ )
+            for ( int i = 0; i < Count; i++ )
             {
                 if (i != 0 && i % 8 == 0)
                     builder.Append(" ");

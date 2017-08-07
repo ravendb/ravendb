@@ -5,8 +5,6 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Runtime.InteropServices;
-using System.Text;
 using Sparrow.Utils;
 
 namespace Sparrow.Compression

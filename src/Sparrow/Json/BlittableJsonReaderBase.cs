@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 
 namespace Sparrow.Json
 {
@@ -14,7 +13,7 @@ namespace Sparrow.Json
 
         protected BlittableJsonReaderBase(JsonOperationContext context)
         {
-            this._context = context;
+            _context = context;
         }
 
         public bool NoCache { get; set; }

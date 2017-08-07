@@ -107,8 +107,8 @@ namespace Sparrow.Json
         public bool Equals(string other)
         {
 #if DEBUG
-            if (this.IsDisposed)
-                this.ThrowAlreadyDisposed();
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
 #endif
 
             if (_string != null)
@@ -123,7 +123,7 @@ namespace Sparrow.Json
             fixed (byte* pBuffer = _lazyStringTempComparisonBuffer)
             {
                 var tmpSize = Encodings.Utf8.GetBytes(pOther, other.Length, pBuffer, sizeInBytes);
-                if (this.Size != tmpSize)
+                if (Size != tmpSize)
                     return false;
 
                 return Memory.CompareInline(Buffer, pBuffer, tmpSize) == 0;                
@@ -134,11 +134,11 @@ namespace Sparrow.Json
         public bool Equals(LazyStringValue other)
         {
 #if DEBUG
-            if (this.IsDisposed)
-                this.ThrowAlreadyDisposed();
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
 #endif
 
-            int size = this.Size;
+            int size = Size;
             if (other.Size != size)
                 return false;
 
@@ -175,8 +175,8 @@ namespace Sparrow.Json
         public int Compare(byte* other, int otherSize)
         {
 #if DEBUG
-            if (this.IsDisposed)
-                this.ThrowAlreadyDisposed();
+            if (IsDisposed)
+                ThrowAlreadyDisposed();
 #endif
             int size = Size;
             var result = Memory.CompareInline(Buffer, other, Math.Min(size, otherSize));
