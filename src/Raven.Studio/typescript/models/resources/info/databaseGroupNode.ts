@@ -33,7 +33,7 @@ class databaseGroupNode {
         switch (this.lastStatus()) {
             case "Ok":
                 return "state-success";
-            case "NotRespondingMovedToRehab":
+            case "NotResponding":
                 return "state-danger";
             default:
                 return "state-warning";
@@ -44,7 +44,7 @@ class databaseGroupNode {
         switch (this.lastStatus()) {
             case "Ok":
                 return "Active";
-            case "NotRespondingMovedToRehab":
+            case "NotResponding":
                 return "Error";
             default:
                 return "Catching up";

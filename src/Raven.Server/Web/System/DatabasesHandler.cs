@@ -377,7 +377,7 @@ namespace Raven.Server.Web.System
                         Url = url
                     };
                     nodesTopology.Members.Add(GetNodeId(node));
-                    nodesTopology.Status[member] = new DbGroupNodeStatus { LastStatus = DatabasePromotionStatus.Ok };
+                    SetNodeStatus(topology, member, nodesTopology);
                 }
 
                 foreach (var promotable in topology.Promotables)
@@ -440,18 +440,21 @@ namespace Raven.Server.Web.System
             context.Write(writer, doc);
         }
 
-        private static void SetNodeStatus(DatabaseTopology topology, string rehab, NodesTopology nodesTopology)
+        private static void SetNodeStatus(DatabaseTopology topology, string nodeTag, NodesTopology nodesTopology)
         {
-            var nodeStatus = new DbGroupNodeStatus();
-            if (topology.PromotablesStatus.TryGetValue(rehab, out var status))
+            var nodeStatus = new DbGroupNodeStatus
+            {
+                LastStatus = DatabasePromotionStatus.Ok
+            };
+            if (topology.PromotablesStatus.TryGetValue(nodeTag, out var status))
             {
                 nodeStatus.LastStatus = status;
             }
-            if (topology.DemotionReasons.TryGetValue(rehab, out var reason))
+            if (topology.DemotionReasons.TryGetValue(nodeTag, out var reason))
             {
                 nodeStatus.LastError = reason;
             }
-            nodesTopology.Status[rehab] = nodeStatus;
+            nodesTopology.Status[nodeTag] = nodeStatus;
         }
 
         private static InternalReplication GetNode(string databaseName, ClusterTopology clusterTopology, string rehab, out PromotableTask promotableTask)
