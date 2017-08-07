@@ -11,8 +11,6 @@
 //    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 //#endif
 
-using System.Diagnostics.Contracts;
-using System.Reflection;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -369,14 +367,14 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ObjectPoolContext(ObjectPool<T, TR> owner, T value )
         {
-            this._owner = owner;
-            this.Value = value;
+            _owner = owner;
+            Value = value;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Dispose()
         {
-            this._owner.Free(Value);
+            _owner.Free(Value);
         }
     }
 }

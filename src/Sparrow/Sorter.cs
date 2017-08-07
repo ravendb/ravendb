@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
@@ -16,7 +15,7 @@ namespace Sparrow
 
         public Sorter(TSorter sorter)
         {
-            this._sorter = sorter;
+            _sorter = sorter;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -288,7 +287,7 @@ namespace Sparrow
 
         public Sorter(TSorter sorter)
         {
-            this._sorter = sorter;
+            _sorter = sorter;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -1,11 +1,8 @@
 using Sparrow.Binary;
 using System;
-using System.Collections.Generic;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow
 {
@@ -22,20 +19,20 @@ namespace Sparrow
 
                 public XXHash32Block(XXHash32Values[] values, uint seed = 0)
                 {
-                    this.Seed = seed;
-                    this.Values = values;
+                    Seed = seed;
+                    Values = values;
                 }                
 
                 public XXHash32Block(int iterations, uint seed = 0)
                 {
-                    this.Seed = seed;
-                    this.Values = new XXHash32Values[iterations];
+                    Seed = seed;
+                    Values = new XXHash32Values[iterations];
                 }
 
                 public XXHash32Block(uint seed = 0)
                 {
-                    this.Seed = seed;
-                    this.Values = Empty;
+                    Seed = seed;
+                    Values = Empty;
                 }
             }
 

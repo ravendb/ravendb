@@ -111,7 +111,7 @@ namespace Sparrow
 #else
         internal ByteString(ByteStringStorage* ptr)
         {
-            this._pointer = ptr;
+            _pointer = ptr;
         }
 #endif
         public ByteStringType Flags
@@ -584,21 +584,21 @@ namespace Sparrow
 
             public SegmentInformation(UnmanagedGlobalSegment memory, byte* start, byte* end, bool canDispose)
             {
-                this.Memory = memory;
-                this.Start = start;
-                this.End = end;
+                Memory = memory;
+                Start = start;
+                End = end;
 
-                this.Current = start;
-                this.CanDispose = canDispose;
+                Current = start;
+                CanDispose = canDispose;
             }
 
             public SegmentInformation(byte* start, byte* end, bool canDispose)
             {
-                this.Start = start;
-                this.End = end;
+                Start = start;
+                End = end;
 
-                this.Current = start;
-                this.CanDispose = canDispose;
+                Current = start;
+                CanDispose = canDispose;
             }
 
             public int Size
@@ -648,18 +648,18 @@ namespace Sparrow
                 throw new ArgumentException($"It is not a good idea to allocate chunks of less than the {nameof(ByteStringContext.MinBlockSizeInBytes)} value of {ByteStringContext.MinBlockSizeInBytes}");
 
             _lowMemoryFlag = lowMemoryFlag;
-            this._allocationBlockSize = allocationBlockSize;
+            _allocationBlockSize = allocationBlockSize;
 
-            this._wholeSegments = new List<SegmentInformation>();
-            this._internalReadyToUseMemorySegments = new List<SegmentInformation>();
+            _wholeSegments = new List<SegmentInformation>();
+            _internalReadyToUseMemorySegments = new List<SegmentInformation>();
 
-            this._internalReusableStringPool = new FastStack<IntPtr>[LogMinBlockSize];
-            this._internalReusableStringPoolCount = new int[LogMinBlockSize];
+            _internalReusableStringPool = new FastStack<IntPtr>[LogMinBlockSize];
+            _internalReusableStringPoolCount = new int[LogMinBlockSize];
 
-            this._internalCurrent = AllocateSegment(allocationBlockSize);
+            _internalCurrent = AllocateSegment(allocationBlockSize);
             AllocateExternalSegment(allocationBlockSize);
 
-            this._externalStringPool = new FastStack<IntPtr>(64);
+            _externalStringPool = new FastStack<IntPtr>(64);
 
             PrepareForValidation();
         }
@@ -848,15 +848,15 @@ namespace Sparrow
                 // The memory chunk left is big enough to make sense to reuse it.
                 int reusablePoolIndex = GetPoolIndexForReservation(currentSizeLeft);
 
-                FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
                 if (pool == null)
                 {
                     pool = new FastStack<IntPtr>();
-                    this._internalReusableStringPool[reusablePoolIndex] = pool;
+                    _internalReusableStringPool[reusablePoolIndex] = pool;
                 }
 
                 pool.Push(new IntPtr(_internalCurrent.Current));
-                this._internalReusableStringPoolCount[reusablePoolIndex]++;
+                _internalReusableStringPoolCount[reusablePoolIndex]++;
             }
 
             // Use the segment and if there is no segment available that matches the request, just get a new one.
@@ -962,14 +962,14 @@ namespace Sparrow
             value._pointer->Flags = ByteStringType.Disposed;
 
             // We release the pointer in the appropriate reuse pool.
-            if (this._externalFastPoolCount < ExternalFastPoolSize)
+            if (_externalFastPoolCount < ExternalFastPoolSize)
             {
                 // Release in the fast pool. 
-                this._externalFastPool[this._externalFastPoolCount++] = new IntPtr(value._pointer);
+                _externalFastPool[_externalFastPoolCount++] = new IntPtr(value._pointer);
             }
             else
             {
-                this._externalStringPool.Push(new IntPtr(value._pointer));
+                _externalStringPool.Push(new IntPtr(value._pointer));
             }
 
 #if VALIDATE
@@ -1003,15 +1003,15 @@ namespace Sparrow
 
             if (value._pointer->Size <= ByteStringContext.MinBlockSizeInBytes)
             {
-                FastStack<IntPtr> pool = this._internalReusableStringPool[reusablePoolIndex];
+                FastStack<IntPtr> pool = _internalReusableStringPool[reusablePoolIndex];
                 if (pool == null)
                 {
                     pool = new FastStack<IntPtr>();
-                    this._internalReusableStringPool[reusablePoolIndex] = pool;
+                    _internalReusableStringPool[reusablePoolIndex] = pool;
                 }
 
                 pool.Push(new IntPtr(value._pointer));
-                this._internalReusableStringPoolCount[reusablePoolIndex]++;
+                _internalReusableStringPoolCount[reusablePoolIndex]++;
             }
             else  // The released memory is big enough, we will just release it as a new segment. 
             {

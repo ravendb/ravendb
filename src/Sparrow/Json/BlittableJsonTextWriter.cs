@@ -85,7 +85,7 @@ namespace Sparrow.Json
                 obj.GetPropertyByIndex(i, ref prop);
                 WritePropertyName(prop.Name);
 
-                WriteValue(prop.Token & BlittableJsonReaderObject.TypesMask, prop.Value, originalPropertyOrder: false);
+                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: false);
             }
 
             WriteEndObject();

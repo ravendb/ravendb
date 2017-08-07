@@ -126,12 +126,12 @@ namespace Sparrow.Collections
 
         public void CopyTo(FastList<int> dest)
         {
-            int size = (int)this._size;
+            int size = (int)_size;
             if (dest.Capacity < size)
                 dest.Capacity = size;
 
             dest._size = (uint)size;
-            Array.Copy( this._items, dest._items, size);
+            Array.Copy( _items, dest._items, size);
             dest._version++;
         }
 
@@ -323,7 +323,7 @@ namespace Sparrow.Collections
 
             internal Enumerator(FastList<T> list)
             {
-                this._list = list;
+                _list = list;
                 _index = 0;
                 _version = list._version;
                 _current = default(T);

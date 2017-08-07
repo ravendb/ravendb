@@ -97,7 +97,7 @@ namespace Sparrow.Collections
             Debug.Assert(srcStack._array != _array);
            
             int srcSize = srcStack._size;
-            int dstIndex = this._size;
+            int dstIndex = _size;
             if (dstIndex + srcSize > _array.Length)
             {
                 Array.Resize(ref _array, dstIndex + srcSize + 4 * DefaultCapacity);

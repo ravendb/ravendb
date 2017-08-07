@@ -6,10 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.Contracts;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow.Collections
 {
@@ -37,7 +35,7 @@ namespace Sparrow.Collections
 
             public Node(int nameLength)
             {
-                this.NameLength = nameLength;
+                NameLength = nameLength;
             }
 
             /// <summary>
@@ -64,14 +62,14 @@ namespace Sparrow.Collections
 
             public int GetHandleLength(ZFastTrieSortedSet<TKey, TValue> owner)
             {
-                return ZFastTrieSortedSet<TKey, TValue>.TwoFattest(NameLength - 1, GetExtentLength(owner));
+                return TwoFattest(NameLength - 1, GetExtentLength(owner));
             }
 
             public abstract int GetExtentLength(ZFastTrieSortedSet<TKey, TValue> owner);
 
             public bool IsExitNodeOf(ZFastTrieSortedSet<TKey, TValue> owner, int length, int lcpLength)
             {
-                return this.NameLength <= lcpLength && (lcpLength < this.GetExtentLength(owner) || lcpLength == length);
+                return NameLength <= lcpLength && (lcpLength < GetExtentLength(owner) || lcpLength == length);
             }
 
             public Leaf GetRightLeaf()
@@ -106,16 +104,16 @@ namespace Sparrow.Collections
 
             public string ToDebugString(ZFastTrieSortedSet<TKey,TValue> owner)
             {
-                TKey key = this.IsInternal ? ((Leaf)((Internal)this).ReferencePtr).Key : ((Leaf)this).Key;
+                TKey key = IsInternal ? ((Leaf)((Internal)this).ReferencePtr).Key : ((Leaf)this).Key;
                 
                 BitVector extent = Extent(owner);
                 int extentLength = GetExtentLength(owner);
 
-                string openBracket = this.IsLeaf ? "[" : "(" ;
-                string closeBracket = this.IsLeaf ? "]" : ")";
+                string openBracket = IsLeaf ? "[" : "(" ;
+                string closeBracket = IsLeaf ? "]" : ")";
                 string extentBinary = extentLength > 16 ? extent.SubVector(0, 8).ToBinaryString() + "..." + extent.SubVector(extent.Count - 8, 8).ToBinaryString() : extent.ToBinaryString();
-                string lenghtInformation = "[" + this.NameLength + ".." + extentLength + "]";
-                string jumpInfo = this.IsInternal ? ((Internal)this).GetHandleLength(owner) + "->" + ((Internal)this).GetJumpLength(owner) : "";
+                string lenghtInformation = "[" + NameLength + ".." + extentLength + "]";
+                string jumpInfo = IsInternal ? ((Internal)this).GetHandleLength(owner) + "->" + ((Internal)this).GetJumpLength(owner) : "";
 
                 return string.Format("{0}{2}, {4}, {3}{1}", openBracket, closeBracket, extentBinary, jumpInfo, lenghtInformation);
             }
@@ -126,7 +124,7 @@ namespace Sparrow.Collections
                 if (thisAsInternal != null)
                     return x >= thisAsInternal.NameLength && x <= thisAsInternal.ExtentLength;
                 else 
-                    return x >= this.NameLength;
+                    return x >= NameLength;
             }
         }
 
@@ -146,8 +144,8 @@ namespace Sparrow.Collections
             public Leaf(int nameLength, TKey key, TValue value)
                 : base(nameLength)
             {
-                this.Key = key;
-                this.Value = value;
+                Key = key;
+                Value = value;
             }
 
             /// <summary>
@@ -172,12 +170,12 @@ namespace Sparrow.Collections
 
             public override BitVector Name(ZFastTrieSortedSet<TKey, TValue> owner)
             {
-                return owner.binarizeFunc(this.Key);
+                return owner.binarizeFunc(Key);
             }
 
             public override BitVector Handle(ZFastTrieSortedSet<TKey, TValue> owner)
             {
-                return this.ReferencePtr.Name(owner).SubVector(0, GetHandleLength(owner));
+                return ReferencePtr.Name(owner).SubVector(0, GetHandleLength(owner));
             }
 
             public override BitVector Extent(ZFastTrieSortedSet<TKey, TValue> owner)
@@ -187,7 +185,7 @@ namespace Sparrow.Collections
 
             public override int GetExtentLength(ZFastTrieSortedSet<TKey, TValue> owner)
             {
-                return owner.binarizeFunc(this.Key).Count;
+                return owner.binarizeFunc(Key).Count;
             }
         }
 
@@ -206,7 +204,7 @@ namespace Sparrow.Collections
             public Internal(int nameLength, int extentLength)
                 : base(nameLength)
             {
-                this.ExtentLength = extentLength;
+                ExtentLength = extentLength;
             }
 
             /// <summary>
@@ -243,7 +241,7 @@ namespace Sparrow.Collections
 
             public override BitVector Extent(ZFastTrieSortedSet<TKey, TValue> owner)
             {
-                return ReferencePtr.Name(owner).SubVector(0, this.ExtentLength);
+                return ReferencePtr.Name(owner).SubVector(0, ExtentLength);
             }
 
             public override int GetExtentLength(ZFastTrieSortedSet<TKey, TValue> owner)
@@ -291,11 +289,11 @@ namespace Sparrow.Collections
 
             public CutPoint(int lcp, Internal parent, Node exit, BitVector searchKey)
             {
-                this.LongestPrefix = lcp;
-                this.Parent = parent;
-                this.Exit = exit;
-                this.SearchKey = searchKey;
-                this.IsRightChild = parent != null && parent.Right == exit;
+                LongestPrefix = lcp;
+                Parent = parent;
+                Exit = exit;
+                SearchKey = searchKey;
+                IsRightChild = parent != null && parent.Right == exit;
             }
 
             /// <summary>
@@ -305,8 +303,8 @@ namespace Sparrow.Collections
             public bool IsCutLow(ZFastTrieSortedSet<TKey, TValue> owner)
             {
                 // Theorem 3: Page 165 of [1]
-                var handleLength = this.Exit.GetHandleLength(owner);
-                return this.LongestPrefix >= handleLength;
+                var handleLength = Exit.GetHandleLength(owner);
+                return LongestPrefix >= handleLength;
             }
         }
 
@@ -326,14 +324,14 @@ namespace Sparrow.Collections
 
             public ExitNode(int lcp, Node exit, BitVector v)
             {
-                this.LongestPrefix = lcp;
-                this.Exit = exit;
-                this.SearchKey = v;
+                LongestPrefix = lcp;
+                Exit = exit;
+                SearchKey = v;
             }
 
             public bool IsLeaf
             {
-                get { return this.Exit is Leaf; }
+                get { return Exit is Leaf; }
             }
         }
 
@@ -359,18 +357,18 @@ namespace Sparrow.Collections
             if (binarize == null)
                 throw new ArgumentException("Cannot continue without knowing how to binarize the key.");
 
-            this.binarizeFunc = binarize;
+            binarizeFunc = binarize;
 
-            this.NodesTable = new ZFastNodesTable(this);
+            NodesTable = new ZFastNodesTable(this);
 
-            this.size = 0;
-            this.Root = null;
+            size = 0;
+            Root = null;
 
             // Setup tombstones. 
-            this.Head = new Leaf();
-            this.Tail = new Leaf();
-            this.Head.Next = Tail;
-            this.Tail.Previous = Head;
+            Head = new Leaf();
+            Tail = new Leaf();
+            Head.Next = Tail;
+            Tail.Previous = Head;
         }
 
         public ZFastTrieSortedSet(IEnumerable<KeyValuePair<TKey, TValue>> elements, Func<TKey, BitVector> binarize) : this ( binarize )
@@ -395,8 +393,8 @@ namespace Sparrow.Collections
                 Leaf leaf = new Leaf(0, key, value);
 
                 // We add the leaf after the head.
-                AddAfter(this.Head, leaf);
-                this.Root = leaf;
+                AddAfter(Head, leaf);
+                Root = leaf;
 
                 size++;
 
@@ -456,10 +454,10 @@ namespace Sparrow.Collections
 
                 // If the exit node is the root
                 bool isRightChild = cutPoint.IsRightChild;
-                if (exitNode == this.Root)
+                if (exitNode == Root)
                 {
                     // Then update the root
-                    this.Root = newInternal;
+                    Root = newInternal;
                 }
                 else
                 {
@@ -486,12 +484,12 @@ namespace Sparrow.Collections
                         Debug.Assert(exitNodeHandleLength == exitNodeAsInternal.GetHandleLength(this));
                         Debug.Assert(hash == ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Handle(this), hashState, exitNodeHandleLength));
 
-                        this.NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
+                        NodesTable.Replace(exitNodeAsInternal, newInternal, hash);
 
                         exitNodeAsInternal.NameLength = cutPoint.LongestPrefix + 1;
 
                         hash = ZFastNodesTable.CalculateHashForBits(exitNodeAsInternal.Name(this), hashState, exitNodeAsInternal.GetHandleLength(this), cutPoint.LongestPrefix);
-                        this.NodesTable.Add(exitNodeAsInternal, hash);
+                        NodesTable.Add(exitNodeAsInternal, hash);
 
                         //  We update the jumps for the exit node.                
                         UpdateJumps(exitNodeAsInternal);
@@ -502,7 +500,7 @@ namespace Sparrow.Collections
                         exitNode.NameLength = cutPoint.LongestPrefix + 1;
                         uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, newInternal.GetHandleLength(this));
 
-                        this.NodesTable.Add(newInternal, hash);
+                        NodesTable.Add(newInternal, hash);
                     }
                 }
 
@@ -559,14 +557,14 @@ namespace Sparrow.Collections
             if ( size == 1 )
             {                
                 // Is the root key (which has to be a Leaf) equal to the one we are looking for?
-                var leaf = (Leaf)this.Root;
+                var leaf = (Leaf)Root;
                 if (leaf.Name(this).CompareTo(searchKey) != 0)
                     return false;
 
                 RemoveLeaf(leaf);
 
                 // We remove the root.                
-                this.Root = null;
+                Root = null;
                 size = 0;
                 
                 return true;
@@ -596,7 +594,7 @@ namespace Sparrow.Collections
                 var otherNodeAsInternal = otherNode as Internal;
 
                 // Then we need to fix the grand parent child pointer.
-                if ( parentExitNode != null && parentExitNode != this.Root )
+                if ( parentExitNode != null && parentExitNode != Root )
                 {
                     var grandParentExitNode = FindGrandParentExitNode(searchKey, hashState, stack);
                     isRightLeaf = grandParentExitNode.Right == parentExitNode;
@@ -644,12 +642,12 @@ namespace Sparrow.Collections
                 {                    
                     //   We remove the existing child node from the jump table
                     uint hash = ZFastNodesTable.CalculateHashForBits(otherNode.Name(this), hashState, otherNodeHandleLength, parentExitNode.ExtentLength);
-                    this.NodesTable.Remove(otherNodeAsInternal, hash);
+                    NodesTable.Remove(otherNodeAsInternal, hash);
                     otherNode.NameLength = parentExitNode.NameLength;
                     
                     //   We replace the parent exit node
                     hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, parentExitNodeHandleLength);
-                    this.NodesTable.Replace(parentExitNode, otherNodeAsInternal, hash);
+                    NodesTable.Replace(parentExitNode, otherNodeAsInternal, hash);
                     
                     //   We update the jumps table for the child node.
                     UpdateJumps(otherNodeAsInternal);
@@ -660,7 +658,7 @@ namespace Sparrow.Collections
                     otherNode.NameLength = parentExitNode.NameLength;
 
                     uint hash = ZFastNodesTable.CalculateHashForBits(searchKey, hashState, parentExitNodeHandleLength);
-                    this.NodesTable.Remove(parentExitNode, hash);
+                    NodesTable.Remove(parentExitNode, hash);
                 }
 
                 size--;
@@ -735,7 +733,7 @@ namespace Sparrow.Collections
                 throw new KeyNotFoundException();
 
             // Returns the head next key
-            return this.Head.Next.Key;
+            return Head.Next.Key;
         }
 
         public TKey LastKey()
@@ -744,16 +742,16 @@ namespace Sparrow.Collections
                 throw new KeyNotFoundException();
 
             // Returns the head next key
-            return this.Tail.Previous.Key;
+            return Tail.Previous.Key;
         }
 
         public void Clear()
         {
-            this.size = 0;
-            this.Root = null;
-            this.NodesTable.Clear();
-            this.Head.Next = this.Tail;
-            this.Tail.Previous = this.Head;
+            size = 0;
+            Root = null;
+            NodesTable.Clear();
+            Head.Next = Tail;
+            Tail.Previous = Head;
         }
 
         public TKey SuccessorOrDefault(TKey key)
@@ -780,7 +778,7 @@ namespace Sparrow.Collections
                 return default(TKey);
 
             // Returns the head next key
-            return this.Head.Next.Key;
+            return Head.Next.Key;
         }
 
         public TKey LastKeyOrDefault()
@@ -789,7 +787,7 @@ namespace Sparrow.Collections
                 return default(TKey);
 
             // Returns the head next key
-            return this.Tail.Previous.Key;
+            return Tail.Previous.Key;
         }
 
 
@@ -1064,7 +1062,7 @@ namespace Sparrow.Collections
             Contract.Requires(size != 0);
             // If there is only a single element, then the exit point is the root.
             if (size == 1)
-                return new CutPoint(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), null, Root, searchKey);
+                return new CutPoint(searchKey.LongestCommonPrefixLength(Root.Extent(this)), null, Root, searchKey);
 
             int length = searchKey.Count;
 
@@ -1096,7 +1094,7 @@ namespace Sparrow.Collections
                 stack.Pop();
 
                 // If the exit node is the root, there is obviously no parent to be found.
-                if (parexOrExitNode == this.Root)
+                if (parexOrExitNode == Root)
                     return new CutPoint(lcpLength, null, parexOrExitNode, searchKey);
 
                 startPoint = stack.Peek().ExtentLength;
@@ -1137,7 +1135,7 @@ namespace Sparrow.Collections
             stack.Pop();
 
             // If the exit node is the root, there is obviously no parent to be found.
-            if (parexOrExitNode == this.Root)
+            if (parexOrExitNode == Root)
                 return new CutPoint(lcpLength, null, parexOrExitNode, searchKey);
 
             startPoint = stack.Peek().ExtentLength;
@@ -1154,7 +1152,7 @@ namespace Sparrow.Collections
             var parentExitNode = stack.Pop();
 
             // The parent is the root, therefore there is no grandparent. 
-            if (parentExitNode == this.Root)
+            if (parentExitNode == Root)
                 return null;
 
             var top = stack.Peek();
@@ -1187,7 +1185,7 @@ namespace Sparrow.Collections
             BitVector searchKey = binarizeFunc(key);          
 
             if (size == 1)
-                return new ExitNode(searchKey.LongestCommonPrefixLength(this.Root.Extent(this)), this.Root, searchKey);
+                return new ExitNode(searchKey.LongestCommonPrefixLength(Root.Extent(this)), Root, searchKey);
 
             // We look for the parent of the exit node for the key.
             var state = Hashing.Iterative.XXHash32.Preprocess(searchKey.Bits);
@@ -1242,14 +1240,14 @@ namespace Sparrow.Collections
 
             if (startBit == -1)
             {
-                Contract.Assert(this.Root is Internal);
+                Contract.Assert(Root is Internal);
 
-                top = (Internal)this.Root;
+                top = (Internal)Root;
                 stack.Push(top);
                 startBit = top.ExtentLength;
             }
 
-            var nodesTable = this.NodesTable;
+            var nodesTable = NodesTable;
 
             uint checkMask = (uint)(-1 << Bits.CeilLog2(endBit - startBit));
             while (endBit - startBit > 0)
@@ -1298,13 +1296,13 @@ namespace Sparrow.Collections
 
             if (startBit == -1)
             {
-                Contract.Assert(this.Root is Internal);
+                Contract.Assert(Root is Internal);
 
-                top = (Internal)this.Root;
+                top = (Internal)Root;
                 startBit = top.ExtentLength;
             }
 
-            var nodesTable = this.NodesTable;
+            var nodesTable = NodesTable;
 
             uint checkMask = (uint)(-1 << Bits.CeilLog2(endBit - startBit));
             while (endBit - startBit > 0)

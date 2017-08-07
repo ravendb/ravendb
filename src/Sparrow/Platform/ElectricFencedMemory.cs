@@ -1,9 +1,4 @@
-﻿using System;
-using Sparrow.Collections;
-using System.Threading;
-using Sparrow.Json;
-
-namespace Sparrow.Platform
+﻿namespace Sparrow.Platform
 {
     public unsafe class ElectricFencedMemory
     {

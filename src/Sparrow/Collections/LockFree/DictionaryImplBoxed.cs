@@ -2,10 +2,6 @@
 //
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace Sparrow.Collections.LockFree
@@ -32,7 +28,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == null)
                 {
                     // claimed a new slot
-                    this.allocatedSlotCount.Increment();
+                    allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -49,7 +45,7 @@ namespace Sparrow.Collections.LockFree
                 if (entryKeyValue == null)
                 {
                     // claimed a new slot
-                    this.allocatedSlotCount.Increment();
+                    allocatedSlotCount.Increment();
                     return true;
                 }
             }
@@ -69,7 +65,7 @@ namespace Sparrow.Collections.LockFree
 
         public Boxed(T key)
         {
-            this.Value = key;
+            Value = key;
         }
     }
 }
