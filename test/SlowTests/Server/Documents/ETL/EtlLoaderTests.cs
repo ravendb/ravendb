@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations.ETL;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Collections;
 using Xunit;

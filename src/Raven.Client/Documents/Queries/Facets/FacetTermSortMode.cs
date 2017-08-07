@@ -5,6 +5,6 @@ namespace Raven.Client.Documents.Queries.Facets
         ValueAsc,
         ValueDesc,
         HitsAsc,
-        HitsDesc,
+        HitsDesc
     }
 }

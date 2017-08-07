@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;

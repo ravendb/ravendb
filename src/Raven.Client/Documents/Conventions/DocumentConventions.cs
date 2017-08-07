@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Dynamic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
@@ -11,9 +12,10 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Linq;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -23,27 +25,33 @@ namespace Raven.Client.Documents.Conventions
     ///     The set of conventions used by the <see cref="DocumentStore" /> which allow the users to customize
     ///     the way the Raven client API behaves
     /// </summary>
-    public class DocumentConventions : QueryConventions
+    public class DocumentConventions : Client.Conventions
     {
+        public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
+
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
 
         internal static DocumentConventions Default = new DocumentConventions();
 
         private static IDictionary<Type, string> _cachedDefaultTypeCollectionNames = new Dictionary<Type, string>();
 
-        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync = new List<Tuple<Type, Func<string, object, Task<string>>>>();
+        private readonly Dictionary<MemberInfo, CustomQueryTranslator> _customQueryTranslators = new Dictionary<MemberInfo, CustomQueryTranslator>();
+
+        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters =
+            new List<(Type, TryConvertValueForQueryDelegate<object>)>();
+
+        private readonly IList<Tuple<Type, Func<string, object, Task<string>>>> _listOfRegisteredIdConventionsAsync =
+            new List<Tuple<Type, Func<string, object, Task<string>>>>();
 
         private readonly IList<Tuple<Type, Func<ValueType, string>>> _listOfRegisteredIdLoadConventions = new List<Tuple<Type, Func<ValueType, string>>>();
+        private ClientConfiguration _originalConfiguration;
         public Func<Type, BlittableJsonReaderObject, object> DeserializeEntityFromBlittable;
-
-        private readonly List<(Type Type, TryConvertValueForQueryDelegate<object> Convert)> _listOfQueryValueConverters = new List<(Type, TryConvertValueForQueryDelegate<object>)>();
 
         protected Dictionary<Type, MemberInfo> IdPropertyCache = new Dictionary<Type, MemberInfo>();
 
-        public Action<object, StreamWriter> SerializeEntityToJsonStream;
-        private ClientConfiguration _originalConfiguration;
-
         public ReadBalanceBehavior ReadBalanceBehavior;
+
+        public Action<object, StreamWriter> SerializeEntityToJsonStream;
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="DocumentConventions" /> class.
@@ -78,7 +86,7 @@ namespace Raven.Client.Documents.Conventions
             PrettifyGeneratedLinqExpressions = true;
 
             JsonContractResolver = new DefaultRavenContractResolver();
-            CustomizeJsonSerializer = serializer => { };// todo: remove this or merge with SerializeEntityToJsonStream
+            CustomizeJsonSerializer = serializer => { }; // todo: remove this or merge with SerializeEntityToJsonStream
             SerializeEntityToJsonStream = (entity, streamWriter) =>
             {
                 var jsonSerializer = CreateSerializer();
@@ -189,6 +197,29 @@ namespace Raven.Client.Documents.Conventions
         public bool DisableTopologyUpdates { get; set; }
 
         /// <summary>
+        ///     Gets or sets the identity parts separator used by the HiLo generators
+        /// </summary>
+        /// <value>The identity parts separator.</value>
+        public string IdentityPartsSeparator { get; set; }
+
+        /// <summary>
+        ///     Saves Enums as integers and instruct the Linq provider to query enums as integer values.
+        /// </summary>
+        public bool SaveEnumsAsIntegers { get; set; }
+
+        public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
+        {
+            var body = member.Body as UnaryExpression;
+            if (body == null)
+                throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
+
+            var info = GetMemberInfoFromExpression(body.Operand);
+
+            if (_customQueryTranslators.ContainsKey(info) == false)
+                _customQueryTranslators.Add(info, translator);
+        }
+
+        /// <summary>
         ///     Default method used when finding a collection name for a type
         /// </summary>
         public static string DefaultGetCollectionName(Type t)
@@ -244,7 +275,6 @@ namespace Raven.Client.Documents.Conventions
                 return null;
 
             if (FindCollectionNameForDynamic != null && entity is IDynamicMetaObjectProvider)
-            {
                 try
                 {
                     return FindCollectionNameForDynamic(entity);
@@ -254,7 +284,6 @@ namespace Raven.Client.Documents.Conventions
                     // if we can't find it, we'll just assume the the propery
                     // isn't there
                 }
-            }
 
             return GetCollectionName(entity.GetType());
         }
@@ -460,7 +489,7 @@ namespace Raven.Client.Documents.Conventions
             lock (this)
             {
                 if (configuration.Disabled && _originalConfiguration == null) // nothing to do
-                    return; 
+                    return;
 
                 if (configuration.Disabled && _originalConfiguration != null) // need to revert to original values
                 {
@@ -471,13 +500,11 @@ namespace Raven.Client.Documents.Conventions
                 }
 
                 if (_originalConfiguration == null)
-                {
                     _originalConfiguration = new ClientConfiguration
                     {
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
                         PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions
                     };
-                }
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                 PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
@@ -501,8 +528,8 @@ namespace Raven.Client.Documents.Conventions
                 yield return propertyInfo;
 
             foreach (var @interface in type.GetInterfaces())
-                foreach (var propertyInfo in GetPropertiesForType(@interface))
-                    yield return propertyInfo;
+            foreach (var propertyInfo in GetPropertiesForType(@interface))
+                yield return propertyInfo;
         }
 
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
@@ -512,9 +539,7 @@ namespace Raven.Client.Documents.Conventions
             {
                 var entry = _listOfQueryValueConverters[index];
                 if (entry.Type.IsAssignableFrom(typeof(T)))
-                {
                     break;
-                }
             }
 
             _listOfQueryValueConverters.Insert(index, (typeof(T), Actual));
@@ -534,12 +559,35 @@ namespace Raven.Client.Documents.Conventions
             {
                 if (queryValueConverter.Type.IsInstanceOfType(value) == false)
                     continue;
-                
+
                 return queryValueConverter.Convert(fieldName, value, forRange, out strValue);
             }
 
             strValue = null;
             return false;
+        }
+
+        internal LinqPathProvider.Result TranslateCustomQueryExpression(LinqPathProvider provider, Expression expression)
+        {
+            var member = GetMemberInfoFromExpression(expression);
+
+            CustomQueryTranslator translator;
+            return _customQueryTranslators.TryGetValue(member, out translator) == false
+                ? null
+                : translator.Invoke(provider, expression);
+        }
+
+        private static MemberInfo GetMemberInfoFromExpression(Expression expression)
+        {
+            var callExpression = expression as MethodCallExpression;
+            if (callExpression != null)
+                return callExpression.Method;
+
+            var memberExpression = expression as MemberExpression;
+            if (memberExpression != null)
+                return memberExpression.Member;
+
+            throw new NotSupportedException("A custom query translator can only be used to evaluate a simple member access or method call.");
         }
     }
 }

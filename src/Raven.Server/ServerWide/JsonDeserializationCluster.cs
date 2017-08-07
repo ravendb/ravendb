@@ -1,11 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Expiration;
-using Raven.Client.Server.PeriodicBackup;
-using Raven.Client.Server.Revisions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Expiration;
+using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;

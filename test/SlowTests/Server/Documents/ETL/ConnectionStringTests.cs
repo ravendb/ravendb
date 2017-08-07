@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations.ConnectionStrings;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Server.Documents.ETL.SQL;
 using Xunit;

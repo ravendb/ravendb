@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;

@@ -7,7 +7,7 @@
 using System;
 using System.IO;
 using System.Threading.Tasks;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Sparrow.Json;

@@ -3,7 +3,7 @@ using System.IO;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
-    public static class PutAttachmentCommandHelper
+    internal static class PutAttachmentCommandHelper
     {
         public static void ThrowStreamAlready()
         {

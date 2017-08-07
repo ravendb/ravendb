@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Commands
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Delete,
+                Method = HttpMethod.Delete
             };
             return request;
         }

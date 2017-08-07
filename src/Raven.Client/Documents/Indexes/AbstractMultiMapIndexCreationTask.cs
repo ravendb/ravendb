@@ -58,7 +58,7 @@ namespace Raven.Client.Documents.Indexes
             if (Conventions == null)
                 Conventions = new DocumentConventions();
 
-            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>()
+            var indexDefinition = new IndexDefinitionBuilder<object, TReduceResult>
             {
                 Indexes = Indexes,
                 Analyzers = Analyzers,
@@ -72,7 +72,7 @@ namespace Raven.Client.Documents.Indexes
                 StoresStrings = StoresStrings,
                 TermVectorsStrings = TermVectorsStrings,
                 SpatialIndexesStrings = SpatialIndexesStrings,
-                OutputReduceToCollection = OutputReduceToCollection,
+                OutputReduceToCollection = OutputReduceToCollection
             }.ToIndexDefinition(Conventions, validateMap: false);
             foreach (var map in _maps.Select(generateMap => generateMap()))
             {

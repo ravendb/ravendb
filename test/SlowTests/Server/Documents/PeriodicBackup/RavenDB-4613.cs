@@ -11,7 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Tests.Infrastructure;
 using Xunit;

@@ -10,7 +10,7 @@
         Faulty
     }
 
-    public static class IndexTypeExtensions
+    internal static class IndexTypeExtensions
     {
         public static bool IsMap(this IndexType self)
         {

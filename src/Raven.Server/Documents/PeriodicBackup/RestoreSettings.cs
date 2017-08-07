@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {

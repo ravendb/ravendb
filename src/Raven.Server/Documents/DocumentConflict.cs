@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Diagnostics;
-using Raven.Client.Documents.Replication.Messages;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents

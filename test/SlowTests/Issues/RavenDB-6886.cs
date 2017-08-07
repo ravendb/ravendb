@@ -2,8 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -374,7 +374,7 @@ namespace SlowTests.Issues
         {
             try
             {
-                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(MultiDatabase.CreateDatabaseDocument(databaseName), clusterSize));
+                var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(new DatabaseRecord(databaseName), clusterSize));
                 Assert.Equal(clusterSize, databaseResult.Topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {

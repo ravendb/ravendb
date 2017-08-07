@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Commands
                 Content = new BlittableJsonContent(stream =>
                 {
                     _context.Write(stream, _document);
-                }),
+                })
             };
             AddChangeVectorIfNotNull(_changeVector, request);
             return request;

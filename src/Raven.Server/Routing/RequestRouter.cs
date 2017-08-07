@@ -6,11 +6,9 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Net;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Raven.Server.Config;
 using Raven.Server.Documents;
 using System.Threading;
 using Microsoft.AspNetCore.Http.Features.Authentication;

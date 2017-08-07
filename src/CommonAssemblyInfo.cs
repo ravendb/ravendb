@@ -27,3 +27,4 @@ using System.Runtime.CompilerServices;
 [assembly: InternalsVisibleTo("RachisTests")]
 [assembly: InternalsVisibleTo("TypingsGenerator")]
 [assembly: InternalsVisibleTo("Voron.Recovery")]
+[assembly: InternalsVisibleTo("rvn")]

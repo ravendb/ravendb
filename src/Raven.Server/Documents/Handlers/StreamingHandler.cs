@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;

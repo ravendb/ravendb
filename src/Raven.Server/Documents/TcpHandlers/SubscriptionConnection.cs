@@ -5,7 +5,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions;
@@ -15,14 +14,9 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Utils;
 using Sparrow.Utils;
-using System.Linq;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
-using Voron;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 
 namespace Raven.Server.Documents.TcpHandlers
 {

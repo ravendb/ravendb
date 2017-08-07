@@ -1,6 +1,5 @@
 using System;
 using Lucene.Net.Search;
-using Microsoft.AspNetCore.Http;
 
 namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 {

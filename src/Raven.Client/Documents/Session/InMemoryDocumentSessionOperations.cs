@@ -16,9 +16,10 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -76,7 +77,7 @@ namespace Raven.Client.Documents.Session
         public async Task<ServerNode> GetCurrentSessionNode()
         {
             (int Index, ServerNode Node) result;
-            switch (this._documentStore.Conventions.ReadBalanceBehavior)
+            switch (_documentStore.Conventions.ReadBalanceBehavior)
             {
                 case ReadBalanceBehavior.None:
                     result = await _requestExecutor.GetPreferredNode().ConfigureAwait(false);
@@ -86,7 +87,7 @@ namespace Raven.Client.Documents.Session
                     break;
                 case ReadBalanceBehavior.FastestNode:
                     result = await _requestExecutor.GetFastestNode().ConfigureAwait(false);
-                    break; 
+                    break;
                 default:
                     throw new ArgumentOutOfRangeException(_documentStore.Conventions.ReadBalanceBehavior.ToString());
             }
@@ -190,7 +191,7 @@ namespace Raven.Client.Documents.Session
             GenerateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, GenerateId);
             EntityToBlittable = new EntityToBlittable(this);
         }
-        
+
         /// <summary>
         /// Gets the metadata for the specified entity.
         /// </summary>
@@ -222,7 +223,7 @@ namespace Raven.Client.Documents.Session
         /// <returns></returns>
         public string GetChangeVectorFor<T>(T instance)
         {
-            if(instance == null)
+            if (instance == null)
                 throw new ArgumentNullException(nameof(instance));
 
             var documentInfo = GetDocumentInfo(instance);
@@ -256,8 +257,8 @@ namespace Raven.Client.Documents.Session
 
         internal bool IsLoadedOrDeleted(string id)
         {
-            return (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null) || 
-                IsDeleted(id) || 
+            return (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) && documentInfo.Document != null) ||
+                IsDeleted(id) ||
                 IncludedDocumentsById.ContainsKey(id);
         }
 
@@ -479,7 +480,8 @@ more responsive application.
 
         public void Delete(string id, string expectedChangeVector)
         {
-            if (id == null) throw new ArgumentNullException(nameof(id));
+            if (id == null)
+                throw new ArgumentNullException(nameof(id));
             string changeVector = null;
             DocumentInfo documentInfo;
             if (DocumentsById.TryGetValue(id, out documentInfo))
@@ -497,7 +499,7 @@ more responsive application.
                 DocumentsById.Remove(id);
                 changeVector = documentInfo.ChangeVector;
             }
-            
+
             KnownMissingIds.Add(id);
             changeVector = UseOptimisticConcurrency ? changeVector : null;
             Defer(new DeleteCommandData(id, expectedChangeVector ?? changeVector));
@@ -523,7 +525,7 @@ more responsive application.
         /// </summary>
         public void Store(object entity)
         {
-            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string id);
+            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string _);
             StoreInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto);
         }
 
@@ -542,7 +544,7 @@ more responsive application.
         {
             StoreInternal(entity, changeVector, id, changeVector == null ? ConcurrencyCheckMode.Disabled : ConcurrencyCheckMode.Forced);
         }
-        
+
         private void StoreInternal(object entity, string changeVector, string id, ConcurrencyCheckMode forceConcurrencyCheck)
         {
             if (null == entity)
@@ -599,8 +601,7 @@ more responsive application.
 
         public Task StoreAsync(object entity, CancellationToken token = default(CancellationToken))
         {
-            string id;
-            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out id);
+            var hasId = GenerateEntityIdOnTheClient.TryGetIdFromInstance(entity, out string _);
 
             return StoreAsyncInternal(entity, null, null, hasId == false ? ConcurrencyCheckMode.Forced : ConcurrencyCheckMode.Auto, token: token);
         }
@@ -1053,7 +1054,7 @@ more responsive application.
             {
                 foreach (var include in includes)
                 {
-                    if(include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                    if (include == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                         continue;
 
                     IncludesUtil.Include(result, include, id =>
@@ -1155,7 +1156,7 @@ more responsive application.
                     continue;
 
                 // Check if document was already loaded, the check if we've received it through include
-                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false && 
+                if (DocumentsById.TryGetValue(id, out DocumentInfo documentInfo) == false &&
                     IncludedDocumentsById.TryGetValue(id, out documentInfo) == false)
                     return false;
 

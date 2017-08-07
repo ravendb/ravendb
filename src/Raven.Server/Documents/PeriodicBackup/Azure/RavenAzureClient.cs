@@ -19,7 +19,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using Microsoft.AspNetCore.WebUtilities;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Exceptions.PeriodicBackup;
 

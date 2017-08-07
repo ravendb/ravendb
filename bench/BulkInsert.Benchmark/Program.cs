@@ -9,8 +9,8 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 
 namespace BulkInsert.Benchmark
@@ -74,7 +74,7 @@ namespace BulkInsert.Benchmark
             {
                 if (dbname == null)
                     dbname = "test";
-                var doc = MultiDatabase.CreateDatabaseDocument(dbname);
+                var doc = new DatabaseRecord(dbname);
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
             }
             catch (Exception ex)

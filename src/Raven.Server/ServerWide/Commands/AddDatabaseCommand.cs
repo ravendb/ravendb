@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

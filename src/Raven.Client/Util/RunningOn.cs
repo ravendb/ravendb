@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Util
 {
-    public class RunningOn
+    internal class RunningOn
     {
         [ThreadStatic]
         public static bool FinalizerThread;

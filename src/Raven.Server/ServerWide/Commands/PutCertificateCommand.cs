@@ -1,4 +1,4 @@
-﻿using Raven.Client.Server.Operations.Certificates;
+﻿using Raven.Client.ServerWide.Operations.Certificates;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands

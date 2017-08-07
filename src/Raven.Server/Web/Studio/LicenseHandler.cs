@@ -1,8 +1,5 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
+﻿using System.Threading.Tasks;
 using Raven.Server.Commercial;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;

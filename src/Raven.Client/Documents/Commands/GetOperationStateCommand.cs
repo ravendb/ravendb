@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Http;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands

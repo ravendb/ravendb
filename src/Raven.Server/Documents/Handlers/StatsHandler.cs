@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;

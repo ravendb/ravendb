@@ -1,5 +1,5 @@
-using Raven.Client.Server;
-using Raven.Client.Server.Revisions;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Revisions;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 

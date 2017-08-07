@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -66,7 +65,7 @@ namespace Raven.Client.Documents.Operations
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Get,
+                    Method = HttpMethods.Get
                 };
 
                 if (_type != AttachmentType.Document)
@@ -110,7 +109,7 @@ namespace Raven.Client.Documents.Operations
                     Hash = hash,
                     Size = size,
                     ChangeVector = changeVector,
-                    DocumentId = _documentId,
+                    DocumentId = _documentId
                 };
 
                 var stream = new AttachmentStream(response, await response.Content.ReadAsStreamAsync().ConfigureAwait(false));
@@ -118,7 +117,7 @@ namespace Raven.Client.Documents.Operations
                 Result = new AttachmentResult
                 {
                     Stream = stream,
-                    Details = attachmentDetails,
+                    Details = attachmentDetails
                 };
 
                 return ResponseDisposeHandling.Manually;

@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Text;
 using System.Threading;
-using Raven.Client.Server.Revisions;
+using Raven.Client.ServerWide.Revisions;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions

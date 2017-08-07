@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -14,7 +12,6 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Global;
 using static Sparrow.DatabasePerformanceMetrics;
-using ExceptionExtensions = Raven.Client.Extensions.ExceptionExtensions;
 
 namespace Raven.Server.Documents
 {

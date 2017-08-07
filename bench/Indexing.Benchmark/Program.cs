@@ -4,13 +4,11 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Indexing.Benchmark.Entities;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 
 #if v35
 using Raven.NewClient.Abstractions.Data;
@@ -53,7 +51,7 @@ namespace Indexing.Benchmark
                 _store.Admin.Server.Send(new DeleteDatabaseOperation(DbName, hardDelete: true));
             }
 
-            var doc = MultiDatabase.CreateDatabaseDocument(DbName);
+            var doc = new DatabaseRecord(DbName);
 
             _store.Admin.Server.Send(new CreateDatabaseOperation(doc));
         }

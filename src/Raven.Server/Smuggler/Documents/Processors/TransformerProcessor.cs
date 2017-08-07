@@ -1,7 +1,5 @@
 ﻿using System;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Sparrow.Json;

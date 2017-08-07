@@ -1,5 +1,5 @@
 using System;
-using Raven.Client.Documents.Exceptions.Revisions;
+using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Revisions

@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Changes
         {
             _documentsSubscription.Dispose();
             _indexesSubscription.Dispose();
-            using (_changes as IDisposable)
+            using (_changes)
             {
                 //var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
                 //if (remoteDatabaseChanges != null)

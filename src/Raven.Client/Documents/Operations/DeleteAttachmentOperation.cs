@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Delete,
+                    Method = HttpMethods.Delete
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);
                 return request;

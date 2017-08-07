@@ -6,7 +6,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -24,8 +23,9 @@ using System.Linq;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Sparrow.Collections;
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupStatus backupStatus)
         {
             var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
-            return taskStatus == TaskStatus.Disabled ? null : 
+            return taskStatus == TaskStatus.Disabled ? null :
                 GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
@@ -371,8 +371,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx)
         {
             long lastEtag;
-            var exception = new Reference<Exception>();
-            using (status.LocalBackup.UpdateStats(isFullBackup, exception))
+            using (status.LocalBackup.UpdateStats(isFullBackup))
             {
                 try
                 {
@@ -392,7 +391,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    exception.Value = e;
+                    status.LocalBackup.Exception = e;
                     throw;
                 }
             }
@@ -505,7 +504,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 ref backupStatus.UploadToS3);
 
             CreateUploadTaskIfNeeded(configuration.GlacierSettings, tasks, backupPath, isFullBackup,
-                async (settings, stream, uploadProgress) => 
+                async (settings, stream, uploadProgress) =>
                 await UploadToGlacier(settings, stream, folderName, fileName, uploadProgress),
                 ref backupStatus.UploadToGlacier);
 
@@ -528,7 +527,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             Func<S, FileStream, UploadProgress, Task> uploadToServer,
             ref T uploadStatus)
             where S : BackupSettings
-            where T: CloudUploadStatus
+            where T : CloudUploadStatus
         {
             if (CanBackupUsing(settings) == false)
                 return;
@@ -540,8 +539,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             tasks.Add(Task.Run(async () =>
             {
-                var exception = new Reference<Exception>();
-                using (localUploadStatus.UpdateStats(isFullBackup, exception))
+                using (localUploadStatus.UpdateStats(isFullBackup))
                 using (var fileStream = File.OpenRead(backupPath))
                 {
                     var uploadProgress = localUploadStatus.UploadProgress;
@@ -555,11 +553,11 @@ namespace Raven.Server.Documents.PeriodicBackup
                     catch (OperationCanceledException e)
                     {
                         // shutting down
-                        exception.Value = e;
+                        localUploadStatus.Exception = e;
                     }
                     catch (Exception e)
                     {
-                        exception.Value = e;
+                        localUploadStatus.Exception = e;
                         throw;
                     }
                     finally
@@ -585,7 +583,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress,
             string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, 
+            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey,
                 settings.AwsRegionName, settings.BucketName, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
@@ -601,13 +599,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         }
 
         private async Task UploadToGlacier(
-            GlacierSettings settings, 
+            GlacierSettings settings,
             Stream stream,
             string folderName,
             string fileName,
             UploadProgress uploadProgress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, 
+            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey,
                 settings.AwsRegionName, settings.VaultName, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(_database.Name, folderName, fileName);
@@ -625,7 +623,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress,
             string archiveDecription)
         {
-            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey, 
+            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey,
                 settings.StorageContainer, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);

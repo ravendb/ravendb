@@ -31,7 +31,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Id)] = Id,
                 [nameof(Name)] = Name,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Type)] = Type.ToString(),
+                [nameof(Type)] = Type.ToString()
             };
         }
     }

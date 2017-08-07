@@ -7,7 +7,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json
 {
-    public static class BlittableOperation
+    internal static class BlittableOperation
     {
         private static readonly Lazy<JsonOperationContext> Context = new Lazy<JsonOperationContext>(JsonOperationContext.ShortTermSingleUse);
 
@@ -177,7 +177,7 @@ namespace Raven.Client.Json
 
         private static void NewChange(string name, object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
         {
-            docChanges.Add(new DocumentsChanges()
+            docChanges.Add(new DocumentsChanges
             {
                 FieldName = name,
                 FieldNewValue = newValue,

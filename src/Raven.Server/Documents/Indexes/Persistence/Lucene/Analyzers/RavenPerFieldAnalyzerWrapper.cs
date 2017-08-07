@@ -10,7 +10,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
-using Sparrow;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers

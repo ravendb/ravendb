@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Sparrow.Json;

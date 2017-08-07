@@ -30,7 +30,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 list.Add(definition.Reduce);
             if (definition.AdditionalSources != null)
             {
-                foreach (var kvp in definition.AdditionalSources.OrderBy(x=>x.Key))
+                foreach (var kvp in definition.AdditionalSources.OrderBy(x => x.Key))
                 {
                     list.Add(kvp.Key);
                     list.Add(kvp.Value);
@@ -49,8 +49,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
 
             var key = new CacheKey(list);
-            Func<TransformerBase> createTransformer = () => IndexAndTransformerCompiler.Compile(definition);
-            var result = TransformerCache.GetOrAdd(key, _ => new Lazy<TransformerBase>(createTransformer));
+            var result = TransformerCache.GetOrAdd(key, _ => new Lazy<TransformerBase>(() => IndexAndTransformerCompiler.Compile(definition)));
             return result.Value;
         }
 

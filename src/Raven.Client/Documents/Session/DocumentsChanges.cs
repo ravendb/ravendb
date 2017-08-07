@@ -49,11 +49,11 @@ namespace Raven.Client.Documents.Session
 
         protected bool Equals(DocumentsChanges other)
         {
-            return string.Equals(FieldOldValue, other.FieldOldValue)
-                   && string.Equals(FieldNewValue, other.FieldNewValue)
-                   && string.Equals(FieldOldType, other.FieldOldType)
+            return Equals(FieldOldValue, other.FieldOldValue)
+                   && Equals(FieldNewValue, other.FieldNewValue)
+                   && Equals(FieldOldType, other.FieldOldType)
                    && string.Equals(FieldName, other.FieldName)
-                   && string.Equals(FieldNewType, other.FieldNewType)
+                   && Equals(FieldNewType, other.FieldNewType)
                    && Change == other.Change;
         }
 

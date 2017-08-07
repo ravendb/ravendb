@@ -3,10 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Util.Encryption;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -61,7 +59,7 @@ namespace Raven.Server.Documents.Indexes
                 writer.Flush();
 
                 stream.Position = 0;
-                
+
                 if (options is StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
                 {
                     using (var metadata = File.Open(options.BasePath.Combine(MetadataFileName).FullPath, FileMode.Create))
@@ -130,7 +128,7 @@ namespace Raven.Server.Documents.Indexes
             Array.Copy(buffer, buffer.Length - nonce.Length, nonce, 0, nonce.Length);
 
             var decryptedData = new byte[data.Length - Sodium.crypto_aead_chacha20poly1305_ABYTES()];
-            
+
             fixed (byte* pData = data)
             fixed (byte* pDecryptedData = decryptedData)
             fixed (byte* pNonce = nonce)
@@ -343,10 +341,10 @@ namespace Raven.Server.Documents.Indexes
                 name = name.Replace(invalidPathChar, '_');
             }
 
-            var hash = MD5Core.GetHashString(name.ToLowerInvariant()).Substring(0, 8);
             if (name.Length < 64)
-                return $"{hash}-{name}";
-            return $"{hash}-{name.Substring(0, 64)}";
+                return name;
+
+            return name.Substring(0, 64);
         }
 
         protected static string ReadName(BlittableJsonReaderObject reader)

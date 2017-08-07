@@ -15,12 +15,11 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
 using Raven.Server.Config;
-using Raven.Server.Config.Attributes;
 using Raven.Server.Documents;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
@@ -122,18 +121,21 @@ namespace FastTests
                         runInMemory = false;
                     }
 
-                    var doc = MultiDatabase.CreateDatabaseDocument(name);
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1";
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString();
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path;
-                    doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";
-                    doc.Settings[
-                            RavenConfiguration.GetKey(
-                                x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] =
-                        int.MaxValue.ToString();
+                    var doc = new DatabaseRecord(name)
+                    {
+                        Settings =
+                        {
+                            [RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1",
+                            [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = runInMemory.ToString(),
+                            [RavenConfiguration.GetKey(x => x.Core.DataDirectory)] = path,
+                            [RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true",
+                            [RavenConfiguration.GetKey(x => x.Indexing.MinNumberOfMapAttemptsAfterWhichBatchWillBeCanceledIfRunningLowOnMemory)] = int.MaxValue.ToString()
+                        }
+                    };
+
                     modifyDatabaseRecord?.Invoke(doc);
 
-                    
+
                     var store = new DocumentStore
                     {
                         Urls = UseFiddler(defaultServer.WebUrls),
@@ -469,10 +471,10 @@ namespace FastTests
             CreatedStores.Clear();
         }
 
-        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath, 
-            RavenServer.CertificateHolder serverCertificateHolder, 
-            Dictionary<string, DatabaseAccess> permissions, 
-            bool serverAdmin = false, 
+        protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath,
+            RavenServer.CertificateHolder serverCertificateHolder,
+            Dictionary<string, DatabaseAccess> permissions,
+            bool serverAdmin = false,
             RavenServer defaultServer = null)
         {
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
@@ -496,7 +498,7 @@ namespace FastTests
             var serverCertificate = new X509Certificate2(serverCertPath);
             X509Certificate2 clientCertificate;
 
-            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate:serverCertificate, defaultServer: defaultServer))
+            using (var store = GetDocumentStore(adminCertificate: serverCertificate, userCertificate: serverCertificate, defaultServer: defaultServer))
             {
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -512,18 +514,18 @@ namespace FastTests
         }
 
         protected string SetupServerAuthentication(
-            IDictionary<string, string> customSettings = null, 
-            string serverUrl = null, 
+            IDictionary<string, string> customSettings = null,
+            string serverUrl = null,
             bool doNotReuseServer = true)
         {
             var serverCertPath = GenerateAndSaveSelfSignedCertificate();
 
             if (customSettings == null)
                 customSettings = new ConcurrentDictionary<string, string>();
-            
+
             customSettings[RavenConfiguration.GetKey(x => x.Security.CertificatePath)] = serverCertPath;
             customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl ?? "https://" + Environment.MachineName + ":0";
-            
+
             if (doNotReuseServer)
                 DoNotReuseServer(customSettings);
 

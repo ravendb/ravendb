@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {

@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 

@@ -64,7 +64,6 @@ namespace Raven.Client.Documents.Linq
         /// <param name="indexName">The name of the index the query is executed against.</param>
         /// <param name="collectionName">The name of the collection the query is executed against.</param>
         /// <param name="fieldsToFetch">The fields to fetch in this query</param>
-        /// <param name="fieldsTRename">The fields to rename for the results of this query</param>
         /// <param name="isMapReduce"></param>
         /// <param name="resultsTransformer"></param>
         /// <param name="transformerParameters"></param>
@@ -1961,7 +1960,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
             /// <summary>
             /// Get only the first item (or throw if there are more than one) or null if empty
             /// </summary>
-            SingleOrDefault,
+            SingleOrDefault
         }
 
         #endregion

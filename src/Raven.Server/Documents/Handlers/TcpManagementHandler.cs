@@ -2,8 +2,7 @@
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Server.Tcp;
-using Raven.Server.Json;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

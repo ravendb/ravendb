@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Server.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;

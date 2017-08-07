@@ -1,5 +1,4 @@
 ﻿using System.Text;
-using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session.Tokens
 {

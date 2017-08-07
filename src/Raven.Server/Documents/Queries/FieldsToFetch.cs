@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Indexes.Auto;
-using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Documents.Transformers;
 using Sparrow;
 

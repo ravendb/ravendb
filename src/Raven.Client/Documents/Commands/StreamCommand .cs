@@ -23,7 +23,7 @@ namespace Raven.Client.Documents.Commands
         {
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Get
             };
             url = $"{node.Url}/databases/{node.Database}/{_url}";
             return request;

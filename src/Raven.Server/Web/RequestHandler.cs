@@ -12,13 +12,10 @@ using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Voron;
 
 namespace Raven.Server.Web
 {

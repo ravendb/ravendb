@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Documents.Indexes;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes

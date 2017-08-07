@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Session.Tokens
             return new FromToken(indexName, collectionName);
         }
 
-        private static char[] _whiteSpaceChars = new[] { ' ', '\t', '\r', '\n', '\v' };
+        private static readonly char[] _whiteSpaceChars = { ' ', '\t', '\r', '\n', '\v' };
         public override void WriteTo(StringBuilder writer)
         {
             if (IsDynamic)

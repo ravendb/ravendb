@@ -7,11 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -104,7 +104,7 @@ namespace Raven.Client.Documents.BulkInsert
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = _stream,
+                    Content = _stream
                 };
             }
 
@@ -203,7 +203,7 @@ namespace Raven.Client.Documents.BulkInsert
                 {
                     [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
                     [nameof(PutCommandDataWithBlittableJson.Id)] = id,
-                    [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
+                    [nameof(PutCommandDataWithBlittableJson.Document)] = doc
                 };
 
                 try

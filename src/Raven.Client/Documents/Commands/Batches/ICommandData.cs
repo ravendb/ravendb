@@ -27,6 +27,6 @@ namespace Raven.Client.Documents.Commands.Batches
         AttachmentDELETE,
 
         ClientAnyCommand,
-        ClientNotAttachmentPUT,
+        ClientNotAttachmentPUT
     }
 }

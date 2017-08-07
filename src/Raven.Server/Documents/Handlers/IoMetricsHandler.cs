@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;

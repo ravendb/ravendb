@@ -3,18 +3,16 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Cluster;
-using Raven.Client.Server;
+using Raven.Client.Exceptions.Documents.Transformers;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands.Transformers;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Transformers

@@ -26,6 +26,6 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
-        Default,
+        Default
     }
 }

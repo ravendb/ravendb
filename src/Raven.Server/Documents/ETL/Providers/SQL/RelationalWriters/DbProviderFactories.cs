@@ -2,7 +2,7 @@ using System;
 using System.Data.Common;
 using System.Data.SqlClient;
 using Npgsql;
-using Raven.Client.Server.ETL.SQL;
+using Raven.Client.ServerWide.ETL.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {

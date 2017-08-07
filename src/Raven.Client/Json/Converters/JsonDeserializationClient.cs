@@ -13,14 +13,14 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.Commands;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.ConnectionStrings;
-using Raven.Client.Server.Operations.ETL;
-using Raven.Client.Server.PeriodicBackup;
-using Raven.Client.Server.Tcp;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Client.ServerWide.Operations.ETL;
+using Raven.Client.ServerWide.PeriodicBackup;
+using Raven.Client.ServerWide.Tcp;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Converters

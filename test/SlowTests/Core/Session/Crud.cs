@@ -9,7 +9,7 @@ using System.Dynamic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.Client.Documents.Exceptions.Session;
+using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using SlowTests.Core.Utils.Transformers;
 
