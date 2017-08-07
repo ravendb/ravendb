@@ -319,7 +319,7 @@ namespace Raven.Client.Http
             return UnlikelyExecuteAsync(command, context, token, topologyUpdate, sessionId);
         }
 
-        public (int currentIndex, ServerNode currentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, int sessionId)
+        public (int CurrentIndex, ServerNode CurrentNode) ChooseNodeForRequest<TResult>(RavenCommand<TResult> cmd, int sessionId)
         {
             if (cmd.IsReadRequest == false)
                 return _nodeSelector.GetPreferredNode();

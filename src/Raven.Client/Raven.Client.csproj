@@ -44,7 +44,7 @@
     <PackageReference Include="Microsoft.Extensions.Primitives" Version="1.1.1" />
     <PackageReference Include="Microsoft.Win32.Primitives" Version="4.3.0" />
     <PackageReference Include="Newtonsoft.Json" Version="10.0.2" />
-    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.4">
+    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.5">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.Collections" Version="4.3.0" />

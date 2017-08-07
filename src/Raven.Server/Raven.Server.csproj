@@ -80,6 +80,9 @@
     <PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
     <PackageReference Include="Npgsql" Version="3.2.3" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
+    <PackageReference Include="Raven.CodeAnalysis" Version="1.0.5">
+      <PrivateAssets>All</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="System.ComponentModel" Version="4.3.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.3.1" />
     <PackageReference Include="System.IO.Pipes" Version="4.3.0" />

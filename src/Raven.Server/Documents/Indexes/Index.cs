@@ -610,7 +610,7 @@ namespace Raven.Server.Documents.Indexes
             Stale = -3
         }
 
-        public virtual (bool isStale, long lastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
+        public virtual (bool IsStale, long LastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
         {
             Debug.Assert(databaseContext.Transaction != null);
 

@@ -431,7 +431,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var removed = internalConnections.RemovedDestiantions.Select(r => new InternalReplication
                 {
-                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
                 });
@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Replication
             {
                 var added = internalConnections.AddedDestinations.Select(r => new InternalReplication
                 {
-                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).nodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(r).NodeTag,
                     Url = r,
                     Database = Database.Name
                 });
