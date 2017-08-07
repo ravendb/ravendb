@@ -227,7 +227,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
+        public virtual async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
         {
             if (_disposed)
                 return false;
@@ -262,7 +262,7 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
-                    else if (_nodeSelector.OnUpdateTopology(command.Result))
+                    else if (_nodeSelector.OnUpdateTopology(command.Result, forceUpdate: forceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
                         if (_readBalanceBehavior == ReadBalanceBehavior.FastestNode)
@@ -628,7 +628,7 @@ namespace Raven.Client.Http
 
                     if (response.IsSuccessStatusCode == false)
                     {
-                        if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionId).ConfigureAwait(false) == false)
+                        if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionId, shouldRetry).ConfigureAwait(false) == false)
                         {
                             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                                 throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
@@ -787,7 +787,7 @@ namespace Raven.Client.Http
 
         public event Action<StringBuilder> AdditionalErrorInformation;
 
-        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url, int? sessionId)
+        private async Task<bool> HandleUnsuccessfulResponse<TResult>(ServerNode chosenNode, int? nodeIndex, JsonOperationContext context, RavenCommand<TResult> command, HttpRequestMessage request, HttpResponseMessage response, string url, int? sessionId, bool shouldRetry)
         {
             switch (response.StatusCode)
             {
@@ -803,6 +803,14 @@ namespace Raven.Client.Http
                     throw new AuthorizationException("Forbidden access to " + chosenNode.Database + "@" + chosenNode.Url + ", " +
                         (Certificate == null ? "a certificate is required." : Certificate.FriendlyName + " does not have permission to access it or is unknown.") +
                         request.Method + " " + request.RequestUri);
+                case HttpStatusCode.Gone: // request not relevant for the chosen node - the database has been moved to a different one
+                    if (shouldRetry == false)
+                        return false;
+
+                    await UpdateTopologyAsync(chosenNode, Timeout.Infinite, forceUpdate: true).ConfigureAwait(false);
+                    var (index, node) = ChooseNodeForRequest(command, sessionId ?? 0);
+                    await ExecuteAsync(node, index, context, command, shouldRetry: false, sessionId: sessionId).ConfigureAwait(false);
+                    return true;
                 case HttpStatusCode.GatewayTimeout:
                 case HttpStatusCode.RequestTimeout:
                 case HttpStatusCode.BadGateway:

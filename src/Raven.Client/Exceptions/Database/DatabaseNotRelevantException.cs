@@ -1,8 +1,8 @@
 ﻿using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.Client.Exceptions.Database
 {
-    public class DatabaseNotRelevantException : Exception
+    public class DatabaseNotRelevantException : RavenException
     {
         public DatabaseNotRelevantException()
         {
