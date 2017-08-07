@@ -62,24 +62,43 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "GET", AuthorizationStatus.ServerAdmin)]
+        public Task SuspendObserver()
+        {
+            SetupCORSHeaders();
+            
+            if (ServerStore.IsLeader())
+            {
+                var suspend = GetBoolValueQueryString("value"); // in seconds
+                if (suspend.HasValue)
+                {
+                    Server.ServerStore.Observer.Suspened = suspend.Value;
+                }
+                return Task.CompletedTask;
+            }
+            RedirectToLeader();
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.ServerAdmin)]
         public Task GetObserverDecisions()
         {
             SetupCORSHeaders();
 
             if (ServerStore.IsLeader())
             {
-                var db = GetStringQueryString("db");
-
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var res = ServerStore.Observer.ReadDecisionsForDatabase(context, db);
-                    var json = new DynamicJsonValue
-                    {
+                    var res = ServerStore.Observer.ReadDecisionsForDatabase();
+                    var json = new DynamicJsonValue{
+                        ["LeaderNode"] = Server.ServerStore.NodeTag,
+                        ["Term"] = Server.ServerStore.Engine.CurrentTerm,
+                        ["Suspended"] = Server.ServerStore.Observer.Suspened,
                         ["Iteration"] = res.Iteration,
-                        ["Commands"] = new DynamicJsonArray(res.Commands)
+                        ["ObserverLog"] = new DynamicJsonArray(res.List)
                     };
+                    
                     context.Write(writer, json);
                     writer.Flush();
                     return Task.CompletedTask;
@@ -213,7 +232,8 @@ namespace Raven.Server.Documents.Handlers.Admin
         [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/observer", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
