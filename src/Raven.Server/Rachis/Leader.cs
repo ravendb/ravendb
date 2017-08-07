@@ -735,7 +735,7 @@ namespace Raven.Server.Rachis
                 var clusterTopology = _engine.GetTopology(context);
 
                 //We need to validate that the node doesn't exists before we generate the nodeTag
-                if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).hasUrl))
+                if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
                 {
                     throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
                                                         $"with validation that it is not contained by the topology but current topology contains it.");

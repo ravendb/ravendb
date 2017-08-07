@@ -1123,7 +1123,7 @@ namespace Raven.Server.Rachis
             throw new TimeoutException();
         }
 
-        public unsafe (long min, long max) GetLogEntriesRange(TransactionOperationContext context)
+        public unsafe (long Min, long Max) GetLogEntriesRange(TransactionOperationContext context)
         {
             Debug.Assert(context.Transaction != null);
 

@@ -262,9 +262,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                     {
                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                         var possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
-                        if (possibleNode.hasUrl)
+                        if (possibleNode.HasUrl)
                         {
-                            throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because this url is already used by node {possibleNode.nodeTag}");
+                            throw new InvalidOperationException($"Can't add a new node on {nodeUrl} to cluster because this url is already used by node {possibleNode.NodeTag}");
                         }
                         topologyId = clusterTopology.TopologyId;
                     }

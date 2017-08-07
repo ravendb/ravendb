@@ -108,13 +108,13 @@ namespace Raven.Client.ServerWide
                 }
             }
             // remove nodes that are not in the raft cluster topology
-            list.RemoveAll(url => clusterTopology.TryGetNodeTagByUrl(url).hasUrl == false);
+            list.RemoveAll(url => clusterTopology.TryGetNodeTagByUrl(url).HasUrl == false);
 
             foreach (var url in list)
             {
                 destinations.Add(new InternalReplication
                 {
-                    NodeTag = clusterTopology.TryGetNodeTagByUrl(url).nodeTag,
+                    NodeTag = clusterTopology.TryGetNodeTagByUrl(url).NodeTag,
                     Url = url,
                     Database = databaseName
                 });

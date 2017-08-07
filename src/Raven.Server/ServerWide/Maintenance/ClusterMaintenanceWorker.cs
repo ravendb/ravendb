@@ -148,9 +148,9 @@ namespace Raven.Server.ServerWide.Maintenance
 
                                 report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
                                 {
-                                    LastIndexedEtag = stats.lastProcessedEtag,
+                                    LastIndexedEtag = stats.LastProcessedEtag,
                                     IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
-                                    IsStale = stats.isStale
+                                    IsStale = stats.IsStale
                                 });
                             }
                         }

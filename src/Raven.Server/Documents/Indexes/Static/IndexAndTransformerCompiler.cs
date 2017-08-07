@@ -111,7 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
-                .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
+                .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
@@ -129,13 +129,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 ? SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8)
                 : SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString());
 
-            res.syntaxTrees.Add(st);
-            var syntaxTrees = res.syntaxTrees;
+            res.SyntaxTrees.Add(st);
+            var syntaxTrees = res.SyntaxTrees;
 
             var compilation = CSharpCompilation.Create(
                 assemblyName: name + ".dll",
                 syntaxTrees: syntaxTrees,
-                references: res.references,
+                references: res.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
                 );
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)

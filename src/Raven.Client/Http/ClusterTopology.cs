@@ -21,7 +21,7 @@ namespace Raven.Client.Http
         }
 
         //Try to avoid using this since it is expensive
-        public (bool hasUrl,string nodeTag) TryGetNodeTagByUrl(string nodeUrl)
+        public (bool HasUrl, string NodeTag) TryGetNodeTagByUrl(string nodeUrl)
         {
             foreach (var member in Members)
             {
@@ -49,7 +49,7 @@ namespace Raven.Client.Http
 
         public ClusterTopology()
         {
-            
+
         }
 
         public DynamicJsonValue ToSortedJson()
@@ -86,7 +86,7 @@ namespace Raven.Client.Http
             return null;
         }
 
-        public static (Dictionary<TKey, TValue> addedValues, Dictionary<TKey, TValue> removedValues) DictionaryDiff<TKey, TValue>(
+        public static (Dictionary<TKey, TValue> AddedValues, Dictionary<TKey, TValue> RemovedValues) DictionaryDiff<TKey, TValue>(
             Dictionary<TKey, TValue> oldDic, Dictionary<TKey, TValue> newDic)
         {
             var addedValues = new Dictionary<TKey, TValue>();
@@ -116,11 +116,11 @@ namespace Raven.Client.Http
             return (addedValues, removedValues);
         }
 
-        public Dictionary<string,string> AllNodes
+        public Dictionary<string, string> AllNodes
         {
             get
             {
-                var dic = new Dictionary<string,string>();
+                var dic = new Dictionary<string, string>();
                 foreach (var node in Members)
                 {
                     dic[node.Key] = node.Value;
@@ -140,9 +140,9 @@ namespace Raven.Client.Http
         public string LastNodeId { get; protected set; }
         public string TopologyId { get; protected set; }
 
-        public Dictionary<string,string> Members { get; protected set; }
-        public Dictionary<string,string> Promotables { get; protected set; }
-        public Dictionary<string,string> Watchers { get; protected set; }
+        public Dictionary<string, string> Members { get; protected set; }
+        public Dictionary<string, string> Promotables { get; protected set; }
+        public Dictionary<string, string> Watchers { get; protected set; }
     }
 
     public class NodeStatus : IDynamicJson

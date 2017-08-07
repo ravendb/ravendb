@@ -177,11 +177,11 @@ namespace Raven.Server.ServerWide
                             var newNodes = clusterTopology.AllNodes;
                             var nodesChanges = ClusterTopology.DictionaryDiff(oldNodes, newNodes);
                             oldNodes = newNodes;
-                            foreach (var node in nodesChanges.removedValues)
+                            foreach (var node in nodesChanges.RemovedValues)
                             {
                                 ClusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
                             }
-                            foreach (var node in nodesChanges.addedValues)
+                            foreach (var node in nodesChanges.AddedValues)
                             {
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
@@ -1358,7 +1358,7 @@ namespace Raven.Server.ServerWide
             RachisConsensus.GetLastTruncated(context, out var index, out var term);
             var range = Engine.GetLogEntriesRange(context);
             var entries = new DynamicJsonArray();
-            foreach (var entry in Engine.GetLogEntries(range.min, context, max))
+            foreach (var entry in Engine.GetLogEntries(range.Min, context, max))
             {
                 entries.Add(entry.ToString());
             }
@@ -1368,8 +1368,8 @@ namespace Raven.Server.ServerWide
                 [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
                 [nameof(LogSummary.LastTrancatedIndex)] = index,
                 [nameof(LogSummary.LastTrancatedTerm)] = term,
-                [nameof(LogSummary.FirstEntryIndex)] = range.min,
-                [nameof(LogSummary.LastLogEntryIndex)] = range.max,
+                [nameof(LogSummary.FirstEntryIndex)] = range.Min,
+                [nameof(LogSummary.LastLogEntryIndex)] = range.Max,
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
