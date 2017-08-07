@@ -116,7 +116,7 @@ namespace Raven.Client.Server.Operations
     public enum DatabasePromotionStatus
     {
         WaitingForFirstPromotion,
-        NotRespondingMovedToRehab,
+        NotResponding,
         IndexNotUpToDate,
         ChangeVectorNotMerged,
         WaitingForResponse,

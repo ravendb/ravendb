@@ -202,22 +202,37 @@ namespace Raven.Server.ServerWide.Maintenance
                     dbStats.Status == Loaded)
                 {
                     hasLivingNodes = true;
-                    topology.DemotionReasons.Remove(member);
-                    topology.PromotablesStatus.Remove(member);
+
+                    if(topology.PromotablesStatus.TryGetValue(member, out var _))
+                    {
+                        topology.DemotionReasons.Remove(member);
+                        topology.PromotablesStatus.Remove(member);
+                        return $"Node {member} is online";
+                    }
+                   
                     continue;
                 }
 
-                if (TryMoveToRehab(dbName, topology, current, member) )
+                if (TryMoveToRehab(dbName, topology, current, member))
                     return $"Node {member} is currently not responding and moved to rehab";
+
+                // node distribution is off and the node is down
+                if (topology.DynamicNodesDistribution == false && (
+                    topology.PromotablesStatus.TryGetValue(member, out var currentStatus) == false
+                    || currentStatus != DatabasePromotionStatus.NotResponding))
+                {
+                    topology.DemotionReasons[member] = "Not responding";
+                    topology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
+                    return $"Node {member} is currently not responding";
+                }
             }
 
             if (hasLivingNodes == false)
             {
-
                 foreach (var rehab in topology.Rehabs)
                 {
                     //TODO: RavenDB-7911 - Find the most up to date rehab node
-                    if(FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current) != DatabaseHealth.Good)
+                    if(FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) != DatabaseHealth.Good)
                         continue;
                     topology.Rehabs.Remove(rehab);
                     topology.Members.Add(rehab);
@@ -229,13 +244,25 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, promotable, dbName, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
+                    // node distribution is off and the node is down
+                    if (topology.DynamicNodesDistribution == false && (
+                            topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
+                            || currentStatus != DatabasePromotionStatus.NotResponding))
+                    {
+                        topology.DemotionReasons[promotable] = "Not responding";
+                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.NotResponding;
+                        return $"Node {promotable} is currently not responding";
+                    }
+
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
                         continue;
 
                     //replace the bad promotable otherwise we will continute to add more and more nodes.
                     topology.Promotables.Add(node);
+                    topology.DemotionReasons[node] = $"Just replaced the promotable node {promotable}";
+                    topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                     var deletionCmd = new DeleteDatabaseCommand
                     {
                         ErrorOnDatabaseDoesNotExists = false,
@@ -269,7 +296,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var rehab in topology.Rehabs)
             {
-                var health = FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current);
+                var health = FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current);
                 switch (health)
                 {
                     case DatabaseHealth.Bad:
@@ -277,6 +304,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
                             topology.Promotables.Add(node);
+                            topology.DemotionReasons[node] = $"Maintaine the replication factor and create new rplica instead of node {rehab}";
+                            topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                             return $"The rehab node {rehab} was too long in rehabilitation, create node {node} to replace it";
                         }
                         break;
@@ -310,12 +339,12 @@ namespace Raven.Server.ServerWide.Maintenance
             var goodMembers = topology.Members.Count;
             foreach (var promotable in topology.Promotables)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, promotable, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             foreach (var rehab in topology.Rehabs)
             {
-                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, rehab, dbName, current) != DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) != DatabaseHealth.Bad)
                     goodMembers++;
             }
             return goodMembers;
@@ -363,7 +392,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             topology.DemotionReasons[member] = reason;
-            topology.PromotablesStatus[member] = DatabasePromotionStatus.NotRespondingMovedToRehab;
+            topology.PromotablesStatus[member] = DatabasePromotionStatus.NotResponding;
 
             if (_logger.IsOperationsEnabled)
             {
@@ -481,19 +510,17 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private enum DatabaseHealth
         {
-            DontCare,
             NotEnoughInfo,
             Bad,
             Good,
         }
 
-        private DatabaseHealth FailedDatabaseInstanceOrNode(ClusterTopology clusterTopology,
-            DatabaseTopology topology, string node, string db,
+        private DatabaseHealth FailedDatabaseInstanceOrNode(
+            ClusterTopology clusterTopology,
+            string node, 
+            string db,
             Dictionary<string, ClusterNodeStatusReport> current)
         {
-            if (topology.DynamicNodesDistribution == false)
-                return DatabaseHealth.DontCare;
-
             if(clusterTopology.Contains(node) == false) // this node is no longer part of the *Cluster* topology and need to be replaced.
                 return DatabaseHealth.Bad;
 
@@ -536,7 +563,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (databaseNodes.Contains(node))
                     continue;
 
-                if (FailedDatabaseInstanceOrNode(clusterTopology, topology, node, db, current) == DatabaseHealth.Bad)
+                if (FailedDatabaseInstanceOrNode(clusterTopology, node, db, current) == DatabaseHealth.Bad)
                     continue;
 
                 if (current.TryGetValue(node, out var nodeReport) == false)

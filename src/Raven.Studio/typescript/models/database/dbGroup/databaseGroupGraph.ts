@@ -47,7 +47,7 @@ class databaseNode extends layoutable {
 
     getStateClass() {
         switch (this.status) {
-            case "NotRespondingMovedToRehab":
+            case "NotResponding":
                 return "state-danger";
             case "Ok":
                 return "state-success";
