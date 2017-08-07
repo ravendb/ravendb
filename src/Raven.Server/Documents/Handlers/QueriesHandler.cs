@@ -333,17 +333,17 @@ namespace Raven.Server.Documents.Handlers
             var operationId = Database.Operations.GetNextOperationId();
 
             var task = Database.Operations.AddOperation(Database, indexName, operationType, onProgress => operation(queryRunner, options, onProgress, token), operationId, token);
+            
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
 
             task.ContinueWith(_ =>
             {
                 using (returnContextToPool)
                     token.Dispose();
             });
-
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationId(context, operationId);
-            }
         }
 
         private async Task Debug(DocumentsOperationContext context, string debug, OperationCancelToken token, HttpMethod method)
