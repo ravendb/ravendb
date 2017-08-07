@@ -220,7 +220,14 @@ namespace FastTests.Sparrow
             
             // This bucket should be dead already. 
             Assert.DoesNotContain(pool.Allocate(), first);
-                    
+
+            foreach (var item in first)
+            {
+                if (item.Index <= 5)
+                    Assert.True(item.IsDisposed);
+                else
+                    Assert.False(item.IsDisposed);
+            }                                   
         }
     }
 }

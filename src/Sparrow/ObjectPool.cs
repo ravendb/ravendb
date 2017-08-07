@@ -229,7 +229,6 @@ namespace Sparrow
 
         // Storage for the pool objects. The first item is stored in a dedicated field because we
         // expect to be able to satisfy most requests from it.
-        public const int Buckets = 128;
         private readonly CacheAwareElement[] _firstItems;
         private readonly int _bucketsMask;
 
@@ -289,20 +288,21 @@ namespace Sparrow
             : this(factory, ProcessorInfo.ProcessorCount * 2)
         { }
 
-        public ObjectPool(Factory factory, int size)
+        public ObjectPool(Factory factory, int size, TProcessAwareBehavior behavior = default(TProcessAwareBehavior))
         {
             Debug.Assert(size >= 1);
             _factory = factory;
+            
+            if (typeof(TProcessAwareBehavior) == typeof(ThreadAwareBehavior))
+            {
+                int buckets = Bits.NextPowerOf2(behavior.Buckets);
+                _bucketsMask = buckets - 1;
+                _firstItems = new CacheAwareElement[buckets];                
+            }
 
             // PERF: We will always have power of two pools to make operations a lot faster. 
             size = Bits.NextPowerOf2(size);
             size = Math.Max(16, size);
-            
-            if (typeof(TProcessAwareBehavior) == typeof(ThreadAwareBehavior))
-            {                
-                _bucketsMask = Buckets - 1;
-                _firstItems = new CacheAwareElement[Buckets];                
-            }                        
 
             _items = new Element[size];
             _itemsMask = (uint) size - 1;
@@ -598,10 +598,34 @@ namespace Sparrow
     }
 
     public interface IProcessAwareBehavior
-    { }
-    
-    public struct ThreadAwareBehavior : IProcessAwareBehavior { }
-    public struct NonThreadAwareBehavior : IProcessAwareBehavior { }
+    {
+        int Buckets { get; }
+    }
+
+    public struct ThreadAwareBehavior : IProcessAwareBehavior
+    {
+        private readonly int _buckets;
+
+        public int Buckets
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return _buckets == 0 ? 128 : _buckets; }
+        }
+
+        public ThreadAwareBehavior( int buckets = 128 )
+        {
+            _buckets = buckets;
+        }
+    }
+
+    public struct NonThreadAwareBehavior : IProcessAwareBehavior
+    {
+        public int Buckets
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            get { return 0; }
+        }
+    }
 
     public interface IResetSupport<in T> where T : class
     {
