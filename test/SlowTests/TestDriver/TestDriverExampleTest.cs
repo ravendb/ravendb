@@ -43,12 +43,12 @@ namespace SlowTests.TestDriver
 
         private const string DocFromDumpId = "Test/1";
 
-        private class TestDoc
+        class TestDoc
         {
             public string Name { get; set; }
         }
 
-        private readonly TestDoc _doc = new TestDoc
+        private readonly TestDoc _doc = new TestDoc()
         {
             Name = "Test"
         };
@@ -68,7 +68,7 @@ namespace SlowTests.TestDriver
         }
 
         [Fact]
-        public void ShouldLoadDocumentAddedInSetupDatabasePhaseOrLoadDocumentFromImport()
+        public void ShouldLoadDocumentAddedInSetupDatabasePhase()
         {
             using (var documentStore = GetDocumentStore())
             {
@@ -81,7 +81,17 @@ namespace SlowTests.TestDriver
 
                     var item2 = session.Load<TestDoc>(ExampleDocId);
                     Assert.Equal(item.Name, item2.Name);
+                }
+            }
+        }
 
+        [Fact]
+        public void ShouldLoadDocumentAddedViaDatabaseImport()
+        {
+            using (var documentStore = GetDocumentStore())
+            {
+                using (var session = documentStore.OpenSession())
+                {
                     var docFromImport = session.Load<TestDoc>(DocFromDumpId);
                     Assert.NotNull(docFromImport);
                     Assert.Equal("This is a test", docFromImport.Name);
@@ -89,11 +99,12 @@ namespace SlowTests.TestDriver
             }
         }
 
-        public override void Dispose()
+        [Fact]
+        public void ShouldDisposeDocStoreIfNotWrappedInUsing()
         {
-            base.Dispose();
-
-            KillGlobalServerProcess();
+            var docStore = GetDocumentStore();
+            DriverDisposed +=
+                (sender, args) => Assert.True(docStore.WasDisposed);
         }
     }
 }
