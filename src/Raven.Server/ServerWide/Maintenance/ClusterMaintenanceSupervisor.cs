@@ -28,7 +28,6 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ConcurrentDictionary<string, ClusterNode> _clusterNodes = new ConcurrentDictionary<string, ClusterNode>();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
-        private readonly JsonContextPool _contextPool = new JsonContextPool();
 
         internal readonly ClusterConfiguration Config;
         private readonly ServerStore _server;
@@ -43,7 +42,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public void AddToCluster(string clusterTag, string url)
         {
-            var clusterNode = new ClusterNode(clusterTag, url, _contextPool, this, _cts.Token);
+            var clusterNode = new ClusterNode(clusterTag, url, JsonContextPool.Shared, this, _cts.Token);
             _clusterNodes[clusterTag] = clusterNode;
             var task = clusterNode.StartListening();
             GC.KeepAlive(task); // we are explicitly not waiting on this task
@@ -85,15 +84,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     //don't care, we are disposing
                 }
-            }
-
-            try
-            {
-                _contextPool.Dispose();
-            }
-            catch
-            {
-                //don't care -> disposing
             }
         }
 

@@ -48,11 +48,10 @@ namespace Sparrow.Json
         
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
-        private const int PoolSize = 2048;
-        
-        protected JsonContextPoolBase()
+
+        protected JsonContextPoolBase(int poolSize = 2048, int bucketSize = 16)
         {
-            _contextPool = new ObjectPool<T, JsonOperationContextResetBehavior, ThreadAwareBehavior>(CreateContext, PoolSize);
+            _contextPool = new ObjectPool<T, JsonOperationContextResetBehavior, ThreadAwareBehavior>(CreateContext, poolSize, new ThreadAwareBehavior(bucketSize));
 
             var period = TimeSpan.FromMinutes(5);
             _idleTime = TimeSpan.FromMinutes(1).Ticks;
