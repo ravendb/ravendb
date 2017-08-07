@@ -1,0 +1,34 @@
+version: '2'
+services:
+  raven1:
+    image: ravendb/ravendb:ubuntu-latest
+    container_name: raven-node1
+    ports:
+      - 8081:8080
+      - 38881:38888
+    environment:
+      - UnsecuredAccessAllowed=PublicNetwork
+      - PublicServerUrl=http://raven1:8080
+      - PublicTcpServerUrl=tcp://raven1:38888
+      
+  raven2:
+    image: ravendb/ravendb:ubuntu-latest
+    container_name: raven-node2
+    ports:
+      - 8082:8080
+      - 38882:38888
+    environment:
+      - UnsecuredAccessAllowed=PublicNetwork
+      - PublicServerUrl=http://raven2:8080
+      - PublicTcpServerUrl=tcp://raven2:38888
+   
+  raven3:
+    image: ravendb/ravendb:ubuntu-latest
+    container_name: raven-node3
+    ports:
+      - 8083:8080
+      - 38883:38888 
+    environment:
+      - UnsecuredAccessAllowed=PublicNetwork
+      - PublicServerUrl=http://raven3:8080
+      - PublicTcpServerUrl=tcp://raven3:38888
