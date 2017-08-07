@@ -859,6 +859,8 @@ namespace Raven.Server.ServerWide
 
                 if (await waitAsync == false)
                 {
+                    if (index <= Volatile.Read(ref LastModifiedIndex))
+                        break;
                     ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, LastModifiedIndex);
                 }
             }
