@@ -200,9 +200,11 @@ namespace Raven.TestDriver
             return store.Initialize();
         }
 
-        private static void KillGlobalServerProcess()
+        internal static void KillGlobalServerProcess()
         {
             var p = _globalServerProcess;
+            _globalServerProcess = null;
+
             if (p != null && p.HasExited == false)
                 p.Kill();
         }
@@ -271,7 +273,7 @@ namespace Raven.TestDriver
             } while (true);
         }
 
-        private void OpenBrowser(string url)
+        private static void OpenBrowser(string url)
         {
             Console.WriteLine(url);
 
@@ -289,12 +291,7 @@ namespace Raven.TestDriver
             }
         }
 
-        protected void Teardown()
-        {
-            Dispose();
-        }
-
-        public void Dispose()
+        public virtual void Dispose()
         {
             if (IsDisposed)
                 return;
