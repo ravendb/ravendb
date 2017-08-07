@@ -150,7 +150,11 @@ class query extends viewModelBase {
 
         this.hasEditableIndex = ko.pureComputed(() => {
             let indexName = this.selectedIndex();
-            return indexName ? !indexName.startsWith(queryUtil.DynamicPrefix) : false;
+            if (!indexName)
+                return false;
+
+            return !indexName.startsWith(queryUtil.DynamicPrefix) &&
+                indexName !== queryUtil.AllDocs;
         });
 
         this.editIndexUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
@@ -173,7 +177,9 @@ class query extends viewModelBase {
             if (!indexName)
                 return false;
 
-            return !indexName.startsWith(queryUtil.DynamicPrefix);
+            return !indexName.startsWith(queryUtil.DynamicPrefix) &&
+                !indexName.startsWith(queryUtil.AutoPrefix) &&
+                indexName !== queryUtil.AllDocs;
         });
 
         this.isDynamicIndex = ko.pureComputed(() => {
@@ -371,7 +377,8 @@ class query extends viewModelBase {
             // if no index exists ==> use the default All Documents
             this.setSelectedIndex(queryUtil.AllDocs);
         } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
-            indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix)) {
+            indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix) || 
+            indexNameOrRecentQueryHash === queryUtil.AllDocs) {
             this.setSelectedIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
