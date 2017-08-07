@@ -512,7 +512,6 @@ namespace Raven.Server.Documents
 
             if (databaseRecord.Topology.RelevantFor(_serverStore.NodeTag) == false &&
                 databaseIsBeenDeleted == false)
-                // TODO: need to handle this properly, need to redirect to somewhere it is on
                 throw new DatabaseNotRelevantException(databaseName + " is not relevant for " + _serverStore.NodeTag);
             return CreateConfiguration(databaseName, databaseRecord);
         }

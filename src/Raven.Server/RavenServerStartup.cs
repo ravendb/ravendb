@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Exceptions.Compilation;
@@ -305,6 +306,11 @@ namespace Raven.Server
                 return;
             }
 
+            if (exception is DatabaseNotRelevantException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Gone;
+                return;
+            }
 
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }
