@@ -11,6 +11,7 @@ using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using Sparrow.Utils;
 
 namespace Raven.Server.Web.System
@@ -34,7 +35,7 @@ namespace Raven.Server.Web.System
                 using (var tcpClient = new TcpClient())
                 {
                     TcpUtils.SetTimeouts(tcpClient, ServerStore.Engine.TcpConnectionTimeout);
-                    result = await ConnectToClientNodeAsync(connectionInfo.Result, tcpClient);
+                    result = await ConnectToClientNodeAsync(connectionInfo.Result, tcpClient, LoggingSource.Instance.GetLogger("testing-connection", "testing-connection"));
                 }
             }
             catch (Exception e)
@@ -54,15 +55,15 @@ namespace Raven.Server.Web.System
         }
 
 
-        private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
+        private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
         {
-            await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, null);
+            await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, log);
             return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ServerCertificateHolder.Certificate);
         }
 
-        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient)
+        private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
         {
-            var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo, tcpClient);
+            var connection = await ConnectAndGetNetworkStreamAsync(tcpConnectionInfo, tcpClient, log);
             var result = new DynamicJsonValue();
 
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
