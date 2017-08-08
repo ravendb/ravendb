@@ -1,9 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
+using Sparrow.Collections.LockFree;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Win32;
@@ -13,7 +13,7 @@ namespace Sparrow.Utils
     public static unsafe class NativeMemory
     {
         public static ThreadLocal<ThreadStats> ThreadAllocations = new ThreadLocal<ThreadStats>(
-            () => new ThreadStats(), trackAllValues:true);
+            () => new ThreadStats(), trackAllValues: true);
 
         public static ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>> FileMapping = new ConcurrentDictionary<string, ConcurrentDictionary<IntPtr, long>>();
 

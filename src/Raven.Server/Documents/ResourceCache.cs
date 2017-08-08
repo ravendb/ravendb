@@ -19,6 +19,9 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
             new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
+        /// <summary>
+        /// This locks the entire cache. Use carefully.
+        /// </summary>
         public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
 
         public void Clear()

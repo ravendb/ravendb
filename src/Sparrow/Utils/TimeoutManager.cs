@@ -5,7 +5,10 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent; // TODO: Use our own fast ConcurrentDictionary
+// TODO: Use our own fast ConcurrentDictionary
+// Here be dragons. Doing this change immediatelly generates "waited for 15s
+// but command was not applied" errors across the board in FastTests.
+using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
