@@ -5,7 +5,7 @@ class localSettings extends backupSettings {
 
     displaySameDriveWarning: KnockoutComputed<boolean>;
 
-    constructor(dto: Raven.Client.Server.PeriodicBackup.LocalSettings) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.LocalSettings) {
         super(dto);
 
         this.folderPath(dto.FolderPath);
@@ -26,8 +26,8 @@ class localSettings extends backupSettings {
         });
     }
 
-    toDto(): Raven.Client.Server.PeriodicBackup.LocalSettings {
-        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.LocalSettings;
+    toDto(): Raven.Client.ServerWide.PeriodicBackup.LocalSettings {
+        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.LocalSettings;
         dto.FolderPath = this.folderPath();
         return dto;
     }

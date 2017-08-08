@@ -14,7 +14,7 @@ class database {
     private clusterNodeTag: KnockoutObservable<string>;
 
 
-    constructor(dbInfo: Raven.Client.Server.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
+    constructor(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo, clusterNodeTag: KnockoutObservable<string>) {
         this.clusterNodeTag = clusterNodeTag;
 
         this.updateUsing(dbInfo);
@@ -31,7 +31,7 @@ class database {
         });*/
     }
 
-    updateUsing(incomingCopy: Raven.Client.Server.Operations.DatabaseInfo) {
+    updateUsing(incomingCopy: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         this.hasRevisionsConfiguration(incomingCopy.HasRevisionsConfiguration);
         this.isAdminCurrentTenant(incomingCopy.IsAdmin);
         this.name = incomingCopy.Name;

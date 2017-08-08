@@ -3,7 +3,7 @@
 class glacierSettings extends amazonSettings {
     vaultName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Server.PeriodicBackup.GlacierSettings) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.GlacierSettings) {
         super(dto);
 
         this.vaultName(dto.VaultName);
@@ -39,8 +39,8 @@ class glacierSettings extends amazonSettings {
         });
     }
 
-    toDto(): Raven.Client.Server.PeriodicBackup.GlacierSettings {
-        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.GlacierSettings;
+    toDto(): Raven.Client.ServerWide.PeriodicBackup.GlacierSettings {
+        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.GlacierSettings;
         dto.VaultName = this.vaultName();
         return dto;
     }

@@ -7,7 +7,7 @@ abstract class backupSettings {
     isTestingCredentials = ko.observable<boolean>();
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.Server.PeriodicBackup.BackupSettings) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.BackupSettings) {
         this.enabled(!dto.Disabled);
     }
 
@@ -18,7 +18,7 @@ abstract class backupSettings {
         return action();
     }
 
-    toDto(): Raven.Client.Server.PeriodicBackup.BackupSettings {
+    toDto(): Raven.Client.ServerWide.PeriodicBackup.BackupSettings {
         return {
             Disabled: !this.enabled()
         }

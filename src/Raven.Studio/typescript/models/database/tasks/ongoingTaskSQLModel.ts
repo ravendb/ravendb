@@ -7,7 +7,7 @@ class ongoingTaskSQLModel extends ongoingTask {
     destinationDatabase = ko.observable<string>();
     destinationDatabaseText: KnockoutComputed<string>;
 
-    constructor(dto: Raven.Client.Server.Operations.OngoingTaskSqlEtl) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl) {
         super();
         this.initializeObservables();
         this.update(dto);
@@ -21,7 +21,7 @@ class ongoingTaskSQLModel extends ongoingTask {
         });
     }
 
-    update(dto: Raven.Client.Server.Operations.OngoingTaskSqlEtl) {
+    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl) {
         super.update(dto);
         this.destinationServer(dto.DestinationServer);
         this.destinationDatabaseText(dto.DestinationDatabase);

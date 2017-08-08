@@ -23,7 +23,7 @@ class databaseNode extends layoutable {
     tag: string;
     type: databaseGroupNodeType;
     responsibleNode: string;
-    status: Raven.Client.Server.Operations.DatabasePromotionStatus;
+    status: Raven.Client.ServerWide.Operations.DatabasePromotionStatus;
     
     private constructor() {
         super();
@@ -33,13 +33,13 @@ class databaseNode extends layoutable {
         return `d_${this.tag}`;
     }
 
-    static for(dto: Raven.Client.Server.Operations.NodeId, type: databaseGroupNodeType) {
+    static for(dto: Raven.Client.ServerWide.Operations.NodeId, type: databaseGroupNodeType) {
         const node = new databaseNode();
         node.updateWith(dto, type);
         return node;
     }
 
-    updateWith(dto: Raven.Client.Server.Operations.NodeId, type: databaseGroupNodeType) {
+    updateWith(dto: Raven.Client.ServerWide.Operations.NodeId, type: databaseGroupNodeType) {
         this.tag = dto.NodeTag;
         this.type = type;
         this.responsibleNode = dto.ResponsibleNode;
@@ -62,10 +62,10 @@ class taskNode extends layoutable {
     static readonly minWidth = 130;
     static readonly textLeftPadding = 45;
     
-    type: Raven.Client.Server.Operations.OngoingTaskType;
+    type: Raven.Client.ServerWide.Operations.OngoingTaskType;
     taskId: number;
     name: string;
-    state: Raven.Client.Server.Operations.OngoingTaskState;
+    state: Raven.Client.ServerWide.Operations.OngoingTaskState;
 
     responsibleNode: databaseNode;
 
@@ -73,13 +73,13 @@ class taskNode extends layoutable {
         super();
     }
 
-    static for(dto: Raven.Client.Server.Operations.OngoingTask, responsibleNode: databaseNode) {
+    static for(dto: Raven.Client.ServerWide.Operations.OngoingTask, responsibleNode: databaseNode) {
         const node = new taskNode();
         node.updateWith(dto, responsibleNode);
         return node;
     }
 
-    updateWith(dto: Raven.Client.Server.Operations.OngoingTask, responsibleNode: databaseNode) {
+    updateWith(dto: Raven.Client.ServerWide.Operations.OngoingTask, responsibleNode: databaseNode) {
         this.type = dto.TaskType;
         this.taskId = dto.TaskId;
         this.state = dto.TaskState;
@@ -121,7 +121,7 @@ class databaseGroupGraph {
     private previousDbNodesCount = -1;
 
     private ongoingTasksCache: Raven.Server.Web.System.OngoingTasksResult;
-    private databaseInfoCache: Raven.Client.Server.Operations.DatabaseInfo;
+    private databaseInfoCache: Raven.Client.ServerWide.Operations.DatabaseInfo;
 
     private edgesContainer: d3.Selection<void>;
     private tasksContainer: d3.Selection<void>;
@@ -601,7 +601,7 @@ class databaseGroupGraph {
         this.draw();
     }
 
-    onDatabaseInfoChanged(dbInfo: Raven.Client.Server.Operations.DatabaseInfo) {
+    onDatabaseInfoChanged(dbInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         this.databaseInfoCache = dbInfo;
         this.updateData();
         this.draw();
@@ -619,7 +619,7 @@ class databaseGroupGraph {
     private updateDatabaseNodes() {
         const newDbTags = [] as Array<string>;
         
-        const merge = (nodes: Array<Raven.Client.Server.Operations.NodeId>, type: databaseGroupNodeType) => {
+        const merge = (nodes: Array<Raven.Client.ServerWide.Operations.NodeId>, type: databaseGroupNodeType) => {
             nodes.forEach(node => {
                 const existing = this.data.databaseNodes.find(x => x.tag === node.NodeTag);
                 if (existing) {

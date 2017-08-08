@@ -8,13 +8,13 @@ class ongoingTaskBackupModel extends ongoingTask {
 
     editUrl: KnockoutComputed<string>;
 
-    backupType = ko.observable<Raven.Client.Server.PeriodicBackup.BackupType>();
+    backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
     backupDestinations = ko.observableArray<string>();
     nextBackup = ko.observable<string>();
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Server.Operations.OngoingTaskBackup) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super();
 
         this.update(dto);
@@ -28,7 +28,7 @@ class ongoingTaskBackupModel extends ongoingTask {
         this.editUrl = urls.editPeriodicBackupTask(this.taskId); 
     }
 
-    update(dto: Raven.Client.Server.Operations.OngoingTaskBackup) {
+    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super.update(dto);
 
         this.backupType(dto.BackupType);

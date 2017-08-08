@@ -72,15 +72,15 @@ class revisions extends viewModelBase {
         });
     }
 
-    private fetchRevisionsConfiguration(db: database): JQueryPromise<Raven.Client.Server.Revisions.RevisionsConfiguration> {
+    private fetchRevisionsConfiguration(db: database): JQueryPromise<Raven.Client.ServerWide.Revisions.RevisionsConfiguration> {
         return new getRevisionsConfigurationCommand(db)
             .execute()
-            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => {
+            .done((revisionsConfig: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) => {
                 this.onRevisionsConfigurationLoaded(revisionsConfig);
             });
     }
 
-    onRevisionsConfigurationLoaded(data: Raven.Client.Server.Revisions.RevisionsConfiguration) {
+    onRevisionsConfigurationLoaded(data: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) {
         if (data) {
             if (data.Default) {
                 this.defaultConfiguration(new revisionsConfigurationEntry(revisionsConfigurationEntry.DefaultConfiguration, data.Default));
@@ -160,10 +160,10 @@ class revisions extends viewModelBase {
         this.exitEditMode();
     }
 
-    toDto(): Raven.Client.Server.Revisions.RevisionsConfiguration {
+    toDto(): Raven.Client.ServerWide.Revisions.RevisionsConfiguration {
         const perCollectionConfigurations = this.perCollectionConfigurations();
 
-        const collectionsDto = {} as { [key: string]: Raven.Client.Server.Revisions.RevisionsCollectionConfiguration; }
+        const collectionsDto = {} as { [key: string]: Raven.Client.ServerWide.Revisions.RevisionsCollectionConfiguration; }
 
         perCollectionConfigurations.forEach(config => {
             collectionsDto[config.collection()] = config.toDto();
