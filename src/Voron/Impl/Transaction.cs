@@ -65,7 +65,15 @@ namespace Voron.Impl
 
             Tree tree;
             if (_trees.TryGetValue(treeName, out tree))
+            {
+                if (newPageAllocator == null)
+                    return tree;
+
+                if (tree.HasNewPageAllocator == false)
+                    tree.SetNewPageAllocator(newPageAllocator);
+
                 return tree;
+            }
 
             TreeRootHeader* header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
@@ -435,9 +443,13 @@ namespace Voron.Impl
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
             {
-                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree, newPageAllocator: newPageAllocator);
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree,
+                    newPageAllocator: newPageAllocator);
                 _globalFixedSizeTree[tree.Name] = tree;
             }
+            else if (newPageAllocator != null && tree.HasNewPageAllocator == false)
+                tree.SetNewPageAllocator(newPageAllocator);
+
             return tree;
         }
     }

@@ -28,19 +28,6 @@ namespace StressTests.Voron.Issues
                 }
 
                 store.Operations.Send(new DeleteCollectionOperation("Users")).WaitForCompletion(TimeSpan.FromMinutes(5));
-
-                using (var bulkInsert = store.BulkInsert())
-                {
-                    for (var i = 0; i < documentsCount; i++)
-                    {
-                        bulkInsert.Store(new User
-                        {
-                            FirstName = RandomString(30),
-                            LastName = RandomString(30),
-                            Phone = RandomString(30)
-                        });
-                    }
-                }
             }
         }
 
