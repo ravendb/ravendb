@@ -43,7 +43,7 @@ namespace Voron.Data.Fixed
 
         internal RootObjectType? Type => _type;
 
-        public bool HasNewPageAllocator { get; private set; }
+        public bool HasNewPageAllocator => _newPageAllocator != null;
 
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
@@ -156,7 +156,9 @@ namespace Voron.Data.Fixed
             _parent = parent;
             _valSize = valSize;
             _isIndexTree = isIndexTree;
-            _newPageAllocator = newPageAllocator;
+
+            if (newPageAllocator != null)
+                SetNewPageAllocator(newPageAllocator);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / _entrySize;
@@ -1632,8 +1634,9 @@ namespace Voron.Data.Fixed
 
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
         {
+            System.Diagnostics.Debug.Assert(newPageAllocator != null);
+
             _newPageAllocator = newPageAllocator;
-            HasNewPageAllocator = true;
         }
     }
 }

@@ -38,7 +38,7 @@ namespace Voron.Data.BTrees
 
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
-        private readonly bool _isIndexTree;
+        public readonly bool IsIndexTree;
         private NewPageAllocator _newPageAllocator;
 
         public LowLevelTransaction Llt => _llt;
@@ -47,10 +47,10 @@ namespace Voron.Data.BTrees
         {
             _llt = llt;
             _tx = tx;
-            _isIndexTree = isIndexTree;
+            IsIndexTree = isIndexTree;
             Name = name;
 
-            if (_newPageAllocator != null)
+            if (newPageAllocator != null)
                 SetNewPageAllocator(newPageAllocator);
 
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2); 
@@ -918,14 +918,14 @@ namespace Voron.Data.BTrees
             {
                 if (_newPageAllocator != null)
                 {
-                    if (_isIndexTree == false)
+                    if (IsIndexTree == false)
                         ThrowAttemptToFreePageToNewPageAllocator(Name, p.PageNumber);
 
                     _newPageAllocator.FreePage(p.PageNumber);
                 }
                 else
                 {
-                    if (_isIndexTree)
+                    if (IsIndexTree)
                         ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, p.PageNumber);
 
                     _llt.FreePage(p.PageNumber);
@@ -1270,14 +1270,14 @@ namespace Voron.Data.BTrees
             {
                 if (_newPageAllocator != null)
                 {
-                    if (_isIndexTree == false)
+                    if (IsIndexTree == false)
                         ThrowAttemptToFreePageToNewPageAllocator(Name, page);
 
                     _newPageAllocator.FreePage(page);
                 }
                 else
                 {
-                    if (_isIndexTree)
+                    if (IsIndexTree)
                         ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, page);
 
                     _llt.FreePage(page);
@@ -1348,6 +1348,8 @@ namespace Voron.Data.BTrees
 
         internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
         {
+            Debug.Assert(newPageAllocator != null);
+
             _newPageAllocator = newPageAllocator;
             HasNewPageAllocator = true;
         }

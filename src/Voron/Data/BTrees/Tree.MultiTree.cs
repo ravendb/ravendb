@@ -245,14 +245,14 @@ namespace Voron.Data.BTrees
                 _tx.TryRemoveMultiValueTree(this, key);
                 if (_newPageAllocator != null)
                 {
-                    if (_isIndexTree == false)
+                    if (IsIndexTree == false)
                         ThrowAttemptToFreePageToNewPageAllocator(Name, tree.State.RootPageNumber);
 
                     _newPageAllocator.FreePage(tree.State.RootPageNumber);
                 }
                 else
                 {
-                    if (_isIndexTree)
+                    if (IsIndexTree)
                         ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, tree.State.RootPageNumber);
 
                     _llt.FreePage(tree.State.RootPageNumber);
