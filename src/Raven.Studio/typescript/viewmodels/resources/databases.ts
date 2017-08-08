@@ -72,7 +72,7 @@ class databases extends viewModelBase {
         return true;
     }
 
-    activate(args: any): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    activate(args: any): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         super.activate(args);
 
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
@@ -90,7 +90,7 @@ class databases extends viewModelBase {
         this.updateUrl(appUrl.forDatabases());
     }
 
-    private fetchDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return new getDatabasesCommand()
             .execute()
             .done(info => this.databases(new databasesInfo(info)));
@@ -124,7 +124,7 @@ class databases extends viewModelBase {
     private updateDatabaseInfo(databaseName: string) {
         return new getDatabaseCommand(databaseName)
             .execute()
-            .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
+            .done((result: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
                 this.databases().updateDatabase(result);
                 this.filterDatabases();
             });

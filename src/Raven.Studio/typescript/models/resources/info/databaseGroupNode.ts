@@ -7,7 +7,7 @@ class databaseGroupNode {
     type = ko.observable<databaseGroupNodeType>();
     responsibleNode = ko.observable<string>();
 
-    lastStatus = ko.observable<Raven.Client.Server.Operations.DatabasePromotionStatus>();
+    lastStatus = ko.observable<Raven.Client.ServerWide.Operations.DatabasePromotionStatus>();
     lastError = ko.observable<string>();
     lastErrorShort = ko.pureComputed(() => {
         const longError = this.lastError();

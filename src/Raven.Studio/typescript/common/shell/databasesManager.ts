@@ -45,7 +45,7 @@ class databasesManager {
             .find(x => name.toLowerCase() === x.name.toLowerCase());
     }
 
-    init(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    init(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return this.refreshDatabases()
             .done(() => {
                 this.activateBasedOnCurrentUrl();
@@ -58,7 +58,7 @@ class databasesManager {
         this.databaseToActivate(databaseName);
     }
 
-    private refreshDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    private refreshDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return new getDatabasesCommand()
             .execute()
             .done(result => {
@@ -152,7 +152,7 @@ class databasesManager {
             }*/
     }
 
-    private updateDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+    private updateDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
         this.deleteRemovedDatabases(incomingData);
 
         incomingData.Databases.forEach(dbInfo => {
@@ -160,7 +160,7 @@ class databasesManager {
         });
     }
 
-    private deleteRemovedDatabases(incomingData: Raven.Client.Server.Operations.DatabasesInfo) {
+    private deleteRemovedDatabases(incomingData: Raven.Client.ServerWide.Operations.DatabasesInfo) {
         const existingDatabase = this.databases;
 
         const toDelete = [] as database[];
@@ -178,7 +178,7 @@ class databasesManager {
         toDelete.forEach(db => this.onDatabaseDeleted(db));
     }
 
-    private updateDatabase(incomingDatabase: Raven.Client.Server.Operations.DatabaseInfo, existingDatabaseFinder: (name: string) => database): database {
+    private updateDatabase(incomingDatabase: Raven.Client.ServerWide.Operations.DatabaseInfo, existingDatabaseFinder: (name: string) => database): database {
         const matchedExistingRs = existingDatabaseFinder(incomingDatabase.Name);
 
         if (matchedExistingRs) {
@@ -192,7 +192,7 @@ class databasesManager {
         }
     }
 
-    private createDatabase(databaseInfo: Raven.Client.Server.Operations.DatabaseInfo): database {
+    private createDatabase(databaseInfo: Raven.Client.ServerWide.Operations.DatabaseInfo): database {
         return new database(databaseInfo, clusterTopologyManager.default.localNodeTag);
     }
 
@@ -221,10 +221,10 @@ class databasesManager {
         }
     }
 
-    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<Raven.Client.Server.Operations.DatabaseInfo> {
+    private updateDatabaseInfo(db: database, databaseName: string): JQueryPromise<Raven.Client.ServerWide.Operations.DatabaseInfo> {
         return new getDatabaseCommand(databaseName)
             .execute()
-            .done((rsInfo: Raven.Client.Server.Operations.DatabaseInfo) => {
+            .done((rsInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
 
                 if (rsInfo.Disabled) {
                     changesContext.default.disconnectIfCurrent(db, "DatabaseDisabled");

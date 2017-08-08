@@ -95,7 +95,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     getCollectionRevisionsSettings() {
         return new getRevisionsConfigurationCommand(this.activeDatabase())
             .execute()
-            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => {
+            .done((revisionsConfig: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) => {
                 if (revisionsConfig) {
                     let revisionIsSet: boolean = false;
 

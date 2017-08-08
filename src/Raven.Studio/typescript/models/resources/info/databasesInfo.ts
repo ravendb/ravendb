@@ -8,7 +8,7 @@ class databasesInfo {
 
     databasesCount: KnockoutComputed<number>;
 
-    constructor(dto: Raven.Client.Server.Operations.DatabasesInfo) {
+    constructor(dto: Raven.Client.ServerWide.Operations.DatabasesInfo) {
 
         const databases = dto.Databases.map(db => new databaseInfo(db));
 
@@ -24,13 +24,13 @@ class databasesInfo {
         return this.sortedDatabases().find(x => x.name.toLowerCase() === name.toLowerCase());
     }
 
-    updateDatabase(newDatabaseInfo: Raven.Client.Server.Operations.DatabaseInfo) {
+    updateDatabase(newDatabaseInfo: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         let databaseToUpdate = this.getByName(newDatabaseInfo.Name);
 
         if (databaseToUpdate) {
             databaseToUpdate.update(newDatabaseInfo);
         } else { // new database - create instance of it
-            let dto = newDatabaseInfo as Raven.Client.Server.Operations.DatabaseInfo;
+            let dto = newDatabaseInfo as Raven.Client.ServerWide.Operations.DatabaseInfo;
             let databaseToAdd = new databaseInfo(dto);
 
             let locationToInsert = _.sortedIndexBy(this.sortedDatabases(), databaseToAdd, function (item) { return item.name.toLowerCase() });

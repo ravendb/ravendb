@@ -4,10 +4,10 @@ abstract class ongoingTaskModel {
 
     taskId: number;
     taskName = ko.observable<string>();
-    taskType = ko.observable<Raven.Client.Server.Operations.OngoingTaskType>();
-    responsibleNode = ko.observable<Raven.Client.Server.Operations.NodeId>();
-    taskState = ko.observable<Raven.Client.Server.Operations.OngoingTaskState>();
-    taskConnectionStatus = ko.observable<Raven.Client.Server.Operations.OngoingTaskConnectionStatus>(); // TODO: discuss this property...
+    taskType = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskType>();
+    responsibleNode = ko.observable<Raven.Client.ServerWide.Operations.NodeId>();
+    taskState = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskState>();
+    taskConnectionStatus = ko.observable<Raven.Client.ServerWide.Operations.OngoingTaskConnectionStatus>(); // TODO: discuss this property...
     
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
@@ -46,7 +46,7 @@ abstract class ongoingTaskModel {
         });
     }
 
-    protected update(dto: Raven.Client.Server.Operations.OngoingTask) {
+    protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
         this.taskId = dto.TaskId;
         this.taskName(dto.TaskName);
         this.taskType(dto.TaskType);

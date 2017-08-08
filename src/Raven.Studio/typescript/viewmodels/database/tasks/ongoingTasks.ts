@@ -120,23 +120,23 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.Server.Operations.OngoingTaskReplication));
+                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':
-                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.Server.Operations.OngoingTaskBackup));
+                    this.backupTasks.push(new ongoingTaskBackup(task as Raven.Client.ServerWide.Operations.OngoingTaskBackup));
                     taskTypesSet.add("Backup");
                     break;
                 case 'RavenEtl':
-                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.Server.Operations.OngoingTaskRavenEtl));
+                    this.etlTasks.push(new ongoingTaskEtl(task as Raven.Client.ServerWide.Operations.OngoingTaskRavenEtl));
                     taskTypesSet.add("RavenDB ETL");
                     break;
                 case 'SqlEtl':
-                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.Server.Operations.OngoingTaskSqlEtl));
+                    this.sqlTasks.push(new ongoingTaskSql(task as Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl));
                     taskTypesSet.add("SQL ETL");
                     break;
                 case 'Subscription': 
-                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.Server.Operations.OngoingTaskSubscription)); 
+                    this.subscriptionTasks.push(new ongoingTaskSubscription(task as Raven.Client.ServerWide.Operations.OngoingTaskSubscription)); 
                     taskTypesSet.add("Subscription");
                     break;
             };

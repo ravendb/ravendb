@@ -5,7 +5,7 @@ import endpoints = require("endpoints");
 class testPeriodicBackupCredentialsCommand extends commandBase {
     constructor(private db: database,
         private type: Raven.Server.Documents.PeriodicBackup.PeriodicBackupTestConnectionType,
-        private connectionConfiguration: Raven.Client.Server.PeriodicBackup.BackupSettings) {
+        private connectionConfiguration: Raven.Client.ServerWide.PeriodicBackup.BackupSettings) {
         super();
     }
  

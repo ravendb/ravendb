@@ -92,7 +92,7 @@ class manageDatabaseGroup extends viewModelBase {
             });
     }
 
-    private onDatabaseInfoFetched(dbInfoDto: Raven.Client.Server.Operations.DatabaseInfo) {
+    private onDatabaseInfoFetched(dbInfoDto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         const dbInfo = new databaseInfo(dbInfoDto);
         this.currentDatabaseInfo(dbInfo);
         

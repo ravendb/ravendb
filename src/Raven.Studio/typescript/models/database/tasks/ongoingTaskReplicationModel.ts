@@ -13,7 +13,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
   
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.Server.Operations.OngoingTaskReplication) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super();
         this.update(dto); 
         this.initializeObservables();
@@ -27,7 +27,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
         this.editUrl = urls.editExternalReplication(this.taskId); 
     }
 
-    update(dto: Raven.Client.Server.Operations.OngoingTaskReplication) {
+    update(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
         super.update(dto);
         this.destinationDB(dto.DestinationDatabase);
         this.destinationURL(dto.DestinationUrl);
@@ -71,7 +71,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: clusterTopologyManager.default.localNodeUrl()
-        } as Raven.Client.Server.Operations.OngoingTaskReplication);
+        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication);
     }
 }
 

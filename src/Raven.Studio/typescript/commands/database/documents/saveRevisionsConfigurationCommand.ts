@@ -3,7 +3,7 @@ import commandBase = require("commands/commandBase");
 import endpoint = require("endpoints");
 
 class saveRevisionsConfigurationCommand extends commandBase {
-    constructor(private db: database, private revisionsConfiguration: Raven.Client.Server.Revisions.RevisionsConfiguration) {
+    constructor(private db: database, private revisionsConfiguration: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) {
         super();
     }
 

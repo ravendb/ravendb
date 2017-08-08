@@ -8,12 +8,12 @@ class getRevisionsConfigurationCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Revisions.RevisionsConfiguration> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Revisions.RevisionsConfiguration> {
 
-        const deferred = $.Deferred<Raven.Client.Server.Revisions.RevisionsConfiguration>();
+        const deferred = $.Deferred<Raven.Client.ServerWide.Revisions.RevisionsConfiguration>();
         const url = endpoints.databases.revisions.revisionsConfig;
         this.query(url, null, this.db)
-            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => deferred.resolve(revisionsConfig))
+            .done((revisionsConfig: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) => deferred.resolve(revisionsConfig))
             .fail((xhr: JQueryXHR) => {
                 if (xhr.status === 404) {
                     deferred.resolve(null);
