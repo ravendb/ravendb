@@ -102,7 +102,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
         private List<Tuple<ByteString, int>> _buffers;
         private ByteString _lz4Buffer;
 
-        [Setup]
+        [GlobalSetup]
         public void Setup()
         {
             var generator = new Random(RandomSeed);
@@ -190,7 +190,7 @@ namespace Micro.Benchmark.Benchmarks.LZ4
             }
         }
 
-        [Cleanup]
+        [GlobalCleanup]
         public void Cleanup()
         {
             _buffers.Clear();
