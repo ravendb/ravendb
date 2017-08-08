@@ -15,9 +15,7 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table : IDisposable
     {
-#if DEBUG
         private readonly bool _forGlobalReadsOnly;
-#endif
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
         private readonly Tree _tableTree;
@@ -113,9 +111,7 @@ namespace Voron.Data.Tables
         {
             _schema = schema;
             _tx = tx;
-#if DEBUG
             _forGlobalReadsOnly = true;
-#endif
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
