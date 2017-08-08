@@ -51,6 +51,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
         public long SubscriptionId => _options.SubscriptionId;
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
+        
 
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
@@ -62,6 +63,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
+            
         }
 
         private async Task ParseSubscriptionOptionsAsync()
@@ -93,8 +95,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 _options.SubscriptionId = id;
             }
-
         }
+
+        
 
         public async Task InitAsync()
         {
@@ -105,6 +108,8 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
+
+            
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
 
@@ -163,6 +168,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
+        
+
         public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
@@ -175,8 +182,24 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     try
                     {
-                        await connection.InitAsync();
-                        await connection.ProcessSubscriptionAsync();
+                        bool gotSemaphore;
+                        if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
+                        {
+                            throw new SubscriptionClosedException(
+                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.ConcurrentConnections})");
+                        }
+                        try
+                        {
+                            await connection.InitAsync();
+                            await connection.ProcessSubscriptionAsync();
+                        }
+                        finally
+                        {
+                            if (gotSemaphore)
+                            {
+                                tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                            }
+                        }
                     }
                     catch (Exception e)
                     {                        
@@ -613,7 +636,6 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 // ignored
             }
-
             CancellationTokenSource.Dispose();
         }
     }
