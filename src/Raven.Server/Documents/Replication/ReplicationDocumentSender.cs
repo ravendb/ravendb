@@ -176,7 +176,6 @@ namespace Raven.Server.Documents.Replication
                     long size = 0;
                     int numberOfItemsSent = 0;
                     short lastTransactionMarker = -1;
-                    bool hasMore = false;
                     using (_stats.Storage.Start())
                     {
                         foreach (var item in GetDocsConflictsTombstonesRevisionsAndAttachmentsAfter(documentsContext, _lastEtag, _stats))
@@ -192,7 +191,6 @@ namespace Raven.Server.Documents.Replication
                                     ((maxSizeToSend.HasValue && size > maxSizeToSend.Value.GetValue(SizeUnit.Bytes)) ||
                                      (batchSize.HasValue && numberOfItemsSent > batchSize.Value)))
                                 {
-                                    hasMore = true;
                                     break;
                                 }
                             }
@@ -233,7 +231,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         using (_stats.Network.Start())
                         {
-                            SendDocumentsBatch(documentsContext, _stats.Network,hasMore);
+                            SendDocumentsBatch(documentsContext, _stats.Network);
                         }
                     }
                     catch (OperationCanceledException)
@@ -315,7 +313,7 @@ namespace Raven.Server.Documents.Replication
             return true;
         }
 
-        private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats, bool hasMore)
+        private void SendDocumentsBatch(DocumentsOperationContext documentsContext, OutgoingReplicationStatsScope stats)
         {
             if (_log.IsInfoEnabled)
                 _log.Info($"Starting sending replication batch ({_parent._database.Name}) with {_orderedReplicaItems.Count:#,#;;0} docs, and last etag {_lastEtag}");
@@ -345,9 +343,7 @@ namespace Raven.Server.Documents.Replication
 
                 stats.RecordAttachmentOutput(value.Stream.Length);
             }
-
-            var changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsContext);
-
+            
             // close the transaction as early as possible, and before we wait for reply
             // from other side
             documentsContext.Transaction.Dispose();
@@ -363,10 +359,7 @@ namespace Raven.Server.Documents.Replication
 
             _parent.HandleServerResponse();
 
-            if (hasMore == false)
-            {
-                _parent.SendHeartbeat(changeVector);
-            }
+          
         }
 
         private void WriteItemToServer(DocumentsOperationContext context,ReplicationBatchItem item, OutgoingReplicationStatsScope stats)

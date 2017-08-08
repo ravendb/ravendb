@@ -520,7 +520,12 @@ namespace Raven.Server.Documents.Replication
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
                     // is purely advisory. We just want to have the information up to date at some point, and we won't 
                     // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions();
+                    _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions().ContinueWith(_ =>
+                    {
+                        // This should be safe to do because we compare the last etag with the last sent etag and only if they are equal we send
+                        // a heartbeat to the peers.
+                        _waitForChanges.Set();
+                    });
                 }
             }
 

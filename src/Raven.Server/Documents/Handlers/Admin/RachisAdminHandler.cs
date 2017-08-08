@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -443,6 +444,9 @@ namespace Raven.Server.Documents.Handlers.Admin
 
         private void RedirectToLeader()
         {
+            if(ServerStore.LeaderTag == null)
+                throw new NoLeaderException();
+
             ClusterTopology topology;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
