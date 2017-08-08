@@ -13,45 +13,6 @@
                             </div>
                         </div>
 
-                        <div class="<!--btn-group fix-float-issue--> btn-group-sm " role="group">
-                            <div class="dropdown">
-                                <button class="btn btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                                    <span data-bind="text: selectedIndexLabel"></span>
-                                    <span class="caret"></span>
-                                </button>
-                                <div class="dropdown-menu">
-                                    <ul class="menu max-height">
-
-                                        <!-- ko foreach: indexes -->
-                                        <li data-bind="click: $root.setSelectedIndex.bind($root, $data.name)"><a href="#" data-bind="text: $data.name"></a></li>
-                                        <!-- /ko -->
-                                        <li class="divider" data-bind="visible: collections().length"></li>
-                                        <!-- ko foreach: collections -->
-                                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'collection/' + name)">
-                                            <a href="#">
-                                                <span data-bind="text: 'collection/' + name"></span>
-                                            </a>
-                                        </li>
-                                        <!-- /ko -->
-                                        <li class="divider"></li>
-                                        <li data-bind="click: $root.setSelectedIndex.bind($root, 'AllDocs')">
-                                            <a href="#">
-                                                <span>All Documents</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: isStaticIndexSelected" title="Edit index"><i class="icon-edit"></i><span>Edit index</span></a>
-                            <a class="btn btn-info" data-bind="attr: { href: editIndexUrl }, css: { 'disabled': !hasEditableIndex() }, visible: !isStaticIndexSelected()" title="View index fields"><i class="icon-preview"></i><span>View index</span></a>
-                            <a class="btn btn-default" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance"><i class="icon-traffic-watch"></i><span>Index performance</span></a>
-                            <div class="btn-group btn-group-sm has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }">
-                                <a class="btn btn-default" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms"><i class="icon-terms"></i><span>Index terms</span></a>
-                            </div>
-                            <div class="btn-group btn-group-sm has-disable-reason"  data-bind="attr: { 'data-original-title': isMapReduceIndex() ? '' : 'Available only for map/reduce indexes' }">
-                                <a class="btn btn-default" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isMapReduceIndex() }" title="Map/Reduce Visualizer"><i class="icon-map-reduce-visualizer"></i><span>Map/Reduce Visualizer</span></a>
-                            </div>
-                        </div>
                         <div class="btn-group btn-group-sm pull-right" role="group">
                             <div class="dropdown">
                                 <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
@@ -115,15 +76,25 @@
         <div class="flex-window-head">
             <div class="clearfix">
                 <div class="results-info pull-left">
-                    <div class="dropdown">
+                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown" >
                         <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
-                            <i class="icon-index"></i> <span>Index '</span><span data-bind="">Index name</span>'
+                            <span>
+                                <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
+                            </span>
                             <span class="caret"></span>
                         </button>
                         <ul class="dropdown-menu" aria-labelledby="dropdownMenu">
+                            
                             <li>
-                                <a href="#" data-bind="attr: { href: indexPerformanceUrl }">
+                                <a href="#" data-bind="attr: { href: editIndexUrl }">
                                     <strong><i class="icon-edit"></i> <span>Edit index</span></strong>
+                                </a>
+                            </li>
+
+                            <li class="has-disable-reason" 
+                                data-original-title="Available only for static and auto indexes">
+                                <a href="#" data-bind="css: { 'disabled' : isDynamicIndex }, attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes', href: termsUrl }" title="Navigate to index terms">
+                                    <i class="icon-terms"></i> <span>View index terms</span>
                                 </a>
                             </li>
 
@@ -133,21 +104,27 @@
                                 </a>
                             </li>
 
-                            <li class="has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }" data-original-title="Available only for static and auto indexes">
-                                <a href="#" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms">
-                                    <i class="icon-terms"></i> <span>Index terms</span>
+                            <li class="has-disable-reason"  data-original-title="Available only for map/reduce indexes">
+                                
+                                <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="Map/Reduce Visualizer">
+                                    <i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span>
                                 </a>
-                            </li>
 
-                            <li class="has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }" data-original-title="Available only for map/reduce indexes">
-                                <a href="#" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer">
+                                <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map/reduce indexes">
                                     <i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span>
                                 </a>
                             </li>
+
                         </ul>
                     </div>
-                    <small>&nbsp;was used to get the results in <strong>15ms</strong></small>
-                    <small data-bind="html: querySummary"></small>
+                    <small data-bind="if: queryStats, visible: queryStats">
+                        <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
+                            <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
+                        </strong>
+                        <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
+                        &nbsp;was used to get the results in
+                        <strong data-bind="text: queryStats().DurationInMs + ' ms'"></strong>.
+                    </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">

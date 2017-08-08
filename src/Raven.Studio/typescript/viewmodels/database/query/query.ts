@@ -87,13 +87,10 @@ class query extends viewModelBase {
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
     isDynamicIndex: KnockoutComputed<boolean>;
-    isStaticIndexSelected: KnockoutComputed<boolean>;
+    isStaticIndex: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
 
-    initialSelectedIndex: string;
-    selectedIndex: KnockoutComputed<string>;
-    selectedIndexLabel: KnockoutComputed<string>;
     hasEditableIndex: KnockoutComputed<boolean>;
 
     editIndexUrl: KnockoutComputed<string>;
@@ -105,6 +102,10 @@ class query extends viewModelBase {
 
     isLoading = ko.observable<boolean>(false);
     containsAsterixQuery: KnockoutComputed<boolean>; // query contains: *.* ?
+
+    queriedIndex: KnockoutComputed<string>;
+    queriedIndexLabel: KnockoutComputed<string>;
+    queriedIndexDescription: KnockoutComputed<string>;
 
     private customFunctionsContext: object;
 
@@ -135,21 +136,42 @@ class query extends viewModelBase {
     }
 
     private initObservables() {
-        this.selectedIndex = ko.pureComputed(() => {
+        this.queriedIndex = ko.pureComputed(() => {
             const stats = this.queryStats();
-            if (!stats) {
-                return this.initialSelectedIndex;
-            }
+            if (!stats)
+                return null;
 
             return stats.IndexName;
         });
-        this.selectedIndexLabel = ko.pureComputed(() => {
-            let indexName = this.selectedIndex();
-            return (indexName === "AllDocs") ? "All Documents" : indexName;
+
+        this.queriedIndexLabel = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
+
+            if (indexName === "AllDocs") {
+                return "All Documents";
+            }
+
+            return indexName;
+        });
+
+        this.queriedIndexDescription = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
+
+            if (indexName === "AllDocs") {
+                return "All Documents";
+            }
+
+            const collectionRegex = /collection\/(.*)/;
+            let m;
+            if (m = indexName.match(collectionRegex)) {
+                return m[1];
+            }
+
+            return indexName;
         });
 
         this.hasEditableIndex = ko.pureComputed(() => {
-            let indexName = this.selectedIndex();
+            const indexName = this.queriedIndex();
             if (!indexName)
                 return false;
 
@@ -157,13 +179,20 @@ class query extends viewModelBase {
                 indexName !== queryUtil.AllDocs;
         });
 
-        this.editIndexUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forEditIndex(this.selectedIndex(), this.activeDatabase()) : null);
-        this.indexPerformanceUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.selectedIndex()) : null);
-        this.termsUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forTerms(this.selectedIndex(), this.activeDatabase()) : null);
-        this.visualizerUrl = ko.pureComputed(() => this.selectedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.selectedIndex()) : null);
+        this.editIndexUrl = ko.pureComputed(() =>
+            this.queriedIndex() ? appUrl.forEditIndex(this.queriedIndex(), this.activeDatabase()) : null);
+
+        this.indexPerformanceUrl = ko.pureComputed(() =>
+            this.queriedIndex() ? appUrl.forIndexPerformance(this.activeDatabase(), this.queriedIndex()) : null);
+
+        this.termsUrl = ko.pureComputed(() =>
+            this.queriedIndex() ? appUrl.forTerms(this.queriedIndex(), this.activeDatabase()) : null);
+
+        this.visualizerUrl = ko.pureComputed(() =>
+            this.queriedIndex() ? appUrl.forVisualizer(this.activeDatabase(), this.queriedIndex()) : null);
 
         this.isMapReduceIndex = ko.pureComputed(() => {
-            let indexName = this.selectedIndex();
+            const indexName = this.queriedIndex();
             if (!indexName)
                 return false;
 
@@ -172,8 +201,8 @@ class query extends viewModelBase {
             return !!currentIndex && currentIndex.isMapReduce;
         });
 
-        this.isStaticIndexSelected = ko.pureComputed(() => {
-            let indexName = this.selectedIndex();
+        this.isStaticIndex = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
             if (!indexName)
                 return false;
 
@@ -183,7 +212,7 @@ class query extends viewModelBase {
         });
 
         this.isDynamicIndex = ko.pureComputed(() => {
-            let indexName = this.selectedIndex();
+            const indexName = this.queriedIndex();
             if (!indexName)
                 return false;
 
@@ -231,12 +260,6 @@ class query extends viewModelBase {
         });
 
         this.selectedIndex.subscribe(index => this.onIndexChanged(index));
-
-        this.enableDeleteButton = ko.computed(() => {
-            var currentIndex = this.indexes().find(i => i.name === this.selectedIndex());
-            var isMapReduce = this.isMapReduceIndex();
-            var isDynamic = this.isDynamicIndex();
-            return !!currentIndex && !isMapReduce && !isDynamic;
         });*/
     }
 
@@ -374,12 +397,11 @@ class query extends viewModelBase {
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash) {
-            // if no index exists ==> use the default All Documents
-            this.setSelectedIndex(queryUtil.AllDocs);
+            return;
         } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
             indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix) || 
             indexNameOrRecentQueryHash === queryUtil.AllDocs) {
-            this.setSelectedIndex(indexNameOrRecentQueryHash);
+            this.runQueryOnIndex(indexNameOrRecentQueryHash);
         } else if (indexNameOrRecentQueryHash.indexOf("recentquery-") === 0) {
             const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             const matchingQuery = this.recentQueries().find(q => q.hash === hash);
@@ -391,12 +413,11 @@ class query extends viewModelBase {
         } else if (indexNameOrRecentQueryHash) {
             messagePublisher.reportError(`Could not find index or recent query: ${indexNameOrRecentQueryHash}`);
             // fallback to All Documents, but show error
-            this.setSelectedIndex(queryUtil.AllDocs);
+            this.runQueryOnIndex(queryUtil.AllDocs);
         }
     }
 
-    setSelectedIndex(indexName: string) {
-        this.initialSelectedIndex = indexName;
+    runQueryOnIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
         this.uiTransformer(null);
         this.uiTransformerParameters([]);
@@ -454,7 +475,7 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
-                        queryUtil.fetchIndexFields(this.activeDatabase(), this.selectedIndex(), this.indexFields);
+                        queryUtil.fetchIndexFields(this.activeDatabase(), this.queriedIndex(), this.indexFields);
 
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -611,7 +632,7 @@ class query extends viewModelBase {
     }
 
     queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
+        queryUtil.queryCompleter(this.indexFields, this.queriedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
         callback([], []);
     }
 
@@ -632,7 +653,7 @@ class query extends viewModelBase {
     private promptDeleteDocsMatchingQuery(resultCount: number) {
         const criteria = this.criteria();
         const db = this.activeDatabase();
-        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.selectedIndex(), criteria.queryText(), resultCount, db);
+        const viewModel = new deleteDocumentsMatchingQueryConfirm(this.queriedIndex(), criteria.queryText(), resultCount, db);
         app.showBootstrapDialog(viewModel)
            .done((result) => {
                 if (result) {
