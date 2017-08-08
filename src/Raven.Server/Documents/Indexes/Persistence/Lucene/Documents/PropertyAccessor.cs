@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (getMethod == null)
                 throw new InvalidOperationException(string.Format("Could not retrieve GetMethod for the {0} property of {1} type", propertyInfo.Name, type.FullName));
 
-            var arguments = new Type[1]
+            var arguments = new[]
             {
                 typeof (object)
             };

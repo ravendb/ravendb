@@ -36,18 +36,18 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public LuceneSuggestionIndexWriter(string field, LuceneVoronDirectory directory, SnapshotDeletionPolicy snapshotter, IndexWriter.MaxFieldLength maxFieldLength, DocumentDatabase database, IState state)
         {
-            this._directory = directory;
-            this._indexDeletionPolicy = snapshotter;
-            this._maxFieldLength = maxFieldLength; 
-            this._field = field;
+            _directory = directory;
+            _indexDeletionPolicy = snapshotter;
+            _maxFieldLength = maxFieldLength;
+            _field = field;
 
             _logger = LoggingSource.Instance.GetLogger<LuceneSuggestionIndexWriter>(database.Name);
-            
-            RecreateIndexWriter(state);                        
+
+            RecreateIndexWriter(state);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int GetMin(int l)
+        private static int GetMin(int l)
         {
             int r = 1;
             if (l > 5)
@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         }
 
         public void AddDocument(global::Lucene.Net.Documents.Document doc, IState state)
-        {           
+        {
             var fieldables = doc.GetFieldables(_field);
             if (fieldables == null)
                 return;
@@ -150,9 +150,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                         streamReader.BaseStream.Position = 0;
                     }
-                    else continue;
-                }                
-                
+                    else
+                        continue;
+                }
+
                 var tokenStream = _analyzer.ReusableTokenStream(_field, reader);
                 while (tokenStream.IncrementToken())
                 {
@@ -173,10 +174,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     {
                         // the word does not exist in the gramindex
                         int min = GetMin(len);
-                        
+
                         _indexWriter.AddDocument(CreateDocument(word, min, min + 1), state);
                     }
-                    
+
                     _alreadySeen.Add(word);
                 }
             }
@@ -222,21 +223,21 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
             catch (Exception e)
             {
-                throw new IndexWriterCreationException(e, this._field);
+                throw new IndexWriterCreationException(e, _field);
             }
         }
 
         private void CreateIndexWriter(IState state)
         {
             _indexWriter = new IndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state)
-            {                
+            {
                 UseCompoundFile = false
-            };           
+            };
 
             using (_indexWriter.MergeScheduler)
             {
             }
-            
+
             _indexWriter.SetMergeScheduler(new SerialMergeScheduler(), state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
@@ -256,7 +257,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             var searcher = _indexSearcher;
             _indexSearcher = null;
-            
+
             var writer = _indexWriter;
             _indexWriter = null;
 

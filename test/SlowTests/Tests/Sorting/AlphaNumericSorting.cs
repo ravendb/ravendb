@@ -579,7 +579,8 @@ namespace SlowTests.Tests.Sorting
 
             public int Compare(Track track1, Track track2)
             {
-                var result = yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year); ;
+                var result = yearDescending == false ? track1.Year.CompareTo(track2.Year) : track2.Year.CompareTo(track1.Year);
+                ;
                 if (result != 0)
                     return result;
 
@@ -635,6 +636,7 @@ namespace SlowTests.Tests.Sorting
                                   doc.Year
                               };
 
+                Index(x => x.Title, FieldIndexing.NotAnalyzed);
             }
         }
 

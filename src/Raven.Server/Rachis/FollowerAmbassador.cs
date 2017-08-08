@@ -134,7 +134,7 @@ namespace Raven.Server.Rachis
                             {
                                 // we are no longer the leader, but we'll not abort the thread here, we'll 
                                 // go to the top of the while loop and exit from there if needed
-                                continue; 
+                                continue;
                             }
 
                             var matchIndex = InitialNegotiationWithFollower();
@@ -250,8 +250,8 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         stream?.Dispose();
-                        if (Status == "Connected")                        
-                            Status = "Disconnected";                    
+                        if (Status == "Connected")
+                            Status = "Disconnected";
                         else
                             Status = "Disconnected " + Status;
                     }
@@ -302,7 +302,7 @@ namespace Raven.Server.Rachis
                     {
                         LastIncludedIndex = earliestIndexEtry,
                         LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
-                        Topology = _engine.GetTopologyRaw(context),
+                        Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
@@ -324,7 +324,7 @@ namespace Raven.Server.Rachis
                     {
                         LastIncludedIndex = index,
                         LastIncludedTerm = term,
-                        Topology = _engine.GetTopologyRaw(context),
+                        Topology = _engine.GetTopologyRaw(context)
                     });
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
@@ -448,15 +448,12 @@ namespace Raven.Server.Rachis
         {
             private readonly byte[] _buffer = new byte[1024];
 
-            public byte[] Buffer => _buffer;
-
             private readonly Stream _stream;
 
             public UnmanagedMemoryToStream(Stream stream)
             {
                 _stream = stream;
             }
-
 
             public void Copy(byte* ptr, int size)
             {
@@ -535,7 +532,7 @@ namespace Raven.Server.Rachis
                     {
                         Term = engineCurrentTerm,
                         PrevLogIndex = lastIndexEntry,
-                        PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
+                        PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry)
                     };
                 }
                 UpdateLastSend("Hello");
@@ -548,7 +545,7 @@ namespace Raven.Server.Rachis
                     TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
                     DebugDestinationIdentifier = _tag,
-                    DebugSourceIdentifier = _engine.Tag,
+                    DebugSourceIdentifier = _engine.Tag
                 });
 
                 UpdateLastSend("Negotiation");

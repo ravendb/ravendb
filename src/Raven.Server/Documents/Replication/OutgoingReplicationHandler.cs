@@ -14,7 +14,6 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
-using Raven.Server.Exceptions;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -41,7 +40,7 @@ namespace Raven.Server.Documents.Replication
         private readonly CancellationTokenSource _cts;
         private Thread _sendingThread;
         internal readonly ReplicationLoader _parent;
-        internal long _lastSentDocumentEtag;   
+        internal long _lastSentDocumentEtag;
 
         internal DateTime _lastDocumentSentTime;
 
@@ -108,7 +107,7 @@ namespace Raven.Server.Documents.Replication
         }
 
         public string OutgoingReplicationThreadName => $"Outgoing replication {FromToString}";
-        
+
         public string GetNode()
         {
             var node = Destination as InternalReplication;
@@ -122,7 +121,7 @@ namespace Raven.Server.Documents.Replication
             NativeMemory.EnsureRegistered();
             try
             {
-                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication", 
+                var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
                     _parent._server.RavenServer.ServerCertificateHolder.Certificate);
 
                 if (_log.IsInfoEnabled)
@@ -162,7 +161,7 @@ namespace Raven.Server.Documents.Replication
                             if (response.ReplyType == ReplicationMessageReply.ReplyType.Error)
                             {
                                 var exception = new InvalidOperationException(response.Reply.Exception);
-                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException))||
+                                if (response.Reply.Exception.Contains(nameof(DatabaseDoesNotExistException)) ||
                                     response.Reply.Exception.Contains(nameof(DatabaseNotRelevantException)))
                                 {
                                     AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, "Database does not exist");
@@ -181,7 +180,7 @@ namespace Raven.Server.Documents.Replication
                                 msg += "In order for the replication to work, a database with the same name needs to be created at the destination";
 
                             var young = (DateTime.UtcNow - _startedAt).TotalSeconds < 30;
-                            if(young)
+                            if (young)
                                 msg += "This can happen if the other node wasn't yet notified about being assigned this database and should be resolved shortly.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
@@ -198,8 +197,8 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (OperationCanceledException e)
                         {
-                            var msg = "Got operation canceled notification while opening outgoing replication channel. " +
-                                      "Aborting and closing the channel.";
+                            const string msg = "Got operation canceled notification while opening outgoing replication channel. " +
+                                               "Aborting and closing the channel.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
                             AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiateError, msg);
@@ -207,7 +206,7 @@ namespace Raven.Server.Documents.Replication
                         }
                         catch (Exception e)
                         {
-                            var msg = "Failed to parse initial server response. This is definitely not supposed to happen.";
+                            const string msg = "Failed to parse initial server response. This is definitely not supposed to happen.";
                             if (_log.IsInfoEnabled)
                                 _log.Info(msg, e);
 
@@ -255,9 +254,9 @@ namespace Raven.Server.Documents.Replication
                                             // cancellation is not an actual error,
                                             // it is a "notification" that we need to cancel current operation
 
-                                            var msg = "Operation was canceled.";
+                                            const string msg = "Operation was canceled.";
                                             AddReplicationPulse(ReplicationPulseDirection.OutgoingError, msg);
-                                            
+
                                             throw;
                                         }
                                         catch (Exception e)
@@ -349,7 +348,7 @@ namespace Raven.Server.Documents.Replication
                 Direction = direction,
                 To = Destination,
                 IsExternal = _external,
-                ExceptionMessage = exceptionMessage,
+                ExceptionMessage = exceptionMessage
             });
         }
 
@@ -383,7 +382,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();
@@ -395,7 +394,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(ReplicationLatestEtagRequest.SourceDatabaseName)] = _database.Name,
                     [nameof(ReplicationLatestEtagRequest.SourceUrl)] = _parent._server.NodeHttpServerUrl,
                     [nameof(ReplicationLatestEtagRequest.SourceTag)] = _parent._server.NodeTag,
-                    [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName,
+                    [nameof(ReplicationLatestEtagRequest.SourceMachineName)] = Environment.MachineName
                 };
 
                 documentsContext.Write(writer, request);
@@ -405,7 +404,7 @@ namespace Raven.Server.Documents.Replication
 
         private void ReadHeaderResponseAndThrowIfUnAuthorized()
         {
-            var timeout = 2 * 60 * 1000; // TODO: configurable
+            const int timeout = 2 * 60 * 1000; // TODO: configurable
             using (var replicationTcpConnectReplyMessage = _interruptibleRead.ParseToMemory(
                 _connectionDisposed,
                 "replication acknowledge response",
@@ -422,7 +421,7 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                if(headerResponse.AuthorizationSuccessful == false)
+                if (headerResponse.AuthorizationSuccessful == false)
                 {
                     throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                 }
@@ -474,13 +473,11 @@ namespace Raven.Server.Documents.Replication
 
         private class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
         {
-            private readonly DocumentDatabase _database;
             private readonly ReplicationMessageReply _replicationBatchReply;
             private Guid _dbId;
 
-            public UpdateSiblingCurrentEtag(DocumentDatabase database,ReplicationMessageReply replicationBatchReply)
+            public UpdateSiblingCurrentEtag(ReplicationMessageReply replicationBatchReply)
             {
-                _database = database;
                 _replicationBatchReply = replicationBatchReply;
             }
 
@@ -506,7 +503,7 @@ namespace Raven.Server.Documents.Replication
                 return ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
             }
         }
-        
+
         private void UpdateDestinationChangeVectorHeartbeat(ReplicationMessageReply replicationBatchReply)
         {
             _lastSentDocumentEtag = Math.Max(_lastSentDocumentEtag, replicationBatchReply.LastEtagAccepted);
@@ -514,7 +511,7 @@ namespace Raven.Server.Documents.Replication
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
             if (_external == false)
             {
-                var update = new UpdateSiblingCurrentEtag(_database, replicationBatchReply);
+                var update = new UpdateSiblingCurrentEtag(replicationBatchReply);
                 if (update.InitAndValidate())
                 {
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
@@ -564,7 +561,7 @@ namespace Raven.Server.Documents.Replication
                     {
                         [nameof(ReplicationMessageHeader.Type)] = ReplicationMessageType.Heartbeat,
                         [nameof(ReplicationMessageHeader.LastDocumentEtag)] = _lastSentDocumentEtag,
-                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0,
+                        [nameof(ReplicationMessageHeader.ItemsCount)] = 0
                     };
                     if (changeVector != null)
                     {

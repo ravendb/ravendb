@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(To)] = To?.ToJson(),
                     [nameof(IsExternal)] = IsExternal,
                     [nameof(From)] = From?.ToJson(),
-                    [nameof(ExceptionMessage)] = ExceptionMessage,
+                    [nameof(ExceptionMessage)] = ExceptionMessage
                 };
             }
         }
@@ -107,6 +107,6 @@ namespace Raven.Server.Documents.Replication
         IncomingError,
         IncomingEnd,
         IncomingHeartbeat,
-        IncomingHeartbeatAcknowledge,
+        IncomingHeartbeatAcknowledge
     }
 }

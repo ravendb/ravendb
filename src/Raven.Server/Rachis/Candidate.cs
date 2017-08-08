@@ -56,7 +56,7 @@ namespace Raven.Server.Rachis
 
                     if (clusterTopology.Members.Count == 1)
                     {
-                        _engine.SwitchToLeaderState(ElectionTerm, $"I'm the only one in the cluster, so no need for elections, I rule.");
+                        _engine.SwitchToLeaderState(ElectionTerm, "I\'m the only one in the cluster, so no need for elections, I rule.");
                         return;
                     }
 
@@ -131,7 +131,7 @@ namespace Raven.Server.Rachis
                             }
                             var engineCurrentTerm = _engine.CurrentTerm;
                             _engine.SetNewState(RachisConsensus.State.Passive, this, engineCurrentTerm,
-                                $"I just learned from the leader that I\'m not in their topology, moving to passive state");
+                                "I just learned from the leader that I\'m not in their topology, moving to passive state");
                             break;
                         }
 

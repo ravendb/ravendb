@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             "GroupBy",
             "OrderBy",
             "Distinct",
-            "Where",
+            "Where"
         };
         
         public override SyntaxNode VisitInvocationExpression(InvocationExpressionSyntax node)
@@ -29,10 +29,10 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             var mae = node.Expression as MemberAccessExpressionSyntax;
             if (mae == null)
-                return base.Visit(node.Expression);
+                return Visit(node.Expression);
 
             if (KnonwMethodsToInsepct.Contains(mae.Name.Identifier.Text) == false)
-                return base.Visit(node.Expression);
+                return Visit(node.Expression);
 
             var last = node.DescendantNodes(descendIntoChildren: syntaxNode =>
                 {

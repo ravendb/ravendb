@@ -12,8 +12,8 @@ namespace Raven.Server.Documents.Replication
         public int NodeTag;
 
         [ThreadStatic] private static char[] _threadBuffer;
-        
-        public unsafe void Append(StringBuilder sb)
+
+        public void Append(StringBuilder sb)
         {
             ChangeVectorExtensions.ToBase26(sb, NodeTag);
             sb.Append(":");
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Replication
             }
             sb.Append(_threadBuffer, 0, 22);
         }
-        
+
         public static unsafe string GuidToTruncatedBase64(Guid id)
         {
             if (_threadBuffer == null)

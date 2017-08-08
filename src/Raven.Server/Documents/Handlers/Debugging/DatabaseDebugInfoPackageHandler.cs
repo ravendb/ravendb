@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         var localEndpointClient = new LocalEndpointClient(Server);
                         var endpointParameters = new Dictionary<string, StringValues>
                         {
-                            { "database",new StringValues(Database.Name) },
+                            { "database",new StringValues(Database.Name) }
                         };
 
                         foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))

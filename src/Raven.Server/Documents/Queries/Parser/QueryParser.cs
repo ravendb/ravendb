@@ -169,7 +169,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return @select;
+            return select;
         }
 
         private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()
@@ -255,18 +255,16 @@ namespace Raven.Server.Documents.Queries.Parser
             return (field, alias, filter, index);
         }
 
-        private bool Alias(out FieldToken alias)
+        private void Alias(out FieldToken alias)
         {
             if (Scanner.TryScan("AS") == false)
             {
                 alias = null;
-                return true;
+                return;
             }
 
             if (Field(out alias) == false)
                 ThrowParseException("Expected field alias after AS in SELECT");
-
-            return true;
         }
 
         internal bool Parameter(out int tokenStart, out int tokenLength)
@@ -366,7 +364,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
-            
+
             op = new QueryExpression
             {
                 Type = type,
@@ -397,7 +395,7 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             OperatorType type;
             FieldToken field = null;
-            
+
             if (Scanner.TryScan("true"))
                 type = OperatorType.True;
             else
@@ -638,7 +636,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 val = new ValueToken
                 {
                     TokenStart = Scanner.TokenStart,
-                    TokenLength = Scanner.TokenLength,
+                    TokenLength = Scanner.TokenLength
                 };
                 switch (match)
                 {

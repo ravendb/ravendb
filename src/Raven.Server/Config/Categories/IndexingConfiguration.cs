@@ -11,7 +11,7 @@ namespace Raven.Server.Config.Categories
     public class IndexingConfiguration : ConfigurationCategory
     {
         private bool? _runInMemory;
-        
+
         private readonly RavenConfiguration _root;
 
         private PathSetting _indexStoragePath;
@@ -34,7 +34,7 @@ namespace Raven.Server.Config.Categories
                 return _runInMemory.Value;
             }
 
-            protected set { _runInMemory = value; }
+            protected set => _runInMemory = value;
         }
 
         [DefaultValue(false)]
@@ -54,8 +54,8 @@ namespace Raven.Server.Config.Categories
 
                 if (_indexStoragePath == null)
                 {
-                    _indexStoragePath = _root.ResourceType == ResourceType.Server 
-                        ? null 
+                    _indexStoragePath = _root.ResourceType == ResourceType.Server
+                        ? null
                         : _root.Core.DataDirectory.Combine("Indexes");
                 }
 

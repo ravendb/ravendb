@@ -24,7 +24,7 @@ namespace Raven.Server.Indexing
             _environment = environment;
             _name = name;
 
-            base.SetLockFactory(NoLockFactory.Instance);
+            SetLockFactory(NoLockFactory.Instance);
 
             tx.CreateTree(_name);
         }

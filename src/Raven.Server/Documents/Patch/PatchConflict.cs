@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Patch
                 Value = new JsValue(index),
                 Configurable = true,
                 Enumerable = true,
-                Writable = true,
+                Writable = true
             });
 
             scope.PatchObject = docsArr;
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Patch
             engine.Global.Delete("HasTombstone", false);
         }
 
-        private bool TryParse(DocumentsOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)
+        private bool TryParse(JsonOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)
         {
             if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
             {

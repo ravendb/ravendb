@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Handlers
                         context.Write(writer, new DynamicJsonValue
                         {
                             ["Error"] = "Connection failed",
-                            ["Exception"] = ex.ToString(),
+                            ["Exception"] = ex.ToString()
                         });
                     }
                 }

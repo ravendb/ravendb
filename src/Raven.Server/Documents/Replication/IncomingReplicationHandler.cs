@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Replication
                                 {
                                     _log.Info(
                                         $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                        $"nevertheless we create an additional task.");
+                                        "nevertheless we create an additional task.");
                                 }
                             }
                             else
@@ -539,7 +539,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
-                [nameof(ReplicationMessageReply.NodeTag)] = _parent._server.NodeTag,
+                [nameof(ReplicationMessageReply.NodeTag)] = _parent._server.NodeTag
 
             };
 
@@ -639,7 +639,7 @@ namespace Raven.Server.Documents.Replication
                 var item = new ReplicationItem
                 {
                     Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte)),
-                    Position = writeBuffer.SizeInBytes,
+                    Position = writeBuffer.SizeInBytes
                 };
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
@@ -766,7 +766,7 @@ namespace Raven.Server.Documents.Replication
                 OccurredAt = SystemTime.UtcNow,
                 Direction = direction,
                 From = ConnectionInfo,
-                ExceptionMessage = exceptionMessage,
+                ExceptionMessage = exceptionMessage
             });
         }
 

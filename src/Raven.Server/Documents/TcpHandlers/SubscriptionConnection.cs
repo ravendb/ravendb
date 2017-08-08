@@ -262,7 +262,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
+                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
                         }
@@ -403,9 +403,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (result.Exception != null)
                                 {
                                     writer.WriteValue(BlittableJsonToken.StartObject,
-                                        docsContext.ReadObject(new DynamicJsonValue()
+                                        docsContext.ReadObject(new DynamicJsonValue
                                         {
-                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
+                                            [Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Client.Constants.Documents.Metadata.Key]
                                         }, result.Doc.Id)
                                     );
                                     writer.WriteComma();

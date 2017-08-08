@@ -14,7 +14,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlLoader
+    public class EtlLoader : IDisposable
     {
         private const string AlertTitle = "ETL loader";
 
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL
         }
 
         public EtlProcess[] Processes => _processes;
-        
+
         public List<RavenEtlConfiguration> RavenDestinations;
 
         public List<SqlEtlConfiguration> SqlDestinations;
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.ETL
         {
             LoadProcesses(record);
         }
-        
+
         private void LoadProcesses(DatabaseRecord record)
         {
             lock (_loadProcessedLock)
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL
                 RavenEtlConfiguration ravenConfig = null;
 
                 var connectionStringNotFound = false;
-                
+
                 switch (config.EtlType)
                 {
                     case EtlType.Raven:
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.ETL
                         {
                             $"Connection string named '{config.ConnectionStringName}' was not found for {config.EtlType} ETL"
                         });
-                    
+
                     continue;
                 }
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.ETL
                 if (config.Disabled)
                     continue;
 
-                if (_databaseRecord.Topology.WhoseTaskIsIt(config,_serverStore.IsPassive()) != _serverStore.NodeTag)
+                if (_databaseRecord.Topology.WhoseTaskIsIt(config, _serverStore.IsPassive()) != _serverStore.NodeTag)
                     continue;
 
                 foreach (var transform in config.Transforms)
@@ -222,9 +222,9 @@ namespace Raven.Server.Documents.ETL
             _database.Changes.OnDocumentChange -= NotifyAboutWork;
 
             var ea = new ExceptionAggregator(Logger, "Could not dispose ETL loader");
-            
+
             Parallel.ForEach(_processes, x => ea.Execute(x.Dispose));
-            
+
             ea.ThrowIfNeeded();
         }
 

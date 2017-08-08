@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Revisions
             DocsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
                 StartIndex = (int)Columns.Etag,
-                Name = CollectionRevisionsEtagsSlice,
+                Name = CollectionRevisionsEtagsSlice
             });
         }
 
@@ -480,13 +480,13 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId, long delta)
+        private static long IncrementCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId, long delta)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             return numbers.Increment(prefixedLowerId, delta);
         }
 
-        private void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId)
+        private static void DeleteCountOfRevisions(DocumentsOperationContext context, Slice prefixedLowerId)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             numbers.Delete(prefixedLowerId);
@@ -604,7 +604,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
+        private static ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerIdSize + 1, out ByteString keyMem);
 
@@ -616,7 +616,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
+        private static ByteStringContext.InternalScope GetLastKey(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
             var scope = context.Allocator.Allocate(lowerId.Size + 1 + sizeof(long), out ByteString keyMem);
 
@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.Revisions
             return scope;
         }
 
-        private long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
+        private static long CountOfRevisions(DocumentsOperationContext context, Slice prefix)
         {
             var numbers = context.Transaction.InnerTransaction.ReadTree(RevisionsCountSlice);
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
@@ -714,7 +714,7 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private ByteStringContext.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
+        private static ByteStringContext.InternalScope GetRevisionsBinEntryKey(DocumentsOperationContext context, long etag, out Slice deletedRevisionKey)
         {
             var scope = context.Allocator.Allocate(sizeof(DocumentFlags) + sizeof(long), out ByteString keyMem);
 
@@ -784,7 +784,7 @@ namespace Raven.Server.Documents.Revisions
             }
         }
 
-        private Document TableValueToRevision(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static Document TableValueToRevision(JsonOperationContext context, ref TableValueReader tvr)
         {
             var result = new Document
             {
@@ -795,7 +795,7 @@ namespace Raven.Server.Documents.Revisions
                 LastModified = TableValueToDateTime((int)Columns.LastModified, ref tvr),
                 Flags = TableValueToFlags((int)Columns.Flags, ref tvr),
                 TransactionMarker = *(short*)tvr.Read((int)Columns.TransactionMarker, out int size),
-                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr),
+                ChangeVector = TableValueToChangeVector(context, (int)Columns.ChangeVector, ref tvr)
             };
 
             var ptr = tvr.Read((int)Columns.Document, out size);

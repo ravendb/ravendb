@@ -8,7 +8,7 @@ namespace Raven.Server.Utils
         {
             queue.Enqueue(item);
             while (queue.Count > sizeOfQueue)
-                queue.TryDequeue(out T dontCare);
+                queue.TryDequeue(out T _);
         }
     }
 }

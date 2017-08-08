@@ -350,10 +350,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 return string.Join(".", tableName.Split('.').Select(_commandBuilder.QuoteIdentifier).ToArray());
             }
-            else
-            {
-                return tableName;
-            }
+
+            return tableName;
         }
 
         public static string SanitizeSqlValue(string sqlValue)
@@ -445,20 +443,20 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         colParam.Value = blittableJsonReaderArray.ToString();
                         break;
                     default:
-                    {
-                        if (column.Value is Stream stream)
                         {
-                            colParam.DbType = DbType.Binary;
+                            if (column.Value is Stream stream)
+                            {
+                                colParam.DbType = DbType.Binary;
 
-                            if (stream == Stream.Null)
-                                colParam.Value = DBNull.Value;
-                            else
-                                colParam.Value = stream.ReadData();
+                                if (stream == Stream.Null)
+                                    colParam.Value = DBNull.Value;
+                                else
+                                    colParam.Value = stream.ReadData();
 
-                            break;
+                                break;
+                            }
+                            throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
                         }
-                        throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
-                    }
                 }
             }
         }

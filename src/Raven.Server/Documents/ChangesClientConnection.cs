@@ -229,7 +229,6 @@ namespace Raven.Server.Documents
             if (change.Name != null && _matchingIndexes.Contains(change.Name))
             {
                 Send(change);
-                return;
             }
         }
 
@@ -238,7 +237,6 @@ namespace Raven.Server.Documents
             if (_watchAllTransformers > 0)
             {
                 Send(change);
-                return;
             }
         }
 
@@ -562,7 +560,7 @@ namespace Raven.Server.Documents
                 ["WatchDocumentPrefixes"] = _matchingDocumentPrefixes.ToArray(),
                 ["WatchDocumentsInCollection"] = _matchingDocumentsInCollection.ToArray(),
                 ["WatchIndexes"] = _matchingIndexes.ToArray(),
-                ["WatchDocuments"] = _matchingDocuments.ToArray(),
+                ["WatchDocuments"] = _matchingDocuments.ToArray()
             };
         }
     }

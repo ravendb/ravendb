@@ -442,7 +442,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return true;
 
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences differences);
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences _);
             return creationOptions != IndexCreationOptions.Noop;
         }
 
@@ -482,31 +482,21 @@ namespace Raven.Server.Documents.Indexes
                 default:
                     throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
             }
-
-
         }
 
-        private static IndexDefinitionCompareDifferences UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex,
-            IndexDefinitionCompareDifferences indexDifferences)
+        private static void UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
-            indexDifferences &= ~IndexDefinitionCompareDifferences.Etag;
-
             if (definition.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
                 existingIndex.SetLock(definition.LockMode.Value);
 
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
-
-            indexDifferences &= ~IndexDefinitionCompareDifferences.LockMode;
-            indexDifferences &= ~IndexDefinitionCompareDifferences.Priority;
-            return indexDifferences;
         }
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
         {
-            return GetIndexCreationOptions(indexDefinition, existingIndex, out IndexDefinitionCompareDifferences differences);
+            return GetIndexCreationOptions(indexDefinition, existingIndex, out IndexDefinitionCompareDifferences _);
         }
-
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {

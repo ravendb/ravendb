@@ -54,13 +54,13 @@ namespace Raven.Server.Config.Categories
                     val = cfg[tmpName];
                     if (val != null)
                         return val;
-                    lastPeriod = name.LastIndexOf('.', lastPeriod-1);
+                    lastPeriod = name.LastIndexOf('.', lastPeriod - 1);
                 }
                 return null;
             }
-            
-            Initialize(key => new SettingValue(GetConfiguration(settings,key), GetConfiguration(serverWideSettings,key)), 
-                serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName, 
+
+            Initialize(key => new SettingValue(GetConfiguration(settings, key), GetConfiguration(serverWideSettings, key)),
+                serverWideSettings?[RavenConfiguration.GetKey(x => x.Core.DataDirectory)], type, resourceName,
                 throwIfThereIsNoSetMethod: true);
         }
 
@@ -136,19 +136,19 @@ namespace Raven.Server.Config.Categories
 
                                 if (property.PropertyType == typeof(PathSetting))
                                 {
-                                    if (settingValue.CurrentValue != null)
-                                        property.SetValue(this, new PathSetting(Convert.ToString(value), serverDataDir));
-                                    else
-                                        property.SetValue(this, new PathSetting(Convert.ToString(value), type, resourceName));
+                                    property.SetValue(this,
+                                        settingValue.CurrentValue != null
+                                            ? new PathSetting(Convert.ToString(value), serverDataDir)
+                                            : new PathSetting(Convert.ToString(value), type, resourceName));
                                 }
                                 else if (property.PropertyType == typeof(PathSetting[]))
                                 {
                                     var paths = value.Split(';');
 
-                                    if (settingValue.CurrentValue != null)
-                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), serverDataDir)).ToArray());
-                                    else
-                                        property.SetValue(this, paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
+                                    property.SetValue(this,
+                                        settingValue.CurrentValue != null
+                                            ? paths.Select(x => new PathSetting(Convert.ToString(x), serverDataDir)).ToArray()
+                                            : paths.Select(x => new PathSetting(Convert.ToString(x), type, resourceName)).ToArray());
                                 }
                                 else if (t == typeof(UriSetting))
                                 {
@@ -156,7 +156,7 @@ namespace Raven.Server.Config.Categories
                                 }
                                 else
                                 {
-                                    var safeValue = (value == null) ? null : Convert.ChangeType(value, t);
+                                    var safeValue = value == null ? null : Convert.ChangeType(value, t);
                                     property.SetValue(this, safeValue);
                                 }
                             }

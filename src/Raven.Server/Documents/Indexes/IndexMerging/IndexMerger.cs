@@ -10,11 +10,11 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
 {
     public class IndexMerger
     {
-        private readonly Dictionary<string, IndexDefinition> indexDefinitions;
+        private readonly Dictionary<string, IndexDefinition> _indexDefinitions;
 
         public IndexMerger(Dictionary<string, IndexDefinition> indexDefinitions)
         {
-            this.indexDefinitions = indexDefinitions;
+            _indexDefinitions = indexDefinitions;
         }
 
         private List<MergeProposal> MergeIndexes(List<IndexData> indexes)
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         {
             var indexes = new List<IndexData>();
 
-            foreach (var kvp in indexDefinitions)
+            foreach (var kvp in _indexDefinitions)
             {
                 var index = kvp.Value;
                 var indexData = new IndexData(index)
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             return DataDictionaryCompare(index1Data.Index.Fields, index2Data.Index.Fields, intersectNames);
         }
 
-        private bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2, IEnumerable<string> names)
+        private static bool DataDictionaryCompare<T>(IDictionary<string, T> dataDict1, IDictionary<string, T> dataDict2, IEnumerable<string> names)
         {
             bool found1, found2;
 
@@ -181,11 +181,11 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                     return false;
 
                 // exists only in 1 - check if contains default value
-                if (found1 && !found2)               
+                if (found1 && !found2)
                     return false;
-                
-                if (found2 && !found1)                
-                    return false;              
+
+                if (found2 && !found1)
+                    return false;
             }
 
             return true;
@@ -356,7 +356,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             }
         }
 
-        private IndexMergeResults ExcludePartialResults(IndexMergeResults originalIndexes)
+        private static IndexMergeResults ExcludePartialResults(IndexMergeResults originalIndexes)
         {
             var resultingIndexMerge = new IndexMergeResults();
 

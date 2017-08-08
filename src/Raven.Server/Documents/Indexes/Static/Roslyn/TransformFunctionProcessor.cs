@@ -6,7 +6,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
 {
     public class TransformFunctionProcessor : CSharpSyntaxRewriter
     {
-        private SelectManyRewriter _selectManyRewriter;
+        private readonly SelectManyRewriter _selectManyRewriter;
 
         public TransformFunctionProcessor(SelectManyRewriter selectManyRewriter)
         {
@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,
-                RecurseRewriter.Instance,
+                RecurseRewriter.Instance
             })
             {
                 node = rewriter.Visit(node);

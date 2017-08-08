@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled=false)
+        public async Task<long> PutSubscription(SubscriptionCreationOptions options, long? subscriptionId = null, bool? disabled = false)
         {
             var command = new PutSubscriptionCommand(_db.Name)
             {
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public async Task<SubscriptionState> AssertSubscriptionIdIsApplicable(long id,string name, TimeSpan timeout)
+        public async Task<SubscriptionState> AssertSubscriptionIdIsApplicable(long id, string name, TimeSpan timeout)
         {
             await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, id);
 
@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Subscriptions
                 var subscription = GetSubscriptionFromServerStore(serverStoreContext, name);
 
                 var dbRecord = _serverStore.Cluster.ReadDatabase(serverStoreContext, _db.Name, out var _);
-                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription,_serverStore.IsPassive());
+                var whoseTaskIsIt = dbRecord.Topology.WhoseTaskIsIt(subscription, _serverStore.IsPassive());
                 if (whoseTaskIsIt != _serverStore.NodeTag)
                 {
                     throw new SubscriptionDoesNotBelongToNodeException($"Subscripition with id {id} can't be proccessed on current node ({_serverStore.NodeTag}), because it belongs to {whoseTaskIsIt}")
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Subscriptions
                         AppropriateNode = whoseTaskIsIt
                     };
                 }
-                if(subscription.Disabled)
+                if (subscription.Disabled)
                     throw new SubscriptionClosedException($"The subscription {id} is disabled and cannot be used until enabled");
 
                 return subscription;
@@ -187,7 +187,6 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var kvp in _subscriptionConnectionStates)
             {
                 var subscriptionState = kvp.Value;
-                var subscriptionId = kvp.Key;
 
                 if (subscriptionState?.Connection == null)
                     continue;
@@ -286,13 +285,13 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        private void SetSubscriptionHistory(SubscriptionConnectionState subscriptionConnectionState, SubscriptionGeneralDataAndStats subscriptionData)
+        private static void SetSubscriptionHistory(SubscriptionConnectionState subscriptionConnectionState, SubscriptionGeneralDataAndStats subscriptionData)
         {
             subscriptionData.RecentConnections = subscriptionConnectionState.RecentConnections;
             subscriptionData.RecentRejectedConnections = subscriptionConnectionState.RecentRejectedConnections;
         }
 
-        private void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
+        private static void GetRunningSubscriptionInternal(bool history, SubscriptionGeneralDataAndStats subscriptionData, SubscriptionConnectionState subscriptionConnectionState)
         {
             subscriptionData.Connection = subscriptionConnectionState.Connection;
             if (history) // TODO: Only valid for this node
@@ -337,7 +336,7 @@ namespace Raven.Server.Documents.Subscriptions
                         DropSubscriptionConnection(subscriptionStateKvp.Key, new SubscriptionClosedException($"The subscription {subscriptionName} script has been modified, connection must be restarted"));
                     }
 
-                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState,_serverStore.IsPassive()) != _serverStore.NodeTag)
+                    if (databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, _serverStore.IsPassive()) != _serverStore.NodeTag)
                     {
                         if (_logger.IsInfoEnabled)
                             _logger.Info($"Disconnected subscription with id {subscriptionStateKvp.Key}, because it was is no longer managed by this node ({_serverStore.NodeTag})");

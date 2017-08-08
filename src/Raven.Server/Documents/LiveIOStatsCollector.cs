@@ -18,9 +18,9 @@ namespace Raven.Server.Documents
         // Dictionary to hold the ioFileItems written by server  
         private readonly ConcurrentDictionary<string, BlockingCollection<IoMeterBuffer.MeterItem>> _perEnvironmentsFilesMetrics; // Path+fileName is the key
         // Queue for Endpoint to read from
-        public AsyncQueue<IOMetricsResponse> MetricsQueue { get; } = new AsyncQueue<IOMetricsResponse>(); 
-      
-        private string basePath;
+        public AsyncQueue<IOMetricsResponse> MetricsQueue { get; } = new AsyncQueue<IOMetricsResponse>();
+
+        private string _basePath;
         private readonly CancellationToken _resourceShutdown;
         private readonly CancellationTokenSource _cts;
         private readonly DocumentDatabase _documentDatabase;
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents
             // 1. First time around, get existing data
             var result = IoMetricsHandler.GetIoMetricsResponse(_documentDatabase);
 
-            basePath = result.Environments[0].Path;
+            _basePath = result.Environments[0].Path;
             result.Environments[0].Path += "\\Documents";
 
             foreach (var environment in result.Environments)
@@ -116,8 +116,8 @@ namespace Raven.Server.Documents
                     currentEnvironment = new IOMetricsEnvironment { Path = envPath, Files = new List<IOMetricsFileStats>() };
                     preparedMetricsResponse.Environments.Add(currentEnvironment);
                 }
-                
-                if (currentEnvironment.Path == basePath)
+
+                if (currentEnvironment.Path == _basePath)
                 {
                     currentEnvironment.Path += "\\Documents";
                 }
@@ -144,7 +144,7 @@ namespace Raven.Server.Documents
                     };
 
                     responseHasContent = true;
-                    preparedFilesInfo.Recent.Add(preparedRecentStats); 
+                    preparedFilesInfo.Recent.Add(preparedRecentStats);
                 }
             }
 
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents
             // recentFileIoItem is the recent item that was written to disk by the server
             // Add the new item to  the File items ConcurrentDictionary collection
             var collection = _perEnvironmentsFilesMetrics.GetOrAdd(recentFileIoItem.FileName, new BlockingCollection<IoMeterBuffer.MeterItem>());
-            collection.Add(recentFileIoItem.MeterItem);
+            collection.Add(recentFileIoItem.MeterItem, CancellationToken.None);
         }
     }
 }

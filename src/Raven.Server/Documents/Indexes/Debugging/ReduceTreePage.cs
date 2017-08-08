@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
     public class ReduceTreePage : IDisposable
     {
         private bool _disposed;
-        private bool _isLeaf;
+        private readonly bool _isLeaf;
 
         public ReduceTreePage()
         {

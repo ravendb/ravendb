@@ -58,7 +58,7 @@ namespace Raven.Server.Documents
             Collection = 5,
             Flags = 6,
             ChangeVector = 7,
-            LastModified = 8,
+            LastModified = 8
         }
 
         public enum DocumentsTable
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents
             ChangeVector = 4,
             LastModified = 5,
             Flags = 6,
-            TransactionMarker = 7,
+            TransactionMarker = 7
         }
 
         static DocumentsStorage()
@@ -97,7 +97,7 @@ namespace Raven.Server.Documents
             {
                 StartIndex = 0,
                 Count = 1,
-                IsGlobal = false,
+                IsGlobal = false
             });
 
             DocsSchema.DefineKey(new TableSchema.SchemaIndexDef
@@ -741,7 +741,7 @@ namespace Raven.Server.Documents
             if (LastDocument(context, collection, ref result) == false)
                 return null;
 
-            return TableValueToChangeVector(context,(int)DocumentsTable.ChangeVector, ref result.Reader);
+            return TableValueToChangeVector(context, (int)DocumentsTable.ChangeVector, ref result.Reader);
         }
 
         private bool LastDocument(DocumentsOperationContext context, string collection, ref Table.TableValueHolder result)
@@ -801,7 +801,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static Document TableValueToDocument(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var document = ParseDocument(context, ref tvr);
 #if DEBUG
@@ -842,7 +842,7 @@ namespace Raven.Server.Documents
             return result;
         }
 
-        private static DocumentTombstone TableValueToTombstone(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static DocumentTombstone TableValueToTombstone(JsonOperationContext context, ref TableValueReader tvr)
         {
             if (tvr.Pointer == null)
                 return null;
@@ -853,8 +853,8 @@ namespace Raven.Server.Documents
                 LowerId = TableValueToString(context, (int)TombstoneTable.LowerId, ref tvr),
                 Etag = TableValueToEtag((int)TombstoneTable.Etag, ref tvr),
                 DeletedEtag = TableValueToEtag((int)TombstoneTable.DeletedEtag, ref tvr),
-                Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int size),
-                TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out size),
+                Type = *(DocumentTombstone.TombstoneType*)tvr.Read((int)TombstoneTable.Type, out int _),
+                TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr)
             };
 
@@ -929,7 +929,7 @@ namespace Raven.Server.Documents
                     Id = id,
                     ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
-                    IsSystemDocument = collectionName.IsSystem,
+                    IsSystemDocument = collectionName.IsSystem
                 });
 
                 return new DeleteOperationResult
@@ -997,7 +997,7 @@ namespace Raven.Server.Documents
                     Id = id,
                     ChangeVector = changeVector,
                     CollectionName = collectionName.Name,
-                    IsSystemDocument = collectionName.IsSystem,
+                    IsSystemDocument = collectionName.IsSystem
                 });
 
                 return new DeleteOperationResult
@@ -1012,7 +1012,7 @@ namespace Raven.Server.Documents
                 // from the incoming replication or if we delete document that wasn't exist at the first place.
                 if (string.IsNullOrEmpty(expectedChangeVector) == false)
                     throw new ConcurrencyException($"Document {lowerId} does not exist, but delete was called with change vector '{expectedChangeVector}'. " +
-                                                   $"Optimistic concurrency violation, transaction will be aborted.");
+                                                   "Optimistic concurrency violation, transaction will be aborted.");
 
                 if (collectionName == null)
                 {

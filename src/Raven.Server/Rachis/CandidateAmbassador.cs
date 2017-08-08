@@ -129,7 +129,7 @@ namespace Raven.Server.Rachis
                                         TopologyId = topology.TopologyId,
                                         DebugSourceIdentifier = _engine.Tag,
                                         DebugDestinationIdentifier = _tag,
-                                        InitialMessageType = InitialMessageType.RequestVote,
+                                        InitialMessageType = InitialMessageType.RequestVote
                                     });
 
                                     RequestVoteResponse rvr;

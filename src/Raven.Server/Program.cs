@@ -183,7 +183,7 @@ namespace Raven.Server
                 Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
 
-            AssemblyLoadContext.Default.Unloading += (s) =>
+            AssemblyLoadContext.Default.Unloading += s =>
             {
                 if (ShutdownServerMre.WaitOne(0))
                     return; // already done

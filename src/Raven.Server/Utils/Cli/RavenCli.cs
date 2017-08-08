@@ -321,7 +321,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"%T", "UTC Time"},
                 new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
                 new[] {"%R", "Momentary Req/Sec"},
-                new[] {"label", "any label"},
+                new[] {"label", "any label"}
             };
 
             var msg = new StringBuilder();
@@ -934,7 +934,7 @@ namespace Raven.Server.Utils.Cli
                             {
                                 if (_consoleColoring == false)
                                 {
-                                    var str = "Restarting Server";
+                                    const string str = "Restarting Server";
                                     PrintBothToConsoleAndRemotePipe(str, this, Delimiter.RestartServer);
                                 }
                                 return true;
@@ -949,7 +949,7 @@ namespace Raven.Server.Utils.Cli
                             {
                                 if (_consoleColoring == false)
                                 {
-                                    var str = "Shutting down the server";
+                                    const string str = "Shutting down the server";
                                     PrintBothToConsoleAndRemotePipe(str, this, Delimiter.Shutdown);
                                 }
                                 return false;

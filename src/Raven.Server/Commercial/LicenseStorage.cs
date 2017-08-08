@@ -4,7 +4,6 @@ using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Voron;
 using Voron.Data.Tables;
 
@@ -12,8 +11,6 @@ namespace Raven.Server.Commercial
 {
     public class LicenseStorage
     {
-        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<LicenseStorage>(null);
-
         private StorageEnvironment _environment;
 
         private TransactionContextPool _contextPool;

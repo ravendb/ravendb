@@ -599,7 +599,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
-            writer.WriteString(statistics.DatabaseId.ToString());
+            writer.WriteString(statistics.DatabaseId);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Is64Bit));

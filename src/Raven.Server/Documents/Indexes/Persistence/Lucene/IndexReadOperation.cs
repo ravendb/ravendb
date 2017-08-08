@@ -410,7 +410,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},
-                        {additionalQuery, Occur.MUST},
+                        {additionalQuery, Occur.MUST}
                     };
             }
 

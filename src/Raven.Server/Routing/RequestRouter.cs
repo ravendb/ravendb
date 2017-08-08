@@ -65,7 +65,7 @@ namespace Raven.Server.Routing
             {
                 HttpContext = context,
                 RavenServer = _ravenServer,
-                RouteMatch = tryMatch.Match,
+                RouteMatch = tryMatch.Match
             };
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
@@ -93,7 +93,7 @@ namespace Raven.Server.Routing
 
             if (_ravenServer.Configuration.Security.AuthenticationEnabled)
             {
-                var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
+                var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.Name;
             }
@@ -223,7 +223,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        private void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
             if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 

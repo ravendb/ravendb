@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Replication
         {
             Tag,
             Etag,
-            Whitespace,
+            Whitespace
         }
          
         public static long GetEtagByNode(string changeVector, string nodeTag)
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 NodeTag = tag,
                                 Etag = etag,
-                                DbId = ParseDbId(changeVector, current + 1),
+                                DbId = ParseDbId(changeVector, current + 1)
                             });
                             start = current + 23;
                             current = start;
@@ -452,7 +452,7 @@ namespace Raven.Server.Documents.Replication
 
         private static void ThrowInvalidState(State state, string cv)
         {
-            throw new ArgumentOutOfRangeException(state.ToString() + " in " + cv);
+            throw new ArgumentOutOfRangeException(state + " in " + cv);
         }
     }
 }

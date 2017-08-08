@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Replication
                     InputCount = Stats.InputCount,
                     ArtificialDocumentSkipCount = Stats.ArtificialDocumentSkipCount,
                     SystemDocumentSkipCount = Stats.SystemDocumentSkipCount,
-                    ChangeVectorSkipCount = Stats.ChangeVectorSkipCount,
+                    ChangeVectorSkipCount = Stats.ChangeVectorSkipCount
                 },
                 Network = new OutgoingReplicationPerformanceStats.NetworkStats
                 {
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents.Replication
                     DocumentOutputCount = Stats.DocumentOutputCount,
                     DocumentOutputSizeInBytes = Stats.DocumentOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentTombstoneOutputCount = Stats.AttachmentTombstoneOutputCount,
-                    DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount,
+                    DocumentTombstoneOutputCount = Stats.DocumentTombstoneOutputCount
                 },
                 Errors = Stats.Errors
             };

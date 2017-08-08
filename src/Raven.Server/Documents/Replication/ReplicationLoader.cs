@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Replication
                 using (Database.ConfigurationStorage.ContextPool.AllocateOperationContext(out TransactionOperationContext configurationContext))
                 using (var writer = new BlittableJsonTextWriter(documentsOperationContext, tcpConnectionOptions.Stream))
                 using (documentsOperationContext.OpenReadTransaction())
-                using (var configTx = configurationContext.OpenReadTransaction())
+                using (configurationContext.OpenReadTransaction())
                 {
                     var changeVector = DocumentsStorage.GetDatabaseChangeVector(documentsOperationContext);
 
@@ -486,33 +486,17 @@ namespace Raven.Server.Documents.Replication
             foreach (var instance in outgoingChanged)
             {
                 if (_log.IsInfoEnabled)
-                    _log.Info($"Stopping replication to " + instance.Destination.FromString());
+                    _log.Info($"Stopping replication to {instance.Destination.FromString()}");
 
                 instance.Failed -= OnOutgoingSendingFailed;
                 instance.SuccessfulTwoWaysCommunication -= OnOutgoingSendingSucceeded;
                 instancesToDispose.Add(instance);
                 _outgoing.TryRemove(instance);
-                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination etag);
+                _lastSendEtagPerDestination.TryRemove(instance.Destination, out LastEtagPerDestination _);
                 _outgoingFailureInfo.TryRemove(instance.Destination, out ConnectionShutdownInfo info);
                 if (info != null)
                     _reconnectQueue.TryRemove(info);
             }
-        }
-
-        private void InitializeOutgoingReplications()
-        {
-            if (Destinations.Count == 0)
-            {
-                if (_log.IsInfoEnabled)
-                    _log.Info("Tried to initialize outgoing replications, but there is no replication document or destinations are empty. Nothing to do...");
-
-                Database.DocumentTombstoneCleaner?.Unsubscribe(this);
-                return;
-            }
-
-            Database.DocumentTombstoneCleaner.Subscribe(this);
-
-            StartOutgoingConnections(Destinations);
         }
 
         public DatabaseRecord LoadDatabaseRecord()

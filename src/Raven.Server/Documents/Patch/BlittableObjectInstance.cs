@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Patch
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly BlittableJsonReaderObject Blittable;
-        public Dictionary<string, (bool isDeleted, JsValue value)> Modifications;
+        public Dictionary<string, (bool IsDeleted, JsValue Value)> Modifications;
 
         public BlittableObjectInstance(Engine engine, BlittableJsonReaderObject parent) : base(engine)
         {
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch
         {
             JsValue returnedValue = engine.Array.Construct(Arguments.Empty);
             var valueAsArrayInstance = returnedValue.TryCast<ArrayInstance>();
-                        
+
             for (var i = 0; i < blittableArray.Length; i++)
             {
                 var indexAsString = i.ToString();
@@ -53,13 +53,13 @@ namespace Raven.Server.Documents.Patch
             Modifications[p] = (true, null);
             base.RemoveOwnProperty(p);
         }
-        
+
         public class BlittablePropertyDescriptor : PropertyDescriptor
         {
-            private Engine _engine;
+            private readonly Engine _engine;
             public readonly BlittableObjectInstance Self;
-            private string _name;
-            private JsValue LastKnownValue;
+            private readonly string _name;
+            private JsValue _lastKnownValue;
 
             public BlittablePropertyDescriptor(Engine engine, BlittableObjectInstance self, string name)
             {
@@ -67,8 +67,8 @@ namespace Raven.Server.Documents.Patch
                 Self = self;
                 _name = name;
 
-                Get = new BlittableGetterFunctionInstance(engine, this, name);
-                Set = new BlittableSetterFunctionInstance(engine, this, name);
+                Get = new BlittableGetterFunctionInstance(engine, this);
+                Set = new BlittableSetterFunctionInstance(engine, this);
                 Writable = true;
                 Configurable = true;
             }
@@ -77,8 +77,8 @@ namespace Raven.Server.Documents.Patch
             {
                 get
                 {
-                    LastKnownValue = GetValue();
-                    return LastKnownValue;
+                    _lastKnownValue = GetValue();
+                    return _lastKnownValue;
                 }
                 set
                 {
@@ -88,14 +88,14 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetValue()
             {
-                if (LastKnownValue != null)
-                    return LastKnownValue;
+                if (_lastKnownValue != null)
+                    return _lastKnownValue;
 
                 if (Self.Modifications != null && Self.Modifications.TryGetValue(_name, out var valTuple))
                 {
-                    if (valTuple.isDeleted)
+                    if (valTuple.IsDeleted)
                         return JsValue.Undefined;
-                    return valTuple.value;
+                    return valTuple.Value;
                 }
 
                 var propertyIndex = Self.Blittable.GetPropertyIndex(_name);
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.Patch
 
                         //returnedValue = new BlittableObjectArrayInstance(_engine, (BlittableJsonReaderArray)propertyDetails.Value);
 
-                        returnedValue = BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(_engine,propertyDetails.Value as BlittableJsonReaderArray);
+                        returnedValue = CreateArrayInstanceBasedOnBlittableArray(_engine, propertyDetails.Value as BlittableJsonReaderArray);
                         break;
                     default:
                         throw new ArgumentOutOfRangeException(propertyDetails.Token.ToString());
@@ -155,20 +155,18 @@ namespace Raven.Server.Documents.Patch
 
                 //BlittableOjectInstanceOperationScope.ToBlittableValue(newVal, string.Empty, true, token, originalValue)
                 // todo: not sure that string.Empty here works fine
-                LastKnownValue = newVal;
+                _lastKnownValue = newVal;
                 Enumerable = newVal.IsArray() || newVal.IsObject();
                 Self.Modifications[_name] = (false, newVal);
             }
 
             public class BlittableGetterFunctionInstance : FunctionInstance
             {
-                private BlittablePropertyDescriptor _descriptor;
-                private string _name;
+                private readonly BlittablePropertyDescriptor _descriptor;
 
-                public BlittableGetterFunctionInstance(Engine engine, BlittablePropertyDescriptor descriptor, string name) : base(engine, null, null, false)
+                public BlittableGetterFunctionInstance(Engine engine, BlittablePropertyDescriptor descriptor) : base(engine, null, null, false)
                 {
-                    this._descriptor = descriptor;
-                    this._name = name;
+                    _descriptor = descriptor;
                 }
 
                 public override JsValue Call(JsValue thisObject, JsValue[] arguments)
@@ -181,13 +179,11 @@ namespace Raven.Server.Documents.Patch
 
             public class BlittableSetterFunctionInstance : FunctionInstance
             {
-                private BlittablePropertyDescriptor _descriptor;
-                private string _name;
+                private readonly BlittablePropertyDescriptor _descriptor;
 
-                public BlittableSetterFunctionInstance(Engine engine, BlittablePropertyDescriptor descriptor, string name) : base(engine, null, null, false)
+                public BlittableSetterFunctionInstance(Engine engine, BlittablePropertyDescriptor descriptor) : base(engine, null, null, false)
                 {
-                    this._descriptor = descriptor;
-                    this._name = name;
+                    _descriptor = descriptor;
                 }
 
                 public override JsValue Call(JsValue thisObject, JsValue[] arguments)
@@ -203,10 +199,10 @@ namespace Raven.Server.Documents.Patch
 
     public class BlittableArrayPropertyDescriptor : PropertyDescriptor
     {
-        private Engine _engine;
-        private int _index;
+        private readonly Engine _engine;
+        private readonly int _index;
         public JsValue LastKnownValue { get; set; }
-        private BlittableJsonReaderArray _parent;
+        private readonly BlittableJsonReaderArray _parent;
 
         public BlittableArrayPropertyDescriptor(Engine engine, BlittableJsonReaderArray parent, int index)
         {
@@ -215,17 +211,17 @@ namespace Raven.Server.Documents.Patch
             _parent = parent;
             // todo: cleanup code here, pretty sure we won't need the _get and _set fields                
             Get = new BlittableGetterFunctionInstance(engine, this, index);
-            Set = new BlittableSetterFunctionInstance(engine, this, index);
-            this.Writable = true;
-            this.Configurable = true;
+            Set = new BlittableSetterFunctionInstance(engine, this);
+            Writable = true;
+            Configurable = true;
         }
 
         public BlittableArrayPropertyDescriptor(Engine engine, BlittableJsonReaderArray parent, int index, JsValue value, bool? writable, bool? enumerable, bool? configurable) : base(value, writable, enumerable, configurable)
         {
             _parent = parent;
             Get = new BlittableGetterFunctionInstance(engine, this, index);
-            Set = new BlittableSetterFunctionInstance(engine, this, index);
-            this.Writable = true;
+            Set = new BlittableSetterFunctionInstance(engine, this);
+            Writable = true;
         }
 
         public override JsValue Value
@@ -283,12 +279,12 @@ namespace Raven.Server.Documents.Patch
 
         public class BlittableGetterFunctionInstance : FunctionInstance
         {
-            private int _index;
-            private BlittableArrayPropertyDescriptor _descriptor;
+            private readonly int _index;
+            private readonly BlittableArrayPropertyDescriptor _descriptor;
 
             public BlittableGetterFunctionInstance(Engine engine, BlittableArrayPropertyDescriptor descriptor, int index) : base(engine, null, null, false)
             {
-                this._index = index;
+                _index = index;
                 _descriptor = descriptor;
             }
 
@@ -302,12 +298,10 @@ namespace Raven.Server.Documents.Patch
 
         public class BlittableSetterFunctionInstance : FunctionInstance
         {
-            private int _index;
-            private BlittableArrayPropertyDescriptor _descriptor;
+            private readonly BlittableArrayPropertyDescriptor _descriptor;
 
-            public BlittableSetterFunctionInstance(Engine engine, BlittableArrayPropertyDescriptor descriptor, int index) : base(engine, null, null, false)
+            public BlittableSetterFunctionInstance(Engine engine, BlittableArrayPropertyDescriptor descriptor) : base(engine, null, null, false)
             {
-                _index = index;
                 _descriptor = descriptor;
             }
 

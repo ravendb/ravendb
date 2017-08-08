@@ -178,7 +178,7 @@ namespace Raven.Server.Documents.Queries.Results
                 if (fieldType == null)
                     fieldType = GetFieldType(field, indexDocument);
 
-                var fieldValue = ConvertType(indexDocument, field, fieldType, state);
+                var fieldValue = ConvertType(field, fieldType, state);
 
                 if (fieldType.IsArray)
                 {
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents.Queries.Results
             return new FieldType
             {
                 IsArray = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.IsArrayFieldSuffix) != null,
-                IsJson = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null,
+                IsJson = indexDocument.GetField(field.Name + LuceneDocumentConverterBase.ConvertToJsonSuffix) != null
             };
         }
 
@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.Queries.Results
             public bool IsJson;
         }
 
-        private object ConvertType(Lucene.Net.Documents.Document indexDocument, IFieldable field, FieldType fieldType, IState state)
+        private object ConvertType(IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
                 throw new NotImplementedException("Support for binary values");

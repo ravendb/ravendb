@@ -11,12 +11,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
     {
         public RavenStandardAnalyzer(Version matchVersion) : base(matchVersion)
         {
-            this.matchVersion = matchVersion;
+            this._matchVersion = matchVersion;
         }
 
         public override TokenStream TokenStream(string fieldName, TextReader reader)
         {
-            StandardTokenizer tokenStream = new StandardTokenizer(matchVersion, reader) { MaxTokenLength = DEFAULT_MAX_TOKEN_LENGTH };
+            StandardTokenizer tokenStream = new StandardTokenizer(_matchVersion, reader) { MaxTokenLength = DEFAULT_MAX_TOKEN_LENGTH };
             var res = new RavenStandardFilter(tokenStream);
             PreviousTokenStream = res;
             return res;
@@ -36,6 +36,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
             return TokenStream(fieldName, reader);
         }
 
-        private readonly Version matchVersion;
+        private readonly Version _matchVersion;
     }
 }

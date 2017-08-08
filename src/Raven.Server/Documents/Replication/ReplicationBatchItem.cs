@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication
                 Id = doc.Id,
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
-                LastModifiedTicks = doc.LastModified.Ticks,
+                LastModifiedTicks = doc.LastModified.Ticks
             };
         }
 
@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Replication
                 Etag = doc.Etag,
                 Id = doc.LowerId,
                 TransactionMarker = doc.TransactionMarker,
-                ChangeVector = doc.ChangeVector,
+                ChangeVector = doc.ChangeVector
             };
 
             switch (doc.Type)
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Replication
                 ContentType = attachment.ContentType,
                 Base64Hash = attachment.Base64Hash,
                 Stream = attachment.Stream,
-                TransactionMarker = attachment.TransactionMarker,
+                TransactionMarker = attachment.TransactionMarker
             };
         }
 
@@ -117,7 +117,7 @@ namespace Raven.Server.Documents.Replication
             Attachment = 3,
             AttachmentStream = 4,
             AttachmentTombstone = 5,
-            RevisionTombstone = 6,
+            RevisionTombstone = 6
         }
     }
 }

@@ -5,13 +5,13 @@ namespace Raven.Server.Utils
 {
     public class PartialStream : Stream
     {
-        private readonly Stream inner;
-        private int size;
+        private readonly Stream _inner;
+        private int _size;
 
         public PartialStream(Stream inner, int size)
         {
-            this.inner = inner;
-            this.size = size;
+            _inner = inner;
+            _size = size;
         }
 
         public override void Flush()
@@ -31,11 +31,11 @@ namespace Raven.Server.Utils
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (size == 0)
+            if (_size == 0)
                 return 0;
-            var actualCount = Math.Min(size, count);
-            var read = inner.Read(buffer, offset, actualCount);
-            size -= read;
+            var actualCount = Math.Min(_size, count);
+            var read = _inner.Read(buffer, offset, actualCount);
+            _size -= read;
             return read;
         }
 
@@ -72,11 +72,11 @@ namespace Raven.Server.Utils
 
         protected override void Dispose(bool disposing)
         {
-            while (size > 0)
+            while (_size > 0)
             {
-                if (inner.ReadByte() == -1)
+                if (_inner.ReadByte() == -1)
                     break;
-                size--;
+                _size--;
             }
             base.Dispose(disposing);
         }

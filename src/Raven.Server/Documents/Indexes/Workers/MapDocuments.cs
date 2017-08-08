@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Indexes.Workers
                     var lastEtag = lastMappedEtag;
                     var count = 0;
                     var resultsCount = 0;
-                    var pageSize = int.MaxValue;
+                    const int pageSize = int.MaxValue;
 
                     var sw = new Stopwatch();
                     IndexWriteOperation indexWriter = null;
@@ -233,8 +233,8 @@ namespace Raven.Server.Documents.Indexes.Workers
 
             if (ShouldReleaseTransactionBecauseFlushIsWaiting(stats))
                 return false;
-           
-            if (_index.CanContinueBatch(stats,documentsContext, indexingContext) == false)
+
+            if (_index.CanContinueBatch(stats, documentsContext, indexingContext) == false)
                 return false;
 
             return true;

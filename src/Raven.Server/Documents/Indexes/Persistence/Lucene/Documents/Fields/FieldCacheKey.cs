@@ -9,11 +9,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 {
     public sealed class FieldCacheKey
     {
-        internal readonly string name;
-        internal readonly Field.Index? index;
-        internal readonly Field.Store store;
-        internal readonly Field.TermVector termVector;
-        internal readonly int[] multipleItemsSameField;
+        internal readonly string _name;
+        internal readonly Field.Index? _index;
+        internal readonly Field.Store _store;
+        internal readonly Field.TermVector _termVector;
+        internal readonly int[] _multipleItemsSameField;
 
         private int _hashKey;
 
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             get
             {
                 if (_hashKey == 0)
-                    _hashKey = GetHashCode(name, index, store, termVector, multipleItemsSameField);
+                    _hashKey = GetHashCode(_name, _index, _store, _termVector, _multipleItemsSameField);
 
                 return _hashKey;
             }
@@ -32,27 +32,27 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
 
         public FieldCacheKey(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
-            this.name = name;
-            this.index = index;
-            this.store = store;
-            this.termVector = termVector;
-            this.multipleItemsSameField = multipleItemsSameField;
+            _name = name;
+            _index = index;
+            _store = store;
+            _termVector = termVector;
+            _multipleItemsSameField = multipleItemsSameField;
         }
-        
+
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
         {
             // We are thinking it is possible to have collisions. This may not be true ever!
-            if (this.index != index || this.store != store || this.termVector != termVector || !string.Equals(this.name, name))
+            if (_index != index || _store != store || _termVector != termVector || !string.Equals(_name, name))
                 return false;
 
-            if (this.multipleItemsSameField.Length != multipleItemsSameField.Length)
+            if (_multipleItemsSameField.Length != multipleItemsSameField.Length)
                 return false;
 
             // PERF: In this case we dont cache the length to allow the JIT to figure out it can evict the bound checks.
             bool result = true;
-            for (int i = 0; i < this.multipleItemsSameField.Length; i++)
+            for (int i = 0; i < _multipleItemsSameField.Length; i++)
             {
-                if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
+                if (_multipleItemsSameField[i] != multipleItemsSameField[i])
                 {
                     result = false;
                     break;
@@ -65,17 +65,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
         public bool IsSame(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, List<int> multipleItemsSameField)
         {
             // We are thinking it is possible to have collisions. This may not be true ever!
-            if (this.index != index || this.store != store || this.termVector != termVector || !string.Equals(this.name, name))
+            if (_index != index || _store != store || _termVector != termVector || !string.Equals(_name, name))
                 return false;
 
-            if (this.multipleItemsSameField.Length != multipleItemsSameField.Count)
+            if (_multipleItemsSameField.Length != multipleItemsSameField.Count)
                 return false;
 
-            int count = this.multipleItemsSameField.Length;
+            int count = _multipleItemsSameField.Length;
             bool result = true;
             for (int i = 0; i < count; i++)
             {
-                if (this.multipleItemsSameField[i] != multipleItemsSameField[i])
+                if (_multipleItemsSameField[i] != multipleItemsSameField[i])
                 {
                     result = false;
                     break;

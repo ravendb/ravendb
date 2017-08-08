@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     var indexField = new IndexField
                     {
                         Name = field.Name,
-                        Storage = FieldStorage.No,
+                        Storage = FieldStorage.No
                     };
                     
                     if (field.IsFullTextSearch)

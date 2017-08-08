@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
 
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;            
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
@@ -98,11 +98,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         }
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext).ToList();
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
-                        
+
                         //this means no databases are defined in the cluster
                         //in this case just output server-wide endpoints from all cluster nodes
                         if (databaseNames.Count == 0)
-                        {                            
+                        {
                             foreach (var tagWithUrl in topology.AllNodes)
                             {
                                 if (tagWithUrl.Value.Contains(ServerStore.NodeHttpServerUrl))
@@ -111,17 +111,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 try
                                 {
                                     await WriteDebugInfoPackageForNodeAsync(
-                                        jsonOperationContext, 
-                                        archive, 
-                                        tag: tagWithUrl.Key, 
+                                        jsonOperationContext,
+                                        archive,
+                                        tag: tagWithUrl.Key,
                                         url: tagWithUrl.Value,
                                         certificate: Server.ServerCertificateHolder.Certificate,
-                                        databaseNames:null);
+                                        databaseNames: null);
                                 }
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{tagWithUrl.Key}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName);
+                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
                                 }
                             }
                         }
@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName);
+                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
                                 }
                             }
                         }
@@ -156,14 +156,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
-        }       
+        }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
-            JsonOperationContext jsonOperationContext, 
-            ZipArchive archive, 
-            string tag, 
-            string url, 
-            IEnumerable<string> databaseNames, 
+            JsonOperationContext jsonOperationContext,
+            ZipArchive archive,
+            string tag,
+            string url,
+            IEnumerable<string> databaseNames,
             X509Certificate2 certificate)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
@@ -203,7 +203,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext, 
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext,
             string url, IEnumerable<string> databaseNames, X509Certificate2 certificate)
         {
             var bodyJson = new DynamicJsonValue
@@ -223,14 +223,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
 
                 var rawStreamCommand = new GetRawStreamResultCommand("admin/debug/remote-cluster-info-package", ms);
-                
+
                 await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
                 rawStreamCommand.Result.Position = 0;
                 return rawStreamCommand.Result;
             }
         }
 
-        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix = "server-wide")
+        private static async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix = "server-wide")
         {
             //theoretically this could be parallelized,
             //however ZipArchive allows only one archive entry to be open concurrently
@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryRoute);
+                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryRoute);
                 }
             }
         }
@@ -260,7 +260,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
-            {                
+            {
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
@@ -277,7 +277,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         private static bool IsDatabaseBeingDeleted(string tag, DatabaseRecord databaseRecord)
-        {            
+        {
             return databaseRecord?.DeletionInProgress != null &&
                                          databaseRecord.DeletionInProgress.TryGetValue(tag, out DeletionInProgressStatus deletionInProgress) &&
                                          deletionInProgress != DeletionInProgressStatus.No;
@@ -287,7 +287,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var endpointParameters = new Dictionary<string, StringValues>
             {
-                {"database", new StringValues(databaseName)},
+                {"database", new StringValues(databaseName)}
             };
 
             foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))
@@ -308,7 +308,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,path ?? databaseName);
+                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, path ?? databaseName);
                 }
             }
         }
@@ -319,7 +319,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var clusterTopology = ServerStore.GetClusterTopology(transactionOperationContext);
             foreach (var databaseName in databaseNames)
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);            
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
 
                 var nodeUrlsAndTags = databaseRecord.Topology.AllNodes.Select(tag => (clusterTopology.GetUrlFromTag(tag), tag));
                 foreach (var urlAndTag in nodeUrlsAndTags)

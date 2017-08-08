@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers
             var operationCancelToken = CreateOperationToken();
             var id = GetLongQueryString("id");
 
-            await Database.Operations.AddOperation(Database,"Bulk Insert", Operations.Operations.OperationType.BulkInsert,
+            await Database.Operations.AddOperation(Database, "Bulk Insert", Operations.Operations.OperationType.BulkInsert,
                 progress => DoBulkInsert(progress, operationCancelToken.Token),
                 id,
                 operationCancelToken
@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.Handlers
             catch (Exception e)
             {
                 HttpContext.Response.Headers["Connection"] = "close";
-                throw new InvalidOperationException("Failed to process bulk insert " + progress.ToString(), e);
+                throw new InvalidOperationException("Failed to process bulk insert " + progress, e);
             }
         }
 

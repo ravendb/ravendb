@@ -13,14 +13,8 @@ namespace Raven.Server.Config.Settings
         public static readonly Type TypeOf = typeof(TimeSetting);
         public static readonly Type NullableTypeOf = typeof(TimeSetting?);
 
-        private readonly long _value;
-        private readonly TimeUnit _unit;
-
         public TimeSetting(long value, TimeUnit unit)
         {
-            _value = value;
-            _unit = unit;
-
             if (value < 0)
             {
                 if (value != -1)

@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers
                                     context.Write(writer, new DynamicJsonValue
                                     {
                                         ["Type"] = "Error",
-                                        ["Exception"] = ex.ToString(),
+                                        ["Exception"] = ex.ToString()
                                     });
                                 }
 
