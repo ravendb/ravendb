@@ -51,10 +51,8 @@ namespace Raven.Client.ServerWide.Commands
 
         public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            var outputStream = new MemoryStream();
-            stream.CopyTo(outputStream);
-
-            Result = outputStream;
+            Result = new MemoryStream();
+            stream.CopyTo(Result);
         }
 
         public void Dispose()
@@ -63,6 +61,8 @@ namespace Raven.Client.ServerWide.Commands
             {
                 _headerStream?.Dispose();
             }
+
+            Result.Dispose();
         }
     }
 }
