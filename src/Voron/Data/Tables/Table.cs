@@ -573,7 +573,7 @@ namespace Voron.Data.Tables
 
             if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: _tablePageAllocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
