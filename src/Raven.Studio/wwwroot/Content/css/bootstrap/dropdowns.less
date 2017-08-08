@@ -86,6 +86,11 @@
 
     white-space: nowrap; // prevent links from randomly breaking onto new lines
 
+    &.disabled {
+        opacity: .5;
+        background-color: @gray-darker;
+    }
+
     &:not(.text-primary):not(.text-info):not(.text-warning):not(.text-danger):not(.text-success) {
         color: @dropdown-link-color;
     }
