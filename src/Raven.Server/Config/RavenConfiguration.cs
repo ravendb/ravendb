@@ -60,6 +60,8 @@ namespace Raven.Server.Config
 
         public TombstoneConfiguration Tombstones { get; }
 
+        public SubscriptionConfiguration Subscriptions { get; }
+
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
         protected IConfigurationRoot Settings { get; set; }
@@ -95,6 +97,7 @@ namespace Raven.Server.Config
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
             Tombstones = new TombstoneConfiguration();
+            Subscriptions = new SubscriptionConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -154,6 +157,7 @@ namespace Raven.Server.Config
             PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 

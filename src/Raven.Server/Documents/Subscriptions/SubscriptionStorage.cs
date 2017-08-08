@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.ServerWide;
@@ -25,12 +26,15 @@ namespace Raven.Server.Documents.Subscriptions
         public static TimeSpan TwoMinutesTimespan = TimeSpan.FromMinutes(2);
         private readonly ConcurrentDictionary<long, SubscriptionConnectionState> _subscriptionConnectionStates = new ConcurrentDictionary<long, SubscriptionConnectionState>();
         private readonly Logger _logger;
+        private SemaphoreSlim _concurrentConnectionsSemiSemaphore;
 
         public SubscriptionStorage(DocumentDatabase db, ServerStore serverStore)
         {
             _db = db;
             _serverStore = serverStore;
             _logger = LoggingSource.Instance.GetLogger<SubscriptionStorage>(db.Name);
+
+            _concurrentConnectionsSemiSemaphore = new SemaphoreSlim(db.Configuration.Subscriptions.ConcurrentConnections);
         }
 
         public void Dispose()
@@ -39,6 +43,7 @@ namespace Raven.Server.Documents.Subscriptions
             foreach (var state in _subscriptionConnectionStates.Values)
             {
                 aggregator.Execute(state.Dispose);
+                aggregator.Execute(_concurrentConnectionsSemiSemaphore.Dispose);
             }
             aggregator.ThrowIfNeeded();
         }
@@ -352,6 +357,16 @@ namespace Raven.Server.Documents.Subscriptions
                 return Task.CompletedTask;
 
             return state.ConnectionInUse.WaitAsync();
+        }
+
+        public bool TryEnterSemaphore()
+        {
+            return _concurrentConnectionsSemiSemaphore.Wait(0);
+        }
+
+        public void ReleaseSubscriptionsSemaphore()
+        {
+            _concurrentConnectionsSemiSemaphore.Release();
         }
     }
 }
