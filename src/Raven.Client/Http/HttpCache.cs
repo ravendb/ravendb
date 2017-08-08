@@ -19,6 +19,9 @@ namespace Raven.Client.Http
         private long _totalSize;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
+        /// <summary>
+        /// This value should not be used outside of tests: fetching it locks the cache.
+        /// </summary>
         public int NumberOfItems => _items.Count;
 
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
@@ -226,10 +229,12 @@ namespace Raven.Client.Http
 
         public void Clear()
         {
-            foreach (var key in _items.Keys)
+            // PERF: _items.Values locks the entire dictionary to produce a
+            // snapshot. This does not lock.
+            foreach (var item in _items)
             {
                 HttpCacheItem value;
-                if (_items.TryRemove(key, out value) == false)
+                if (_items.TryRemove(item.Key, out value) == false)
                     continue;
 
                 value.Dispose();
@@ -238,9 +243,9 @@ namespace Raven.Client.Http
 
         public void Dispose()
         {
-            foreach (var item in _items.Values)
+            foreach (var item in _items)
             {
-                item.Dispose();
+                item.Value.Dispose();
             }
             _unmanagedBuffersPool.Dispose();
         }

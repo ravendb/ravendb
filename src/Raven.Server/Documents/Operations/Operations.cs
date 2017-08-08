@@ -236,15 +236,9 @@ namespace Raven.Server.Documents.Operations
             _completed.Clear();
         }
 
-        public IEnumerable<Operation> GetAll()
-        {
-            return _active.Values.Union(_completed.Values);
-        }
+        public IEnumerable<Operation> GetAll() => _active.Values.Union(_completed.Values);
 
-        public ICollection<Operation> GetActive()
-        {
-            return _active.Values;
-        }
+        public ICollection<Operation> GetActive() => _active.Values;
 
         public class Operation
         {

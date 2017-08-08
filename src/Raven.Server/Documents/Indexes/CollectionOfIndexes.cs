@@ -95,6 +95,7 @@ namespace Raven.Server.Documents.Indexes
 
         public IEnumerator<Index> GetEnumerator()
         {
+            // This doesn't happen often enough for this lock to hurt
             return _indexesByEtag.Values.GetEnumerator();
         }
 
@@ -103,6 +104,9 @@ namespace Raven.Server.Documents.Indexes
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// This value should be used sparingly: fetching it locks the cache.
+        /// </summary>
         public int Count => _indexesByEtag.Count;
     }
 }

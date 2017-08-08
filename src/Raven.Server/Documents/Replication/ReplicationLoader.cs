@@ -101,10 +101,14 @@ namespace Raven.Server.Documents.Replication
 
         private readonly Logger _log;
 
-        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Values.Select(x => x.ConnectionInfo);
+        // PERF: _incoming locks if you do _incoming.Values. Using .Select
+        // directly and fetching the Value avoids this problem.
+        public IEnumerable<IncomingConnectionInfo> IncomingConnections => _incoming.Select(x => x.Value.ConnectionInfo);
         public IEnumerable<ReplicationNode> OutgoingConnections => _outgoing.Select(x => x.Node);
         public IEnumerable<OutgoingReplicationHandler> OutgoingHandlers => _outgoing;
-        public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Values;
+        // PERF: _incoming locks if you do _incoming.Values. Using .Select
+        // directly and fetching the Value avoids this problem.
+        public IEnumerable<IncomingReplicationHandler> IncomingHandlers => _incoming.Select(x => x.Value);
 
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks =
             new ConcurrentQueue<TaskCompletionSource<object>>();
@@ -598,8 +602,12 @@ namespace Raven.Server.Documents.Replication
         private void OnIncomingReceiveSucceeded(IncomingReplicationHandler instance)
         {
             _incomingLastActivityTime.AddOrUpdate(instance.ConnectionInfo, DateTime.UtcNow, (_, __) => DateTime.UtcNow);
-            foreach (var handler in _incoming.Values)
+
+            // PERF: _incoming locks if you do _incoming.Values. Using .Select
+            // directly and fetching the Value avoids this problem.
+            foreach (var kv in _incoming)
             {
+                var handler = kv.Value;
                 if (handler != instance)
                     handler.OnReplicationFromAnotherSource();
             }

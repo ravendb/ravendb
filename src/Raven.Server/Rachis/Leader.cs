@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,6 +13,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Sparrow.Collections.LockFree;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -591,7 +591,7 @@ namespace Raven.Server.Rachis
             return tcs.Task;
         }
 
-        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();
+        public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {

@@ -29,6 +29,9 @@ namespace Raven.Client.Util
             _locks = new ConcurrentDictionary<string, object>(comparer);
         }
 
+        /// <summary>
+        /// This locks the entire dictionary. Use carefully.
+        /// </summary>
         public IEnumerable<TVal> Values => _items.Values;
 
         public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
@@ -51,6 +54,10 @@ namespace Raven.Client.Util
             }
         }
 
+
+        /// <summary>
+        /// This locks the entire dictionary. Use carefully.
+        /// </summary>
         public List<TVal> ValuesSnapshot
         {
             get
