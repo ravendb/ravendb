@@ -38,14 +38,16 @@ namespace Voron.Data.BTrees
 
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
+        private readonly bool _isIndexTree;
         private readonly NewPageAllocator _newPageAllocator;
 
         public LowLevelTransaction Llt => _llt;
 
-        private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, NewPageAllocator newPageAllocator = null)
+        private Tree(LowLevelTransaction llt, Transaction tx, long root, Slice name, bool isIndexTree, NewPageAllocator newPageAllocator)
         {
             _llt = llt;
             _tx = tx;
+            _isIndexTree = isIndexTree;
             Name = name;
             _newPageAllocator = newPageAllocator;
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2); 
@@ -73,9 +75,9 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null)
+            bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            return new Tree(llt, tx, header->RootPageNumber, name, newPageAllocator)
+            return new Tree(llt, tx, header->RootPageNumber, name, isIndexTree, newPageAllocator)
             {
                 _state =
                 {
@@ -92,7 +94,7 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null)
+            bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();
@@ -101,7 +103,7 @@ namespace Voron.Data.BTrees
 
             TreePage newRootPage = PrepareTreePage(TreePageFlags.Leaf, 1, newPage);
 
-            var tree = new Tree(llt, tx, newRootPage.PageNumber, name, newPageAllocator)
+            var tree = new Tree(llt, tx, newRootPage.PageNumber, name, isIndexTree, newPageAllocator)
             {
                 _state =
                 {
@@ -910,12 +912,32 @@ namespace Voron.Data.BTrees
             else
             {
                 if (_newPageAllocator != null)
+                {
+                    if (_isIndexTree == false)
+                        ThrowAttemptToFreePageToNewPageAllocator(Name, p.PageNumber);
+
                     _newPageAllocator.FreePage(p.PageNumber);
+                }
                 else
+                {
+                    if (_isIndexTree)
+                        ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, p.PageNumber);
+
                     _llt.FreePage(p.PageNumber);
+                }
 
                 State.RecordFreedPage(p, 1);
             }
+        }
+
+        public static void ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Slice treeName, long pageNumber)
+        {
+            throw new InvalidOperationException($"Attempting to free page #{pageNumber} of '{treeName}' index tree to the free space handling. The page was allocated by {nameof(NewPageAllocator)} so it needs to be returned there.");
+        }
+
+        public static void ThrowAttemptToFreePageToNewPageAllocator(Slice treeName, long pageNumber)
+        {
+            throw new InvalidOperationException($"Attempting to free page #{pageNumber} of '{treeName}' tree to {nameof(NewPageAllocator)} while it wasn't allocated by it");
         }
 
         public void Delete(Slice key)
@@ -1242,9 +1264,19 @@ namespace Voron.Data.BTrees
             foreach (var page in fixedSizeTree.AllPages())
             {
                 if (_newPageAllocator != null)
+                {
+                    if (_isIndexTree == false)
+                        ThrowAttemptToFreePageToNewPageAllocator(Name, page);
+
                     _newPageAllocator.FreePage(page);
+                }
                 else
+                {
+                    if (_isIndexTree)
+                        ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, page);
+
                     _llt.FreePage(page);
+                }
             }
             _fixedSizeTrees.Remove(key);
             Delete(key);

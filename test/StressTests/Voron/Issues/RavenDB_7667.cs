@@ -9,7 +9,7 @@ namespace StressTests.Voron.Issues
     public class RavenDB_7667 : RavenTestBase
     {
         [Fact]
-        public void CanStoreAnonymousObject()
+        public void IndexTreeNeedsToReturnPageToAllocatorInsteadOfFreeSpaceHandling()
         {
             using (var store = GetDocumentStore())
             {

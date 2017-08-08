@@ -244,9 +244,19 @@ namespace Voron.Data.BTrees
                     return;
                 _tx.TryRemoveMultiValueTree(this, key);
                 if (_newPageAllocator != null)
+                {
+                    if (_isIndexTree == false)
+                        ThrowAttemptToFreePageToNewPageAllocator(Name, tree.State.RootPageNumber);
+
                     _newPageAllocator.FreePage(tree.State.RootPageNumber);
+                }
                 else
+                {
+                    if (_isIndexTree)
+                        ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, tree.State.RootPageNumber);
+
                     _llt.FreePage(tree.State.RootPageNumber);
+                }
 
                 Delete(key);
             }

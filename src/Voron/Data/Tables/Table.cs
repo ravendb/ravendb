@@ -561,13 +561,13 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), newPageAllocator: _globalPageAllocator);
+                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
 
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isIndexTree: true);
         }
 
-        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
+        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isIndexTree = false)
         {
             if (_fixedSizeTreeCache.TryGetValue(parent.Name, out FastDictionary<Slice, FixedSizeTree, SliceStructComparer> cache) == false)
             {
@@ -577,7 +577,7 @@ namespace Voron.Data.Tables
 
             if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, newPageAllocator: _tablePageAllocator);
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
@@ -633,7 +633,7 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        internal Tree GetTree(Slice name)
+        internal Tree GetTree(Slice name, bool isIndexTree)
         {
             if (_treesBySliceCache.TryGetValue(name, out Tree tree))
                 return tree;
@@ -642,7 +642,7 @@ namespace Voron.Data.Tables
             if (treeHeader == null)
                 throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, newPageAllocator: _tablePageAllocator);
+            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
             _treesBySliceCache[name] = tree;
 
             return tree;
@@ -651,8 +651,8 @@ namespace Voron.Data.Tables
         internal Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name, newPageAllocator: _globalPageAllocator);
-            return GetTree(idx.Name);
+                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: _globalPageAllocator);
+            return GetTree(idx.Name, true);
         }
 
         public bool DeleteByKey(Slice key)

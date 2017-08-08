@@ -52,14 +52,14 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null)
+        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
-            return ReadTree(treeNameSlice, type, newPageAllocator);
+            return ReadTree(treeNameSlice, type, isIndexTree, newPageAllocator);
         }
 
-        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null)
+        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             EnsureTrees();
 
@@ -73,7 +73,7 @@ namespace Voron.Impl
                 if (header->RootObjectType != type)
                     ThrowInvalidTreeType(treeName, type, header);
 
-                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, newPageAllocator);
+                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, isIndexTree, newPageAllocator);
 
                 if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
                     tree.InitializeCompression();
@@ -331,16 +331,16 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
-            return CreateTree(treeNameSlice, type, flags, newPageAllocator);
+            return CreateTree(treeNameSlice, type, flags, isIndexTree, newPageAllocator);
         }
 
-        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null)
+        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            Tree tree = ReadTree(name, type, newPageAllocator);
+            Tree tree = ReadTree(name, type, isIndexTree, newPageAllocator);
             if (tree != null)
                 return tree;
 
@@ -427,7 +427,7 @@ namespace Voron.Impl
             return val->RootObjectType;
         }
 
-        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, NewPageAllocator newPageAllocator = null)
+        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             if (_globalFixedSizeTree == null)
                 _globalFixedSizeTree = new FastDictionary<Slice, FixedSizeTree, SliceStructComparer>(SliceStructComparer.Instance);
@@ -435,7 +435,7 @@ namespace Voron.Impl
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
             {
-                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, newPageAllocator: newPageAllocator);
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree, newPageAllocator: newPageAllocator);
                 _globalFixedSizeTree[tree.Name] = tree;
             }
             return tree;
