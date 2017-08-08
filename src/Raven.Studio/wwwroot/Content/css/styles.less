@@ -59,7 +59,7 @@ h3 {
 }
 
 strong {
-    color: lighten(@text-color,8%);
+    color: @gray-lighter;
 }
 
 kbd {
@@ -1036,11 +1036,11 @@ pre {
         font-size: 13px;
 
         dt {
-            width: 80px;
+            width: 90px;
         }
 
         dd {
-            margin-left: 90px;
+            margin-left: 90px + @grid-gutter-width/2;
         }
     }
 }
@@ -1472,7 +1472,6 @@ pre {
         transform-origin: top left;
         content: attr(data-state-text);
         text-transform: uppercase;
-        white-space: nowrap;
     }
 }
 

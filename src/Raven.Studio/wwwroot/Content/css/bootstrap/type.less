@@ -210,6 +210,8 @@ dd {
 .dl-horizontal {
   dd {
     &:extend(.clearfix all); // Clear the floated `dt` if an empty `dd` is present
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   @media (min-width: @dl-horizontal-breakpoint) {
