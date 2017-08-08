@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Runtime.Loader;
 using Lucene.Net.Util;
 using Raven.Client.Documents;
 using Raven.TestDriver;
@@ -43,12 +45,17 @@ namespace SlowTests.TestDriver
 
         private const string DocFromDumpId = "Test/1";
 
-        class TestDoc
+        public TestDriverExampleTest()
+        {
+            Debug = true;
+        }
+
+        private class TestDoc
         {
             public string Name { get; set; }
         }
 
-        private readonly TestDoc _doc = new TestDoc()
+        private readonly TestDoc _doc = new TestDoc
         {
             Name = "Test"
         };
@@ -97,14 +104,6 @@ namespace SlowTests.TestDriver
                     Assert.Equal("This is a test", docFromImport.Name);
                 }
             }
-        }
-
-        [Fact]
-        public void ShouldDisposeDocStoreIfNotWrappedInUsing()
-        {
-            var docStore = GetDocumentStore();
-            DriverDisposed +=
-                (sender, args) => Assert.True(docStore.WasDisposed);
         }
     }
 }

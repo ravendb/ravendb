@@ -45,10 +45,14 @@ namespace Raven.TestDriver
 
         protected bool IsDisposed { get; private set; }
 
+        public static bool Debug { get; set; }
+
+        public static Process GlobalServerProcess => _globalServerProcess;
+
         public IDocumentStore GetDocumentStore([CallerMemberName] string database = null, TimeSpan? waitForIndexingTimeout = null)
         {
             var name = database + "_" + Interlocked.Increment(ref _index);
-
+            ReportInfo($"GetDocumentStore for db ${ database }.");
             var documentStore = GlobalServer.Value;
 
             var createDatabaseOperation = new CreateDatabaseOperation(new DatabaseRecord(name));
@@ -120,6 +124,8 @@ namespace Raven.TestDriver
         {
             var process = _globalServerProcess = RavenServerRunner<TServerLocator>.Run(new TServerLocator());
 
+            ReportInfo($"Starting global server: { _globalServerProcess.Id }");
+
 #if NETSTANDARD1_3
             AppDomain.CurrentDomain.ProcessExit += (s, args) =>
             {
@@ -165,9 +171,12 @@ namespace Raven.TestDriver
                     try
                     {
                         process.Kill();
-
                     }
-                    catch {}
+                    catch (Exception e)
+                    {
+                        ReportError(e);
+                    }
+
                     throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
                 }
                 const string prefix = "Server available on: ";
@@ -180,16 +189,26 @@ namespace Raven.TestDriver
 
             if (url == null)
             {
+                var log = sb.ToString();
+                ReportInfo(log);
                 try
                 {
                     process.Kill();
                 }
-                catch{}
-                throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + sb);
+                catch (Exception e)
+                {
+                    ReportError(e);
+                }
+
+                throw new InvalidOperationException("Unable to start server, log is: " + Environment.NewLine + log);
             }
             
             output.ReadToEndAsync()
-                .ContinueWith(x => GC.KeepAlive(x.Exception)); // just discard any other output
+                .ContinueWith(x =>
+                {
+                    ReportError(x.Exception);
+                    GC.KeepAlive(x.Exception);
+                }); // just discard any other output
 
             var store = new DocumentStore
             {
@@ -203,8 +222,20 @@ namespace Raven.TestDriver
         private static void KillGlobalServerProcess()
         {
             var p = _globalServerProcess;
+            _globalServerProcess = null;
             if (p != null && p.HasExited == false)
-                p.Kill();
+            {
+                ReportInfo($"Kill global server PID { p.Id }.");
+
+                try
+                {
+                    p.Kill();
+                }
+                catch (Exception e)
+                {
+                    ReportError(e);
+                }
+            }
         }
 
         public void WaitForIndexing(IDocumentStore store, string database = null, TimeSpan? timeout = null)
@@ -271,30 +302,52 @@ namespace Raven.TestDriver
             } while (true);
         }
 
-        private void OpenBrowser(string url)
+        protected virtual void OpenBrowser(string url)
         {
             Console.WriteLine(url);
 
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
             {
                 Process.Start(new ProcessStartInfo("cmd", $"/c start \"Stop & look at studio\" \"{url}\"")); // Works ok on windows
+                return;
             }
-            else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
             {
                 Process.Start("xdg-open", url); // Works ok on linux
+                return;
             }
-            else
-            {
-                Console.WriteLine("Do it yourself!");
-            }
+
+            throw new NotImplementedException("Implement your own browser opening mechanism.");
         }
 
-        protected void Teardown()
+        private static void ReportError(Exception e)
         {
-            Dispose();
+            if (Debug == false)
+                return;
+
+            if (e == null)
+                throw new ArgumentNullException(nameof(e));
+
+            var msg = $"{DateTime.Now}: {e}\r\n";
+            File.AppendAllText("raven_testdriver.log", msg);
+            Console.WriteLine(msg);
         }
 
-        public void Dispose()
+        private static void ReportInfo(string message)
+        {
+            if (Debug == false)
+                return;
+
+            if (string.IsNullOrWhiteSpace(message))
+                throw new ArgumentNullException(nameof(message));
+
+            var msg = $"{DateTime.Now}: {message}\r\n";
+            File.AppendAllText("raven_testdriver.log", msg);
+            Console.WriteLine(msg);
+        }
+
+        public virtual void Dispose()
         {
             if (IsDisposed)
                 return;
