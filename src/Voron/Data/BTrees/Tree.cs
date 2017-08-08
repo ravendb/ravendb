@@ -73,7 +73,7 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+             NewPageAllocator newPageAllocator = null)
         {
             return new Tree(llt, tx, header->RootPageNumber, name, newPageAllocator)
             {
@@ -92,8 +92,7 @@ namespace Voron.Data.BTrees
         }
 
         public static Tree Create(LowLevelTransaction llt, Transaction tx, Slice name, TreeFlags flags = TreeFlags.None, RootObjectType type = RootObjectType.VariableSizeTree,
-             NewPageAllocator newPageAllocator = null,
-             PageLocator pageLocator = null)
+             NewPageAllocator newPageAllocator = null)
         {
             if (type != RootObjectType.VariableSizeTree && type != RootObjectType.Table)
                 ThrowInvalidTreeCreateType();

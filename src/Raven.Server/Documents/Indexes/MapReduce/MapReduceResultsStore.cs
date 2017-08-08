@@ -21,7 +21,6 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         private readonly Slice _nestedValueKey;
         private ByteStringContext.InternalScope _nestedValueKeyScope;
         private readonly Transaction _tx;
-        private readonly PageLocator _pageLocator;
 
         private NestedMapResultsSection _nestedSection;
 
@@ -31,14 +30,13 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         public HashSet<long> ModifiedPages;
         public HashSet<long> FreedPages;
 
-        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create, PageLocator pageLocator = null)
+        public MapReduceResultsStore(ulong reduceKeyHash, MapResultsStorageType type, TransactionOperationContext indexContext, MapReduceIndexingContext mapReduceContext, bool create)
         {
             _reduceKeyHash = reduceKeyHash;
             Type = type;
             _indexContext = indexContext;
             _mapReduceContext = mapReduceContext;
             _tx = indexContext.Transaction.InnerTransaction;
-            _pageLocator = pageLocator;
 
             switch (Type)
             {
@@ -57,7 +55,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
         {
             var treeName = ReduceTreePrefix + _reduceKeyHash;
             var options = _tx.LowLevelTransaction.Environment.Options.RunningOn32Bits ? TreeFlags.None : TreeFlags.LeafsCompressed;
-            Tree = create ? _tx.CreateTree(treeName, flags: options, pageLocator: _pageLocator) : _tx.ReadTree(treeName, pageLocator: _pageLocator);
+            Tree = create ? _tx.CreateTree(treeName, flags: options) : _tx.ReadTree(treeName);
 
             ModifiedPages = new HashSet<long>();
             FreedPages = new HashSet<long>();
