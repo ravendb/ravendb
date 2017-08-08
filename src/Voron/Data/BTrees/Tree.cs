@@ -39,7 +39,7 @@ namespace Voron.Data.BTrees
         private readonly LowLevelTransaction _llt;
         private readonly Transaction _tx;
         private readonly bool _isIndexTree;
-        private readonly NewPageAllocator _newPageAllocator;
+        private NewPageAllocator _newPageAllocator;
 
         public LowLevelTransaction Llt => _llt;
 
@@ -49,7 +49,10 @@ namespace Voron.Data.BTrees
             _tx = tx;
             _isIndexTree = isIndexTree;
             Name = name;
-            _newPageAllocator = newPageAllocator;
+
+            if (_newPageAllocator != null)
+                SetNewPageAllocator(newPageAllocator);
+
             _recentlyFoundPages = new RecentlyFoundTreePages(llt.Flags == TransactionFlags.Read ? 8 : 2); 
 
             _state = new TreeMutableState(llt)
@@ -73,6 +76,8 @@ namespace Voron.Data.BTrees
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             get { return (State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed; }
         }
+
+        public bool HasNewPageAllocator { get; private set; }
 
         public static Tree Open(LowLevelTransaction llt, Transaction tx, Slice name, TreeRootHeader* header, RootObjectType type = RootObjectType.VariableSizeTree,
             bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
@@ -1339,6 +1344,12 @@ namespace Voron.Data.BTrees
         public void Rename(Slice newName)
         {
             Name = newName;
+        }
+
+        internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
+        {
+            _newPageAllocator = newPageAllocator;
+            HasNewPageAllocator = true;
         }
     }
 }

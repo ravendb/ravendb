@@ -31,10 +31,10 @@ namespace Voron.Data.Fixed
         private Slice _treeName;
         private readonly ushort _valSize;
         private readonly bool _isIndexTree;
-        private readonly NewPageAllocator _newPageAllocator;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
 
+        private NewPageAllocator _newPageAllocator;
         private RootObjectType? _type;
         private FastStack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -42,6 +42,9 @@ namespace Voron.Data.Fixed
         public LowLevelTransaction Llt => _tx;
 
         internal RootObjectType? Type => _type;
+
+        public bool HasNewPageAllocator { get; private set; }
+
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
             var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);
@@ -1625,6 +1628,12 @@ namespace Voron.Data.Fixed
             }
 
             throw new InvalidOperationException("Should not happen!");
+        }
+
+        internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
+        {
+            _newPageAllocator = newPageAllocator;
+            HasNewPageAllocator = true;
         }
     }
 }
