@@ -30,6 +30,7 @@ namespace Voron.Data.Fixed
         private readonly Tree _parent;
         private Slice _treeName;
         private readonly ushort _valSize;
+        private readonly bool _isIndexTree;
         private readonly NewPageAllocator _newPageAllocator;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
@@ -146,11 +147,12 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, NewPageAllocator newPageAllocator = null)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
+            _isIndexTree = isIndexTree;
             _newPageAllocator = newPageAllocator;
 
             _entrySize = sizeof(long) + _valSize;
@@ -418,9 +420,19 @@ namespace Voron.Data.Fixed
             {
 
                 if (_newPageAllocator != null)
+                {
+                    if (_isIndexTree == false)
+                        Tree.ThrowAttemptToFreePageToNewPageAllocator(Name, pageNumber);
+
                     _newPageAllocator.FreePage(pageNumber);
+                }
                 else
+                {
+                    if (_isIndexTree)
+                        Tree.ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, pageNumber);
+
                     _tx.FreePage(pageNumber);
+                }
             }
         }
 
