@@ -417,7 +417,7 @@ namespace Raven.Server
 
         public string[] WebUrls { get; set; }
 
-        private readonly JsonContextPool _tcpContextPool = JsonContextPool.Shared;
+        private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
         internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
 

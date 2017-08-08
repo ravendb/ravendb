@@ -18,6 +18,8 @@ namespace Raven.Server.TrafficWatch
     {
         private static readonly Logger _logger = LoggingSource.Instance.GetLogger<TrafficWatchConnection>("Raven/Server");
 
+        readonly JsonContextPool _jsonContextPool = new JsonContextPool();
+
         private readonly WebSocket _websocket;
         public string TenantSpecific { get; set; }
         public bool IsAlive => _cancellationTokenSource.IsCancellationRequested == false;
@@ -102,7 +104,7 @@ namespace Raven.Server.TrafficWatch
             };
 
             _bufferStream.SetLength(0);
-            using (JsonContextPool.Shared.AllocateOperationContext(out JsonOperationContext context))
+            using (_jsonContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, _bufferStream))
             {
                 context.Write(writer, json);
@@ -132,6 +134,7 @@ namespace Raven.Server.TrafficWatch
 
         public void Dispose()
         {
+            _jsonContextPool.Dispose();
             _websocket.Dispose();
             _cancellationTokenSource.Dispose();
         }

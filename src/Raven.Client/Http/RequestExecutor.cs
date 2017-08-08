@@ -128,7 +128,7 @@ namespace Raven.Client.Http
 
             _lastReturnedResponse = DateTime.UtcNow;
 
-            ContextPool = JsonContextPool.Shared;
+            ContextPool = new JsonContextPool();
             Conventions = conventions.Clone();
 
 
@@ -991,14 +991,11 @@ namespace Raven.Client.Http
                 return;
             _disposed = true;
             Cache.Dispose();
-            
+            ContextPool.Dispose();
             _updateTopologyTimer?.Dispose();
-
             DisposeAllFailedNodesTimers();
-            
             // shared instance, cannot dispose!
-            // _httpClient.Dispose();
-            // ContextPool.Dispose();
+            //_httpClient.Dispose();
         }
 
         private HttpClient CreateClient()

@@ -1,17 +1,7 @@
-﻿using Sparrow.LowMemory;
-
-namespace Sparrow.Json
+﻿namespace Sparrow.Json
 {
-    public sealed class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
+    public class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
     {
-        public static JsonContextPool Shared = new JsonContextPool(2048, 128);
-
-        public JsonContextPool() : base(64, 16)
-        { }
-
-        public JsonContextPool(int poolSize, int bucketSize) : base(poolSize, bucketSize)
-        { }
-
         protected override JsonOperationContext CreateContext()
         {
             if (Platform.PlatformDetails.Is32Bits)
