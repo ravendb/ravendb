@@ -495,6 +495,8 @@ namespace Raven.Client.Documents.Conventions
                 {
                     MaxNumberOfRequestsPerSession = _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
 
+                    ReadBalanceBehavior = _originalConfiguration.ReadBalanceBehavior.Value;
+
                     _originalConfiguration = null;
                     return;
                 }
@@ -503,11 +505,13 @@ namespace Raven.Client.Documents.Conventions
                     _originalConfiguration = new ClientConfiguration
                     {
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
-                        PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions
+                        PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
+                        ReadBalanceBehavior = ReadBalanceBehavior
                     };
 
                 MaxNumberOfRequestsPerSession = configuration.MaxNumberOfRequestsPerSession ?? _originalConfiguration.MaxNumberOfRequestsPerSession.Value;
                 PrettifyGeneratedLinqExpressions = configuration.PrettifyGeneratedLinqExpressions ?? _originalConfiguration.PrettifyGeneratedLinqExpressions.Value;
+                ReadBalanceBehavior = configuration.ReadBalanceBehavior ?? _originalConfiguration.ReadBalanceBehavior.Value;
             }
         }
 
