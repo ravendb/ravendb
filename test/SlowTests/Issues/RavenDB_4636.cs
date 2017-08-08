@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations.Configuration;
+using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Xunit;
@@ -79,6 +80,40 @@ namespace SlowTests.Issues
 
                 Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
                 Assert.Equal(10, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 20, ReadBalanceBehavior = ReadBalanceBehavior.FastestNode }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(30, store.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
+
+                Assert.Equal(20, requestExecutor.Conventions.MaxNumberOfRequestsPerSession);
+                Assert.Equal(ReadBalanceBehavior.FastestNode, requestExecutor.Conventions.ReadBalanceBehavior);
+
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = true }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
+                Assert.Equal(ReadBalanceBehavior.None, requestExecutor.Conventions.ReadBalanceBehavior);
+
+                store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { ReadBalanceBehavior = ReadBalanceBehavior.RoundRobin, Disabled = false }));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Load<dynamic>("users/1"); // forcing client configuration update
+                }
+
+                Assert.Equal(ReadBalanceBehavior.None, store.Conventions.ReadBalanceBehavior);
+                Assert.Equal(ReadBalanceBehavior.RoundRobin, requestExecutor.Conventions.ReadBalanceBehavior);
+
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using Raven.Client.Http;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
@@ -10,13 +11,17 @@ namespace Raven.Client.ServerWide
 
         public bool? PrettifyGeneratedLinqExpressions { get; set; }
 
+        public ReadBalanceBehavior? ReadBalanceBehavior { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
-                [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions
+                [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions,
+                [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior
+
             };
         }
     }
