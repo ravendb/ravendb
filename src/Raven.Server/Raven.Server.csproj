@@ -63,34 +63,34 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
-    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetcore.Server.Kestrel.Https" Version="2.0.0" />
-    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.0.0" />
-    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.3.1" />
+    <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
+    <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
     <PackageReference Include="Jint" Version="2.10.100" />
     <PackageReference Include="Lucene.Net" Version="3.0.10" />
-    <PackageReference Include="Npgsql" Version="3.2.5" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
-    <PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
+    <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.0.0" />
+    <PackageReference Include="Microsoft.AspNetcore.Server.Kestrel.Https" Version="2.0.0" />
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="2.3.1" />
     <PackageReference Include="Microsoft.Extensions.CommandLineUtils" Version="1.1.1" />
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="2.0.0" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="2.0.0" />
-    <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
-    <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
+    <PackageReference Include="NCrontab.Advanced" Version="1.2.3.3" />
+    <PackageReference Include="Npgsql" Version="3.2.5" />
     <PackageReference Include="Portable.BouncyCastle" Version="1.8.1.2" />
     <PackageReference Include="Raven.CodeAnalysis" Version="1.0.5">
       <PrivateAssets>All</PrivateAssets>
     </PackageReference>
     <PackageReference Include="System.ComponentModel" Version="4.3.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.3.1" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.4.0" />
     <PackageReference Include="System.IO.Pipes" Version="4.3.0" />
     <PackageReference Include="System.Reflection.Emit.Lightweight" Version="4.3.0" />
     <PackageReference Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.Csp" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.3.0" />
-    <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="4.4.0" />
+    <PackageReference Include="System.Threading.Tasks.Parallel" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Documents\Indexes\IndexMerging" />

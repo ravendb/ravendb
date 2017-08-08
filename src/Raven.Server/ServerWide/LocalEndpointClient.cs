@@ -119,7 +119,10 @@ namespace Raven.Server.ServerWide
             public override HttpResponse Response { get; }
             public override ConnectionInfo Connection { get; } = null;
             public override WebSocketManager WebSockets { get; } = null;
+
+            [Obsolete]
             public override AuthenticationManager Authentication { get; } = null;
+
             public override ClaimsPrincipal User { get; set; }
             public override IDictionary<object, object> Items { get; set; }
             public override IServiceProvider RequestServices { get; set; }

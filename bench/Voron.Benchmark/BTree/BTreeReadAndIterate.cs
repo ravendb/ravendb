@@ -65,7 +65,7 @@ namespace Voron.Benchmark.BTree
             Slice.From(Configuration.Allocator, "TestTreeRead", ByteStringType.Immutable, out TreeNameSlice);
         }
 
-        [Setup]
+        [GlobalSetup]
         public override void Setup()
         {
             base.Setup();

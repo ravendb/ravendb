@@ -112,7 +112,7 @@ namespace Voron.Benchmark
             }
         }
 
-        [Setup]
+        [GlobalSetup]
         public virtual void Setup()
         {
             if (DeleteBeforeEachBenchmark)
@@ -122,7 +122,7 @@ namespace Voron.Benchmark
             }
         }
 
-        [Cleanup]
+        [GlobalCleanup]
         public virtual void Cleanup()
         {
             if (DeleteBeforeEachBenchmark)
