@@ -146,7 +146,7 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, NewPageAllocator newPageAllocator = null)
         {
             _tx = tx;
             _parent = parent;
