@@ -115,6 +115,38 @@
         <div class="flex-window-head">
             <div class="clearfix">
                 <div class="results-info pull-left">
+                    <div class="dropdown">
+                        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            <i class="icon-index"></i> <span>Index '</span><span data-bind="">Index name</span>'
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu">
+                            <li>
+                                <a href="#" data-bind="attr: { href: indexPerformanceUrl }">
+                                    <strong><i class="icon-edit"></i> <span>Edit index</span></strong>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a href="#" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance">
+                                    <i class="icon-traffic-watch"></i> <span>Index performance</span>
+                                </a>
+                            </li>
+
+                            <li class="has-disable-reason" data-bind="attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes' }" data-original-title="Available only for static and auto indexes">
+                                <a href="#" data-bind="attr: { href: termsUrl }, css: { 'disabled' : isDynamicIndex }" title="Navigate to index terms">
+                                    <i class="icon-terms"></i> <span>Index terms</span>
+                                </a>
+                            </li>
+
+                            <li class="has-disable-reason" data-bind="attr: { 'data-original-title': isIndexMapReduce() ? '' : 'Available only for map/reduce indexes' }" data-original-title="Available only for map/reduce indexes">
+                                <a href="#" data-bind="attr: { href: visualizerUrl }, css: { 'disabled' : !isIndexMapReduce() }" title="Map/Reduce Visualizer">
+                                    <i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                    <small>&nbsp;was used to get the results in <strong>15ms</strong></small>
                     <small data-bind="html: querySummary"></small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
