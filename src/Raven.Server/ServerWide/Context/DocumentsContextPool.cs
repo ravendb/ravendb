@@ -10,11 +10,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public sealed class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
+    public class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
     {
         private readonly DocumentDatabase _database;
 
-        public DocumentsContextPool(DocumentDatabase database) : base(256, 128)
+        public DocumentsContextPool(DocumentDatabase database)
         {
             _database = database;
         }
