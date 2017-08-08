@@ -135,6 +135,6 @@ namespace Raven.Server.Config.Categories
         None = 0,
         Local = 1 << 0,
         PrivateNetwork = 1 << 1,
-        PublicNetwork = 1 << 2,
+        PublicNetwork = 1 << 2
     }
 }

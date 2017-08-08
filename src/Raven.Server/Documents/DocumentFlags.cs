@@ -17,7 +17,7 @@ namespace Raven.Server.Documents
         FromReplication = 0x40,
         Reserved3 = 0x80,
 
-        HasAttachments = 0x100,
+        HasAttachments = 0x100
     }
 
     [Flags]
@@ -31,6 +31,6 @@ namespace Raven.Server.Documents
         FromReplication = 0x8,
         ByAttachmentUpdate = 0x10,
         ResolveAttachmentsConflict = 0x20,
-        FromRevision = 0x40,
+        FromRevision = 0x40
     }
 }

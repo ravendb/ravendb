@@ -63,7 +63,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
     public class IndexableBinaryStringTools_UsingArrays
     {
 
-        private static readonly CodingCase[] CODING_CASES = new CodingCase[] { new CodingCase(7, 1), new CodingCase(14, 6, 2), new CodingCase(13, 5, 3), new CodingCase(12, 4, 4), new CodingCase(11, 3, 5), new CodingCase(10, 2, 6), new CodingCase(9, 1, 7), new CodingCase(8, 0) };
+        private static readonly CodingCase[] CODING_CASES = { new CodingCase(7, 1), new CodingCase(14, 6, 2), new CodingCase(13, 5, 3), new CodingCase(12, 4, 4), new CodingCase(11, 3, 5), new CodingCase(10, 2, 6), new CodingCase(9, 1, 7), new CodingCase(8, 0) };
 
         // Export only static methods
         private IndexableBinaryStringTools_UsingArrays()
@@ -98,12 +98,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             {
                 return 0;
             }
-            else
-            {
-                int numFullBytesInFinalChar = encoded[encoded.Count - 1];
-                int numEncodedChars = numChars - 1;
-                return ((numEncodedChars * 15 + 7) / 8 + numFullBytesInFinalChar);
-            }
+
+            int numFullBytesInFinalChar = encoded[encoded.Count - 1];
+            int numEncodedChars = numChars - 1;
+            return ((numEncodedChars * 15 + 7) / 8 + numFullBytesInFinalChar);
         }
 
         /// <summary> Encodes the input byte sequence into the output char sequence.  Before
@@ -307,20 +305,20 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
 
             internal CodingCase(int initialShift, int middleShift, int finalShift)
             {
-                this.numBytes = 3;
+                numBytes = 3;
                 this.initialShift = initialShift;
                 this.middleShift = middleShift;
                 this.finalShift = finalShift;
-                this.finalMask = (short)(SupportClass.Number.URShift((short)0xFF, finalShift));
-                this.middleMask = (short)((short)0xFF << middleShift);
+                finalMask = (short)(SupportClass.Number.URShift((short)0xFF, finalShift));
+                middleMask = (short)((short)0xFF << middleShift);
             }
 
             internal CodingCase(int initialShift, int finalShift)
             {
-                this.numBytes = 2;
+                numBytes = 2;
                 this.initialShift = initialShift;
                 this.finalShift = finalShift;
-                this.finalMask = (short)(SupportClass.Number.URShift((short)0xFF, finalShift));
+                finalMask = (short)(SupportClass.Number.URShift((short)0xFF, finalShift));
                 if (finalShift != 0)
                 {
                     advanceBytes = 1;

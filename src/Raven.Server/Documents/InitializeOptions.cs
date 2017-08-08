@@ -8,6 +8,6 @@ namespace Raven.Server.Documents
         None = 0,
 
         GenerateNewDatabaseId = 1,
-        SkipLoadingDatabaseRecord = 2,
+        SkipLoadingDatabaseRecord = 2
     }
 }

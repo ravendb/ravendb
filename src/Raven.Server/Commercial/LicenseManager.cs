@@ -32,7 +32,7 @@ namespace Raven.Server.Commercial
         private Timer _leaseLicenseTimer;
         private RSAParameters? _rsaParameters;
         private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1);
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
 
         public LicenseManager(NotificationCenter.NotificationCenter notificationCenter)
         {
@@ -131,7 +131,7 @@ namespace Raven.Server.Commercial
             var response = await ApiHttpClient.Instance.PostAsync("api/v1/license/register",
                     new StringContent(JsonConvert.SerializeObject(userInfo), Encoding.UTF8, "application/json"))
                 .ConfigureAwait(false);
-            
+
             var responseString = await response.Content.ReadAsStringAsync().ConfigureAwait(false);
             if (response.IsSuccessStatusCode == false)
             {
@@ -172,7 +172,7 @@ namespace Raven.Server.Commercial
 
         private async Task LeaseLicense()
         {
-            if (semaphoreSlim.Wait(0) == false)
+            if (_semaphoreSlim.Wait(0) == false)
                 return;
 
             try
@@ -240,7 +240,7 @@ namespace Raven.Server.Commercial
             }
             finally
             {
-                semaphoreSlim.Release();
+                _semaphoreSlim.Release();
             }
         }
 

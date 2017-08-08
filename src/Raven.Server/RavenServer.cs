@@ -126,7 +126,7 @@ namespace Raven.Server
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
-                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
+                            ClientCertificateValidation = (cert, chain, errors) =>
                                     // Here we are explicitly ignoring trust chain issues for client certificates
                                     // this is because we don't actually require trust, we just use the certificate
                                     // as a way to authenticate. The admin is going to tell us which specific certs
@@ -585,7 +585,7 @@ namespace Raven.Server
                         ContextPool = _tcpContextPool,
                         Stream = stream,
                         TcpClient = tcpClient,
-                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance(),
+                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance()
                     };
 
                     try
@@ -875,7 +875,7 @@ namespace Raven.Server
         }
 
         public RequestRouter Router { get; private set; }
-        public MetricsCountersManager Metrics { get; private set; }
+        public MetricsCountersManager Metrics { get; }
 
         public bool Disposed { get; private set; }
         internal NamedPipeServerStream Pipe { get; set; }

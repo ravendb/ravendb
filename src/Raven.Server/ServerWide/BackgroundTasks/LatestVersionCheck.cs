@@ -20,6 +20,7 @@ namespace Raven.Server.ServerWide.BackgroundTasks
 
         private static AlertRaised _alert;
 
+        // ReSharper disable once NotAccessedField.Local
         private static Timer _timer;
 
         private static readonly ConcurrentSet<WeakReference<ServerStore>> ServerStores = new ConcurrentSet<WeakReference<ServerStore>>();

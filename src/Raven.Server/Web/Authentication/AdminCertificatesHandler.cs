@@ -68,7 +68,7 @@ namespace Raven.Server.Web.Authentication
                 if(certificateJson.TryGet("Certificate", out string certificate) == false)
                     throw new ArgumentException("'Certificate' is a mandatory property");
 
-                var certificateDefinition = new CertificateDefinition()
+                var certificateDefinition = new CertificateDefinition
                 {
                     Certificate = certificate,
                     Permissions = permissions,

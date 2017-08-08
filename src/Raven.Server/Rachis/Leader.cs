@@ -111,13 +111,13 @@ namespace Raven.Server.Rachis
             old.TrySetResult(null);
         }
 
-        
+
 
         public Dictionary<string, NodeStatus> GetStatus()
         {
             var dict = new Dictionary<string, NodeStatus>();
 
-            foreach (var peers in new[] { _nonVoters , _voters , _promotables })
+            foreach (var peers in new[] { _nonVoters, _voters, _promotables })
             {
                 foreach (var kvp in peers)
                 {
@@ -205,7 +205,7 @@ namespace Raven.Server.Rachis
                         continue; // already here
                     }
 
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, 
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
                         _engine.ClusterCertificate);
                     _promotables.Add(promotable.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
@@ -561,7 +561,7 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task task);
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
 
                 _promotableUpdated.Set();
                 break;
@@ -738,14 +738,14 @@ namespace Raven.Server.Rachis
                 if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
                 {
                     throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                        $"with validation that it is not contained by the topology but current topology contains it.");
+                                                        "with validation that it is not contained by the topology but current topology contains it.");
                 }
 
                 if (nodeTag == null)
                 {
                     nodeTag = GenerateNodeTag(clusterTopology);
                 }
-                
+
                 var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
@@ -773,7 +773,7 @@ namespace Raven.Server.Rachis
                         if (clusterTopology.Contains(nodeTag) == false)
                         {
                             throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
-                                                        $"but it is not contained by the topology.");
+                                                        "but it is not contained by the topology.");
                         }
                         break;
                     default:

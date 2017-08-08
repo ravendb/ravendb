@@ -215,7 +215,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var docToProccess = new Document
                 {
                     Data = revision,
-                    Id = item.Id,
+                    Id = item.Id
                 };
 
                 return patch.MatchCriteria(dbContext, docToProccess, out transformResult);

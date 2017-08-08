@@ -30,11 +30,9 @@ namespace Raven.Server.Utils
 
             while (_queue.Count > _size)
             {
-                TKey result;
-                if (_queue.TryDequeue(out result) == false)
+                if (_queue.TryDequeue(out _) == false)
                     break;
-                TValue value;
-                _dic.TryRemove(key, out value);
+                _dic.TryRemove(key, out _);
             }
         }
 

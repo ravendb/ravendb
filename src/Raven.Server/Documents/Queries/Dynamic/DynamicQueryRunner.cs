@@ -166,19 +166,19 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(_context.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
-                resultToFill.TotalResults = (int) numberOfDocuments;
+                resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
             {
                 var collectionStats = _documents.GetCollection(collection, _context);
-                resultToFill.TotalResults = (int) collectionStats.Count;
+                resultToFill.TotalResults = (int)collectionStats.Count;
 
                 buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
                 buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);
                 buffer[2] = collectionStats.Count;
             }
 
-            resultToFill.ResultEtag = (long) Hashing.XXHash64.Calculate((byte*) buffer, sizeof(long) * 3);
+            resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
         }
 
         private async Task<(Index Index, string Collection)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             if (_indexStore.Logger.IsInfoEnabled)
                             {
-                                _indexStore.Logger.Info($"Failed to delete superceded indexes for index " + index.Name);
+                                _indexStore.Logger.Info("Failed to delete superceded indexes for index " + index.Name);
                             }
                         }
                     });

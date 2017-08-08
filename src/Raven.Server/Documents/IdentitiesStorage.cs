@@ -64,7 +64,7 @@ namespace Raven.Server.Documents
 
         public string GetNextIdentityValueWithoutOverwritingOnExistingDocuments(string id, Table table, DocumentsOperationContext context, out int tries)
         {
-            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesStorage.IdentitiesSlice);
+            var identities = context.Transaction.InnerTransaction.ReadTree(IdentitiesSlice);
             var nextIdentityValue = identities.Increment(id, 1);
             var finalId = AppendIdentityValueToId(id, nextIdentityValue);
             tries = 1;

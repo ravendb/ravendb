@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["WorkingSet"] = Size.Humane(workingSet),
                     ["TotalUnmanagedAllocations"] = Size.Humane(totalUnmanagedAllocations),
                     ["ManagedAllocations"] = Size.Humane(managedMemory),
-                    ["TotalMemoryMapped"] = Size.Humane(totalMapping),
+                    ["TotalMemoryMapped"] = Size.Humane(totalMapping)
                 },
 
                 ["Threads"] = threads,

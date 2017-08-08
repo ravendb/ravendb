@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
                 result = new DynamicJsonValue
                 {
                     [nameof(NodeConnectionTestResult.Success)] = false,
-                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}",
+                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}"
                 };
             }
 

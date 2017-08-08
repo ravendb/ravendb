@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
             _validator = validator;
         }
 
-        private int _recursiveCallCounter = 0;
+        private int _recursiveCallCounter;
 
         public IDisposable RecursiveCall()
         {
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 {
                     parent = VisitQueryExpression(queryExpressionSyntax) as ForEachStatementSyntax;
                 }
-                
+
                 if (parent != null)
                     node =
                         node.WithFromClause(
@@ -61,12 +61,12 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
             foreach (var clause in node.Body.Clauses)
             {
-                if (TryRewriteBodyClause(clause, dummyYield, ref body)) 
+                if (TryRewriteBodyClause(clause, dummyYield, ref body))
                     continue;
-                
+
                 return base.VisitQueryExpression(node);
             }
-            
+
             var selectClauseSyntax = node.Body.SelectOrGroup as SelectClauseSyntax;
             if (selectClauseSyntax == null)
             {

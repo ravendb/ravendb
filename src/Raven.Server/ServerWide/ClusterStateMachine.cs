@@ -82,7 +82,7 @@ namespace Raven.Server.ServerWide
         {
             if (cmd.TryGet("Type", out string type) == false)
             {
-                NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command, wrong format"));
+                NotifyLeaderAboutError(index, leader, new CommandExecutionException("Cannot execute command, wrong format"));
                 return;
             }
 
@@ -187,7 +187,6 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
-                return;
             }
         }
 
@@ -236,7 +235,6 @@ namespace Raven.Server.ServerWide
                 {
                     NotifyLeaderAboutError(index, leader,
                         new CommandExecutionException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because does not exist", e));
-                    return;
                 }
             }
             finally
@@ -270,7 +268,7 @@ namespace Raven.Server.ServerWide
 
                 var databaseRecord = JsonDeserializationCluster.DatabaseRecord(doc);
 
-                if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject topology) == false)
+                if (doc.TryGet(nameof(DatabaseRecord.Topology), out BlittableJsonReaderObject _) == false)
                 {
                     items.DeleteByKey(lowerKey);
                     NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
@@ -638,7 +636,7 @@ namespace Raven.Server.ServerWide
                     if (take-- <= 0)
                         yield break;
 
-                    yield return GetCurrentItemKey(context, result.Value);
+                    yield return GetCurrentItemKey(result.Value);
                 }
             }
         }
@@ -647,7 +645,7 @@ namespace Raven.Server.ServerWide
         {
             var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
 
-            var dbKey = "db/";
+            const string dbKey = "db/";
             using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
             {
                 foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
@@ -655,17 +653,17 @@ namespace Raven.Server.ServerWide
                     if (take-- <= 0)
                         yield break;
 
-                    yield return GetCurrentItemKey(context, result.Value).Substring(3);
+                    yield return GetCurrentItemKey(result.Value).Substring(3);
                 }
             }
         }
 
-        private static unsafe string GetCurrentItemKey(TransactionOperationContext context, Table.TableValueHolder result)
+        private static unsafe string GetCurrentItemKey(Table.TableValueHolder result)
         {
             return Encoding.UTF8.GetString(result.Reader.Read(1, out int size), size);
         }
 
-        private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(TransactionOperationContext context, Table.TableValueHolder result)
+        private static unsafe Tuple<string, BlittableJsonReaderObject> GetCurrentItem(JsonOperationContext context, Table.TableValueHolder result)
         {
             var ptr = result.Reader.Read(2, out int size);
             var doc = new BlittableJsonReaderObject(ptr, size, context);
@@ -743,7 +741,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private static unsafe int GetDataAndEtagTupleFromReader(TransactionOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
+        private static unsafe int GetDataAndEtagTupleFromReader(JsonOperationContext context, TableValueReader reader, out BlittableJsonReaderObject doc,
             out long etag)
         {
             var ptr = reader.Read(2, out int size);
@@ -756,8 +754,10 @@ namespace Raven.Server.ServerWide
 
         public override async Task<Stream> ConnectToPeer(string url, X509Certificate2 certificate)
         {
-            if (url == null) throw new ArgumentNullException(nameof(url));
-            if (_parent == null) throw new InvalidOperationException("Cannot connect to peer without a parent");
+            if (url == null)
+                throw new ArgumentNullException(nameof(url));
+            if (_parent == null)
+                throw new InvalidOperationException("Cannot connect to peer without a parent");
             if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
@@ -770,14 +770,14 @@ namespace Raven.Server.ServerWide
             {
                 TcpUtils.SetTimeouts(tcpClient, _parent.TcpConnectionTimeout);
                 await tcpClient.ConnectAsync(tcpInfo.Host, tcpInfo.Port);
-                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, this._parent.ClusterCertificate);
+                stream = await TcpUtils.WrapStreamWithSslAsync(tcpClient, info, _parent.ClusterCertificate);
 
                 using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var msg = new DynamicJsonValue
                     {
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster
                     };
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var msgJson = context.ReadObject(msg, "message"))
@@ -812,7 +812,7 @@ namespace Raven.Server.ServerWide
 
                 foreach (var key in clusterCertificateKeys)
                 {
-                    using (var localCertificate = GetLocalState(context, key))
+                    using (GetLocalState(context, key))
                     {
                         DeleteLocalState(context, key);
                     }
@@ -831,7 +831,7 @@ namespace Raven.Server.ServerWide
 
                 context.Transaction.Commit();
             }
-            
+
             _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
         }
     }

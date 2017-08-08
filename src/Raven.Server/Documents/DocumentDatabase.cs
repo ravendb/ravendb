@@ -115,8 +115,7 @@ namespace Raven.Server.Documents
                 IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
                 TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
                 EtlLoader = new EtlLoader(this, serverStore);
-                if (serverStore != null)
-                    ReplicationLoader = new ReplicationLoader(this, serverStore);
+                ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricsCountersManager();
                 Patcher = new DocumentPatcher(this);
@@ -126,11 +125,11 @@ namespace Raven.Server.Documents
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
-                DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+                DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
                 {
-                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                    serverStore.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
                 });
             }
             catch (Exception)
@@ -478,8 +477,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-
         public DynamicJsonValue GenerateDatabaseInfo()
         {
             var envs = GetAllStoragesEnvironment().ToList();
@@ -506,7 +503,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                 [nameof(DatabaseInfo.IndexingStatus)] = IndexStore.Status.ToString(),
-                [CachedDatabaseInfo] = true
+                ["CachedDatabaseInfo"] = true
             };
             return databaseInfo;
         }
@@ -557,19 +554,19 @@ namespace Raven.Server.Documents
             {
                 var env = index._indexStorage.Environment();
                 if (env != null)
-                    yield return (new FullBackup.StorageEnvironmentInformation()
+                    yield return new FullBackup.StorageEnvironmentInformation
                     {
                         Name = i++.ToString(),
                         Folder = "Indexes",
                         Env = env
-                    });
+                    };
             }
-            yield return (new FullBackup.StorageEnvironmentInformation()
+            yield return new FullBackup.StorageEnvironmentInformation
             {
                 Name = "",
                 Folder = "",
                 Env = DocumentsStorage.Environment
-            });
+            };
         }
 
         public void FullBackupTo(string backupPath)
@@ -652,7 +649,7 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                NotifyFeaturesAboutValueChange(record, index);
+                NotifyFeaturesAboutValueChange(record);
             }
             catch
             {
@@ -744,7 +741,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
         {
             SubscriptionStorage?.HandleDatabaseValueChange(record);
         }
@@ -762,7 +759,7 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
             NotifyFeaturesAboutStateChange(record, index);
-            NotifyFeaturesAboutValueChange(record, index);
+            NotifyFeaturesAboutValueChange(record);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)

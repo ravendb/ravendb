@@ -135,10 +135,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 return string.Join(".", tableName.Split('.').Select(x => _commandBuilder.QuoteIdentifier(x)).ToArray());
             }
-            else
-            {
-                return tableName;
-            }
+
+            return tableName;
         }
     }
 }

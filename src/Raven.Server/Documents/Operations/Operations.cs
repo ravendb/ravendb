@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Operations
 
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
                 {
-                    _completed.TryRemove(taskAndState.Key, out Operation value);
+                    _completed.TryRemove(taskAndState.Key, out Operation _);
                 }
 
                 var task = state.Task;
@@ -373,7 +373,7 @@ namespace Raven.Server.Documents.Operations
             BulkInsert,
 
             [Description("Database Restore")]
-            DatabaseRestore,
+            DatabaseRestore
         }
     }
 }

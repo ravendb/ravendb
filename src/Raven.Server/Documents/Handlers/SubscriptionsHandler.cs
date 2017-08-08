@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers
                 if (tryout.Collection == null)
                     throw new ArgumentException("Collection must be specified");
 
-                var pageSize = GetIntValueQueryString("pageSize", required: true) ?? 1;
+                var pageSize = GetIntValueQueryString("pageSize") ?? 1;
 
                 var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Handlers
                         Collection = tryout.Collection,
                         IncludeRevisions = tryout.IncludeRevisions,
                         Script = tryout.Script
-                    },
+                    }
                 };
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             else
                             {
-                                var docWithExcepton = new DocumentWithException()
+                                var docWithExcepton = new DocumentWithException
                                 {
                                     Exception = itemDetails.Exception.ToString(),
                                     ChangeVector = itemDetails.Doc.ChangeVector,
@@ -137,7 +137,7 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                IEnumerable<Subscriptions.SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
+                IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
                 if (id == null)
                 {
                     subscriptions = running

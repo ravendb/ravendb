@@ -103,7 +103,7 @@ namespace Raven.Server.Routing
             DatabasesLandlord databasesLandlord, StringSegment databaseName)
         {
             var time = databasesLandlord.DatabaseLoadTimeout;
-            var result = await Task.WhenAny(database, Task.Delay(time));
+            await Task.WhenAny(database, Task.Delay(time));
             if (database.IsCompleted == false)
             {
                 ThrowDatabaseLoadTimeout(databaseName, databasesLandlord.DatabaseLoadTimeout);

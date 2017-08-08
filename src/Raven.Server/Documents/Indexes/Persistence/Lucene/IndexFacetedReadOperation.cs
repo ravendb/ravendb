@@ -24,8 +24,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 {
     public class IndexFacetedReadOperation : IndexOperationBase
     {
-        private readonly Dictionary<string, IndexField> _fields;
-
         private readonly IndexSearcher _searcher;
         private readonly IDisposable _releaseReadTransaction;
         private readonly RavenPerFieldAnalyzerWrapper _analyzer;
@@ -50,7 +48,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new IndexAnalyzerException(e);
             }
 
-            _fields = fields;
             _releaseReadTransaction = directory.SetTransaction(readTransaction, out _state);
             _currentStateHolder = searcherHolder.GetStateHolder(readTransaction);
             _searcher = _currentStateHolder.GetIndexSearcher(_state);
@@ -64,7 +61,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             uint fieldsHash = 0;
             if (query.Metadata.IsDistinct)
-                fieldsHash = CalculateQueryFieldsHash(query, context);
+                fieldsHash = CalculateQueryFieldsHash(query);
 
             var baseQuery = GetLuceneQuery(context, query.Metadata, query.QueryParameters, _analyzer);
             var returnedReaders = GetQueryMatchingDocuments(_searcher, baseQuery, _state);
@@ -192,7 +189,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        private static unsafe uint CalculateQueryFieldsHash(FacetQueryServerSide query, JsonOperationContext context)
+        private static unsafe uint CalculateQueryFieldsHash(FacetQueryServerSide query)
         {
             uint hash = 0;
 
@@ -207,7 +204,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return hash;
         }
 
-        private void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
+        private static void UpdateFacetResults(Dictionary<string, FacetResult> results, FacetQueryServerSide query, Dictionary<string, Facet> facets, Dictionary<string, Dictionary<string, FacetValue>> facetsByName)
         {
             foreach (var facet in facets.Values)
             {
@@ -262,7 +259,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     Values = values,
                     RemainingTermsCount = allTerms.Count - (query.Start + values.Count),
-                    RemainingHits = groups.Values.Sum(x => x.Hits) - (previousHits + values.Sum(x => x.Hits)),
+                    RemainingHits = groups.Values.Sum(x => x.Hits) - (previousHits + values.Sum(x => x.Hits))
                 };
 
                 if (facet.IncludeRemainingTerms)
@@ -291,7 +288,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
+        private static void ApplyAggregation(Facet facet, FacetValue value, ArraySegment<int> docsInQuery, IndexReader indexReader, int docBase, IState state)
         {
             var name = facet.AggregationField;
             var rangeType = FieldUtil.GetRangeTypeFromFieldName(name);
@@ -312,7 +309,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     doubles = FieldCache_Fields.DEFAULT.GetDoubles(indexReader, name, state);
                     break;
                 default:
-                    throw new InvalidOperationException("Invalid range type for " + facet.Name +", don't know how to handle " + rangeType);
+                    throw new InvalidOperationException("Invalid range type for " + facet.Name + ", don't know how to handle " + rangeType);
             }
 
             for (int index = 0; index < docsInQuery.Count; index++)
@@ -507,7 +504,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 matchingQueue.Free(returnedArray);
             }
 
-            private int GetRoundedSize(int size)
+            private static int GetRoundedSize(int size)
             {
                 const int roundSize = 1024;
                 if (size % roundSize == 0)
@@ -518,7 +515,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return (size / roundSize + 1) * roundSize;
             }
 
-            private void RunIdleOperations()
+            private static void RunIdleOperations()
             {
                 //_timeSensitiveStore.ForAllExpired(x =>
                 //{
@@ -547,7 +544,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public int DocBase;
             // Here we store the _global document id_, if you need the 
             // reader document id, you must decrement with the DocBase
-            public LinkedList<int[]> Matches;
+            private readonly LinkedList<int[]> _matches;
             private int[] _current;
             private int _pos;
             public ArraySegment<int> Results;
@@ -555,14 +552,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public ReaderFacetInfo()
             {
                 _current = IntArraysPool.Instance.AllocateArray();
-                Matches = new LinkedList<int[]>();
+                _matches = new LinkedList<int[]>();
             }
 
             public void AddMatch(int doc)
             {
                 if (_pos >= _current.Length)
                 {
-                    Matches.AddLast(_current);
+                    _matches.AddLast(_current);
                     _current = IntArraysPool.Instance.AllocateArray();
                     _pos = 0;
                 }
@@ -572,14 +569,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             public void Complete()
             {
                 var size = _pos;
-                foreach (var match in Matches)
+                foreach (var match in _matches)
                 {
                     size += match.Length;
                 }
 
                 var mergedAndSortedArray = IntArraysPool.Instance.AllocateArray(size);
                 var curMergedArrayIndex = 0;
-                foreach (var match in Matches)
+                foreach (var match in _matches)
                 {
                     Array.Copy(match, 0, mergedAndSortedArray, curMergedArrayIndex, match.Length);
                     curMergedArrayIndex += match.Length;
@@ -616,7 +613,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _current = new ReaderFacetInfo
                 {
                     DocBase = docBase,
-                    Reader = reader,
+                    Reader = reader
                 };
                 Results.Add(_current);
             }

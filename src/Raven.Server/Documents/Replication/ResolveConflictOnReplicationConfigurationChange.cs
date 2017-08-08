@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Replication
 
         public ResolveConflictOnReplicationConfigurationChange(ReplicationLoader replicationLoader, Logger log)
         {
-            _replicationLoader = replicationLoader ?? 
+            _replicationLoader = replicationLoader ??
                 throw new ArgumentNullException($"{nameof(ResolveConflictOnReplicationConfigurationChange)} must have replicationLoader instance");
             _database = _replicationLoader.Database;
             _log = log;
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Replication
                     _log.Info("Failed to run automatic conflict resolution", e);
             }
         }
-        
+
         private class PutResolvedConflictsCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ConflictsStorage _conflictsStorage;
@@ -165,7 +165,7 @@ namespace Raven.Server.Documents.Replication
                             continue;
                         RequiresRetry = true;
                     }
-                    
+
                     _resolver.PutResolvedDocument(context, item.ResolvedConflict);
                 }
 
@@ -175,7 +175,8 @@ namespace Raven.Server.Documents.Replication
 
         private void UpdateScriptResolvers()
         {
-            if (ConflictSolver?.ResolveByCollection == null)            {
+            if (ConflictSolver?.ResolveByCollection == null)
+            {
                 if (ScriptConflictResolversCache.Count > 0)
                     ScriptConflictResolversCache = new Dictionary<string, ScriptResolver>();
                 return;
@@ -331,7 +332,7 @@ namespace Raven.Server.Documents.Replication
             DocumentsOperationContext context,
             ScriptResolver scriptResolver,
             IReadOnlyList<DocumentConflict> conflicts,
-            LazyStringValue collection, 
+            LazyStringValue collection,
             out DocumentConflict resolvedConflict)
         {
             resolvedConflict = null;
@@ -363,8 +364,8 @@ namespace Raven.Server.Documents.Replication
         {
             // we have to sort this here because we need to ensure that all the nodes are always 
             // arrive to the same conclusion, regardless of what time they go it
-            conflicts.Sort((x, y) => x.ChangeVector.CompareTo(y.ChangeVector));
-            
+            conflicts.Sort((x, y) => string.Compare(x.ChangeVector, y.ChangeVector, StringComparison.Ordinal));
+
             var latestDoc = conflicts[0];
             var latestTime = latestDoc.LastModified.Ticks;
 

@@ -10,7 +10,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionConnectionState:IDisposable
+    public class SubscriptionConnectionState : IDisposable
     {
         private readonly long _subscriptionId;
         private readonly SubscriptionStorage _storage;
@@ -29,14 +29,14 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         private SubscriptionConnection _currentConnection;
-      
-        
+
+
         private readonly ConcurrentQueue<SubscriptionConnection> _recentConnections = new ConcurrentQueue<SubscriptionConnection>();
         private readonly ConcurrentQueue<SubscriptionConnection> _rejectedConnections = new ConcurrentQueue<SubscriptionConnection>();
 
 
         public SubscriptionConnection Connection => _currentConnection;
-        
+
 
 
         // we should have two locks: one lock for a connection and one lock for operations
@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Subscriptions
 
                         case SubscriptionOpeningStrategy.TakeOver:
                             if (_currentConnection?.Strategy == SubscriptionOpeningStrategy.TakeOver)
-                                throw  new SubscriptionInUseException(
+                                throw new SubscriptionInUseException(
                                     $"Subscription {incomingConnection.SubscriptionId} is already occupied by a TakeOver connection, connection cannot be opened");
 
                             if (_currentConnection != null)
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Subscriptions
                                     new SubscriptionInUseException("Closed by TakeOver"));
 
                             throw new TimeoutException();
-                        
+
                         default:
                             throw new InvalidOperationException("Unknown subscription open strategy: " +
                                                                 incomingConnection.Strategy);
@@ -89,10 +89,11 @@ namespace Raven.Server.Documents.Subscriptions
 
             ConnectionInUse.Reset();
 
-            return new DisposableAction(() => {
+            return new DisposableAction(() =>
+            {
                 while (_recentConnections.Count > 10)
                 {
-                    _recentConnections.TryDequeue(out SubscriptionConnection options);
+                    _recentConnections.TryDequeue(out SubscriptionConnection _);
                 }
                 _recentConnections.Enqueue(incomingConnection);
                 ConnectionInUse.Set();
@@ -102,12 +103,12 @@ namespace Raven.Server.Documents.Subscriptions
 
         public void RegisterRejectedConnection(SubscriptionConnection connection, SubscriptionException exception = null)
         {
-            if (exception!= null && connection.ConnectionException == null)
+            if (exception != null && connection.ConnectionException == null)
                 connection.ConnectionException = exception;
 
             while (_rejectedConnections.Count > 10)
             {
-                _rejectedConnections.TryDequeue(out SubscriptionConnection options);
+                _rejectedConnections.TryDequeue(out SubscriptionConnection _);
             }
             _rejectedConnections.Enqueue(connection);
         }

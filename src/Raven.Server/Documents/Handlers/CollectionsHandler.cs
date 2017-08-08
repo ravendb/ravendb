@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Handlers
         {
             return new CollectionOperationOptions
             {
-                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false),
+                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false)
             };
         }
     }

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
 
-                var newMetadata = new DynamicJsonValue()
+                var newMetadata = new DynamicJsonValue
                 {
                     [Constants.Documents.Metadata.Collection] = collectionName,
                     [Constants.Documents.Metadata.Id] = id

@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
-        private static readonly bool EnableDebugging = true; // for debugging purposes
+        private static bool EnableDebugging = true; // for debugging purposes
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
@@ -537,7 +537,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
                         SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)))
                     .WithRankSpecifiers(
-                        SyntaxFactory.SingletonList<ArrayRankSpecifierSyntax>(
+                        SyntaxFactory.SingletonList(
                             SyntaxFactory.ArrayRankSpecifier(
                                     SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(
                                         SyntaxFactory.OmittedArraySizeExpression()

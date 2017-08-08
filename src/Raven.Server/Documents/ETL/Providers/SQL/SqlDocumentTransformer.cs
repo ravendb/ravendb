@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             _config = config;
             _patchRequest = new PatchRequest { Script = transformation.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
-            
+
             var tables = new string[config.SqlTables.Count];
 
             for (var i = 0; i < config.SqlTables.Count; i++)
@@ -47,12 +47,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
         {
             base.RemoveEngineCustomizations(engine, scope);
-            
+
             engine.Global.Delete("varchar", true);
             engine.Global.Delete("nVarchar", true);
             engine.Global.Delete(Transformation.LoadAttachment, true);
         }
-        
+
         protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);
@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 ThrowLoadParameterIsMandatory(nameof(tableName));
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
-            
+
             var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
             var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
@@ -105,7 +105,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 columns.Add(sqlColumn);
             }
-            
+
             GetOrAdd(tableName).Inserts.Add(new ToSqlItem(Current)
             {
                 Columns = columns
@@ -134,7 +134,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return true;
         }
 
-        private string LoadAttachmentFunction(string attachmentName)
+        private static string LoadAttachmentFunction(string attachmentName)
         {
             return $"{AttachmentMarker}{attachmentName}";
         }
@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
-        private ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)
+        private static ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)
         {
             return new ValueTypeLengthTriple
             {
@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             };
         }
 
-        private ValueTypeLengthTriple ToNVarchar(string value, double? sizeAsDouble)
+        private static ValueTypeLengthTriple ToNVarchar(string value, double? sizeAsDouble)
         {
             return new ValueTypeLengthTriple
             {
@@ -174,7 +174,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             return _tables.Values;
         }
-         
+
         public override void Transform(ToSqlItem item)
         {
             if (item.IsDelete == false)

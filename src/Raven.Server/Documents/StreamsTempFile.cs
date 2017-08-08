@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
         {
             _reading = false;
 
-            var _128mb = 128 * 1024 * 1024;
+            const int _128mb = 128 * 1024 * 1024;
             if (_file.Length > _128mb)
                 _file.SetLength(_128mb);
         }
@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
             private readonly long _startPosition;
             private long _length;
             private bool _reading;
-            public InnerPartStream(FileStream file, StreamsTempFile parent)
+            public InnerPartStream(Stream file, StreamsTempFile parent)
             {
                 _file = file;
                 _parent = parent;
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents
 
             public override int Read(byte[] buffer, int offset, int count)
             {
-                if(_reading == false)
+                if (_reading == false)
                     throw new NotSupportedException();
 
                 var remaining = (_startPosition + _length) - _file.Position;
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents
 
             public override long Seek(long offset, SeekOrigin origin)
             {
-                if(origin != SeekOrigin.Begin || offset != 0)
+                if (origin != SeekOrigin.Begin || offset != 0)
                     throw new NotSupportedException();
 
                 _reading = true;
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents
 
             public override void Write(byte[] buffer, int offset, int count)
             {
-                if(_reading)
+                if (_reading)
                     throw new NotSupportedException();
                 _file.Write(buffer, offset, count);
                 _length += count;

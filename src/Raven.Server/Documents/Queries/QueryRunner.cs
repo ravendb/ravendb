@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Queries
                 return new BulkOperationCommand<DeleteDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.DeleteDetails
                 {
                     Id = key,
-                    Etag = x.DeleteResult?.Etag,
+                    Etag = x.DeleteResult?.Etag
                 });
             }, token);
         }
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Queries
                 return count;
             }
 
-            public Action<IBulkOperationDetails> AfterExecute { get; set; }
+            public Action<IBulkOperationDetails> AfterExecute { private get; set; }
         }
     }
 }

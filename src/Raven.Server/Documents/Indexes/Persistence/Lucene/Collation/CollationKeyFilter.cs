@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
         public CollationKeyFilter(TokenStream input, CultureInfo cultureInfo) : base(input)
         {
             _cultureInfo = cultureInfo;
-            _termAtt = (TermAttribute)base.AddAttribute<ITermAttribute>();
+            _termAtt = (TermAttribute)AddAttribute<ITermAttribute>();
         }
 
         public override bool IncrementToken()

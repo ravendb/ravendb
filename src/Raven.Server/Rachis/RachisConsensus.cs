@@ -171,7 +171,7 @@ namespace Raven.Server.Rachis
             LogsTable = new TableSchema();
             LogsTable.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = 0
             });
         }
 

@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Simulation
             tableQuerySummary.TableName = tableName;
             tableQuerySummary.Commands =
                 commands
-                    .Select(x => new CommandData()
+                    .Select(x => new CommandData
                     {
                         CommandText = x.CommandText,
                         Params = x.Parameters.Cast<DbParameter>().Select(y => new KeyValuePair<string, object>(y.ParameterName, y.Value)).ToArray()

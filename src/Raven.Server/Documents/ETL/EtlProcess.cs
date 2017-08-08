@@ -127,7 +127,7 @@ namespace Raven.Server.Documents.ETL
                         enumerators.Add((docs, tombstones, collection));
                     }
                 }
-                
+
                 using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
                     foreach (var en in enumerators)
@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.ETL
                         continue;
                     }
                 }
-                
+
                 using (stats.For(EtlOperations.Transform))
                 {
                     CancellationToken.ThrowIfCancellationRequested();
@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.ETL
                     var didWork = false;
 
                     var state = GetProcessState();
-                    
+
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -486,7 +486,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutSystemDocument(bool isHiLo);
 
-        private bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
+        private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                 remoteAsString: item.ChangeVector,
@@ -567,7 +567,7 @@ namespace Raven.Server.Documents.ETL
 
             exceptionAggregator.Execute(() => _cts.Dispose());
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());
-            
+
             exceptionAggregator.ThrowIfNeeded();
         }
     }

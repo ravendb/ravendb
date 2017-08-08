@@ -84,8 +84,8 @@ namespace Raven.Server.Documents
                         {
                             if (tryMergeAttachmentsConflict)
                             {
-                                if (current.TryGetMember(property, out object currentAttachments) == false ||
-                                    modified.TryGetMember(property, out object modifiedAttachments) == false)
+                                if (current.TryGetMember(property, out object _) == false ||
+                                    modified.TryGetMember(property, out object _) == false)
                                 {
                                     // Resolve when just 1 document have attachments
                                     resolvedAttachmetConflict = true;
@@ -182,6 +182,6 @@ namespace Raven.Server.Documents
         NotEqual = 0x1,
         Equal = 0x2,
 
-        ShouldRecreateDocument = 0x8,
+        ShouldRecreateDocument = 0x8
     }
 }

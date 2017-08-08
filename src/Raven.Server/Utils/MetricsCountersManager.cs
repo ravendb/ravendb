@@ -83,7 +83,7 @@ namespace Raven.Server.Utils
                 ["ConcurrentRequestsCount"] = self.ConcurrentRequestsCount,
 
                 ["AttachmentPutsPerSecond"] = self.AttachmentPutsPerSecond.CreateMeterData(),
-                ["AttachmentBytesPutsPerSecond"] = self.AttachmentBytesPutsPerSecond.CreateMeterData(),
+                ["AttachmentBytesPutsPerSecond"] = self.AttachmentBytesPutsPerSecond.CreateMeterData()
                 
             };
             return metricsStatsJsonValue;

@@ -27,7 +27,6 @@ namespace Raven.Server.Documents
     {
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
-        private readonly Logger _logger;
 
         private static readonly Slice AttachmentsSlice;
         private static readonly Slice AttachmentsMetadataSlice;
@@ -50,7 +49,7 @@ namespace Raven.Server.Documents
             ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
             Hash = 4, // base64 hash
             TransactionMarker = 5,
-            ChangeVector = 6,
+            ChangeVector = 6
         }
 
         static AttachmentsStorage()
@@ -64,7 +63,7 @@ namespace Raven.Server.Documents
             AttachmentsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
-                Count = 1,
+                Count = 1
             });
             AttachmentsSchema.DefineFixedSizeIndex(new TableSchema.FixedSizeSchemaIndexDef
             {
@@ -83,7 +82,7 @@ namespace Raven.Server.Documents
         {
             _documentDatabase = documentDatabase;
             _documentsStorage = documentDatabase.DocumentsStorage;
-            _logger = LoggingSource.Instance.GetLogger<AttachmentsStorage>(documentDatabase.Name);
+            LoggingSource.Instance.GetLogger<AttachmentsStorage>(documentDatabase.Name);
 
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
@@ -107,7 +106,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
+        private static long GetCountOfAttachmentsForHash(DocumentsOperationContext context, Slice hash)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             return table.GetCountOfMatchesFor(AttachmentsSchema.Indexes[AttachmentsHashSlice], hash);
@@ -259,7 +258,7 @@ namespace Raven.Server.Documents
             }
 
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (Slice.From(context.Allocator,changeVector,out var changeVectorSlice))
+            using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
             using (table.Allocate(out TableValueBuilder tvb))
             {
                 tvb.Add(key.Content.Ptr, key.Size);
@@ -376,7 +375,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector, 
+        private void PutRevisionAttachment(DocumentsOperationContext context, byte* lowerId, int lowerIdSize, Slice changeVector,
             (LazyStringValue name, LazyStringValue contentType, Slice base64Hash) attachment)
         {
             var attachmentEtag = _documentsStorage.GenerateNextEtag();
@@ -463,7 +462,7 @@ namespace Raven.Server.Documents
                         [nameof(AttachmentName.Name)] = attachment.Name,
                         [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(), // TODO: Do better than create a string
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
-                        [nameof(AttachmentName.Size)] = attachment.Size,
+                        [nameof(AttachmentName.Size)] = attachment.Size
                     });
                 }
             }
@@ -534,7 +533,7 @@ namespace Raven.Server.Documents
             return tree.ReadStream(hashSlice);
         }
 
-        private long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
+        private static long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             var info = tree.GetStreamInfo(hashSlice, false);
@@ -659,7 +658,7 @@ namespace Raven.Server.Documents
             Prefix
         }
 
-        private Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
+        private static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)
         {
             var result = new Attachment
             {
@@ -673,7 +672,7 @@ namespace Raven.Server.Documents
 
             TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
-            result.TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out int size);
+            result.TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out int _);
 
             return result;
         }
@@ -704,7 +703,7 @@ namespace Raven.Server.Documents
                     if (expectedChangeVector != null)
                         throw new ConcurrencyException($"Document {documentId} does not exist, " +
                                                        $"but delete was called with change vector '{expectedChangeVector}' to remove attachment {name}. " +
-                                                       $"Optimistic concurrency violation, transaction will be aborted.");
+                                                       "Optimistic concurrency violation, transaction will be aborted.");
 
                     // this basically mean that we tried to delete attachment whose document doesn't exist.
                     return;
@@ -800,7 +799,7 @@ namespace Raven.Server.Documents
                 if (expectedChangeVector != null)
                     throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
                                                    $"but delete was called with change vector '{expectedChangeVector}'. " +
-                                                   $"Optimistic concurrency violation, transaction will be aborted.");
+                                                   "Optimistic concurrency violation, transaction will be aborted.");
 
                 // this basically means that we tried to delete attachment that doesn't exist.
                 return;
@@ -915,7 +914,7 @@ namespace Raven.Server.Documents
             if ((flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
                 if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                    metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray _) == false)
                 {
                     Debug.Assert(false, $"Found {DocumentFlags.HasAttachments} flag bug {Constants.Documents.Metadata.Attachments} is missing from metadata.");
                 }

@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         /// to, e.g., lowercase tokens. 
         /// </summary>
         char Normalize(char c);
-    }    
+    }
 
     public class LowerCaseTokenizerBase<T> : Tokenizer where T : struct, ILowerCaseTokenizerHelper
     {
@@ -29,57 +29,57 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         public LowerCaseTokenizerBase(System.IO.TextReader input)
             : base(input)
         {
-            offsetAtt = AddAttribute<IOffsetAttribute>();
-            termAtt = AddAttribute<ITermAttribute>();
+            _offsetAtt = AddAttribute<IOffsetAttribute>();
+            _termAtt = AddAttribute<ITermAttribute>();
         }
 
         protected LowerCaseTokenizerBase(AttributeSource source, System.IO.TextReader input)
             : base(source, input)
         {
-            offsetAtt = AddAttribute<IOffsetAttribute>();
-            termAtt = AddAttribute<ITermAttribute>();
+            _offsetAtt = AddAttribute<IOffsetAttribute>();
+            _termAtt = AddAttribute<ITermAttribute>();
         }
 
         protected LowerCaseTokenizerBase(AttributeFactory factory, System.IO.TextReader input)
             : base(factory, input)
         {
-            offsetAtt = AddAttribute<IOffsetAttribute>();
-            termAtt = AddAttribute<ITermAttribute>();
+            _offsetAtt = AddAttribute<IOffsetAttribute>();
+            _termAtt = AddAttribute<ITermAttribute>();
         }
 
-        private int offset = 0, bufferIndex = 0, dataLen = 0;
+        private int _offset, _bufferIndex, _dataLen;
 
         private const int IO_BUFFER_SIZE = 4096;
-        private char[] ioBuffer = new char[IO_BUFFER_SIZE];
-        private readonly ITermAttribute termAtt;
-        private readonly IOffsetAttribute offsetAtt;
+        private readonly char[] _ioBuffer = new char[IO_BUFFER_SIZE];
+        private readonly ITermAttribute _termAtt;
+        private readonly IOffsetAttribute _offsetAtt;
 
         public override bool IncrementToken()
         {
             ClearAttributes();
 
             int length = 0;
-            int start = bufferIndex;
+            int start = _bufferIndex;
 
-            char[] buffer = termAtt.TermBuffer();
+            char[] buffer = _termAtt.TermBuffer();
             while (true)
             {
-                if (bufferIndex >= dataLen)
+                if (_bufferIndex >= _dataLen)
                 {
-                    offset += dataLen;
-                    dataLen = input.Read(ioBuffer, 0, ioBuffer.Length);
-                    if (dataLen <= 0)
+                    _offset += _dataLen;
+                    _dataLen = input.Read(_ioBuffer, 0, _ioBuffer.Length);
+                    if (_dataLen <= 0)
                     {
-                        dataLen = 0; // so next offset += dataLen won't decrement offset
+                        _dataLen = 0; // so next offset += dataLen won't decrement offset
                         if (length > 0)
                             break;
 
                         return false;
                     }
-                    bufferIndex = 0;
+                    _bufferIndex = 0;
                 }
 
-                char c = ioBuffer[bufferIndex++];
+                char c = _ioBuffer[_bufferIndex++];
 
                 if (Helper.IsTokenChar(c))
                 {
@@ -87,9 +87,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
                     if (length == 0)
                         // start of token
-                        start = offset + bufferIndex - 1;
+                        start = _offset + _bufferIndex - 1;
                     else if (length == buffer.Length)
-                        buffer = termAtt.ResizeTermBuffer(1 + length);
+                        buffer = _termAtt.ResizeTermBuffer(1 + length);
 
                     buffer[length++] = Helper.Normalize(c); // buffer it, normalized
                 }
@@ -98,8 +98,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
                     break; // return 'em
             }
 
-            termAtt.SetTermLength(length);
-            offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
+            _termAtt.SetTermLength(length);
+            _offsetAtt.SetOffset(CorrectOffset(start), CorrectOffset(start + length));
 
             return true;
         }
@@ -107,16 +107,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         public override void End()
         {
             // set final offset
-            int finalOffset = CorrectOffset(offset);
-            offsetAtt.SetOffset(finalOffset, finalOffset);
+            int finalOffset = CorrectOffset(_offset);
+            _offsetAtt.SetOffset(finalOffset, finalOffset);
         }
 
-        public override void Reset(System.IO.TextReader input)
+        public override void Reset(System.IO.TextReader tr)
         {
-            base.Reset(input);
-            bufferIndex = 0;
-            offset = 0;
-            dataLen = 0;
+            base.Reset(tr);
+            _bufferIndex = 0;
+            _offset = 0;
+            _dataLen = 0;
         }
     }
 }

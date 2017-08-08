@@ -9,7 +9,6 @@ namespace Raven.Server.Documents.Queries
 {
     public class StreamDocumentQueryResult : QueryResultServerSide, IDisposable
     {
-        private readonly HttpResponse _response;
         private readonly BlittableJsonTextWriter _writer;
         private readonly JsonOperationContext _context;
         private bool _anyWrites;
@@ -20,7 +19,6 @@ namespace Raven.Server.Documents.Queries
             if (response.HasStarted)
                 throw new InvalidOperationException("You cannot start streaming because response has already started.");
 
-            _response = response;
             _writer = writer;
             _context = context;
         }

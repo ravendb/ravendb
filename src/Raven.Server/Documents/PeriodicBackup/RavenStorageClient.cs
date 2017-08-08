@@ -71,9 +71,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Metadata = metadata;
             }
 
-            public Stream Data { get; private set; }
+            public Stream Data { get; }
 
-            public Dictionary<string, string> Metadata { get; private set; }
+            public Dictionary<string, string> Metadata { get; }
         }
     }
 }

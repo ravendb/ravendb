@@ -220,7 +220,7 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        private NotificationTableValue Get(string id, TransactionOperationContext context, RavenTransaction tx)
+        private NotificationTableValue Get(string id, JsonOperationContext context, RavenTransaction tx)
         {
             var table = tx.InnerTransaction.OpenTable(_actionsSchema, NotificationsSchema.NotificationsTree);
 

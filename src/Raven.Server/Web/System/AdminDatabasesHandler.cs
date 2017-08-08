@@ -71,7 +71,7 @@ namespace Raven.Server.Web.System
                         writer.WriteStartObject();
                         writer.WriteDocumentPropertiesWithoutMetdata(context, new Document
                         {
-                            Data = dbDoc,
+                            Data = dbDoc
                         });
                         writer.WriteComma();
                         writer.WritePropertyName("Etag");
@@ -149,7 +149,7 @@ namespace Raven.Server.Web.System
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
 
                 await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
-                
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -242,7 +242,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WaitForExecutionOnRelevantNodes(TransactionOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
+        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
@@ -650,7 +650,7 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(DatabasePutResult.RaftCommandIndex)] = index,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = index
                     });
                     writer.Flush();
                 }
@@ -718,7 +718,7 @@ namespace Raven.Server.Web.System
         public async Task ToggleDynamicNodeDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var enable = GetBoolValueQueryString("enable", required: true) ?? true;
+            var enable = GetBoolValueQueryString("enable") ?? true;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -735,7 +735,7 @@ namespace Raven.Server.Web.System
 
                 var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
                 await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
-                
+
                 NoContentStatus();
             }
         }
@@ -769,7 +769,7 @@ namespace Raven.Server.Web.System
                         {
                             ["Name"] = name,
                             ["Success"] = false,
-                            ["Reason"] = "database not found",
+                            ["Reason"] = "database not found"
                         });
                         continue;
                     }
@@ -782,7 +782,7 @@ namespace Raven.Server.Web.System
                             ["Name"] = name,
                             ["Success"] = true, //even if we have nothing to do, no reason to return failure status
                             ["Disabled"] = disableRequested,
-                            ["Reason"] = $"Database already {state}",
+                            ["Reason"] = $"Database already {state}"
                         });
                         continue;
                     }

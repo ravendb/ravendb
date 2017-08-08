@@ -7,14 +7,14 @@ namespace Raven.Server.Indexing
 {
     unsafe class MmapStream : Stream
     {
-        private byte* ptr;
-        private long len;
-        private long pos;
+        private byte* _ptr;
+        private long _len;
+        private long _pos;
 
         public MmapStream(byte* ptr, long len)
         {
-            this.ptr = ptr;
-            this.len = len;
+            _ptr = ptr;
+            _len = len;
         }
 
         public override void Flush()
@@ -32,7 +32,7 @@ namespace Raven.Server.Indexing
                     Position += offset;
                     break;
                 case SeekOrigin.End:
-                    Position = len + offset;
+                    Position = _len + offset;
                     break;
                 default:
                     throw new ArgumentOutOfRangeException("origin", origin, null);
@@ -47,24 +47,24 @@ namespace Raven.Server.Indexing
 
         public override int ReadByte()
         {
-            if (Position == len)
+            if (Position == _len)
                 return -1;
-            return ptr[pos++];
+            return _ptr[_pos++];
         }
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (pos == len)
+            if (_pos == _len)
                 return 0;
-            if (count > len - pos)
+            if (count > _len - _pos)
             {
-                count = (int)(len - pos);
+                count = (int)(_len - _pos);
             }
             fixed (byte* dst = buffer)
             {
-                Memory.Copy(dst + offset, ptr + pos, count);
+                Memory.Copy(dst + offset, _ptr + _pos, count);
             }
-            pos += count;
+            _pos += count;
             return count;
         }
 
@@ -79,14 +79,14 @@ namespace Raven.Server.Indexing
 
         public override bool CanWrite => false;
 
-        public override long Length => len;
-        public override long Position { get { return pos; } set { pos = value; } }
+        public override long Length => _len;
+        public override long Position { get { return _pos; } set { _pos = value; } }
 
         public void Set(byte* buffer, int size)
         {
-            this.ptr = buffer;
-            this.len = size;
-            pos = 0;
+            _ptr = buffer;
+            _len = size;
+            _pos = 0;
         }
     }
 }

@@ -74,7 +74,7 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
-        
+
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
@@ -204,7 +204,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
@@ -265,9 +265,9 @@ namespace Raven.Server.ServerWide
                     catch (Exception e)
                     {
                         throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
-                                                         $"Was the server store encrypted using a different OS user? In that case, " +
-                                                         $"you must provide an unprotected key (rvn server put-key). " +
-                                                         $"Admin assistance required.", e);
+                                                         "Was the server store encrypted using a different OS user? In that case, " +
+                                                         "you must provide an unprotected key (rvn server put-key). " +
+                                                         "Admin assistance required.", e);
                     }
                 }
             }
@@ -404,16 +404,16 @@ namespace Raven.Server.ServerWide
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long etag) != null)
                     _lastClientConfigurationIndex = etag;
             }
-            
+
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
-        
+
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag , GetNodesStatuses()));
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag, GetNodesStatuses()));
                 // If we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
@@ -460,7 +460,7 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, NodeStatus> GetNodesStatuses()
         {
-             Dictionary<string, NodeStatus> nodesStatuses = null;
+            Dictionary<string, NodeStatus> nodesStatuses = null;
 
             switch (CurrentState)
             {
@@ -478,18 +478,18 @@ namespace Raven.Server.ServerWide
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [leaderTag] = new NodeStatus { Connected = true } 
+                            [leaderTag] = new NodeStatus { Connected = true }
                         };
                     }
                     break;
             }
 
-            return nodesStatuses?? new Dictionary<string, NodeStatus>();
+            return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag , GetNodesStatuses()));
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag, GetNodesStatuses()));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
@@ -739,9 +739,9 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
         {
-            var deleteTaskCommand = 
-                taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName): 
+            var deleteTaskCommand =
+                taskType == OngoingTaskType.Subscription ?
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName) :
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
@@ -872,7 +872,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName , string type)
+        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName, string type)
         {
             if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
@@ -1075,7 +1075,7 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
                 _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
-                
+
                 // We put a certificate in the local state to tell the server who to trust, and this is done before
                 // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
                 // create the cluster, we register those local certificates in the cluster.
@@ -1349,7 +1349,7 @@ namespace Raven.Server.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ServerCertificateHolder.CertificateForClients,
+                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ServerCertificateHolder.CertificateForClients
             };
         }
 
@@ -1375,14 +1375,14 @@ namespace Raven.Server.ServerWide
             return json;
 
         }
-        
+
         public bool HasClientConfigurationChanged(long index)
         {
             if (index < 0)
                 return false;
 
             return _lastClientConfigurationIndex > index;
-        }		
+        }
 
     }
 }

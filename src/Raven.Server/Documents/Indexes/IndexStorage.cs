@@ -621,11 +621,6 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private static unsafe ByteStringContext.ExternalScope CreateKey(RavenTransaction tx, LazyStringValue key, out Slice keySlice)
-        {
-            return Slice.External(tx.InnerTransaction.Allocator, key.Buffer, key.Size, out keySlice);
-        }
-
         private class IndexSchema
         {
             public const string StatsTree = "Stats";
@@ -654,8 +649,6 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice LastIndexingTimeSlice;
 
-            public static readonly Slice PrioritySlice;
-
             public static readonly Slice StateSlice;
 
             public static readonly Slice ErrorTimestampsSlice;
@@ -673,7 +666,7 @@ namespace Raven.Server.Documents.Indexes
                 Slice.From(StorageEnvironment.LabelsContext, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
-                Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable, out PrioritySlice);
+                Slice.From(StorageEnvironment.LabelsContext, "Priority", ByteStringType.Immutable, out _);
                 Slice.From(StorageEnvironment.LabelsContext, "State", ByteStringType.Immutable, out StateSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
                 Slice.From(StorageEnvironment.LabelsContext, "MaxNumberOfOutputsPerDocument", ByteStringType.Immutable, out MaxNumberOfOutputsPerDocument);

@@ -10,14 +10,12 @@ namespace Raven.Server.Documents
 {
     public class JsonClassGenerator
     {
-        private string language;
-
         private readonly Lazy<IDictionary<Type, FieldType>> _knownTypes = new Lazy<IDictionary<Type, FieldType>>(InitializeKnownTypes, true);
 
         internal IDictionary<Type, FieldType> KnownTypes => _knownTypes.Value;
 
         private readonly IDictionary<string, ClassType> _generatedTypes = new Dictionary<string, ClassType>();
-        
+
         private static IDictionary<Type, FieldType> InitializeKnownTypes()
         {
             var types = new Dictionary<Type, FieldType>
@@ -120,7 +118,7 @@ namespace Raven.Server.Documents
         {
             public readonly IDictionary<string, FieldType> Properties;
 
-            public ClassType(string name, IDictionary<string, FieldType> properties = null) : base(name, false)
+            public ClassType(string name, IDictionary<string, FieldType> properties = null) : base(name)
             {
                 Properties = new ReadOnlyDictionary<string, FieldType>(properties);
             }
@@ -173,9 +171,12 @@ namespace Raven.Server.Documents
 
             private static bool Compare<TKey, TValue>(IDictionary<TKey, TValue> dict1, IDictionary<TKey, TValue> dict2)
             {
-                if (dict1 == dict2) return true;
-                if ((dict1 == null) || (dict2 == null)) return false;
-                if (dict1.Count != dict2.Count) return false;
+                if (dict1 == dict2)
+                    return true;
+                if ((dict1 == null) || (dict2 == null))
+                    return false;
+                if (dict1.Count != dict2.Count)
+                    return false;
 
                 var comparer = EqualityComparer<TValue>.Default;
 
@@ -196,8 +197,6 @@ namespace Raven.Server.Documents
         {
             if (string.IsNullOrWhiteSpace(language))
                 throw new ArgumentNullException("language");
-
-            this.language = language;
         }
 
         public string Execute(Document document)
@@ -255,7 +254,7 @@ namespace Raven.Server.Documents
                 codeBuilder.Append("\tpublic class " + @class.Name + Environment.NewLine);
                 codeBuilder.Append("\t{" + Environment.NewLine);
 
-                foreach (var @field in @class.Properties)
+                foreach (var field in @class.Properties)
                 {
                     codeBuilder.Append("\t\tpublic ");
                     codeBuilder.Append(field.Value.IsArray ? $"List<{field.Value.Name}>" : field.Value.Name);
@@ -335,7 +334,7 @@ namespace Raven.Server.Documents
                     case BlittableJsonToken.StartArray:
                     case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeByte:
                     case BlittableJsonToken.StartArray | BlittableJsonToken.OffsetSizeShort:
-                        var array = (BlittableJsonReaderArray) prop.Value;
+                        var array = (BlittableJsonReaderArray)prop.Value;
                         fields[prop.Name] = GetArrayField(array, prop.Name);
                         break;
                     default:
@@ -468,7 +467,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private const string CodeLayout = 
+        private const string CodeLayout =
 @"using System;
 using System.Collections.Generic;
 using System.Linq;

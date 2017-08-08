@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -43,7 +42,7 @@ namespace Raven.Server
                 //KeepAliveInterval = Debugger.IsAttached ? 
                 //    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30), 
                 KeepAliveInterval = TimeSpan.FromHours(24),
-                ReceiveBufferSize = 4096,
+                ReceiveBufferSize = 4096
             });
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
@@ -175,7 +174,7 @@ namespace Raven.Server
                         TenantName = tenant ?? "N/A",
                         CustomInfo = "", // TODO: Implement
                         InnerRequestsCount = 0, // TODO: Implement
-                        QueryTimings = null, // TODO: Implement
+                        QueryTimings = null // TODO: Implement
                     };
 
                     TrafficWatchManager.DispatchMessage(twn);

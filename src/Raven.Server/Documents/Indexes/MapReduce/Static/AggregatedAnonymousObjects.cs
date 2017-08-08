@@ -1,7 +1,6 @@
 ﻿using Sparrow.Json;
 using System.Collections.Generic;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Raven.Server.Utils;
 
@@ -14,7 +13,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
         private readonly PropertyAccessor _propertyAccessor;
         private readonly JsonOperationContext _indexContext;
 
-        public AggregatedAnonymousObjects(List<object> results, PropertyAccessor propertyAccessor, TransactionOperationContext indexContext)
+        public AggregatedAnonymousObjects(List<object> results, PropertyAccessor propertyAccessor, JsonOperationContext indexContext)
         {
             _outputs = results;
             _propertyAccessor = propertyAccessor;

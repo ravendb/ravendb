@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         CommandText = x
                     }).ToArray();
 
-                    summaries.Add(new TableQuerySummary()
+                    summaries.Add(new TableQuerySummary
                     {
                         TableName = records.TableName,
                         Commands = commands

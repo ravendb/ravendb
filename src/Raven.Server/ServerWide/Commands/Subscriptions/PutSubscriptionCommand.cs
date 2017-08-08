@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (InitialChangeVector == Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
+                        if (InitialChangeVector == Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
                         {
                             if (receivedSubscriptionState.Modifications == null)
                                 receivedSubscriptionState.Modifications = new DynamicJsonValue();
@@ -83,7 +83,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Criteria)] = new DynamicJsonValue()
+            json[nameof(Criteria)] = new DynamicJsonValue
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,

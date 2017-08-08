@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);
         }
 
-        private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)
+        private void WriteDocumentsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {

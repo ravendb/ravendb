@@ -274,7 +274,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             {
                 var boostedValue = (BoostedValue)value;
 
-                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext, nestedArray: false);
+                int boostedFields = GetRegularFields(instance, field, boostedValue.Value, indexContext);
                 newFields += boostedFields;
 
                 var fields = instance.GetFields();
@@ -429,33 +429,47 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             if (valueString != null)
                 return valueString.Length == 0 ? ValueType.EmptyString : ValueType.String;
 
-            if (value is Enum) return ValueType.Enum;
+            if (value is Enum)
+                return ValueType.Enum;
 
-            if (value is bool) return ValueType.Boolean;
+            if (value is bool)
+                return ValueType.Boolean;
 
-            if (value is DateTime) return ValueType.DateTime;
+            if (value is DateTime)
+                return ValueType.DateTime;
 
-            if (value is DateTimeOffset) return ValueType.DateTimeOffset;
+            if (value is DateTimeOffset)
+                return ValueType.DateTimeOffset;
 
-            if (value is TimeSpan) return ValueType.TimeSpan;
+            if (value is TimeSpan)
+                return ValueType.TimeSpan;
 
-            if (value is BoostedValue) return ValueType.BoostedValue;
+            if (value is BoostedValue)
+                return ValueType.BoostedValue;
 
-            if (value is DynamicBlittableJson) return ValueType.DynamicJsonObject;
+            if (value is DynamicBlittableJson)
+                return ValueType.DynamicJsonObject;
 
-            if (value is IEnumerable) return ValueType.Enumerable;
+            if (value is IEnumerable)
+                return ValueType.Enumerable;
 
-            if (value is LazyNumberValue || value is double || value is decimal || value is float) return ValueType.Double;
+            if (value is LazyNumberValue || value is double || value is decimal || value is float)
+                return ValueType.Double;
 
-            if (value is AbstractField) return ValueType.Lucene;
+            if (value is AbstractField)
+                return ValueType.Lucene;
 
-            if (value is char) return ValueType.String;
+            if (value is char)
+                return ValueType.String;
 
-            if (value is IConvertible) return ValueType.Convertible;
+            if (value is IConvertible)
+                return ValueType.Convertible;
 
-            if (value is BlittableJsonReaderObject) return ValueType.BlittableJsonObject;
+            if (value is BlittableJsonReaderObject)
+                return ValueType.BlittableJsonObject;
 
-            if (IsNumber(value)) return ValueType.Numeric;
+            if (IsNumber(value))
+                return ValueType.Numeric;
 
 
             return ValueType.ConvertToJson;
@@ -543,11 +557,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             var fieldNameDouble = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixDouble;
             var fieldNameLong = field.Name + Constants.Documents.Indexing.Fields.RangeFieldSuffixLong;
 
-            var multipleItemsSameFieldCountArray = _multipleItemsSameFieldCount.ToArray();
-
-            var numericFieldDouble = GetNumericFieldFromCache(fieldNameDouble, null, storage, termVector, multipleItemsSameFieldCountArray);
-            var numericFieldLong = GetNumericFieldFromCache(fieldNameLong, null, storage, termVector, multipleItemsSameFieldCountArray);
-
+            var numericFieldDouble = GetNumericFieldFromCache(fieldNameDouble, null, storage, termVector);
+            var numericFieldLong = GetNumericFieldFromCache(fieldNameLong, null, storage, termVector);
 
             switch (BlittableNumber.Parse(value, out double doubleValue, out long longValue))
             {
@@ -562,7 +573,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
             }
         }
 
-        private NumericField GetNumericFieldFromCache(string name, Field.Index? index, Field.Store store, Field.TermVector termVector, int[] multipleItemsSameField)
+        private NumericField GetNumericFieldFromCache(string name, Field.Index? index, Field.Store store, Field.TermVector termVector)
         {
             int cacheKey = FieldCacheKey.GetHashCode(name, index, store, termVector, _multipleItemsSameFieldCount);
 

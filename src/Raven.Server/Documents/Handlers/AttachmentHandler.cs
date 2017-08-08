@@ -73,7 +73,6 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var type = AttachmentType.Document;
-                string changeVector = null;
                 Slice cv;
                 ByteStringContext.InternalScope disposeCv = default(ByteStringContext.InternalScope);
                 if (isDocument == false)
@@ -85,7 +84,7 @@ namespace Raven.Server.Documents.Handlers
                         Enum.TryParse(typeString, out type) == false)
                         throw new ArgumentException("The 'Type' field in the body request is mandatory");
 
-                    if (request.TryGet("ChangeVector", out changeVector) == false && changeVector != null)
+                    if (request.TryGet("ChangeVector", out string changeVector) == false && changeVector != null)
                         throw new ArgumentException("The 'ChangeVector' field in the body request is mandatory");
                     disposeCv = Slice.From(context.Allocator, changeVector, out cv);
                 }
@@ -231,7 +230,7 @@ namespace Raven.Server.Documents.Handlers
                     Database = Database,
                     ExpectedChangeVector = changeVector,
                     DocumentId = id,
-                    Name = name,
+                    Name = name
                 };
                 await Database.TxMerger.Enqueue(cmd);
                 cmd.ExceptionDispatchInfo?.Throw();
@@ -256,7 +255,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 try
                 {
-                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, 
+                    Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name,
                         ContentType, Hash, ExpectedChangeVector, Stream);
                     Database.DocumentsStorage.Get(context, "users/1");
                 }

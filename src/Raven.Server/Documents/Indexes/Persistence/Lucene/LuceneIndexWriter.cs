@@ -17,29 +17,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
     {
         private readonly Logger _logger;
 
-        private IndexWriter indexWriter;
+        private IndexWriter _indexWriter;
 
-        private readonly Directory directory;
+        private readonly Directory _directory;
 
-        private readonly Analyzer analyzer;
+        private readonly Analyzer _analyzer;
 
-        private readonly IndexDeletionPolicy indexDeletionPolicy;
+        private readonly IndexDeletionPolicy _indexDeletionPolicy;
 
-        private readonly IndexWriter.MaxFieldLength maxFieldLength;
+        private readonly IndexWriter.MaxFieldLength _maxFieldLength;
 
         private readonly IndexWriter.IndexReaderWarmer _indexReaderWarmer;
 
-        public Directory Directory => indexWriter?.Directory;
+        public Directory Directory => _indexWriter?.Directory;
 
-        public Analyzer Analyzer => indexWriter?.Analyzer;
+        public Analyzer Analyzer => _indexWriter?.Analyzer;
 
         public LuceneIndexWriter(Directory d, Analyzer a, IndexDeletionPolicy deletionPolicy,
             IndexWriter.MaxFieldLength mfl, IndexWriter.IndexReaderWarmer indexReaderWarmer, DocumentDatabase documentDatabase, IState state)
         {
-            directory = d;
-            analyzer = a;
-            indexDeletionPolicy = deletionPolicy;
-            maxFieldLength = mfl;
+            _directory = d;
+            _analyzer = a;
+            _indexDeletionPolicy = deletionPolicy;
+            _maxFieldLength = mfl;
             _indexReaderWarmer = indexReaderWarmer;
             _logger = LoggingSource.Instance.GetLogger<LuceneIndexWriter>(documentDatabase.Name);
             RecreateIndexWriter(state);
@@ -47,19 +47,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void AddDocument(global::Lucene.Net.Documents.Document doc, Analyzer a, IState state)
         {
-            indexWriter.AddDocument(doc, a, state);
+            _indexWriter.AddDocument(doc, a, state);
         }
 
         public void DeleteDocuments(Term term, IState state)
         {
-            indexWriter.DeleteDocuments(term, state);
+            _indexWriter.DeleteDocuments(term, state);
         }
 
         public void Commit(IState state)
         {
             try
             {
-                indexWriter.Commit(state);
+                _indexWriter.Commit(state);
             }
             catch (SystemException e)
             {
@@ -77,12 +77,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public long RamSizeInBytes()
         {
-            return indexWriter.RamSizeInBytes();
+            return _indexWriter.RamSizeInBytes();
         }
 
         public void Optimize(IState state)
         {
-            indexWriter.Optimize(state);
+            _indexWriter.Optimize(state);
         }
 
         private void RecreateIndexWriter(IState state)
@@ -91,10 +91,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 DisposeIndexWriter();
 
-                if (indexWriter == null)
+                if (_indexWriter == null)
                     CreateIndexWriter(state);
             }
-            catch (Exception e) 
+            catch (Exception e)
             {
                 throw new IndexWriterCreationException(e);
             }
@@ -102,29 +102,29 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         private void CreateIndexWriter(IState state)
         {
-            indexWriter = new IndexWriter(directory, analyzer, indexDeletionPolicy, maxFieldLength, state);
-            indexWriter.UseCompoundFile = false;
+            _indexWriter = new IndexWriter(_directory, _analyzer, _indexDeletionPolicy, _maxFieldLength, state);
+            _indexWriter.UseCompoundFile = false;
             if (_indexReaderWarmer != null)
             {
-                indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
+                _indexWriter.MergedSegmentWarmer = _indexReaderWarmer;
             }
-            using (indexWriter.MergeScheduler)
+            using (_indexWriter.MergeScheduler)
             {
             }
-            indexWriter.SetMergeScheduler(new SerialMergeScheduler(), state);
+            _indexWriter.SetMergeScheduler(new SerialMergeScheduler(), state);
 
             // RavenDB already manages the memory for those, no need for Lucene to do this as well
-            indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
-            indexWriter.SetRAMBufferSizeMB(1024);
+            _indexWriter.SetMaxBufferedDocs(IndexWriter.DISABLE_AUTO_FLUSH);
+            _indexWriter.SetRAMBufferSizeMB(1024);
         }
 
         private void DisposeIndexWriter(bool waitForMerges = true)
         {
-            if (indexWriter == null)
+            if (_indexWriter == null)
                 return;
 
-            var writer = indexWriter;
-            indexWriter = null;
+            var writer = _indexWriter;
+            _indexWriter = null;
 
             try
             {
@@ -154,12 +154,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public void AddIndexesNoOptimize(Directory[] directories, int count, IState state)
         {
-            indexWriter.AddIndexesNoOptimize(state, directories);
+            _indexWriter.AddIndexesNoOptimize(state, directories);
         }
 
         public int NumDocs(IState state)
         {
-            return indexWriter.NumDocs(state);
+            return _indexWriter.NumDocs(state);
         }
     }
 }

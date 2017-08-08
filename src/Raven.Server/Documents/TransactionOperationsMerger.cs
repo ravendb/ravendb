@@ -183,7 +183,7 @@ namespace Raven.Server.Documents
             DoCommandNotification((MergedTransactionCommand)op);
         }
 
-        private void DoCommandNotification(MergedTransactionCommand cmd)
+        private static void DoCommandNotification(MergedTransactionCommand cmd)
         {
             if (cmd.Exception != null)
             {

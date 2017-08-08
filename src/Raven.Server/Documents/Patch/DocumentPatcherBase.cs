@@ -18,7 +18,7 @@ using Sparrow.Logging;
 using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
-{    
+{
     public abstract class DocumentPatcherBase
     {
         private const int MaxRecursionDepth = 128;
@@ -44,10 +44,10 @@ namespace Raven.Server.Documents.Patch
             _allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
         }
 
-        public virtual PatchResult Apply(DocumentsOperationContext context, 
-                                         Document document, 
-                                         PatchRequest patch, 
-                                         BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None, 
+        public virtual PatchResult Apply(DocumentsOperationContext context,
+                                         Document document,
+                                         PatchRequest patch,
+                                         BlittableJsonDocumentBuilder.UsageMode mode = BlittableJsonDocumentBuilder.UsageMode.None,
                                          IBlittableDocumentModifier modifier = null,
                                          bool debugMode = false)
         {
@@ -213,7 +213,7 @@ namespace Raven.Server.Documents.Patch
 
         protected abstract void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope);
 
-        private void OutputLog(Engine engine, PatcherOperationScope scope)
+        private static void OutputLog(Engine engine, PatcherOperationScope scope)
         {
             var numberOfOutputs = (int)engine.GetValue("number_of_outputs").AsNumber();
             if (numberOfOutputs == 0)
@@ -321,7 +321,7 @@ namespace Raven.Server.Documents.Patch
 
                 _parent.CleanupEngine(_patch, JintEngine, _scope);
 
-                _parent.OutputLog(JintEngine, _scope);
+                OutputLog(JintEngine, _scope);
                 if (_scope.DebugMode)
                     _scope.DebugInfo.Add(string.Format("Statements executed: {0}", JintEngine.StatementsCount));
             }
@@ -333,7 +333,7 @@ namespace Raven.Server.Documents.Patch
 
                 JintEngine.ResetStatementsCount();
 
-                _parent.OutputLog(JintEngine, _scope);
+                OutputLog(JintEngine, _scope);
                 var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
                 var error = errorEx as Jint.Runtime.JavaScriptException;
                 if (error != null)

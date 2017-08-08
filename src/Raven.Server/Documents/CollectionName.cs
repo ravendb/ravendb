@@ -17,8 +17,10 @@ namespace Raven.Server.Documents
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public bool Equals(CollectionName x, CollectionName y)
         {
-            if (x == y) return true;
-            if (x == null || y == null) return false;
+            if (x == y)
+                return true;
+            if (x == null || y == null)
+                return false;
             return string.Equals(x.Name, y.Name, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -70,8 +72,8 @@ namespace Raven.Server.Documents
                     return _documents;
                 case CollectionTableType.Tombstones:
                     return _tombstones;
-                    case CollectionTableType.Revisions:
-                        return _revisions;
+                case CollectionTableType.Revisions:
+                    return _revisions;
                 default:
                     throw new NotSupportedException($"Collection table type '{type}' is not supported.");
             }
@@ -89,9 +91,12 @@ namespace Raven.Server.Documents
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((CollectionName)obj);
         }
 
@@ -134,11 +139,11 @@ namespace Raven.Server.Documents
 
             // case insensitive 'Raven/' match without doing allocations
 
-            if ((buffer[0] != (byte)'R' && buffer[0] != (byte)'r') ||
-                (buffer[1] != (byte)'A' && buffer[1] != (byte)'a') ||
-                (buffer[2] != (byte)'V' && buffer[2] != (byte)'v') ||
-                (buffer[3] != (byte)'E' && buffer[3] != (byte)'e') ||
-                (buffer[4] != (byte)'N' && buffer[4] != (byte)'n') ||
+            if (buffer[0] != (byte)'R' && buffer[0] != (byte)'r' ||
+                buffer[1] != (byte)'A' && buffer[1] != (byte)'a' ||
+                buffer[2] != (byte)'V' && buffer[2] != (byte)'v' ||
+                buffer[3] != (byte)'E' && buffer[3] != (byte)'e' ||
+                buffer[4] != (byte)'N' && buffer[4] != (byte)'n' ||
                 buffer[5] != (byte)'/')
                 return false;
 
@@ -166,17 +171,17 @@ namespace Raven.Server.Documents
 
             // case insensitive 'Raven/' match without doing allocations
 
-            if ( id[5] != '/' ||
-                (id[0] != 'R' && id[0] != 'r') ||
-                (id[1] != 'A' && id[1] != 'a') ||
-                (id[2] != 'V' && id[2] != 'v') ||
-                (id[3] != 'E' && id[3] != 'e') ||
-                (id[4] != 'N' && id[4] != 'n'))
+            if (id[5] != '/' ||
+                id[0] != 'R' && id[0] != 'r' ||
+                id[1] != 'A' && id[1] != 'a' ||
+                id[2] != 'V' && id[2] != 'v' ||
+                id[3] != 'E' && id[3] != 'e' ||
+                id[4] != 'N' && id[4] != 'n')
                 return false;
 
             return true;
         }
-        
+
         public static string GetCollectionName(string id, BlittableJsonReaderObject document)
         {
             if (id != null && IsSystemCollectionName(id))
@@ -212,7 +217,7 @@ namespace Raven.Server.Documents
                 return EmptyCollection;
 
             document.NoCache = true;
-            if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false || 
+            if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false ||
                 metadata.TryGet(MetadataCollectionSegment, out string collectionName) == false)
             {
                 collectionName = EmptyCollection;

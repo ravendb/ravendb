@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             };
         }
 
-        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, TransactionOperationContext context)
+        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
         {
             HashSet<string> groupByFields;
 

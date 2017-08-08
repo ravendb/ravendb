@@ -34,9 +34,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             try
             {
                 using (stats.For(IndexingOperation.Reduce.SaveOutputDocuments))
-                {                    
-                    bool result = enqueue.Result;
-                }                    
+                {
+                    var result = enqueue.Result;
+                }
             }
             catch (Exception e)
             {
@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _reduceDocuments.Add(new OutputReduceDocument
                 {
                     Key = key,
-                    Document = _jsonContext.ReadObject(djv, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk),
+                    Document = _jsonContext.ReadObject(djv, key, BlittableJsonDocumentBuilder.UsageMode.ToDisk)
                 });
             }
 
@@ -140,7 +140,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _reduceDocuments.Add(new OutputReduceDocument
                 {
                     IsDelete = true,
-                    Key = key,
+                    Key = key
                 });
             }
 

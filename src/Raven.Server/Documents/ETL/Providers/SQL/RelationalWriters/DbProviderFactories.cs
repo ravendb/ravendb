@@ -38,9 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     Start = "\"",
                     End = "\""
                 };
-            return new DbCommandBuilder
-            {
-            };
+            return new DbCommandBuilder();
         }
     }
 }

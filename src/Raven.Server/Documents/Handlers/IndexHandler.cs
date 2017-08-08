@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
 
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["Error"] = $"{index.Name} is not map-reduce index",
+                            ["Error"] = $"{index.Name} is not map-reduce index"
                         });
 
                         return Task.CompletedTask;

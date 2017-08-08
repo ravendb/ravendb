@@ -31,8 +31,8 @@ namespace Raven.Server.Config
 
         public string this[string key]
         {
-            get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); }
+            get => throw new NotImplementedException();
+            set => throw new NotImplementedException();
         }
 
         public string Key { get; }
