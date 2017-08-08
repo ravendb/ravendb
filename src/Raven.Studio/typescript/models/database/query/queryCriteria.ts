@@ -7,7 +7,7 @@ import queryUtil = require("common/queryUtil");
 class queryCriteria {
     showFields = ko.observable<boolean>(false);
     indexEntries = ko.observable<boolean>(false);
-    queryText = ko.observable<string>("from @all_docs");
+    queryText = ko.observable<string>("");
     transformer = ko.observable<string>();
     transformerParameters = ko.observableArray<transformerParamDto>();
 
