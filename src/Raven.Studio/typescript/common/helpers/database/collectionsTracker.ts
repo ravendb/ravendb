@@ -23,7 +23,7 @@ class collectionsTracker {
         changed: [] as Array<(coll: collection, changeVector: string) => void>,
         removed: [] as Array<(coll: collection) => void>,
         globalChangeVector: [] as Array<(changeVector: string) => void>
-    }
+    };
 
     onDatabaseChanged(db: database) {
         this.db = db;

@@ -24,7 +24,7 @@
                                 </label>
                             </div>
                             <div class="toggle">
-                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments">
+                                <input id="toggle6" type="checkbox" data-bind="checked: includeRevisionDocuments, enable: $root.canExportDocumentRevisions">
                                 <label for="toggle6">
                                     Include Document Revisions
                                 </label>
