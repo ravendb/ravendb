@@ -124,29 +124,6 @@ namespace Raven.Server.NotificationCenter
             }
         }
 
-        internal static bool TryReadDate(BlittableJsonReaderObject action, string fieldName, out DateTime date)
-        {
-            if (action.TryGetMember(fieldName, out object dateString) == false || dateString == null)
-            {
-                date = default(DateTime);
-                return false;
-            }
-
-            var lazyStringDate = (LazyStringValue)dateString;
-
-            var parsedType = LazyStringParser.TryParseDateTime(lazyStringDate.Buffer, lazyStringDate.Size, out date, out DateTimeOffset _);
-
-            switch (parsedType)
-            {
-                case LazyStringParser.Result.DateTime:
-                    return true;
-                case LazyStringParser.Result.DateTimeOffset:
-                    throw new NotSupportedException($"Got {nameof(DateTimeOffset)} while only {nameof(DateTime)} is supported");
-                default:
-                    throw new NotSupportedException($"Unknown type: {parsedType}");
-            }
-        }
-
         public IDisposable ReadActionsOrderedByCreationDate(out IEnumerable<NotificationTableValue> actions)
         {
             using (var scope = new DisposeableScope())

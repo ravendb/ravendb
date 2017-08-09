@@ -372,7 +372,9 @@ namespace SlowTests.MailingList
 
             public void PopulateData()
             {
-                getVenues().ForEach(_documentSession.Store);
+                foreach (var venue in getVenues())
+                    _documentSession.Store(venue);
+
                 performers = getPerformers();
                 performers.ForEach(_documentSession.Store);
                 Events = getEvents();
@@ -398,13 +400,25 @@ namespace SlowTests.MailingList
                 // Each of the following groups of events is larger than the default page size of 128 in order to prove that paging is being used for retrieving documents
                 var events = new List<Event>();
                 // 2 valid events, sharing 2 performers, multiplied by 70 gives us 140 valid events featuring 140 performers
-                Enumerable.Range(0, 70).ForEach(x => events.AddRange(getEventsStartingToday(x)));
+                foreach (var x in Enumerable.Range(0, 70))
+                {
+                    events.AddRange(getEventsStartingToday(x));
+                }
                 // 3 valid events, sharing 3 performers, multiplied by 50 gives us 150 valid events featuring 150 performers
-                Enumerable.Range(0, 50).ForEach(x => events.AddRange(getEventsPublishedAfterLastNotificationRunAndGoingOnSaleAfterToday(70, x)));
+                foreach (var x in Enumerable.Range(0, 50))
+                {
+                    events.AddRange(getEventsPublishedAfterLastNotificationRunAndGoingOnSaleAfterToday(70, x));
+                }
                 // 3 valid events, sharing 3 performers, multiplied by 50 gives us 150 valid events featuring 150 performers
-                Enumerable.Range(0, 50).ForEach(x => events.AddRange(getEventsStartingAfterTodayButGoingOnSaleToday(120, x)));
+                foreach (var x in Enumerable.Range(0, 50))
+                {
+                    events.AddRange(getEventsStartingAfterTodayButGoingOnSaleToday(120, x));
+                }
                 // 3 valid events, sharing 3 performers, published before the last run multiplied by 50 gives us 150 valid events featuring 150 performers
-                Enumerable.Range(0, 50).ForEach(x => events.AddRange(getEventsPublishedBeforeLastNotificationRun(170, x)));
+                foreach (var x in Enumerable.Range(0, 50))
+                {
+                    events.AddRange(getEventsPublishedBeforeLastNotificationRun(170, x));
+                }
 
                 return events;
             }

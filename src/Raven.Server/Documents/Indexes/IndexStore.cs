@@ -493,11 +493,6 @@ namespace Raven.Server.Documents.Indexes
                 existingIndex.SetPriority(definition.Priority.Value);
         }
 
-        internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
-        {
-            return GetIndexCreationOptions(indexDefinition, existingIndex, out IndexDefinitionCompareDifferences _);
-        }
-
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {
             differences = IndexDefinitionCompareDifferences.All;

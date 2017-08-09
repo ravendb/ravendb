@@ -69,12 +69,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             return this;
         }
 
-        public LazyLoadOperation<T> WithTransformer(string transformer)
-        {
-            _transformer = transformer;
-            return this;
-        }
-
         public object Result { get; set; }
         public QueryResult QueryResult { get; set; }
         public bool RequiresRetry { get; set; }

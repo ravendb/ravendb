@@ -32,7 +32,7 @@ using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Json
 {
-    internal class JsonDeserializationServer : JsonDeserializationBase
+    internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
         public static readonly Func<BlittableJsonReaderObject, ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader> NodeDebugInfoRequestHeader =
             GenerateJsonDeserializationRoutine<ServerWideDebugInfoPackageHandler.NodeDebugInfoRequestHeader>();

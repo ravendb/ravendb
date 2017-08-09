@@ -130,7 +130,8 @@ namespace SlowTests.Core.Session
 
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2", "users/3" });
 
-                    users.ForEach(kvp => Assert.Null(kvp.Value));
+                    foreach (var user in users)
+                        Assert.Null(user.Value);
                 }
             }
         }

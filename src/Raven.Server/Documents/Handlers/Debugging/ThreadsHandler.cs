@@ -1,8 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
-using Raven.Client.ServerWide.Debugging;
 using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -15,18 +15,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
     {
         [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
-        {            
+        {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 using (var write = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     var threadAllocations = NativeMemory.ThreadAllocations.Values
-                        .GroupBy(x=>x.UnmanagedThreadId)
-                        .ToDictionary(g=>g.Key, x=>x.First().Name);
+                        .GroupBy(x => x.UnmanagedThreadId)
+                        .ToDictionary(g => g.Key, x => x.First().Name);
 
                     context.Write(write,
                         new DynamicJsonValue
-                        {                            
+                        {
                             ["Runaway Threads"] = new DynamicJsonArray(GetCurrentProcessThreads()
                                 .OrderByDescending(thread => thread.TotalProcessorTime.TotalMilliseconds)
                                 .Select(thread => new DynamicJsonValue
@@ -52,6 +52,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private static IEnumerable<ProcessThread> GetCurrentProcessThreads()
         {
             return Process.GetCurrentProcess().Threads.Cast<ProcessThread>();
+        }
+
+        private class ThreadInfo
+        {
+            public int Id { get; set; }
+            public string Name { get; set; }
+            public DateTime StartingTime { get; set; }
+            public ThreadState State { get; set; }
+            public ThreadWaitReason? WaitReason { get; set; }
+            public TimeSpan TotalProcessorTime { get; set; }
+            public TimeSpan PrivilegedProcessorTime { get; set; }
+            public TimeSpan UserProcessorTime { get; set; }
         }
     }
 }

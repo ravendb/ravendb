@@ -114,7 +114,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35),CancellationToken.None);
+                var operation2 = await store.Operations.SendAsync(new DeleteByIndexOperation<Person, Person_ByAge>(x => x.Age < 35), CancellationToken.None);
                 await operation2.WaitForCompletionAsync();
 
                 using (var session = store.OpenAsyncSession())
@@ -135,7 +135,9 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var persons = GetNewPersons();
-                    persons.ForEach(x => session.Store(x));
+                    foreach (var person in persons)
+                        session.Store(person);
+
                     session.SaveChanges();
                 }
 
