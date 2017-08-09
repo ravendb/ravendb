@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Queries.Sorting.AlphaNumeric;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.Tests.Sorting
@@ -298,13 +299,15 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public async Task random_words()
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public async Task random_words(int seed)
         {
             var localTracks = new List<Track>();
             for (var i = 0; i < 1024; i++)
             {
-                var str = GetRandomString(500);
+                var str = GetRandomString(500, seed);
                 localTracks.Add(CreateTrack(str));
             }
 
@@ -351,13 +354,15 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public async Task random_words_using_document_query()
+
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public async Task random_words_using_document_query(int seed)
         {
             var localTracks = new List<Track>();
             for (var i = 0; i < 1024; i++)
             {
-                var str = GetRandomString(500);
+                var str = GetRandomString(500, seed);
                 localTracks.Add(CreateTrack(str));
             }
 
@@ -404,13 +409,14 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Fact]
-        public async Task random_words_using_document_query_async()
+        [Theory]
+        [InlineDataWithRandomSeed]
+        public async Task random_words_using_document_query_async(int seed)
         {
             var localTracks = new List<Track>();
             for (var i = 0; i < 1024; i++)
             {
-                var str = GetRandomString(500);
+                var str = GetRandomString(500, seed);
                 localTracks.Add(CreateTrack(str));
             }
 
@@ -640,10 +646,10 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        private static string GetRandomString(int length)
+        private static string GetRandomString(int length, int seed)
         {
             const string Chars = "~`!@#$%^&()_+-={}[];',. 0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-            var random = new Random();
+            var random = new Random(seed);
             return new string(Enumerable.Repeat(Chars, length).Select(s => s[random.Next(s.Length)]).ToArray());
         }
     }
