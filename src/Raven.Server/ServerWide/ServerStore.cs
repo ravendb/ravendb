@@ -9,6 +9,8 @@ using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
@@ -361,6 +363,12 @@ namespace Raven.Server.ServerWide
                 BooleanQuery.MaxClauseCount = Configuration.Queries.MaxClauseCount.Value;
 
             ContextPool = new TransactionContextPool(_env);
+
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                // warm-up the json convertor, it takes about 250ms at first conversion.
+                EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
+            }
 
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 
