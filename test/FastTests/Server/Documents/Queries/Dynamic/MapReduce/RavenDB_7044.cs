@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
@@ -96,6 +97,55 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                 Assert.Equal(1, indexDefinitions.Length); // all of the above queries should be handled by the same auto index
                 Assert.Equal("Auto/ToDoTasks/ByCountReducedByCompletedAndDueDate", indexDefinitions[0].Name);
+            }
+        }
+
+        [Fact]
+        public void Where_field_needs_to_be_incorporated_into_group_by_if_it_is_not_aggregate_operation_RavenDB_7995()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Address()
+                    {
+                        City = "London",
+                        Country = "UK"
+                    });
+                    session.Store(new Address()
+                    {
+                        City = "Torun",
+                        Country = "Poland"
+                    });
+                    session.Store(new Address()
+                    {
+                        City = "London",
+                        Country = "UK"
+                    });
+
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var addressesCount = session.Query<Address>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .Where(x => x.City == "London")
+                        .GroupBy(x => x.Country)
+                        .Select(x => new
+                        {
+                            Country = x.Key,
+                            Count = x.Count(),
+                        })
+                        .ToList();
+
+                    Assert.Equal(2, addressesCount[0].Count);
+                    Assert.Equal("UK", addressesCount[0].Country);
+
+                }
+
+                var indexDefinitions = store.Admin.Send(new GetIndexesOperation(0, 10));
+                Assert.Equal("Auto/Addresses/ByCountReducedByCityAndCountry", indexDefinitions[0].Name);
             }
         }
 
