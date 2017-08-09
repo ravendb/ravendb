@@ -235,7 +235,6 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         _conenctToPeer?.Dispose();
-                        Status = "Disconnected";
                     }
                 }
             }

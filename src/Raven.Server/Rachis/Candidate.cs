@@ -191,6 +191,7 @@ namespace Raven.Server.Rachis
                 {
                     nodeStatus.ErrorDetails = voter.Status;
                 }
+                dic.Add(voter.Tag,nodeStatus);
             }
            
             return dic;
