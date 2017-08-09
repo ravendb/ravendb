@@ -36,12 +36,6 @@ import getCustomFunctionsCommand = require("commands/database/documents/getCusto
 import customFunctions = require("models/database/documents/customFunctions");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
-
-type indexItem = {
-    name: string;
-    isMapReduce: boolean;
-}
-
 type filterType = "in" | "string" | "range";
 
 type stringSearchType = "Starts With" | "Ends With" | "Contains" | "Exact";
@@ -65,7 +59,7 @@ class query extends viewModelBase {
     allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
     collections = ko.observableArray<collection>([]);
-    indexes = ko.observableArray<indexItem>();
+    indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
     indexFields = ko.observableArray<string>();
     querySummary = ko.observable<string>();
 
@@ -197,8 +191,8 @@ class query extends viewModelBase {
                 return false;
 
             const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.name === indexName);
-            return !!currentIndex && currentIndex.isMapReduce;
+            const currentIndex = indexes.find(i => i.Name === indexName);
+            return !!currentIndex && currentIndex.Type === "MapReduce";
         });
 
         this.isStaticIndex = ko.pureComputed(() => {
@@ -217,7 +211,7 @@ class query extends viewModelBase {
                 return false;
 
             const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.name === indexName);
+            const currentIndex = indexes.find(i => i.Name === indexName);
             return !currentIndex;
         });
 
@@ -386,19 +380,14 @@ class query extends viewModelBase {
         return new getDatabaseStatsCommand(db)
             .execute()
             .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
-                this.indexes(results.Indexes.map(indexDto => {
-                    return {
-                        name: indexDto.Name,
-                        isMapReduce: indexDto.Type === "MapReduce" //TODO: support for autoindexes?
-                    } as indexItem;
-                }));
+                this.indexes(results.Indexes);
             });
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash) {
             return;
-        } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
+        } else if (this.indexes().find(i => i.Name === indexNameOrRecentQueryHash) ||
             indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix) || 
             indexNameOrRecentQueryHash === queryUtil.AllDocs) {
             this.runQueryOnIndex(indexNameOrRecentQueryHash);
@@ -635,8 +624,13 @@ class query extends viewModelBase {
         return "";
     }
 
-    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.queriedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
+    queryCompleter(editor: any,
+        session: any,
+        pos: AceAjax.Position,
+        prefix: string,
+        callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
+        queryUtil.queryCompleter(this.indexFields, this.queriedIndex, this.activeDatabase, editor, session, pos, prefix,
+            callback, this.collections, this.indexes);
         callback([], []);
     }
 
