@@ -84,10 +84,9 @@
                     </div>
                     <div class="panel-addon" data-bind="visible: lastError">
                         <div class="padding small" data-bind="css: { 'bg-danger': badgeClass() === 'state-danger', 'bg-warning': badgeClass() === 'state-warning' }">
-                            <div data-bind="text: _.includes($root.expandedDetails(), tag()) ? lastErrorShort() : lastError()"></div>
-                            <div data-bind="visible: lastErrorShort() !== lastError()">
-                                <a href="#" 
-                                    data-bind="click: _.partial($root.toggleExpand, tag()), text: _.includes($root.expandedDetails(), tag()) ? 'hide details' : 'see more'"></a>
+                            <div data-bind="text: lastErrorShort()"></div>
+                            <div>
+                                <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
                             </div>
                         </div>
                     </div>
