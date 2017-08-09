@@ -1,4 +1,6 @@
 using System;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using FastTests.Server;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Documents.Queries.Dynamic.Map;
@@ -8,64 +10,41 @@ using FastTests.Voron.Storage;
 using SlowTests.Cluster;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using SlowTests.Tests.Linq;
+using Sparrow.Json;
+using SQLToRavenMigration;
 
 namespace Tryouts
 {
     public class Program
     {
+        public void NotifyPerTable(string tableName)
+        {
+            Console.WriteLine($"'{tableName}' table has been written.");
+        }
+
+        public void NotifyDocuments(int documentsCount)
+        {
+            Console.WriteLine($"Documents count: {documentsCount}");
+        }
         public static void Main(string[] args)
         {
-            using (var store = new DocumentStore
+            var doc = new 
             {
-                Urls = new string[] { "http://192.168.0.100:8080" },
-                Database = "Demo"
-            }.Initialize())
+                Array = new byte[] {1, 2, 3, 4, 5}
+            };
+            var context = JsonOperationContext.ShortTermSingleUse();
+            EntityToBlittable.ConvertEntityToBlittable(doc, new DocumentConventions(), context, new DocumentInfo
             {
-                store.SetRequestsTimeout(TimeSpan.FromSeconds(1));
+                Collection = "foo"
+            });
 
-                while (true)
-                {
-                    using (var session = store.OpenSession())
-                    {
-                        session.Load<dynamic>("users/1");
-                        Console.WriteLine("a");
-                    }
-                    Console.ReadLine();
-                }
 
-                //var sub = store.Subscriptions.Open(new Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions(11));
-                //sub.Run(batch =>
-                //{
-                //    foreach (var item in batch.Items)
-                //    {
-                //        Console.WriteLine(item.Id);
-                //    }
-                //}).Wait();
-            }
-            //RunTest();
+            
         }
 
-        private static void RunTest()
-        {
-            for (int i = 0; i < 100; i++)
-            {
-                Console.Clear();
-                Console.WriteLine(i);
-                using (var test = new SlowTests.Client.Subscriptions.TestSubscriptionOnDisabledDatabase())
-                {
-                    try
-                    {
-                        test.Run().Wait();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.Beep();
-                        return;
-                    }
-                }
-            }
-        }
+
     }
 }

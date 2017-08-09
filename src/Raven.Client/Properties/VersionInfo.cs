@@ -3,7 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Properties;
 
-[assembly: RavenVersion(Build = "40", CommitHash = "15a7da4", Version = "4.0", FullVersion = "4.0.0-custom-40")]
+[assembly: RavenVersion(Build = "40", CommitHash = "f9836f4", Version = "4.0", FullVersion = "4.0.0-custom-40")]
 
 namespace Raven.Client.Properties
 {

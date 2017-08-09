@@ -1,11 +1,20 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO.Compression;
+using System.Net;
 using System.Reflection;
 using System.Threading.Tasks;
+using Raven.Client.Json;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
+using Raven.Server.SqlMigration;
+using Sparrow.Json;
+using Voron.Exceptions;
 using DatabaseSmuggler = Raven.Server.Smuggler.Documents.DatabaseSmuggler;
 
 namespace Raven.Server.Web.Studio
@@ -44,6 +53,128 @@ namespace Raven.Server.Web.Studio
 
                 return NoContent();
             }
+        }
+
+        [RavenAction("/databases/*/studio/sql-schema", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public Task SqlSchema()
+        {
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                /*using (context.OpenReadTransaction())
+                {
+                    foreach (var collection in Database.DocumentsStorage.GetCollections(context))
+                    {
+                        if (collection.Count > 0 && collection.Name != CollectionName.SystemCollection)
+                        {
+                            throw new InvalidOperationException("You cannot create sample data in a database that already contains documents");
+                        }
+                    }
+                }*/
+
+                var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
+                sqlImportDoc.TryGet("ConnectionString", out string connectionString);
+
+                var connectionFactory = new ConnectionFactory(connectionString);
+
+                var con = (SqlConnection) connectionFactory.OpenConnection();
+
+                var db = new SqlDatabase(con);
+                
+                var tablesNames = new List<string>();
+                var relations = new List<Tuple<string, string>>();
+
+                foreach (var table in db.Tables)
+                {
+                    tablesNames.Add(table.Name);
+                    if (!table.IsReferenced && table.PrimaryKeys.Count > 1)
+                        foreach (var reference in table.References)
+                        {
+                            relations.Add(Tuple.Create(reference.Value.Item1, table.Name));
+                        }
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Relations");
+
+                    writer.WriteStartArray();
+                    var first = true;
+                    foreach (var item in relations)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+
+                        first = false;
+                        writer.WriteStartObject();
+                        writer.WritePropertyName("Parent");
+                        writer.WriteString(item.Item1);
+                        writer.WriteComma();
+                        writer.WritePropertyName("Child");
+                        writer.WriteString(item.Item2);
+                        writer.WriteEndObject();
+                    }
+
+                    writer.WriteEndArray();
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("Tables");
+                    writer.WriteStartArray();
+                    first = true;
+                    foreach (var item in tablesNames)
+                    {
+                        if (first == false)
+                            writer.WriteComma();
+
+                        first = false;
+                        writer.WriteString(item);
+                    }
+
+                    writer.WriteEndArray();
+                    writer.WriteEndObject();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/databases/*/studio/import-sql", "POST", AuthorizationStatus.DatabaseAdmin)]
+        public async Task ImportSql()
+        {
+            var sw = new Stopwatch();
+            sw.Start();
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
+                sqlImportDoc.TryGet("ConnectionString", out string connectionString);
+                sqlImportDoc.TryGet("Relations", out BlittableJsonReaderArray relations);
+
+                var connectionFactory = new ConnectionFactory(connectionString);
+
+                var con = (SqlConnection) connectionFactory.OpenConnection();
+
+                var db = new SqlDatabase(con);
+
+                foreach (BlittableJsonReaderObject item in relations.Items)
+                {
+                    item.TryGet("Parent", out string parent);
+                    item.TryGet("Child", out string child);
+                    item.TryGet("PropertyName", out string propertyName);
+
+                    db.Embed(parent, propertyName, child);
+                }
+
+                //db.Embed("dbo.Products", "Lines", "dbo.Order Details");
+                //db.Embed("dbo.Categories", "MyProducts", "dbo.Products");
+
+                var databaseWriter = new RavenDatabaseWriter(db, Database, context);
+
+                await databaseWriter.WriteDatabase();
+            }
+
+            Console.WriteLine("Over all time: " + (double)sw.ElapsedMilliseconds / 1000);
         }
 
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
