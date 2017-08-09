@@ -4,6 +4,7 @@ namespace Raven.Server.NotificationCenter.Notifications
     public enum AlertType
     {
         Etl_Error,
+        Etl_Warning,
         Etl_TransformationError,
         Etl_LoadError,
 
