@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
