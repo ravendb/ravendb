@@ -807,6 +807,30 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/databases/promote", "POST", AuthorizationStatus.ServerAdmin)]
+        public async Task PromoteImmediately()
+        {
+            var name = GetStringQueryString("name");
+            var nodeTag = GetStringQueryString("node");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.PromoteDatabaseNode(name, nodeTag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["RaftCommandIndex"] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
         [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
