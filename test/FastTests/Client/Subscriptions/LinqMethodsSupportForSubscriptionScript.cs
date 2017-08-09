@@ -158,7 +158,6 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-
         [Fact]
         public async Task CanHandleWhere()
         {
@@ -434,6 +433,90 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task CanHandleCountAsProperty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "cool", "great", "nice", "special", "the best"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Michael",
+                            Count = 27
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "unforgettable" , "a must", "don't miss", "once in a lifetime"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Maxim",
+                            Count = 17
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "annoying"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Aviv",
+                            Count = 7
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call =>
+                            call.Comments.Count > 3 &&
+                            call.Person.Count < 20
+                    )
+                };
+
+                Assert.Equal("return this.Comments.length>3&&this.Person.Count<20;",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Maxim", call.Person.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
         private class SupportCall
         {
             public string Name { get; set; }
@@ -442,6 +525,7 @@ namespace FastTests.Client.Subscriptions
             public List<Person> Contacts { get; set; }
             public int Votes { get; set; }
             public bool Survey { get; set; }
+            public Person Person { get; set; }
 
         }
 
@@ -449,6 +533,7 @@ namespace FastTests.Client.Subscriptions
         {
             public string Name { get; set; }
             public int Phone { get; set; }
+            public long Count { get; set; }
         }
     }
 }
