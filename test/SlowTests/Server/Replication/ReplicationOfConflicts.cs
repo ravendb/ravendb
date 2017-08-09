@@ -92,7 +92,8 @@ namespace SlowTests.Server.Replication
                 {
                     try
                     {
-                        session.Load<User>("users/1");                        
+                        session.Load<User>("users/1");
+                        Assert.False(true, "Expected a confclit here");
                     }
                     catch (DocumentConflictException e)
                     {
@@ -100,7 +101,10 @@ namespace SlowTests.Server.Replication
                         Assert.NotEqual(e.LargestEtag, 0);
                         slave.Commands().Delete("users/1", null); //resolve conflict to the one with tombstone
                     }
+                }
 
+                using (var session = slave.OpenSession())
+                {
                     //after resolving the conflict, should not throw
                     Assert.Null(session.Load<User>("users/1"));
                 }

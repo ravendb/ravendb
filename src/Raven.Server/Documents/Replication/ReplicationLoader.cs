@@ -415,7 +415,7 @@ namespace Raven.Server.Documents.Replication
             if (changes.AddedDestinations.Count > 0)
             {
                 var added = newRecord.ExternalReplication.Where(n => changes.AddedDestinations.Contains(n.Url + "@" + n.Database));
-                StartOutgoingConnections(added.ToList());
+                StartOutgoingConnections(added.ToList(), external: true);
             }
             _externalDestinations.Clear();
             _externalDestinations.AddRange(newRecord.ExternalReplication);
