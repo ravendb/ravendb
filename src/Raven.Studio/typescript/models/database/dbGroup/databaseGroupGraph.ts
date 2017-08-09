@@ -510,8 +510,6 @@ class databaseGroupGraph {
                     return "&#xe9c0;";
                 case "Promotable":
                     return "&#xe9c1;";
-                case "Watcher":
-                    return "&#xe9c2;";
                 case "Rehab":
                     return "&#xe9c4;";
             }

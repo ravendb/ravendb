@@ -21,8 +21,6 @@ class databaseGroupNode {
                 return "icon-dbgroup-member";
             case "Promotable":
                 return "icon-dbgroup-promotable";
-            case "Watcher":
-                return "icon-dbgroup-watcher";
             case "Rehab":
                 return "icon-dbgroup-rehab";
         }
