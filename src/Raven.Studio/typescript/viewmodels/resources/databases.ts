@@ -45,7 +45,7 @@ class databases extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase");
+        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo");
 
         this.initObservables();
     }
@@ -121,7 +121,7 @@ class databases extends viewModelBase {
         }
     }
 
-    private updateDatabaseInfo(databaseName: string) {
+    updateDatabaseInfo(databaseName: string) {
         return new getDatabaseCommand(databaseName)
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
