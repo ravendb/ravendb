@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
-        private static bool EnableDebugging = true; // for debugging purposes
+        private static bool EnableDebugging = false; // for debugging purposes (mind http://issues.hibernatingrhinos.com/issue/RavenDB-6960)
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
