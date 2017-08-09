@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
                         .As<Entity>()
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.NotEmpty(results);
                 }

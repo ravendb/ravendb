@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
                         .Take(1024)
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.True(results.Count > 0);
                 }
             }
@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
                         .Take(1024)
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.True(results.Count > 0);
                 }
             }

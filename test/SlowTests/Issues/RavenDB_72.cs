@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(users);
                 }
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
 
@@ -75,7 +75,7 @@ namespace SlowTests.Issues
                     Assert.NotEmpty(users);
                 }
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
 

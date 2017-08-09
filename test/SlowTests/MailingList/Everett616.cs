@@ -72,7 +72,7 @@ namespace SlowTests.MailingList
                                                 }}));
 
                 WaitForIndexing(store);
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
 
@@ -136,7 +136,7 @@ namespace SlowTests.MailingList
                                                 }}));
 
                 WaitForIndexing(store);
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
     }

@@ -35,7 +35,7 @@ namespace SlowTests.MailingList
                                .Customize(customization => customization.WaitForNonStaleResults())
                                .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, results.Count);
                 }
             }

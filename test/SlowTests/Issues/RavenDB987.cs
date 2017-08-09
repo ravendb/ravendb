@@ -129,7 +129,7 @@ namespace SlowTests.Issues
 
                     Assert.Equal(6, results.Count);
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

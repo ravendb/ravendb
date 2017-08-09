@@ -96,7 +96,7 @@ namespace SlowTests.Tests.Track
                         .ProjectFromIndexFieldsInto<JoinedChildTransport>()
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(4, transports.Count);
 

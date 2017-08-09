@@ -110,7 +110,7 @@ namespace SlowTests.MailingList
                     var fullFacetResults = session.Query<AccItem, AccItems_Attributes>()
                                                   .ToFacets("facets/AttributeFacets");
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     var partialGardenFacet =
                         partialFacetResults.Results["Attributes"].Values.First(
@@ -122,7 +122,7 @@ namespace SlowTests.MailingList
                             x => x.Range.Contains("hasgarden"));
                     Assert.Equal(3, fullGardenFacet.Hits);
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

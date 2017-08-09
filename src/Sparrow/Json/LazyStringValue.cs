@@ -230,6 +230,13 @@ namespace Sparrow.Json
                 (self._string = Encodings.Utf8.GetString(self._buffer, self._size));
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator byte[](LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            return Convert.FromBase64String(valueAsString);
+        }
+
         public override bool Equals(object obj)
         {
 #if DEBUG
