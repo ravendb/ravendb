@@ -765,6 +765,15 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(disableEnableCommand);
         }
 
+        public Task<(long Etag, object Result)> PromoteDatabaseNode(string dbName, string nodeTag)
+        {
+            var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName)
+            {
+                NodeTag = nodeTag
+            };
+            return SendToLeaderAsync(promoteDatabaseNodeCommand);
+        }
+
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
         {
             var conflictResolverCommand = new ModifyConflictSolverCommand(dbName)
