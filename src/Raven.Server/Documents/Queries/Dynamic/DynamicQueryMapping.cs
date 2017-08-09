@@ -178,14 +178,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         {
                             existingField.AggregationOperation = field.AggregationOperation;
                         }
-                        else
-                        {
-                            Debug.Assert(groupByFields.Contains(fieldName));
-                            // the field was specified in GROUP BY and WHERE
-                            // let's remove it since GROUP BY fields are passed separately
-
-                            mapFields.Remove(fieldName);
-                        }
                     }
                     else
                     {
