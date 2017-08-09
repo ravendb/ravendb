@@ -5,6 +5,7 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -162,12 +163,24 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false)
+            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel == false)
             {
                 LogConfigurationError(config,
                     new List<string>
                     {
-                        $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so cannot be used"
+                        $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so ETL is not allowed. " +
+                        $"You can change this behavior by setting {nameof(config.AllowEtlOnNonEncryptedChannel)} when creating the ETL configuration"
+                    });
+                return false;
+            }
+
+            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel)
+            {
+                LogConfigurationWarning(config,
+                    new List<string>
+                    {
+                        $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use encryption, " +
+                        $"but {nameof(config.AllowEtlOnNonEncryptedChannel)} is set to true, so ETL is allowed"
                     });
                 return false;
             }
@@ -194,6 +207,19 @@ namespace Raven.Server.Documents.ETL
                 Logger.Info(errorMessage);
 
             var alert = AlertRaised.Create(AlertTitle, errorMessage, AlertType.Etl_Error, NotificationSeverity.Error);
+
+            _database.NotificationCenter.Add(alert);
+        }
+
+        private void LogConfigurationWarning<T>(EtlConfiguration<T> config, List<string> warnings) where T : ConnectionString
+        {
+            var warnMessage = $"Warning about ETL configuration for '{config.Name}'{(config.Connection != null ? $" ({config.GetDestination()})" : string.Empty)}. " +
+                               $"Reason{(warnings.Count > 1 ? "s" : string.Empty)}: {string.Join(";", warnings)}.";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info(warnMessage);
+
+            var alert = AlertRaised.Create(AlertTitle, warnMessage, AlertType.Etl_Warning, NotificationSeverity.Warning);
 
             _database.NotificationCenter.Add(alert);
         }
