@@ -143,7 +143,7 @@ class databases extends viewModelBase {
 
         const matchesFilters = (rs: databaseInfo) => {
             const matchesText = !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
-            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable"));
+            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable" || x.type() === "Rehab"));
 
             return matchesText && matchesLocal;
         };
@@ -424,7 +424,7 @@ class databases extends viewModelBase {
 
             // using foreach to register knockout dependencies
             clusterNodes.forEach(n => {
-                if (n.type() === "Member" || n.type() === "Promotable") {
+                if (n.type() === "Member" || n.type() === "Promotable" || n.type() === "Rehab") {
                     nodeTags.add(n.tag());
                 }
             });
