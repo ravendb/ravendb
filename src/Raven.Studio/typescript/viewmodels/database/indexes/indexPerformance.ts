@@ -107,6 +107,12 @@ class hitTest {
         this.cursor(graphHelper.prefixStyle("grab"));
     }
 
+    findTrackItem(position: { x: number, y: number}) {
+        const items = this.findItems(position.x, position.y);
+        const match = items.find(x => x.actionType === "trackItem");
+        return match ? match.arg as Raven.Client.Documents.Indexes.IndexingPerformanceOperation : null;
+    }
+    
     onMouseMove() {
         const clickLocation = d3.mouse(this.container.node());
         const items = this.findItems(clickLocation[0], clickLocation[1]);
@@ -188,7 +194,7 @@ class indexPerformance extends viewModelBase {
             "Lucene/RecreateSearcher": "#b79ec7",
             "SaveOutputDocuments": "#fed101"
         }
-    }
+    };
 
     static readonly brushSectionHeight = 40;
     private static readonly brushSectionIndexesWorkHeight = 22;
@@ -199,7 +205,6 @@ class indexPerformance extends viewModelBase {
     private static readonly closedTrackPadding = 2;
     private static readonly openedTrackPadding = 4;
     private static readonly axisHeight = 35; 
-    private static readonly inProgressStripesPadding = 7;
 
     private static readonly maxRecursion = 5;
     private static readonly minGapSize = 10 * 1000; // 10 seconds
@@ -246,7 +251,6 @@ class indexPerformance extends viewModelBase {
     private dialogVisible = false;
 
     private inProgressAnimator: inProgressAnimator;
-    private inProgressMarkerCanvas: HTMLCanvasElement;    
 
     /* d3 */
 
@@ -264,8 +268,9 @@ class indexPerformance extends viewModelBase {
     private brushContainer: d3.Selection<any>;
     private zoom: d3.behavior.Zoom<any>;
     private yScale: d3.scale.Ordinal<string, number>;
-    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;      
-
+    private tooltip: d3.Selection<Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo>;
+    private currentTrackTooltipPosition: { x: number, y: number} = null;
+    
     constructor() {
         super();
 
@@ -325,7 +330,7 @@ class indexPerformance extends viewModelBase {
 
         this.hitTest.init(this.svg,
             (indexName) => this.onToggleIndex(indexName),
-            (item, x, y) => this.handleTrackTooltip(item, x, y),
+            (item, x, y) => this.handleTrackTooltip(item, { x, y }),
             (gapItem, x, y) => this.handleGapTooltip(gapItem, x, y),
             () => this.hideTooltip());
 
@@ -387,7 +392,7 @@ class indexPerformance extends viewModelBase {
     private setupEvents(selection: d3.Selection<any>) {
         const onMove = () => {
             this.hitTest.onMouseMove();
-        }
+        };
 
         this.hitTest.cursor.subscribe((cursor) => {
             selection.style('cursor', cursor);
@@ -423,9 +428,7 @@ class indexPerformance extends viewModelBase {
                     const currentMouseLocation = d3.mouse(node);
                     const yDiff = currentMouseLocation[1] - initialClickLocation[1];
 
-                    const newYOffset = initialOffset - yDiff;
-
-                    this.currentYOffset = newYOffset;
+                    this.currentYOffset = initialOffset - yDiff;
                     this.fixCurrentOffset();
                 });
 
@@ -466,6 +469,8 @@ class indexPerformance extends viewModelBase {
 
             this.draw(workData, maxConcurrentIndexes, firstTime);
 
+            this.maybeUpdateTooltip();
+            
             if (firstTime) {
                 firstTime = false;
             }
@@ -506,6 +511,16 @@ class indexPerformance extends viewModelBase {
                     }
                 });
         }
+    }
+    
+    private maybeUpdateTooltip() {
+        if (!this.currentTrackTooltipPosition) {
+            return;
+        }
+        
+        const datum = this.hitTest.findTrackItem(this.currentTrackTooltipPosition);
+        
+        this.handleTrackTooltip(datum, null, true);
     }
 
     private cancelLiveView() {
@@ -918,7 +933,7 @@ class indexPerformance extends viewModelBase {
                 }
                 currentX += dx;
             });
-        }
+        };
 
         extractor([perf.Details], xStart, yStart, yOffset);
     }
@@ -1052,14 +1067,19 @@ class indexPerformance extends viewModelBase {
         if (currentDatum !== element) {
             const tooltipHtml = "Gap start time: " + (element).start.toLocaleTimeString() +
                 "<br/>Gap duration: " + generalUtils.formatMillis((element).durationInMillis);       
-            this.handleTooltip(element, x, y, tooltipHtml);
+            this.handleTooltip(element, tooltipHtml, { x, y }, false);
         }
     } 
 
-    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, x: number, y: number) {
+    private handleTrackTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation, position: { x: number, y: number }, reuseTooltip: boolean = false) {
+        if (!reuseTooltip) {
+            this.currentTrackTooltipPosition = position;
+        }
+        
         const currentDatum = this.tooltip.datum();
 
-        if (currentDatum !== element) {
+        
+        if (currentDatum !== element || reuseTooltip) {
             let tooltipHtml = `${element.Name}<br/>Duration: ${generalUtils.formatMillis((element).DurationInMs)}`;
 
             const opWithParent = element as IndexingPerformanceOperationWithParent;
@@ -1102,15 +1122,16 @@ class indexPerformance extends viewModelBase {
                 tooltipHtml += reduceDetails;
             }           
 
-            this.handleTooltip(element, x, y, tooltipHtml);
+            this.handleTooltip(element, tooltipHtml, position, reuseTooltip);
         }
     }
     
-    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo, x: number, y: number, tooltipHtml: string) {
-        if (element && !this.dialogVisible) {
+    private handleTooltip(element: Raven.Client.Documents.Indexes.IndexingPerformanceOperation | timeGapInfo, tooltipHtml: string, position: { x: number, y: number }, reuseTooltip: boolean) {
+        if (element && (!this.dialogVisible || !position)) {
             const canvas = this.canvas.node() as HTMLCanvasElement;
             const context = canvas.getContext("2d");
             context.font = this.tooltip.style("font");
+            
 
             const longestLine = generalUtils.findLongestLine(tooltipHtml); 
             const tooltipWidth = context.measureText(longestLine).width + 60;
@@ -1118,19 +1139,23 @@ class indexPerformance extends viewModelBase {
             const numberOfLines = generalUtils.findNumberOfLines(tooltipHtml);
             const tooltipHeight = numberOfLines * 30 + 60;
 
-            x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
-            y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
+            if (!reuseTooltip) {
+                let x = position.x;
+                let y = position.y;
+                x = Math.min(x, Math.max(this.totalWidth - tooltipWidth, 0));
+                y = Math.min(y, Math.max(this.totalHeight - tooltipHeight, 0));
 
-            this.tooltip
-                .style("left", (x + 10) + "px")
-                .style("top", (y + 10) + "px")
-                .style('display', undefined);
+                this.tooltip
+                    .style("left", (x + 10) + "px")
+                    .style("top", (y + 10) + "px")
+                    .style('display', undefined);
 
-            this.tooltip
-                .transition()
-                .duration(250)
-                .style("opacity", 1);
-
+                this.tooltip
+                    .transition()
+                    .duration(250)
+                    .style("opacity", 1);
+            }
+            
             this.tooltip
                 .html(tooltipHtml)
                 .datum(element);
