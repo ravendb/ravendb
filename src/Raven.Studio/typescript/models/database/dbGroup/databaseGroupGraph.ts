@@ -108,7 +108,7 @@ class databaseGroupGraph {
     private data = {
         databaseNodes: [] as Array<databaseNode>,
         tasks: [] as Array<taskNode>
-    }
+    };
     
     private $container: JQuery;
     private width: number;
@@ -127,11 +127,17 @@ class databaseGroupGraph {
     private tasksContainer: d3.Selection<void>;
     private dbNodesContainer: d3.Selection<void>;
 
+    private savedWidthAndHeight: [number, number] = null;
+
+    constructor() {
+        _.bindAll(this, ...["enterFullScreen", "exitFullScreen"] as Array<keyof this>);
+    }
+
     init(container: JQuery) {
         this.$container = container;
         this.width = container.innerWidth();
         this.height = container.innerHeight();
-
+        
         this.initGraph();
     }
 
@@ -152,6 +158,7 @@ class databaseGroupGraph {
             .attr("viewBox", "0 0 " + this.width + " " + this.height);
 
         this.svg.append("rect")
+            .attr("class", "zoomRect")
             .attr("width", this.width)
             .attr("height", this.height)
             .style("fill", "none")
@@ -417,7 +424,7 @@ class databaseGroupGraph {
             if (Math.abs(actualSize) > maxSizeWithPadding) {
                 scale = Math.min(scale, maxSizeWithPadding / Math.abs(actualSize));
             }
-        }
+        };
 
         maybeReduceScale(bbox.x, this.width / 2);
         maybeReduceScale(bbox.x + bbox.width, this.width / 2);
@@ -628,7 +635,7 @@ class databaseGroupGraph {
 
                 newDbTags.push(node.NodeTag);
             });
-        }
+        };
 
         merge(this.databaseInfoCache.NodesTopology.Members, "Member");
         merge(this.databaseInfoCache.NodesTopology.Promotables, "Promotable");
@@ -672,6 +679,43 @@ class databaseGroupGraph {
         _.pullAll(this.data.tasks, tasksToDelete);
         
         //TODO: process subscripitons - bundled for now
+    }
+     
+    onResize() {
+        if ($(document).fullScreen()) {
+            this.width = screen.width;
+            this.height = screen.height;
+        } else {
+            [this.width, this.height] = this.savedWidthAndHeight;
+            this.savedWidthAndHeight = null;
+        }
+
+        this.svg
+            .style({
+                width: this.width + "px",
+                height: this.height + "px"
+            })
+            .attr("viewBox", "0 0 " + this.width + " " + this.height);
+        
+        this.svg.select(".zoomRect")
+            .attr("width", this.width)
+            .attr("height", this.height); 
+        
+        this.zoom.translate([this.width / 2, this.height / 2]);
+
+        this.svg
+            .select(".zoom")
+            .call(this.zoom.event);
+    }
+
+    enterFullScreen() {
+        this.savedWidthAndHeight = [this.width, this.height];
+        
+        $("#databaseGroupGraphContainer").fullScreen(true);
+    }
+
+    exitFullScreen() {
+        $("#databaseGroupGraphContainer").fullScreen(false);
     }
 
 }

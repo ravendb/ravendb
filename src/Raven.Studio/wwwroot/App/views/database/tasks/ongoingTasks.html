@@ -260,8 +260,10 @@
 
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-horizontal flex-header">
-                <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
+                <h3>Database group topology</h3>
                 <div class="flex-separator"></div>
+                <button data-bind="click: graph.enterFullScreen" class="btn btn-default">Full screen mode</button>
+                    
                 <div class="btn-group dropdown-right">
                     <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                         <i class="icon-export"></i><span>Download topology</span>
@@ -273,6 +275,8 @@
                 </div>
             </div>
             <div class="panel flex-grow" id="databaseGroupGraphContainer">
+                <h3>Database group topology</h3>
+                <button class="btn btn-default exit-button" data-bind="click: graph.exitFullScreen">Exit full screen</button>
             </div>
             <div class="legend">
                 <div class="row">
