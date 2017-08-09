@@ -63,7 +63,7 @@ namespace SlowTests.SlowTests.Indexes
                     }
                 }
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
 

@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
                         .Customize(c => c.WaitForNonStaleResults())
                         .ToArray();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.NotEmpty(results);
                     Assert.NotEmpty(results);
                 }

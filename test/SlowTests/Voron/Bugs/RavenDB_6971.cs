@@ -88,7 +88,7 @@ namespace SlowTests.Voron.Bugs
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
     }

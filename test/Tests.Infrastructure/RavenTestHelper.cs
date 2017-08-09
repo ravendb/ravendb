@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Utils;
@@ -10,6 +12,7 @@ using Voron.Platform.Posix;
 using Sparrow.Collections;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Xunit;
 
 namespace FastTests
 {
@@ -76,6 +79,13 @@ namespace FastTests
         {
             var inspector = (IRavenQueryInspector)queryable;
             return inspector.GetIndexQuery(isAsync: false);
+        }
+
+        public static void AssertNoIndexErrors(IDocumentStore store, string databaseName = null)
+        {
+            var errors = store.Admin.ForDatabase(databaseName).Send(new GetIndexErrorsOperation());
+
+            Assert.Empty(errors.SelectMany(x => x.Errors));
         }
     }
 }

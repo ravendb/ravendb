@@ -197,7 +197,7 @@ namespace SlowTests.MailingList
                                                            .TransformWith<SearchTransformer, Transformed>();
 
                     var data = query.FirstOrDefault();
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.NotNull(data);
                     Assert.NotNull(data.PostStatus);
                     //Assert.Contains(PostStatus.Edited, data.PostStatus);

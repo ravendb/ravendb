@@ -32,7 +32,7 @@ namespace SlowTests.MailingList
                     List<SiteSale> sitesales = s.Query<SiteSale, Sales_ByLocation>().Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(d);
+                    RavenTestHelper.AssertNoIndexErrors(d);
 
                     Assert.NotEmpty(sitesales);
                 }

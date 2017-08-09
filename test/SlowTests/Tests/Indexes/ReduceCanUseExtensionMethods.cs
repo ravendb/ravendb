@@ -49,7 +49,7 @@ namespace SlowTests.Tests.Indexes
 
                 WaitForIndexing(store);
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {

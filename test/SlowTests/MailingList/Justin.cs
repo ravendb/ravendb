@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var documentSession = store.OpenSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                TestHelper.AssertNoIndexErrors(documentStore);
+                RavenTestHelper.AssertNoIndexErrors(documentStore);
 
                 using (var documentSession = documentStore.OpenSession())
                 {
