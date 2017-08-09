@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 using Lambda2Js;
 using Raven.Client.Documents.Conventions;
 
@@ -99,7 +101,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 var nodeAsConst = context.Node as ConstantExpression;
 
-                if (nodeAsConst != null && nodeAsConst.Type.Name == "Boolean")
+                if (nodeAsConst != null && nodeAsConst.Type == typeof(bool))
                 {
                     context.PreventDefault();
                     var writer = context.GetWriter();
@@ -136,9 +138,35 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         context.Visitor.Visit(node.Expression);
                     }
+
                     javascriptWriter.Write(".");
-                    javascriptWriter.Write(node.Member.Name == "Count" ? "length" : node.Member.Name);
+
+                    if (node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
+                    {
+                        javascriptWriter.Write("length");
+                    }
+                    else
+                    {
+                        javascriptWriter.Write(node.Member.Name);
+                    }
                 }
+            }
+
+            private static bool IsCollection(Type type)
+            {
+                if (type.GetGenericArguments().Length == 0)
+                    return false;
+
+                var genericTypeDefinition = type.GetGenericTypeDefinition();
+                var collectionTypes = new[] { typeof(IEnumerable<>), typeof(ICollection<>), typeof(IList<>), typeof(List<>) };
+
+                for (var i = 0; i < collectionTypes.Length; i++)
+                {
+                    if (collectionTypes[i].IsAssignableFrom(genericTypeDefinition))
+                        return true;
+                }
+
+                return false;
             }
         }
 
