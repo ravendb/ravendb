@@ -29,7 +29,8 @@ namespace Raven.Server.Web.Studio
                     }
                 }
 
-                using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind_3.5.35168.ravendbdump"))
+                using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly
+                    .GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind_3.5.35168.ravendbdump"))
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     {
@@ -41,11 +42,10 @@ namespace Raven.Server.Web.Studio
                         smuggler.Execute();
                     }
                 }
-
                 return NoContent();
             }
         }
-
+        
         [RavenAction("/databases/*/studio/sample-data/classes", "GET", AuthorizationStatus.ValidUser)]
         public async Task GetSampleDataClasses()
         {
