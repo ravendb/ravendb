@@ -25,14 +25,14 @@ class visualizer extends viewModelBase {
 
     spinners = {
         addDocument: ko.observable<boolean>(false)
-    }
+    };
 
     private documents = {
         documentId: ko.observable(""),
         hasFocusDocumentId: ko.observable<boolean>(false),
         documentIds: ko.observableArray<string>(),
         documentIdsSearchResults: ko.observableArray<autoCompleteItem>()
-    }
+    };
 
     private trees = [] as Raven.Server.Documents.Indexes.Debugging.ReduceTree[];
 
@@ -65,10 +65,15 @@ class visualizer extends viewModelBase {
         this.documents.documentId.throttle(100).subscribe(query => this.fetchDocumentIdSearchResults(query));
     }
 
-    activate(args: any) {
+    activate(args: { index: string }) {
         return new getIndexesStatsCommand(this.activeDatabase())
             .execute()
-            .done(result => this.onIndexesLoaded(result));
+            .done(result => {
+                this.onIndexesLoaded(result);
+                if (args.index) {
+                    this.currentIndex(args.index);
+                }
+            });
     }
 
     compositionComplete() {
