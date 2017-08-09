@@ -31,9 +31,11 @@ class createOngoingTask extends dialogViewModelBase {
         this.close();
     }
 
-    newEtlTask() {
-        alert("NewEtlTask");
-        // ...
+    newRavenEtlTask() {
+        eventsCollector.default.reportEvent("RavenETL", "new");
+        const url = appUrl.forEditRavenEtl(this.activeDatabase());
+        router.navigate(url);
+        this.close();
     }
 
     newSqlEtlTask() {

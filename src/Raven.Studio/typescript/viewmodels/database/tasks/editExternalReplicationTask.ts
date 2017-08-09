@@ -94,7 +94,7 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     testConnection() {
-        if(this.isValid(this.editedExternalReplication().destinationURL)) {
+        if (this.isValid(this.editedExternalReplication().destinationURL)) {
             eventsCollector.default.reportEvent("external-replication", "test-connection");
 
             this.spinners.test(true);
