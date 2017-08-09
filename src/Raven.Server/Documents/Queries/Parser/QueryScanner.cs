@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         break;
                     case '-': // -- comment to end of line / input
                     {
-                        if (_pos + 1 < _q.Length || _q[_pos + 1] != '-')
+                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '-')
                             return true;
                         _pos += 2;
                         for (; _pos < _q.Length; _pos++)
