@@ -299,7 +299,7 @@ interface clusterTopologyDto {
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
-type databaseGroupNodeType = "Member" | "Promotable" | "Watcher" | "Rehab";
+type databaseGroupNodeType = "Member" | "Promotable" | "Rehab";
 type patchOption = "Document" | "Collection" | "Index";
 type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';
 
