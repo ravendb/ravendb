@@ -10,9 +10,8 @@ namespace Raven.Server.Config.Categories
     public class SubscriptionConfiguration : ConfigurationCategory
     {
         [DefaultValue(10)]
-        [TimeUnit(TimeUnit.Minutes)]
         [ConfigurationEntry("Subscriptions.ConcurrentConnections")]
-        [Description("Amount of concurrent subscription connections.")]
+        [Description("Amount of concurrent subscription connections per database")]
         public int ConcurrentConnections { get; set; }
     }
 }
