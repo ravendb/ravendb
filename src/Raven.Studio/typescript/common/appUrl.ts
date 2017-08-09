@@ -42,6 +42,7 @@ class appUrl {
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
+        editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId, taskName)),
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -55,6 +56,7 @@ class appUrl {
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
+        editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
         status: ko.pureComputed(() => appUrl.forStatus(appUrl.currentDatabase())),
         replicationPerfStats: ko.pureComputed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
@@ -82,6 +84,7 @@ class appUrl {
         etl: ko.pureComputed(() => appUrl.forEtl(appUrl.currentDatabase())),
         hotSpare: ko.pureComputed(() => appUrl.forHotSpare()),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
+        connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         sqlReplications: ko.pureComputed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
         editSqlReplication: ko.pureComputed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
         sqlReplicationsConnections: ko.pureComputed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
@@ -400,6 +403,10 @@ class appUrl {
         return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
     }
 
+    static forConnectionStrings(db: database | databaseInfo): string {
+        return "#databases/settings/connectionStrings?" + appUrl.getEncodedDbPart(db);
+    }
+
     static forSqlReplications(db: database | databaseInfo): string {
         return "#databases/settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
     }
@@ -583,6 +590,13 @@ class appUrl {
         const taskPart = taskId ? "&taskId=" + taskId : "";
         const taskNamePart = taskName ? "&taskName=" + taskName : ""; 
         return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
+    }
+
+    static forEditRavenEtl(db: database | databaseInfo, taskId?: number, taskName?: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        const taskNamePart = taskName ? "&taskName=" + taskName : "";
+        return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart + taskNamePart;
     }
 
     static forSampleData(db: database | databaseInfo): string {

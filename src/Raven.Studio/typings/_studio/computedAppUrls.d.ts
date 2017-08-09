@@ -17,6 +17,7 @@ interface computedAppUrls {
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
+    editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     newTransformer: KnockoutComputed<string>;
     editTransformer: (transformerName?: string) => KnockoutComputed<string>;
     transformers: KnockoutComputed<string>;
@@ -31,6 +32,7 @@ interface computedAppUrls {
     ongoingTasksUrl: KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editSubscriptionTaskUrl: KnockoutComputed<string>;
+    editRavenEtlTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
@@ -52,6 +54,7 @@ interface computedAppUrls {
     etl: KnockoutComputed<string>;
     hotSpare: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
+    connectionStrings: KnockoutComputed<string>;
     sqlReplications: KnockoutComputed<string>;
     sqlReplicationsConnections: KnockoutComputed<string>;
     editSqlReplication: KnockoutComputed<string>;

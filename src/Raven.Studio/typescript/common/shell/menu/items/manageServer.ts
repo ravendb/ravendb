@@ -28,6 +28,15 @@ function getManageServerMenuItem() {
             itemRouteToHighlight: 'admin/settings/cluster'
         }),
         new leafMenuItem({
+            route: 'admin/settings/debugInfo',
+            moduleId: 'viewmodels/manage/infoPackage',
+            title: 'Gather Debug Info',
+            nav: true,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugInfo,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Administrator JS Console",
@@ -35,7 +44,7 @@ function getManageServerMenuItem() {
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
             enabled: accessHelper.isGlobalAdmin
-        }),
+        })
         /* TODO
         new leafMenuItem({
             route: 'admin/settings/backup',
@@ -100,15 +109,6 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forLicenseInformation,
             enabled: canReadOrWrite
         }),*/
-        new leafMenuItem({
-            route: 'admin/settings/debugInfo',
-            moduleId: 'viewmodels/manage/infoPackage',
-            title: 'Gather Debug Info',
-            nav: true,
-            css: 'icon-gather-debug-information',
-            dynamicHash: appUrl.forDebugInfo,
-            enabled: accessHelper.isGlobalAdmin
-        }),
         /*
         new leafMenuItem({
             route: 'admin/settings/ioTest',

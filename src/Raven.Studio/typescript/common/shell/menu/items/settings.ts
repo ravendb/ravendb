@@ -1,7 +1,7 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-
+import accessHelper = require("viewmodels/shell/accessHelper");
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
@@ -75,6 +75,23 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.sqlReplicationsConnections
         }),
         new leafMenuItem({
+            route: 'databases/settings/customFunctionsEditor',
+            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
+            title: 'Custom Functions',
+            nav: true,
+            css: 'icon-custom-functions',
+            dynamicHash: appUrls.customFunctionsEditor
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/connectionStrings',
+            moduleId: "viewmodels/database/settings/connectionStrings",
+            title: "Connection Strings",
+            nav: true,
+            css: 'icon-list',
+            dynamicHash: appUrls.connectionStrings,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
             route: 'databases/settings/revisions',
             moduleId: 'viewmodels/database/settings/revisions',
             title: 'Document Revisions',
@@ -83,14 +100,13 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.revisions
         }),
         new leafMenuItem({
-            route: 'databases/settings/customFunctionsEditor',
-            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
-            title: 'Custom Functions',
-            nav: true,
-            css: 'icon-custom-functions',
-            dynamicHash: appUrls.customFunctionsEditor
+            route: 'databases/manageDatabaseGroup',
+            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            title: 'Manage database group',
+            nav: false,
+            css: 'icon-topology',
+            dynamicHash: appUrls.manageDatabaseGroup
         }),
-        
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',
@@ -100,16 +116,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-studio-config',
             dynamicHash: appUrls.databaseStudioConfig
         })*/
-
+        new separatorMenuItem(),
         new separatorMenuItem('Tasks'),
-        new leafMenuItem({
-            route: 'databases/tasks/ongoingTasks',
-            moduleId: 'viewmodels/database/tasks/ongoingTasks',
-            title: 'Manage Ongoing Tasks',
-            nav: true,
-            css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl
-        }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
@@ -132,6 +140,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Subscription Task',
             nav: false,
             dynamicHash: appUrls.editSubscriptionTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editRavenEtlTask',
+            moduleId: 'viewmodels/database/tasks/editRavenEtlTask',
+            title: 'RavenDB ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editRavenEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
@@ -158,6 +174,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-create-sample-data',
             dynamicHash: appUrls.sampleDataUrl
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/ongoingTasks',
+            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            title: 'Manage Ongoing Tasks',
+            nav: true,
+            css: 'icon-manage-ongoing-tasks',
+            dynamicHash: appUrls.ongoingTasksUrl
+        }),
         /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/csvImport',
@@ -168,7 +192,17 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: csvImportUrl
         })*/
 
+        new separatorMenuItem(),
         new separatorMenuItem('Statistics'),
+        new leafMenuItem({
+            route: 'databases/status/ioStats',
+            moduleId: 'viewmodels/database/status/ioStats',
+            title: 'IO Stats',
+            tooltip: "Displays IO metrics statatus",
+            nav: true,
+            css: 'icon-io-test',
+            dynamicHash: appUrls.ioStats
+        }),
         new leafMenuItem({
             route: 'databases/status',
             moduleId: 'viewmodels/database/status/statistics',
@@ -293,15 +327,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugExplainReplication
             })
         ], 'icon-plus'),*/
-        new leafMenuItem({
-            route: 'databases/status/ioStats',
-            moduleId: 'viewmodels/database/status/ioStats',
-            title: 'IO Stats',
-            tooltip: "Displays IO metrics statatus",
-            nav: true,
-            css: 'icon-io-test',
-            dynamicHash: appUrls.ioStats
-        }),
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/requests',

@@ -1,0 +1,22 @@
+<div class="modal-dialog" role="document">
+    <div class="modal-content">
+        <div class="modal-header">
+            <button type="button" class="close" data-bind="click: close" aria-hidden="true">
+                <i class="icon-cancel"></i>
+            </button>
+            <h4 class="modal-title">Delete Connection String</h4>
+        </div>
+        <div class="modal-body">
+            <p data-bind="visible: connectionStringType === 'Raven'">You're deleting RavenDB ETL connection string: 
+                <br/><br/><strong data-bind="text: connectionStringName"></strong>
+            </p>
+            <p data-bind="visible: connectionStringType === 'Sql'">You're deleting SQL ETL connection string: 
+                <br/><br/><strong data-bind="text: connectionStringName"></strong>
+            </p>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-default" data-bind="click: cancel">Cancel</button>
+            <button type="button" class="btn btn-danger" data-bind="click: confirm">Delete</button>
+        </div>
+    </div>
+</div>
