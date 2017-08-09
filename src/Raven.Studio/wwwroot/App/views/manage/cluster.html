@@ -65,8 +65,12 @@
                             </div>
                         </div>
                     </div>
-                    <div class="panel-addon" data-bind="visible: errorDetails">
-                        <div class="padding bg-danger small" data-bind="text: errorDetails">
+                    <div class="panel-addon" data-bind="visible: errorDetailsShort">
+                        <div class="padding bg-danger small">
+                            <div data-bind="text: errorDetailsShort"></div>
+                            <div>
+                                <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
+                            </div>
                         </div>
                     </div>
                 </div>
