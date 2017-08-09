@@ -57,13 +57,5 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
             _fieldNames.Add(name);
             _selectExpressions[name] = expression.Expression;
         }
-
-        public void Clear()
-        {
-            _queryProcessed = false;
-            _fieldNames.Clear();
-            _selectExpressions.Clear();
-        }
     }
-
 }

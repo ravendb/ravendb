@@ -404,6 +404,9 @@ namespace Raven.Client.Documents.Indexes
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
 
+            foreach (var kvp in _additionalSources)
+                definition.AdditionalSources[kvp.Key] = kvp.Value;
+
             return definition;
         }
     }

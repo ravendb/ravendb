@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Config.Categories;
@@ -281,7 +280,8 @@ namespace Raven.Server.Documents.ETL
             // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
-            old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x));
+            foreach (var process in old)
+                _database.DocumentTombstoneCleaner.Unsubscribe(process);
         }
     }
 }
