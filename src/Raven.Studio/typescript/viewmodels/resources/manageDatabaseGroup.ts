@@ -67,6 +67,11 @@ class manageDatabaseGroup extends viewModelBase {
     compositionComplete(): void {
         super.compositionComplete();
 
+        this.registerDisposableHandler($(document), "fullscreenchange", () => {
+            $("body").toggleClass("fullscreen", $(document).fullScreen());
+            this.graph.onResize();
+        });
+
         this.graph.init($("#databaseGroupGraphContainer"));
     }
 
