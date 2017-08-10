@@ -138,11 +138,11 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
 
                     var rand = new Random().Next();
-                    var newNode = allNodes[rand % allNodes.Count];
+                    node = allNodes[rand % allNodes.Count];
 
-                    databaseRecord.Topology.Promotables.Add(newNode);
-                    databaseRecord.Topology.DemotionReasons[newNode] = "Joined the Db-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[newNode] = DatabasePromotionStatus.WaitingForFirstPromotion;
+                    databaseRecord.Topology.Promotables.Add(node);
+                    databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
+                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;
@@ -824,7 +824,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["RaftCommandIndex"] = index
+                        [nameof(DatabasePutResult.Name)] = name,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = index
                     });
                     writer.Flush();
                 }
