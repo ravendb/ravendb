@@ -221,8 +221,14 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
+
                     writer.WritePropertyName("Field");
-                    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+
+                    if (Field != null)
+                        WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    else
+                        writer.WriteValue((string)null);
+
                     writer.WritePropertyName("Value");
                     switch (Value.Type)
                     {

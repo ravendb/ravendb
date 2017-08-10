@@ -36,6 +36,8 @@ ORDER BY LastName
         [InlineData(@"FROM Users
 ORDER BY Age AS double DESC, Name ASC", "{\"From\":{\"Index\":false,\"Source\":\"Users\"},\"OrderBy\":[{\"Field\":\"Age\",\"FieldType\":\"Double\",\"Ascending\":false},{\"Field\":\"Name\",\"Ascending\":true}]}")]
         [InlineData("FROM Posts WHERE Tags[].Name = 'Any'", "{\"From\":{\"Index\":false,\"Source\":\"Posts\"},\"Where\":{\"Type\":\"Equal\",\"Field\":\"Tags[].Name\",\"Value\":\"Any'\"}}")]
+        [InlineData("SELECT count() FROM Users GROUP BY Country WHERE count() > 100", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"count\",\"Arguments\":[]}}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Method\",\"Method\":\"count\",\"Arguments\":[{\"Type\":\"GreaterThan\",\"Field\":null,\"Value\":\"100\"}]}}")]
+        [InlineData("SELECT sum(Weight) FROM Users GROUP BY Country WHERE sum(Weight) > 100", "{\"Select\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Weight\"}]}}],\"From\":{\"Index\":false,\"Source\":\"Users\"},\"GroupBy\":[\"Country\"],\"Where\":{\"Type\":\"Method\",\"Method\":\"sum\",\"Arguments\":[{\"Field\":\"Weight\"},{\"Type\":\"GreaterThan\",\"Field\":null,\"Value\":\"100\"}]}}")]
 
         public void CanParseFullQueries(string q, string json)
         {
