@@ -419,8 +419,7 @@ namespace Raven.Server.Documents.Queries
                 if (arguments.Count == 0)
                     return;
 
-                string fieldName = null;
-                var previousType = ValueTokenType.Null;
+                string fieldName;
 
                 var methodName = QueryExpression.Extract(_metadata.Query.QueryText, expression.Field);
 
@@ -428,93 +427,103 @@ namespace Raven.Server.Documents.Queries
 
                 switch (methodType)
                 {
-                    case MethodType.Count:
-                        if (arguments.Count != 1)
-                            throw new InvalidQueryException($"Invalid count() usage in WHERE, expected one argument, got {arguments.Count}", QueryText, parameters);
+                    case MethodType.StartsWith:
+                    case MethodType.EndsWith:
+                    case MethodType.Search:
+                    case MethodType.Lucene:
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
 
-                        if (arguments[0] is QueryExpression countExpression)
-                        {
-                            _metadata._aliasToName[methodName] = CountFieldName;
-                            countExpression.Field = expression.Field;
+                        if (arguments.Count == 1)
+                            throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
 
-                            Visit(countExpression, parameters);
-                            return;
-                        }
+                        var valueToken = arguments[1] as ValueToken;
 
-                        throw new InvalidQueryException($"Invalid count() usage in WHERE, expected expression after count(), got {arguments[0].GetType()} type", QueryText, parameters);
-                    case MethodType.Sum:
-                        if (arguments.Count != 2)
-                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected two arguments, got {arguments.Count}", QueryText, parameters);
+                        if (valueToken == null)
+                            throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText, parameters);
 
-                        var fieldToken = arguments[0] as FieldToken;
+                        var valueType = GetValueTokenType(parameters, valueToken, unwrapArrays: true);
 
-                        if (fieldToken == null)
-                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected first argument to be field token, got {arguments[0].GetType()} type", QueryText, parameters);
-
-                        var sumExpression = arguments[1] as QueryExpression;
-
-                        if (sumExpression == null)
-                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected expression after sum(), got {arguments[1].GetType()} type", QueryText, parameters);
-
-                        sumExpression.Field = fieldToken;
-                        Visit(sumExpression, parameters);
-                        return;
-                    // TODO arek - implement cases for all methods here and remove the below code
-                }
-
-                for (var i = 0; i < arguments.Count; i++)
-                {
-                    var argument = arguments[i];
-
-                    if (argument is QueryExpression expressionArgument)
-                    {
-                        Visit(expressionArgument, parameters);
-                        continue;
-                    }
-
-                    if (i == 0)
-                    {
-                        if (argument is FieldToken fieldTokenArgument)
-                            fieldName = QueryExpression.Extract(_metadata.Query.QueryText, fieldTokenArgument);
-
-                        continue;
-                    }
-
-                    if (arguments.Count == 3 && i == 2 && argument is FieldToken)
-                        continue; // e.g. search(FieldName, 'sth', AND)
-
-                    // validation of parameters
-
-                    var value = (ValueToken)argument;
-
-                    var valueType = GetValueTokenType(parameters, value, unwrapArrays: true);
-                    if (i > 0 && QueryBuilder.AreValueTokenTypesValid(previousType, valueType) == false)
-                        ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, arguments.Skip(1).Cast<ValueToken>().ToArray());
-
-                    if (valueType != ValueTokenType.Null)
-                        previousType = valueType;
-                }
-
-                if (fieldName == null)
-                {
-                    // we can have null field name here e.g. boost(search(Tags, :p1), 20), intersect(Age > 20, Name = 'Joe')
-                    return;
-                }
-
-                switch (methodType)
-                {
+                        if (methodType == MethodType.Search)
+                            _metadata.AddSearchField(fieldName, valueType);
+                        else
+                            _metadata.AddWhereField(fieldName, valueType);
+                        break;
                     case MethodType.Exists:
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
                         _metadata.AddExistField(fieldName);
                         break;
-                    case MethodType.Search:
-                        _metadata.AddSearchField(fieldName, previousType);
+                    case MethodType.Boost:
+                        var firstArg = arguments[0] as QueryExpression;
+
+                        if (firstArg == null)
+                            throw new InvalidQueryException($"Method {methodName}() expects expression , got {arguments[0]}", QueryText, parameters);
+
+                        Visit(firstArg, parameters);
                         break;
+                    case MethodType.Intersect:
+                    case MethodType.Exact:
+                        for (var i = 0; i < arguments.Count; i++)
+                        {
+                            var expressionArgument = arguments[i] as QueryExpression;
+                            Visit(expressionArgument, parameters);
+                        }
+                        return;
+                    case MethodType.Count:
+                        HandleCount(methodName, expression.Field, arguments, parameters);
+                        return;
+                    case MethodType.Sum:
+                        HandleSum(arguments, parameters);
+                        return;
                     default:
-                        _metadata.AddWhereField(fieldName, previousType);
+                        QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
                 }
             }
-        }
 
+            private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)
+            {
+                if (arguments.Count != 1)
+                    throw new InvalidQueryException("Method count() expects no argument", QueryText, parameters);
+
+                if (arguments[0] is QueryExpression countExpression)
+                {
+                    _metadata._aliasToName[providedCountMethodName] = CountFieldName;
+                    countExpression.Field = methodNameToken;
+
+                    Visit(countExpression, parameters);
+                }
+                else
+                    throw new InvalidQueryException($"Method count() expects expression after its invocation, got {arguments[0]}", QueryText, parameters);
+            }
+
+            private void HandleSum(List<object> arguments, BlittableJsonReaderObject parameters)
+            {
+                if (arguments.Count != 2)
+                    throw new InvalidQueryException("Method sum() expects one argument and operator after its invocation", QueryText, parameters);
+
+                var fieldToken = arguments[0] as FieldToken;
+
+                if (fieldToken == null)
+                    throw new InvalidQueryException($"Method sum() expects first argument to be field token, got {arguments[0]}", QueryText, parameters);
+
+                var sumExpression = arguments[1] as QueryExpression;
+
+                if (sumExpression == null)
+                    throw new InvalidQueryException($"Method sum() expects expression after sum(), got {arguments[1]}", QueryText, parameters);
+
+                sumExpression.Field = fieldToken;
+                Visit(sumExpression, parameters);
+            }
+
+            private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName)
+            {
+                var fieldArgument = arguments[0] as FieldToken;
+
+                if (fieldArgument == null)
+                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument");
+
+                return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
+            }
+        }
     }
 }

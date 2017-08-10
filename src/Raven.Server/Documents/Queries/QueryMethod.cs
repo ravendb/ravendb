@@ -29,6 +29,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "exact", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Exact;
 
+            if (string.Equals(methodName, "intersect", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Intersect;
+
             if (string.Equals(methodName, "count", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Count;
 
