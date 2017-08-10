@@ -49,6 +49,9 @@
         .text-warning {
             color: #dd992c;
         }
+        .text-danger {
+            color: #ff3633;
+        }
         .warning {
             fill: #dd992c;
         }
@@ -76,6 +79,25 @@
         }
         strong {
             color: #e3e7eb;
+        }
+        .settings-options {
+            display: flex;
+        }
+        .settings-options .item {
+            width: 50%;
+        }
+        .settings-options .or {
+            margin: 14px;
+            align-self: center;
+        }
+        .settings-options .small {			
+            font-size: 12px;
+            padding: 7px;
+            background-color: #2b3d4f;
+            margin-top: 4px;
+        }
+        .settings-options div.text-file {
+            text-align: center;
         }
     </style>
 </head>
@@ -151,10 +173,21 @@
         Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.
     </p>
     <p>
-        Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information in either <span class="text-file long-word">Security.Certificate.Path</span> or <span class="text-file long-word">Security.Certificate.Exec</span> option.
+        Please find the RavenDB settings file <strong class="text-file long-word">settings.json</strong> in the server directory and fill in your certificate information under either:
     </p>
+    <div class="settings-options">
+        <div class="item">
+            <div class="text-file long-word">{{CERTIFICATE_PATH_KEY}}</div>
+            <p class="small">{{CERTIFICATE_PATH_DESCRIPTION}}</p>
+        </div>
+        <div class="or">or</div>
+        <div class="item">
+            <div class="text-file long-word">{{CERTIFICATE_EXEC_KEY}}</div>
+            <p class="small">{{CERTIFICATE_EXEC_DESCRIPTION}}</p>
+        </div>
+    </div>
     <p>
-        If you would rather like to keep your server unsecured, please relax the <span class="text-file long-word">Security.UnsecuredAccessAllowed</span> setting to match the <span class="text-file long-word">ServerUrl</span> setting value.
+        If you would rather like to keep your server <span class="text-danger">unsecured</span>, please relax the <span class="text-file long-word">{{UNSECURED_ACCESS_ALLOWED_KEY}}</span> configuration setting to match the <span class="text-file long-word">{{SERVER_URL_KEY}}</span> setting value, which can be a combination of the following flags: {{UNSECURED_ACCESS_ALLOWED_FLAGS}}.
     </p>
 </div>
 </body>
