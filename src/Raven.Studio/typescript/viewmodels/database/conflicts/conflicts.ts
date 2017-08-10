@@ -77,7 +77,7 @@ class conflicts extends viewModelBase {
 
         this.suggestedResolution.extend({
             required: true,
-            validJson: true,
+            aceValidation: true,
             validation: [{
                 validator: (val: string) => _.every(conflictTokens, t => !val.includes(t)),
                 message: "Document contains conflicts markers"

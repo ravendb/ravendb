@@ -46,7 +46,7 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, completerHostObject: $root.indexAutoCompleter  }, validationElement: map"></pre>
+                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, completerHostObject: $root.indexAutoCompleter  }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
 
                             <div data-bind="validationElement: map">
                                 <div class="help-block" data-bind="validationMessage: map"></div>
@@ -79,7 +79,7 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, completerHostObject: $root.indexAutoCompleter }, validationElement: editedIndex().reduce"></pre>
+                                 data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, completerHostObject: $root.indexAutoCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: editedIndex().reduce"></pre>
 
                             <div data-bind="validationElement: editedIndex().reduce">
                                 <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>

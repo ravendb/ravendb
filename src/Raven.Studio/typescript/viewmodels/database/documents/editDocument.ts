@@ -205,7 +205,7 @@ class editDocument extends viewModelBase {
 
         this.documentText.extend({
             required: true,
-            validJson: true
+            aceValidation: true
         });
     }
 

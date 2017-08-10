@@ -1,4 +1,6 @@
-﻿class importDatabaseModel {
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+
+class importDatabaseModel {
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
     includeTransformers = ko.observable(true);
@@ -35,6 +37,7 @@
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions;
     }
+
 }
 
 export = importDatabaseModel;

@@ -157,6 +157,9 @@ class editIndex extends viewModelBase {
     }
 
     private initValidation() {
+        
+        //TODO: aceValidation: true for map and reduce
+        
         this.editedIndex().name.extend({
             validation: [{
                 validator: (val: string) => {

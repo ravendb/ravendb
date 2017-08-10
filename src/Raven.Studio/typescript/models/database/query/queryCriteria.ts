@@ -10,6 +10,8 @@ class queryCriteria {
     queryText = ko.observable<string>("");
     transformer = ko.observable<string>();
     transformerParameters = ko.observableArray<transformerParamDto>();
+    
+    validationGroup: KnockoutValidationGroup;
 
     static empty() {
         const criteria = new queryCriteria();
@@ -18,6 +20,17 @@ class queryCriteria {
 
     constructor() {
         this.initObservables();
+        this.initValidation();
+    }
+    
+    private initValidation() {
+        this.queryText.extend({
+            aceValidation: true
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            queryText: this.queryText
+        })
     }
 
     private initObservables() {

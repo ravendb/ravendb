@@ -111,8 +111,11 @@
                     </div>
 
                     <div data-bind="collapse: showTransformScript">
-                        <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: model.transformScript, lang: 'ace/mode/javascript' }">
-                    </pre>
+                        <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: model.transformScript, lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: model.transformScript">
+                        </pre>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model.transformScript">
+                            <div class="help-block" data-bind="validationMessage: model.transformScript"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">

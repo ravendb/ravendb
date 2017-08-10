@@ -88,7 +88,7 @@
                                                                     </div>
                                                                 </td>
                                                                 <td data-bind="if: hasScript()">
-                                                                    <pre class="form-control" data-bind="aceEditor: { lang: 'ace/mode/javascript', readOnly: false, code: script, allowResize: true }"></pre>
+                                                                    <pre class="form-control" data-bind="aceEditor: { lang: 'ace/mode/javascript', readOnly: false, code: script, allowResize: true }"></pre> <!--TODO: validation error --> 
                                                                 </td>
                                                                 <td>
                                                                     <button type="button" class="close" aria-hidden="true" data-bind="visible: $parent.specifiedCollections().length > 1">

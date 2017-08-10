@@ -34,7 +34,7 @@
                         </div>
                         <div class="form-group">
                             <label class="control-label">Collection</label>
-                            <div class="flex-grow" data-bind="validationElement: collection, validationOptions: { insertMessages: false }">
+                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
                                            data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
@@ -51,7 +51,7 @@
                         </div>
                     </div>
                     <div class="panel padding">
-                        <div class="toggle" data-bind="validationElement: includeRevisions,  validationOptions: { insertMessages: false }">
+                        <div class="toggle" data-bind="validationOptions: { insertMessages: false }, validationElement: includeRevisions">
                             <input id="include-revisions" type="checkbox" data-bind="checked: includeRevisions">
                             <label for="include-revisions">Include Revisions</label>
                         </div>
@@ -59,9 +59,12 @@
                     </div>
                     <div class="panel padding">
                         <label>Transform Script:&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
-                        <pre class="form-control margin-top" placeholder="Enter transform script"
-                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }" style="height: 160px;">
-                        </pre>  <!--TODO : ace editor, add script validations - see issue 7795-->    
+                        <pre class="form-control margin-top" placeholder="Enter transform script" 
+                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
+                        </pre>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
+                            <div class="help-block" data-bind="validationMessage: script"></div>
+                        </div>
                     </div>
                     <div class="panel padding flex-form">
                         <div class="form-group">

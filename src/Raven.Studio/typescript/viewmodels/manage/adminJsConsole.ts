@@ -32,7 +32,8 @@ class adminJsModel {
         });
 
         this.script.extend({
-            required: true
+            required: true,
+            aceValidation: true
         });
 
         this.validationGroup = ko.validatedObservable({
@@ -58,11 +59,11 @@ class adminJsConsole extends viewModelBase {
 
     filters = {
         searchText: ko.observable<string>()
-    }
+    };
 
     spinners = {
         execute: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();

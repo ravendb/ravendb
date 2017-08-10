@@ -35,7 +35,7 @@ class editSubscriptionTask extends viewModelBase {
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();

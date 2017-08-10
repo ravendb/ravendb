@@ -4,7 +4,7 @@
             <div class="clearfix">
                 <h3 class="pull-left-sm">Patch target</h3>
                 <div class="pull-right-sm flex-horizontal">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName, validationOptions: { insertMessages: false }">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
@@ -115,7 +115,11 @@
                         <div class="patch-container">
                             <div class="patch-main">
                                 <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene', completer:queryCompleter, completerHostObject: $root }"></pre>
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene', completer:queryCompleter, completerHostObject: $root }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
+                                    <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
+                                </div>
                             </div>
                             <div class="query-controls">
                                 <button class="btn btn-default btn-block text-center" data-bind="click: runQuery">
@@ -156,9 +160,9 @@
             <div class="col-sm-9 col-lg-10">
                 <div class="patch-container">
                     <div class="patch-main">
-                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }, validationElement: patchDocument().script" style="height: 160px;"></pre>
+                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script" style="height: 160px;"></pre>
 
-                        <div data-bind="validationElement: patchDocument().script">
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script">
                             <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
                         </div>
                     </div>

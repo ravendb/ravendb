@@ -73,9 +73,9 @@
         <div class="col-sm-9 col-lg-10">
             <div class="patch-container">
                 <div class="patch-main">
-                    <pre class="form-control" data-bind="aceEditor: { code: model().script, lang:'ace/mode/javascript' }, validationElement: model().script" style="height: 160px;"></pre>
+                    <pre class="form-control" data-bind="aceEditor: { code: model().script, lang:'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: model().script" style="height: 160px;"></pre>
 
-                    <div data-bind="validationElement: model().script">
+                    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: model().script">
                         <div class="help-block" data-bind="validationMessage: model().script"></div>
                     </div>
                 </div>
