@@ -10,6 +10,7 @@
         Exists,
         Exact,
         Count,
-        Sum
+        Sum,
+        Intersect
     }
 }

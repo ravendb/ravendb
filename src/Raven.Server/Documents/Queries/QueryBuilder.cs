@@ -384,10 +384,10 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleCount(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-            var queryExpression = expression.Arguments[0] as QueryExpression;
+            if (expression.Arguments == null || expression.Arguments.Count == 0)
+                ThrowMethodExpectsOperatorAfterInvocation("count", metadata.QueryText, parameters);
 
-            if (queryExpression == null)
-                ThrowMethodExpectsExpression("count", expression.Arguments[0].GetType(), metadata.QueryText, parameters);
+            var queryExpression = (QueryExpression)expression.Arguments[0];
 
             queryExpression.Field = expression.Field;
 
@@ -396,10 +396,10 @@ namespace Raven.Server.Documents.Queries
 
         private static Lucene.Net.Search.Query HandleSum(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
-            var queryExpression = expression.Arguments[1] as QueryExpression;
+            if (expression.Arguments == null || expression.Arguments.Count != 2)
+                ThrowMethodExpectsOperatorAfterInvocation("sum", metadata.QueryText, parameters);
 
-            if (queryExpression == null)
-                ThrowMethodExpectsExpression("sum", expression.Arguments[1].GetType(), metadata.QueryText, parameters);
+            var queryExpression = (QueryExpression)expression.Arguments[1];
 
             queryExpression.Field = expression.Arguments[0] as FieldToken;
 
@@ -736,12 +736,12 @@ namespace Raven.Server.Documents.Queries
 
         private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
+            throw new InvalidQueryException($"Method {methodName}() expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
         }
 
-        private static void ThrowMethodExpectsExpression(string methodName, Type gotType, string queryText, BlittableJsonReaderObject parameters)
+        private static void ThrowMethodExpectsOperatorAfterInvocation(string methodName, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Method '{methodName}' expects expression after its invocation while it got {gotType} type", queryText, parameters);
+            throw new InvalidQueryException($"Method {methodName}() expects operator after its invocation", queryText, parameters);
         }
 
         public static void ThrowParametersWereNotProvided(string queryText)
