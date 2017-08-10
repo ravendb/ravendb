@@ -557,6 +557,36 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             }
         }
 
+        [Fact]
+        public void Group_by_number()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Age = 30
+                    });
+
+                    session.Store(new User
+                    {
+                        Age = 30
+                    });
+
+                    session.SaveChanges();
+
+                    var results = session.Query<User>().GroupBy(x => x.Age).Select(x => new
+                    {
+                        Age = x.Key,
+                        Count = x.Count(),
+                    }).ToList();
+
+                    Assert.Equal(2, results[0].Count);
+                }
+            }
+        }
+
         public class AddressReduceResult
         {
             public string City { get; set; }
