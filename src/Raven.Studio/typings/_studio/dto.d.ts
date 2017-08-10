@@ -300,7 +300,7 @@ interface clusterTopologyDto {
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
 type databaseGroupNodeType = "Member" | "Promotable" | "Rehab";
-type patchOption = "Document" | "Collection" | "Index";
+type patchOption = "Document" | "Collection" | "Query";
 type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';
 
 interface patchDto extends documentDto {
