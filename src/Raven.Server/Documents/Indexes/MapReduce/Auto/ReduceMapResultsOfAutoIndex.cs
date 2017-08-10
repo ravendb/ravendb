@@ -37,12 +37,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             switch (indexField.Aggregation)
                             {
                                 case AggregationOperation.None:
-                                    if (obj.TryGet(propertyName, out string stringValue) == false)
+                                    if (obj.TryGet(propertyName, out object groupByValue) == false)
                                         throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
 
                                     aggregatedResult[propertyName] = new PropertyResult
                                     {
-                                        ResultValue = stringValue
+                                        ResultValue = groupByValue
                                     };
                                     break;
                                 case AggregationOperation.Count:
