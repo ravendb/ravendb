@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations
                 url = $"{node.Url}/admin/databases/node?name={_databaseName}";
                 if (string.IsNullOrEmpty(_node) == false)
                 {
-                    url += $"node={node}";
+                    url += $"&node={_node}";
                 }
 
                 var request = new HttpRequestMessage
