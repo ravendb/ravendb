@@ -162,6 +162,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
+            QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
@@ -172,9 +173,7 @@ namespace Raven.Server.Documents.Handlers
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            // read from cache here
-
-            return IndexQueryServerSide.Create(json);
+            return IndexQueryServerSide.Create(json, context);
         }
 
         private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
@@ -186,8 +185,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var json = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
-
-            // read from cache here
 
             return MoreLikeThisQueryServerSide.Create(json);
         }
@@ -295,7 +292,7 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             var reader = context.Read(RequestBodyStream(), "queries/delete");
-            var query = IndexQueryServerSide.Create(reader);
+            var query = IndexQueryServerSide.Create(reader, context);
 
             ExecuteQueryOperation(query.Metadata, (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
@@ -317,13 +314,13 @@ namespace Raven.Server.Documents.Handlers
                 throw new BadRequestException("Missing 'Query' property.");
 
             var patch = PatchRequest.Parse(patchJson);
-            var query = IndexQueryServerSide.Create(queryJson);
+            var query = IndexQueryServerSide.Create(queryJson, context);
 
             if (query.Metadata.IsDynamic == false)
             {
                 ExecuteQueryOperation(query.Metadata,
                     (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(query, options.Query, patch, context, onProgress, token),
-                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
+                context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
             }
             else
             {
@@ -354,7 +351,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (queryMetadata.IsDynamic == false)
             {
-                var queryRunner = new QueryRunner(Database, context);
+            var queryRunner = new QueryRunner(Database, context);
                 task = Database.Operations.AddOperation(Database, queryMetadata.IndexName, operationType,
                     onProgress => operation((queryRunner, null), (options, null), onProgress, token), operationId, token);
             }
@@ -368,7 +365,7 @@ namespace Raven.Server.Documents.Handlers
                         MaxOpsPerSecond = options.MaxOpsPerSecond
                     }), onProgress, token), operationId, token);
             }
-           
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationId(context, operationId);

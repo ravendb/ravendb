@@ -99,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
-                var query = IndexQueryServerSide.Create(queryJson);
+                var query = IndexQueryServerSide.Create(queryJson, context);
 
                 var runner = new QueryRunner(Database, context);
 

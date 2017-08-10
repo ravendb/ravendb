@@ -185,6 +185,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
         {
             var collection = query.Metadata.CollectionName;
 
+            if (query.Metadata.DynamicIndexName != null)
+            {
+                var previousIndex = _indexStore.GetIndex(query.Metadata.DynamicIndexName);
+                if (previousIndex != null)
+                    return (previousIndex, collection);
+            }
+
             var map = DynamicQueryMapping.Create(query);
 
             if (map.MapFields.Length == 0 && map.GroupByFields.Length == 0)

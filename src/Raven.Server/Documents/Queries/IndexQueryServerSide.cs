@@ -30,10 +30,10 @@ namespace Raven.Server.Documents.Queries
         {
             Query = Uri.UnescapeDataString(query);
             QueryParameters = queryParameters;
-            Metadata = new QueryMetadata(Query, queryParameters);
+            Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
+        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context)
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
@@ -43,7 +43,10 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters);
+            result.Metadata = QueryMetadataCache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
+                ? metadata
+                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
+
             return result;
         }
 
@@ -123,7 +126,7 @@ namespace Raven.Server.Documents.Queries
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
-            result.Metadata = new QueryMetadata(result.Query, null);
+            result.Metadata = new QueryMetadata(result.Query, null, 0);
             return result;
         }
     }
