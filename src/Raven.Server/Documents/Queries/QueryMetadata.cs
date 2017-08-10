@@ -163,6 +163,56 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidQueryException("Invalid ORDER BY score call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
             }
 
+            if (IsGroupBy)
+            {
+                if (string.Equals("count", method, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
+                        return (CountFieldName, OrderByFieldType.Long, order.Ascending);
+
+                    throw new InvalidQueryException("Invalid ORDER BY count() call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+                }
+
+                if (string.Equals("sum", method, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (order.Expression.Arguments == null)
+                        throw new InvalidQueryException("Invalid ORDER BY sum() call, expected one argument but didn't get any", QueryText, parameters);
+
+                    if (order.Expression.Arguments.Count != 1)
+                        throw new InvalidQueryException("Invalid ORDER BY sum() call, expected one argument, got " + order.Expression.Arguments.Count, QueryText, parameters);
+
+                    var sumFieldToken = order.Expression.Arguments[0] as FieldToken;
+
+                    var fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+
+                    var orderingType = order.FieldType;
+
+                    if (orderingType == OrderByFieldType.Implicit)
+                    {
+                        if (WhereFields.TryGetValue(fieldName, out var whereField))
+                        {
+                            switch (whereField.Type)
+                            {
+                                case ValueTokenType.Double:
+                                    orderingType = OrderByFieldType.Double;
+                                    break;
+                                case ValueTokenType.Long:
+                                    orderingType = OrderByFieldType.Long;
+                                    break;
+                                default:
+                                    throw new InvalidQueryException(
+                                        $"Invalid query due to invalid value type of '{fieldName}' in WHERE clause, expected {nameof(ValueTokenType.Double)} or {nameof(ValueTokenType.Long)} because it's the argument of sum() function, got the value of {whereField.Type} type",
+                                        QueryText, parameters);
+                            }
+                        }
+                        else
+                            orderingType = OrderByFieldType.Double;
+                    }
+
+                    return (fieldName, orderingType, order.Ascending);
+                }
+            }
+
             throw new InvalidQueryException("Invalid ORDER BY method call " + method, QueryText, parameters);
         }
 
