@@ -4,10 +4,10 @@ import router = require("plugins/router");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
-class ongoingTaskRavenETlModel extends ongoingTask {
+class ongoingTaskRavenEtlModel extends ongoingTask {
     
     // TODO... 
   
 }
 
-export = ongoingTaskRavenETlModel;
+export = ongoingTaskRavenEtlModel;

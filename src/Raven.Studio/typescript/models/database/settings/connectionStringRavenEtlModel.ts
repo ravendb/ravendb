@@ -26,7 +26,6 @@ class connectionStringRavenEtlModel {
 
         this.database.extend({
             required: true,
-            maxLength: 230,
             validDatabaseName: true            
         })
 

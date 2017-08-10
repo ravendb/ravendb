@@ -7,14 +7,6 @@ export = getSettingsMenuItem;
 function getSettingsMenuItem(appUrls: computedAppUrls) {
     const items: menuItem[] = [
         new leafMenuItem({
-            route: 'databases/manageDatabaseGroup',
-            moduleId: 'viewmodels/resources/manageDatabaseGroup',
-            title: 'Manage database group',
-            nav: true,
-            css: 'icon-topology',
-            dynamicHash: appUrls.manageDatabaseGroup
-        }),
-        new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
             title: 'Database Record',
@@ -103,7 +95,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             route: 'databases/manageDatabaseGroup',
             moduleId: 'viewmodels/resources/manageDatabaseGroup',
             title: 'Manage database group',
-            nav: false,
+            nav: true,
             css: 'icon-topology',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
@@ -191,9 +183,16 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: csvImportUrl
         })*/
-
         new separatorMenuItem(),
         new separatorMenuItem('Statistics'),
+        new leafMenuItem({
+            route: 'databases/status',
+            moduleId: 'viewmodels/database/status/statistics',
+            title: 'Stats',
+            nav: true,
+            css: 'icon-stats',
+            dynamicHash: appUrls.status
+        }),
         new leafMenuItem({
             route: 'databases/status/ioStats',
             moduleId: 'viewmodels/database/status/ioStats',
@@ -202,14 +201,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-io-test',
             dynamicHash: appUrls.ioStats
-        }),
-        new leafMenuItem({
-            route: 'databases/status',
-            moduleId: 'viewmodels/database/status/statistics',
-            title: 'Stats',
-            nav: true,
-            css: 'icon-stats',
-            dynamicHash: appUrls.status
         }),
         new leafMenuItem({
             route: 'databases/status/storage/report',
