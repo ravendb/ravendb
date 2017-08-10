@@ -107,7 +107,7 @@ namespace FastTests.Issues
             try
             {
                 GetConfiguration(
-                    tcpServerUrl: "http://0.0.0.0:8080", publicTcpServerUrl: "http://0.0.0.0:40000");
+                    tcpServerUrl: "tcp://0.0.0.0:8080", publicTcpServerUrl: "http://0.0.0.0:40000");
                 throw new Exception("Configuration should have been validated.");
             }
             catch (ArgumentException argException)
@@ -121,7 +121,7 @@ namespace FastTests.Issues
         {
             try
             {
-                GetConfiguration(tcpServerUrl: "http://0.0.0.0:8080", publicTcpServerUrl: "http://0.0.0.0:0");
+                GetConfiguration(tcpServerUrl: "tcp://0.0.0.0:8080", publicTcpServerUrl: "http://0.0.0.0:0");
                 throw new Exception("Configuration should have been validated.");
             }
             catch (ArgumentException argException)

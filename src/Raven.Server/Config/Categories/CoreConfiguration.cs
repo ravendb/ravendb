@@ -3,6 +3,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 using System;
+using System.Linq;
 using Microsoft.Extensions.Configuration;
 using Raven.Server.ServerWide;
 
@@ -58,6 +59,7 @@ namespace Raven.Server.Config.Categories
             if (type != ResourceType.Server)
                 return;
 
+            ValidateServerUrls();
             ValidatePublicUrls();
             ValidateSchemePublicVsBoundUrl();
         }
@@ -102,6 +104,17 @@ namespace Raven.Server.Config.Categories
             return serverWebUri.Host;
         }
 
+        internal void ValidateServerUrls()
+        {
+            if (ServerUrl != null)
+                ValidateServerUrl(ServerUrl, new [] { "http", "https" }, RavenConfiguration.GetKey(x => x.Core.ServerUrl));
+                
+            if (TcpServerUrl != null 
+                && ushort.TryParse(TcpServerUrl, out var _) == false)
+                ValidateServerUrl(TcpServerUrl, new [] { "tcp" }, RavenConfiguration.GetKey(x => x.Core.TcpServerUrl));
+            
+        }
+
         internal void ValidatePublicUrls()
         {
             if (PublicServerUrl.HasValue)
@@ -109,6 +122,15 @@ namespace Raven.Server.Config.Categories
 
             if (PublicTcpServerUrl.HasValue)
                 ValidatePublicUrl(PublicTcpServerUrl.Value.UriValue, RavenConfiguration.GetKey(x => x.Core.PublicTcpServerUrl));
+        }
+
+        private void ValidateServerUrl(string url, string[] expectedSchemes, string confKey)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var parsedUri) == false)
+                throw new ArgumentException($"'{url}' is an invalid URI.");
+            
+            if (expectedSchemes.Any(x => x == parsedUri.Scheme) == false)
+                throw new ArgumentException($"URI scheme '{ parsedUri.Scheme }' is invalid for '{confKey}' configuration setting, it must be one of the following: { string.Join(", ", expectedSchemes) }.");
         }
 
         private void ValidateSchemePublicVsBoundUrl()
