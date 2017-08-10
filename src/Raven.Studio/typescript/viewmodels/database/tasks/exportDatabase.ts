@@ -177,6 +177,10 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        if (!this.isValid(this.model.validationGroup)) {
+            return;
+        }
+        
         eventsCollector.default.reportEvent("database", "export");
 
         exportDatabase.isExporting(true);

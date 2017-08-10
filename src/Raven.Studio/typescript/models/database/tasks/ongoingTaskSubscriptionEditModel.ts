@@ -72,6 +72,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.collection.extend({
             required: true
         });
+        
+        this.script.extend({
+            aceValidation: true
+        });
 
         this.includeRevisions.extend({
             validation: [
@@ -87,7 +91,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
         this.validationGroup = ko.validatedObservable({
             collection: this.collection,
-            includeRevisions: this.includeRevisions
+            includeRevisions: this.includeRevisions,
+            script: this.script
         });
     }
 

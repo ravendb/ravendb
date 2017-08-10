@@ -34,7 +34,8 @@ class importDatabase extends viewModelBase {
     importCommand: KnockoutComputed<string>;
 
     validationGroup = ko.validatedObservable({
-        importedFileName: this.importedFileName
+        importedFileName: this.importedFileName,
+        transformScript: this.model.transformScript
     });
 
     constructor() {
@@ -117,6 +118,11 @@ class importDatabase extends viewModelBase {
         this.importedFileName.extend({
             required: true
         });
+
+        this.model.transformScript.extend({
+            aceValidation: true
+        });
+
     }
 
     attached() {

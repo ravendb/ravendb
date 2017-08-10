@@ -81,7 +81,7 @@ class patchList {
 
     filters = {
         searchText: ko.observable<string>()
-    }
+    };
 
     previewPatch(item: patchDocument) {
         this.previewItem(item);
@@ -352,7 +352,12 @@ class patch extends viewModelBase {
         const doc = this.patchDocument();
 
         doc.script.extend({
-            required: true
+            required: true,
+            aceValidation: true
+        });
+        
+        doc.query.extend({
+            aceValidation: true
         });
 
         doc.selectedItem.extend({
@@ -369,10 +374,12 @@ class patch extends viewModelBase {
 
         this.runPatchValidationGroup = ko.validatedObservable({
             script: doc.script,
-            selectedItem: doc.selectedItem
+            selectedItem: doc.selectedItem,
+            query: doc.query
         });
         this.runQueryValidationGroup = ko.validatedObservable({
-            selectedItem: doc.selectedItem
+            selectedItem: doc.selectedItem,
+            query: doc.query
         });
 
         this.savePatchValidationGroup = ko.validatedObservable({

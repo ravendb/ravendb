@@ -16,7 +16,7 @@ class aceEditorBindingHandler {
         selectAll: false,
         bubbleEscKey: false,
         bubbleEnterKey: false
-    }
+    };
 
     static dom = ace.require("ace/lib/dom");
     static commands = ace.require("ace/commands/default_commands").commands;
@@ -29,7 +29,7 @@ class aceEditorBindingHandler {
 
     static getEditorBySelection(selector: JQuery): AceAjax.Editor {
         if (selector.length) {
-            var element = selector[0];
+            const element = selector[0];
             return ko.utils.domData.get(element, "aceEditor");
         }
         return null;
@@ -233,6 +233,21 @@ class aceEditorBindingHandler {
             code(aceEditor.getSession().getValue());
             this.alterHeight(element, aceEditor);
         });
+        
+        aceEditor.getSession().on("changeAnnotation", () => {
+            const annotations = aceEditor.getSession().getAnnotations() as Array<AceAjax.Annotation>;
+            
+            if ('rules' in code && ko.isObservable(code.rules)) {
+                const rules = ko.unwrap(code.rules) as KnockoutValidationRule[];
+                if (_.some(rules, x => x.rule === "aceValidation")) {
+                    const firstError = annotations.find(x => x.type === "error");
+                    
+                    if (firstError) {
+                        code.setError(`${firstError.row},${firstError.column}: ${firstError.type}: ${firstError.text}`)
+                    }
+                }
+            }
+        });
 
         $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
 
@@ -243,15 +258,6 @@ class aceEditorBindingHandler {
         if ($(element).height() < this.minHeight) {
             $(element).height(this.minHeight);
         }
-        /*TODO: 
-        $(element).resizable(<any>{
-            minHeight: this.minHeight,
-            handles: "s, se",
-            grid: [10000000000000000, 1],
-            resize: function (event, ui) {
-                aceEditor.resize();
-            }
-        });*/
 
         this.alterHeight(element, aceEditor);
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
@@ -301,11 +307,11 @@ class aceEditorBindingHandler {
             return;
         }
         // update only if line count changes
-        var currentLinesCount = aceEditor.getSession().getScreenLength();
+        const currentLinesCount = aceEditor.getSession().getScreenLength();
         if (this.previousLinesCount != currentLinesCount) {
             let newHeight = currentLinesCount
                 * aceEditor.renderer.lineHeight
-                + (<any>aceEditor.renderer).scrollBar.getWidth();
+                + (<any>aceEditor.renderer).scrollBar.getWidth()
                 + 10; // few pixels extra padding
 
             if (newHeight < this.minHeight) {

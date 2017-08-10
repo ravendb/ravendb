@@ -66,34 +66,15 @@ class extensions {
                 return !val || base64regex.test(val);
             },
             message: 'Invaild base64 string.'
-        };       
-
-        (ko.validation.rules as any)['validJson'] = {
-            validator: (text: string) => {
-                let isValidJson = false;
-                try {
-                    JSON.parse(text);
-                    isValidJson = true;
-                }
-                catch (e) { }
-                return isValidJson;
-            },
-            message: 'Invalid json format.'
         };
 
-        (ko.validation.rules as any)['validJavascript'] = {
+        (ko.validation.rules as any)['aceValidation'] = {
             validator: (text: string) => {
-                try {
-                    eval("throw 0;" + text);
-                } catch (e) {
-                    if (e === 0)
-                        return true;
-                }
-                return false;
-            },
-            message: 'Invalid javascript.'
+                // we return true here, as validation is handled in aceEditorBindingHandler
+                return true; 
+            }
         };
-
+        
         ko.validation.init({
             errorElementClass: 'has-error',
             errorMessageClass: 'help-block',

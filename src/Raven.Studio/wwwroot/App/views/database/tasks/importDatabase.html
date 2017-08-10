@@ -88,7 +88,10 @@
                         <small class="scriptPopover"><i class="icon-info text-info"></i></small>
                     </div>
                     <div data-bind="collapse: $root.showTransformScript">
-                        <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }"></pre>
+                        <pre class="form-control" style="height: 200px;" data-bind="aceEditor: { code: transformScript, lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: transformScript"></pre>
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: transformScript">
+                            <div class="help-block" data-bind="validationMessage: transformScript"></div>
+                        </div>
                     </div>
                 </div>
                 <div class="form-group">

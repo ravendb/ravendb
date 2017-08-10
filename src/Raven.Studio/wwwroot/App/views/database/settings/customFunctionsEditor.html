@@ -13,8 +13,8 @@
             </span>
         </div>
     </div>
-    <pre class="editor flex-grow" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, validationElement: documentText"></pre>
-    <div data-bind="validationElement: documentText">
+    <pre class="editor flex-grow" id="customFunctionsEditor" data-bind="aceEditor: { code: documentText, fontSize: '18px', lang: 'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: documentText"></pre>
+    <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: documentText">
         <div class="help-block" data-bind="validationMessage: documentText"></div>
     </div>
 </form>

@@ -18,7 +18,7 @@ class customFunctionsEditor extends viewModelBase {
 
     spinners = {
         save: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -32,7 +32,7 @@ class customFunctionsEditor extends viewModelBase {
 
     private initValidation() {
         this.documentText.extend({
-            validJavascript: true
+            aceValidation: true
         });
     }
 

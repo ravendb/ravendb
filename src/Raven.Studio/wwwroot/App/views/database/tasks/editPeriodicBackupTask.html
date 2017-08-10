@@ -17,7 +17,7 @@
             </div>
             <div class="row flex-row margin-bottom">
                 <label class="control-label col-sm-4 col-lg-2">Backup type <i id="backup-info" class="icon-info text-info"></i></label>
-                <div class="col-sm-4 col-lg-4" data-bind="validationElement: backupType, validationOptions: { insertMessages: false }">
+                <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }, validationElement: backupType">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                             <span data-bind="text: backupType() || 'Select backup type..'"></span>
@@ -128,7 +128,7 @@
                     </div>
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="s3RegionInput"
@@ -232,7 +232,7 @@
                     </div>
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="glacierRegionInput"

@@ -449,6 +449,10 @@ class query extends viewModelBase {
     }
 
     runQuery() {
+        if (!this.isValid(this.criteria().validationGroup)) {
+            return;
+        }
+        
         eventsCollector.default.reportEvent("query", "run");
         this.querySummary(this.generateQuerySummary());
         const criteria = this.criteria();
