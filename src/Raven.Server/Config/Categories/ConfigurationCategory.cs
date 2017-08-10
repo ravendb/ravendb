@@ -115,7 +115,17 @@ namespace Raven.Server.Config.Categories
                         {
                             if (property.PropertyType.GetTypeInfo().IsEnum)
                             {
-                                property.SetValue(this, Enum.Parse(property.PropertyType, value, true));
+                                object parsedValue;
+                                try
+                                {
+                                    parsedValue = Enum.Parse(property.PropertyType, value, true);
+                                }
+                                catch (ArgumentException)
+                                {
+                                    throw new ConfigurationEnumValueException(value, property.PropertyType);
+                                }
+
+                                property.SetValue(this, parsedValue);
                             }
                             else if (property.PropertyType == typeof(string[]))
                             {
@@ -179,7 +189,7 @@ namespace Raven.Server.Config.Categories
                     }
                     catch (Exception e)
                     {
-                        throw new InvalidOperationException("Could not set configuration value given under the following setting: " + entry.Key, e);
+                        throw new InvalidOperationException($"Could not set '{entry.Key}' configuration setting value.", e);
                     }
 
                     configuredValueSet = true;
