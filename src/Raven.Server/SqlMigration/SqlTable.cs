@@ -5,29 +5,29 @@ using System.Text;
 
 namespace Raven.Server.SqlMigration
 {
-    class SqlTable
+    public class SqlTable
     {
-        private readonly SqlDatabase _database;
-
         public readonly string Name;
         public Dictionary<string, Tuple<string, string>> References;
         public List<string> PrimaryKeys;
+        public List<string> UnsupportedColumns;
         public bool IsEmbedded;
         public Dictionary<string, string> EmbeddedTables;
         public bool IsReferenced;
 
-        public SqlTable(SqlDatabase database, string tableName)
+        public SqlTable(string tableName)
         {
-            _database = database;
             Name = tableName;
             References = new Dictionary<string, Tuple<string, string>>();
             PrimaryKeys = new List<string>();
+            UnsupportedColumns = new List<string>();
             IsEmbedded = false;
             EmbeddedTables = new Dictionary<string, string>();
             IsReferenced = false;
 
             PrimaryKeys.Sort();
         }
+
 
         public void AddEmbeddedTable(string propertyName, string childTable)
         {
@@ -44,5 +44,7 @@ namespace Raven.Server.SqlMigration
 
             throw new InvalidOperationException($"Reference with table name {name} was not found");
         }
+
+        
     }
 }

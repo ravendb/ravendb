@@ -86,10 +86,11 @@ namespace Raven.Server.Web.Studio
                 foreach (var table in db.Tables)
                 {
                     tablesNames.Add(table.Name);
-                    if (!table.IsReferenced && table.PrimaryKeys.Count > 1)
+                    if (table.References.Count > 0)
                         foreach (var reference in table.References)
                         {
-                            relations.Add(Tuple.Create(reference.Value.Item1, table.Name));
+                            if (table.Name != reference.Value.Item1)
+                                relations.Add(Tuple.Create(table.Name, reference.Value.Item1));
                         }
                 }
 
@@ -132,6 +133,12 @@ namespace Raven.Server.Web.Studio
                     }
 
                     writer.WriteEndArray();
+
+                    writer.WriteComma();
+
+                    writer.WritePropertyName("TableCount");
+                    writer.WriteInteger(tablesNames.Count);
+
                     writer.WriteEndObject();
                 }
             }
@@ -142,6 +149,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/studio/import-sql", "POST", AuthorizationStatus.DatabaseAdmin)]
         public async Task ImportSql()
         {
+
             var sw = new Stopwatch();
             sw.Start();
 
@@ -150,6 +158,8 @@ namespace Raven.Server.Web.Studio
                 var sqlImportDoc = context.ReadForDisk(RequestBodyStream(), null);
                 sqlImportDoc.TryGet("ConnectionString", out string connectionString);
                 sqlImportDoc.TryGet("Relations", out BlittableJsonReaderArray relations);
+                if (!sqlImportDoc.TryGet("BinaryToAttachment", out bool binaryToAttachment))
+                    binaryToAttachment = false;
 
                 var connectionFactory = new ConnectionFactory(connectionString);
 
@@ -163,13 +173,18 @@ namespace Raven.Server.Web.Studio
                     item.TryGet("Child", out string child);
                     item.TryGet("PropertyName", out string propertyName);
 
-                    db.Embed(parent, propertyName, child);
+                    try
+                    {
+                        db.Embed(parent, propertyName, child);
+                    }
+                    catch(Exception e) { }
                 }
 
+                //db.Embed("dbo.Orders", "Lines", "dbo.Order Details");
                 //db.Embed("dbo.Products", "Lines", "dbo.Order Details");
                 //db.Embed("dbo.Categories", "MyProducts", "dbo.Products");
 
-                var databaseWriter = new RavenDatabaseWriter(db, Database, context);
+                var databaseWriter = new RavenDatabaseWriter(db, Database, context, binaryToAttachment);
 
                 await databaseWriter.WriteDatabase();
             }

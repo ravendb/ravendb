@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
-using System.Diagnostics.CodeAnalysis;
-using System.Text;
 
 namespace Raven.Server.SqlMigration
 {
-    class SqlDatabase
+    public class SqlDatabase
     {
         public string Name;
         public readonly SqlConnection Connection;
@@ -18,12 +16,27 @@ namespace Raven.Server.SqlMigration
             Name = Connection.Database;
             Tables = new List<SqlTable>();
 
-            SetTablesList();
+            SetTables();
             SetKeysRelations();
             SetPrimaryKeys();
+            SetUnsuppoertedColumns();
         }
 
-        internal void Embed(string parentTableName, string propertyName, string childTableName)
+        private void SetUnsuppoertedColumns()
+        {
+            var query = @"select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from INFORMATION_SCHEMA.COLUMNS where DATA_TYPE = 'hierarchyid' or DATA_TYPE = 'geography'";
+
+            using (var cmd = new SqlCommand(query, Connection))
+            {
+                using (var reader = SqlHelper.ExecuteReader(cmd))
+                {
+                    while (reader.Read())
+                        GetTableByName(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString())).UnsupportedColumns.Add(reader["COLUMN_NAME"].ToString());
+                }
+            }
+        }
+
+        public void Embed(string parentTableName, string propertyName, string childTableName)
         {
             SqlTable parentTable;
             SqlTable childTable;
@@ -47,7 +60,7 @@ namespace Raven.Server.SqlMigration
 
         public void SetKeysRelations()
         {
-            var ReferentialConstraints = new Dictionary<string, string>();
+            var referentialConstraints = new Dictionary<string, string>();
 
             var _query = "select CONSTRAINT_NAME, UNIQUE_CONSTRAINT_NAME from information_schema.REFERENTIAL_CONSTRAINTS";
 
@@ -56,16 +69,16 @@ namespace Raven.Server.SqlMigration
                 using (var reader = SqlHelper.ExecuteReader(cmd))
                 {
                     while (reader.Read())
-                        ReferentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
+                        referentialConstraints.Add(reader["CONSTRAINT_NAME"].ToString(), reader["UNIQUE_CONSTRAINT_NAME"].ToString());
                 }
             }
 
-            foreach (var kvp in ReferentialConstraints)
+            foreach (var kvp in referentialConstraints)
             {
-                var parentTableName = string.Empty;
-                var parentColumnName = string.Empty;
-                var childTableName = string.Empty;
-                var childColumnName = string.Empty;
+                string parentTableName;
+                string parentColumnName;
+                string childTableName;
+                string childColumnName;
 
                 var query = "select TABLE_SCHEMA, TABLE_NAME, COLUMN_NAME from information_schema.KEY_COLUMN_USAGE where CONSTRAINT_NAME = @constraintName";
                 using (var cmd = new SqlCommand(query, Connection))
@@ -75,7 +88,7 @@ namespace Raven.Server.SqlMigration
                     {
                         if (reader.Read())
                         {
-                            parentTableName = $"{reader["TABLE_SCHEMA"]}.{reader["TABLE_NAME"]}";
+                            parentTableName = GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
                             parentColumnName = reader["COLUMN_NAME"].ToString();
                         }
                         else
@@ -91,7 +104,7 @@ namespace Raven.Server.SqlMigration
                     {
                         if (reader.Read())
                         {
-                            childTableName = $"{reader["TABLE_SCHEMA"]}.{reader["TABLE_NAME"]}";
+                            childTableName = GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString());
                             childColumnName = reader["COLUMN_NAME"].ToString();
                         }
                         else
@@ -121,14 +134,15 @@ namespace Raven.Server.SqlMigration
                 using (var reader = SqlHelper.ExecuteReader(cmd))
                 {
                     while (reader.Read())
-                        GetTableByName($"{reader["TABLE_SCHEMA"]}.{reader["TABLE_NAME"]}").PrimaryKeys.Add(reader["COLUMN_NAME"].ToString());
+                        GetTableByName(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString())).PrimaryKeys.Add(reader["COLUMN_NAME"].ToString());
                 }
             }
         }     
 
-        private void SetTablesList()
+        private void SetTables()
         {
             var query = "select TABLE_SCHEMA, TABLE_NAME from INFORMATION_SCHEMA.TABLES where TABLE_TYPE = @tableType";
+
             var lst = new List<string>();
 
             using (var cmd = new SqlCommand(query, Connection))
@@ -137,14 +151,17 @@ namespace Raven.Server.SqlMigration
                 using (var reader = SqlHelper.ExecuteReader(cmd))
                 {
                     while (reader.Read())
-                        lst.Add($"{reader["TABLE_SCHEMA"]}.{reader["TABLE_NAME"]}");
+                        lst.Add(GetTableNameWithSchema(reader["TABLE_SCHEMA"].ToString(), reader["TABLE_NAME"].ToString()));
                 }
             }
-
-            foreach (var name in lst)
-                Tables.Add(new SqlTable(this, name));
+            foreach (var item in lst)
+                Tables.Add(new SqlTable(item));
         }
 
+        private string GetTableNameWithSchema(string schemaName, string tableName)
+        {
+            return $"{schemaName}.{tableName}";
+        }
 
         public bool TryGetTableByName(string name, out SqlTable table)
         {
@@ -166,6 +183,17 @@ namespace Raven.Server.SqlMigration
                     return table;
 
             return null;
+        }
+
+
+        public string TableQuote(string q)
+        {
+            q = $"[{q}]";
+            
+            q = q.Insert(q.IndexOf('.'), "]");
+            q = q.Insert(q.IndexOf('.') + 1, "[");
+
+            return q;
         }
     }
 }

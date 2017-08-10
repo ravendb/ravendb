@@ -28,14 +28,5 @@ namespace Raven.Server.SqlMigration
             return reader;
         }
 
-        public static string TableQuote(string q)
-        {
-            q = $"[{q}]";
-
-            q = q.Insert(q.IndexOf('.'), "]");
-            q = q.Insert(q.IndexOf('.') + 1, "[");
-
-            return q;
-        }
     }
 }

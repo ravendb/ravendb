@@ -2,28 +2,14 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
-using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Text;
 using System.Threading.Tasks;
-using Jint;
-using Microsoft.AspNetCore.Http;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
-using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.SqlMigration;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Logging;
 using CommandType = Raven.Client.Documents.Commands.Batches.CommandType;
 
 namespace Raven.Server.SqlMigration
@@ -38,24 +24,27 @@ namespace Raven.Server.SqlMigration
         //public event DocumentsEventHandler OnDocumentsWritten;
 
         private readonly DocumentDatabase _documentDatabase;
-        private readonly JsonOperationContext _context;
+        private readonly DocumentsOperationContext _context;
         private List<string> _jsFunctions;
         private string _jsCode;
         private readonly SqlConnection _connection;
+        private readonly bool _binaryToAttachment;
+        private readonly Logger _logger;
         //private readonly int _reportPerDocument = 1000;
         //private int _documentsCount;
 
-        public RavenDatabaseWriter(SqlDatabase sqlDatabase, DocumentDatabase documentDatabase, JsonOperationContext context)
+        public RavenDatabaseWriter(SqlDatabase sqlDatabase, DocumentDatabase documentDatabase, DocumentsOperationContext context, bool binaryToAttachment)
         {
             SqlDatabase = sqlDatabase;
+
             _documentDatabase = documentDatabase;
-
+            _binaryToAttachment = binaryToAttachment;
             _context = context;
-
             _connection = SqlDatabase.Connection;
             //_documentsCount = 0;
             _jsFunctions = new List<string>();
-            _jsCode = string.Empty;
+            _jsCode = String.Empty;
+            _logger = LoggingSource.Instance.GetLogger<RavenDatabaseWriter>("Sql migration");
         }
 
         public Dictionary<string, IDataReader> GetReadersOfEmbeddedTables(SqlTable table)
@@ -67,7 +56,7 @@ namespace Raven.Server.SqlMigration
                 var childTable = SqlDatabase.GetTableByName(kvp.Value);
                 var reference = childTable.GetReferenceColumnNameByTableName(table.Name);
 
-                var embeddedQuery = $"select * from {SqlHelper.TableQuote(childTable.Name)} order by '{reference.Key}'";
+                var embeddedQuery = $"select * from {SqlDatabase.TableQuote(childTable.Name)} order by '{reference.Key}'";
 
                 var con = new ConnectionFactory(_connection.ConnectionString).OpenConnection();
                 var cmd = new SqlCommand(embeddedQuery, (SqlConnection)con);
@@ -77,6 +66,7 @@ namespace Raven.Server.SqlMigration
 
             return readers;
         }
+
 
         public void AddJSModification(string filePath, string functionName)
         {
@@ -90,14 +80,31 @@ namespace Raven.Server.SqlMigration
         {
             foreach (var table in SqlDatabase.Tables)
             {
-                Console.WriteLine(table.Name);
                 if (table.IsEmbedded)
                     continue;
 
                 // Execute queries parallelly
                 var readers = GetReadersOfEmbeddedTables(table);
 
-                var query = $"Select * from {SqlHelper.TableQuote(table.Name)}";
+                string unsupportedStr = String.Empty;
+                string removeUnsupportedStr = String.Empty;
+
+                foreach (var item in table.UnsupportedColumns)
+                {
+                    unsupportedStr += $"CONVERT(varchar(256), {item}) as converted,";
+                    if (removeUnsupportedStr == String.Empty)
+                        removeUnsupportedStr = " ALTER TABLE #TempTable DROP COLUMN";
+                    else
+                        removeUnsupportedStr += ",";
+
+                    removeUnsupportedStr += " " + item;
+                }
+
+
+                var query = "Select " + unsupportedStr + $"* INTO #TempTable from {SqlDatabase.TableQuote(table.Name)}" + removeUnsupportedStr + " SELECT * FROM #TempTable DROP TABLE #TempTable";
+                Console.WriteLine(query);
+
+                //var query = $"Select * from {SqlDatabase.TableQuote(table.Name)}";
 
                 using (var cmd = new SqlCommand(query, _connection))
                 {
@@ -106,120 +113,120 @@ namespace Raven.Server.SqlMigration
                     {
                         reader = SqlHelper.ExecuteReader(cmd);
                     }
-                    catch (Exception)
+                    catch (Exception e)
                     {
-                        _connection.Open();
+                        var str = $"Cannot import table '{table.Name}' because it contains an unsupported data type.";
+                        Console.WriteLine(e);
+                        Console.WriteLine("\n\n\n\n\n\n");
+                        if (_logger.IsInfoEnabled)
+                            _logger.Info(str, e);
+                        if(_connection.State == ConnectionState.Closed)
+                            _connection.Open();
                         continue;
                     }
                     using (reader)
                     {
                         while (reader.Read())
                         {
-                            var document = GetDocumentFromSqlRow(table, reader, new List<string>(table.PrimaryKeys), false);
+                            Dictionary<string, byte[]> attachments = new Dictionary<string, byte[]>();
+
+                            var document = GetDocumentFromSqlRow(table, reader, new List<string>(table.PrimaryKeys), false, ref attachments);
 
                             var id = GenerateIdFromSqlRow(reader, table);
                             document.SetCollection(table.Name);
-                            document.SetEmbeddedTables(this, table, reader, readers);
-
+                            document.SetEmbeddedTables(this, table, reader, readers, ref attachments);
 
                             var doc = _context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            /*var doc = EntityToBlittable.ConvertEntityToBlittable(document, DocumentConventions.Default, _context, new DocumentInfo
-                            {
-                                Collection = table.Name
-                            });*/
                             
-                            await InsertDocument(doc, id);
-                            
+                            await InsertDocument(doc, id, attachments);
                         }
                     }
                 }
             }
-            await InsertDocument(null, null, true);
+            await EnqueueCommands();
 
         }
 
-        public async Task InsertDocument1(BlittableJsonReaderObject document, string id)
+        private const int BatchSize = 1000;
+        private int _count = 0;
+        private readonly BatchRequestParser.CommandData[] _commands = new BatchRequestParser.CommandData[BatchSize];
+        private readonly List<AttachmentHandler.MergedPutAttachmentCommand> _attachmentCommands = new List<AttachmentHandler.MergedPutAttachmentCommand>();
+        private List<IDisposable> _toDispose = new List<IDisposable>();
+
+        public async Task InsertDocument(BlittableJsonReaderObject document, string id, Dictionary<string, byte[]> attachments)
         {
-            using (var command = new BatchHandler.MergedBatchCommand
+            _commands[_count++] = new BatchRequestParser.CommandData
             {
-                Database = _documentDatabase
-            })
-            {
+                Type = CommandType.PUT,
+                Document = document,
+                Id = id
+            };
 
-                command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(new[]{new BatchRequestParser.CommandData()
+            foreach (var attachment in attachments)
+            {
+                var streamsTempFile = _documentDatabase.DocumentsStorage.AttachmentsStorage.GetTempFile("put");
+                var stream = streamsTempFile.StartNewStream();
+                
+                var ms = new MemoryStream(attachment.Value);
+                var hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(_context, ms, stream, _documentDatabase.DatabaseShutdown);
+
+                _attachmentCommands.Add(new AttachmentHandler.MergedPutAttachmentCommand
                 {
-                    Type =  CommandType.PUT,
-                    Document = document,
-                    Id = id
-                }});
+                    Database = _documentDatabase,
+                    DocumentId = id,
+                    Name = $"{id}/{attachment.Key}",
+                    Stream = stream,
+                    Hash = hash,
+                    ContentType = ""
+                });
+                _toDispose.Add(stream);
+                _toDispose.Add(streamsTempFile);
+             }
 
+            if (_count % BatchSize == 0)
+            {
+                await EnqueueCommands();
+                _count = 0;
+            }
+        }
+
+        private async Task EnqueueCommands()
+        {
+            using (var command = new BatchHandler.MergedBatchCommand { Database = _documentDatabase })
+            {
+                command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(_commands, 0, _count);
 
                 try
                 {
                     await _documentDatabase.TxMerger.Enqueue(command);
                 }
-                catch (ConcurrencyException)
-                {/*
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                    throw;*/
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
                 }
+
+                try
+                {
+                    foreach (var attachment in _attachmentCommands)
+                        await _documentDatabase.TxMerger.Enqueue(attachment);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
+                finally
+                {
+                    foreach (var disposable in _toDispose)
+                    {
+                        disposable.Dispose();
+                    }
+                    _toDispose = new List<IDisposable>();
+                }
+
             }
         }
 
-        private int indexInCommands = 0;
-        private BatchRequestParser.CommandData[] Commands = new BatchRequestParser.CommandData[1000];
-        public async Task InsertDocument(BlittableJsonReaderObject document, string id, bool force = false)
-        {
-
-            if (document != null)
-                Commands[indexInCommands] = new BatchRequestParser.CommandData()
-                {
-                    Type = CommandType.PUT,
-                    Document = document,
-                    Id = id
-                };
-
-            if (indexInCommands > 0 && indexInCommands % 999 == 0 || indexInCommands > 0 && force)
-            {
-                using (var command = new BatchHandler.MergedBatchCommand
-                {
-                    Database = _documentDatabase
-                })
-                {
-
-                    command.ParsedCommands = new ArraySegment<BatchRequestParser.CommandData>(Commands, 0, indexInCommands+1);
-
-                    try
-                    {
-
-                        await _documentDatabase.TxMerger.Enqueue(command);
-
-                    }
-                    catch (ConcurrencyException e)
-                    {
-                        // todo: decide what to do with exceptions
-                        Console.WriteLine(e);
-                        /*
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Conflict;
-                        throw;*/
-                    }
-                    finally
-                    {
-                        
-                    }
-                }
-                indexInCommands = 0;
-
-            }
-            else
-            {
-                indexInCommands++;
-            }
-
-
-        }
-
-        private static RavenDocument GetDocumentFromSqlRow(SqlTable table, IDataReader reader, List<string> primaryKeys, bool embedded)
+        private RavenDocument GetDocumentFromSqlRow(SqlTable table, IDataReader reader, List<string> primaryKeys, bool embedded, ref Dictionary<string, byte[]> attachments)
         {
             var document = new RavenDocument();
             
@@ -228,7 +235,20 @@ namespace Raven.Server.SqlMigration
                 var value = reader[i];
                 var columnName = reader.GetName(i);
 
-                if (primaryKeys.Contains(columnName) == false || (!embedded && table.PrimaryKeys.Count > 1))
+                bool inDoc = true;
+                if (value is byte[])
+                {
+                    if (_binaryToAttachment && primaryKeys.Contains(columnName) == false)
+                    {
+                        attachments.Add(columnName, (byte[])value);
+                        inDoc = false;
+                    }
+                    else
+                        value = value.ToString();
+                }
+
+
+                if (inDoc && primaryKeys.Contains(columnName) == false || !embedded && table.PrimaryKeys.Count > 1)
                 {
                     if (value == DBNull.Value)
                         value = null;
@@ -257,20 +277,19 @@ namespace Raven.Server.SqlMigration
             public void Set(string key, object value)
             {
 
-                if (value == null)
+                if (value == null) 
                 {
-                    this[key] = value;
-                    return;
-                }
-
-                var val1 = value as byte[];
-                if (val1 != null)
-                {
-                    this[key] = System.Convert.ToBase64String(val1);
+                    this[key] = null;
                     return;
                 }
                 
-                if (Guid.TryParse(value.ToString(), out _))
+                if (value is byte[])
+                {
+                    this[key] = System.Convert.ToBase64String((byte[]) value);
+                    return;
+                }
+
+                if (value is Guid)
                 {
                     this[key] = value.ToString();
                     return;
@@ -296,7 +315,7 @@ namespace Raven.Server.SqlMigration
                     };
             }
 
-            public void SetEmbeddedTables(RavenDatabaseWriter writer, SqlTable parentTable, IDataReader parentReader, Dictionary<string, IDataReader> readers)
+            public void SetEmbeddedTables(RavenDatabaseWriter writer, SqlTable parentTable, IDataReader parentReader, Dictionary<string, IDataReader> readers, ref Dictionary<string, byte[]> attachments)
             {
                 foreach (var item in parentTable.EmbeddedTables)
                 {
@@ -339,11 +358,10 @@ namespace Raven.Server.SqlMigration
 
                     do
                     {
-                        RavenDocument innerDocument = GetDocumentFromSqlRow(childTable, embeddedReader, parentTable.PrimaryKeys, true);
+                        RavenDocument innerDocument = writer.GetDocumentFromSqlRow(childTable, embeddedReader, parentTable.PrimaryKeys, true, ref attachments);
 
                         if (childTable.EmbeddedTables.Count > 0)
-                            innerDocument.SetEmbeddedTables(writer, childTable, embeddedReader, writer.GetReadersOfEmbeddedTables(childTable));
-
+                            innerDocument.SetEmbeddedTables(writer, childTable, embeddedReader, writer.GetReadersOfEmbeddedTables(childTable), ref attachments);
 
                         Append(parentTableColumnName, innerDocument);
                     }
