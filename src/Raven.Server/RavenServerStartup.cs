@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net;
 using System.Reflection;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -19,6 +20,7 @@ using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Config;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -70,8 +72,6 @@ namespace Raven.Server
             "/debug/server-id"
         };
 
-        private const string UnsafePageHtmlResource = "Raven.Server.Web.Assets.Unsafe.html";
-
         private Task UnsafeRequestHandler(HttpContext context)
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
@@ -84,13 +84,7 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-
-                using (var reader = new StreamReader(
-                    Assembly.GetEntryAssembly().GetManifestResourceStream(UnsafePageHtmlResource)))
-                {
-                    var html = reader.ReadToEnd();
-                    return context.Response.WriteAsync(html);
-                }
+                return context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
             }
 
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
