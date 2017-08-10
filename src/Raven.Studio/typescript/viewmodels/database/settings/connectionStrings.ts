@@ -30,7 +30,7 @@ class connectionStrings extends viewModelBase {
 
     activate(args: any) {
         super.activate(args);
-        this.getAllConnectionStrings();
+        return this.getAllConnectionStrings();
     }
 
     private clearTestResult() {
@@ -41,21 +41,8 @@ class connectionStrings extends viewModelBase {
         new getConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-
-                this.ravenEtlConnectionStringsNames([]);
-                this.sqlEtlConnectionStringsNames([]);
-
-                for (const key in result.RavenConnectionStrings) {
-                    if (result.RavenConnectionStrings.hasOwnProperty(key)) {
-                        this.ravenEtlConnectionStringsNames.push(key);
-                    }
-                }
-               
-                for (const key in result.SqlConnectionStrings) {
-                    if (result.SqlConnectionStrings.hasOwnProperty(key)) {
-                        this.sqlEtlConnectionStringsNames.push(key);
-                    }
-                }
+                this.ravenEtlConnectionStringsNames(Object.keys(result.RavenConnectionStrings));
+                this.sqlEtlConnectionStringsNames(Object.keys(result.SqlConnectionStrings));
 
                 this.ravenEtlConnectionStringsNames(_.sortBy(this.ravenEtlConnectionStringsNames(), x => x.toUpperCase()));
                 this.sqlEtlConnectionStringsNames(_.sortBy(this.sqlEtlConnectionStringsNames(), x => x.toUpperCase()));
@@ -104,7 +91,7 @@ class connectionStrings extends viewModelBase {
     }
 
     onEditRavenEtl(connectionStringName: string) {
-        new getConnectionStringInfoCommand(this.activeDatabase(), "Raven", connectionStringName)
+        return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
                 this.editedRavenEtlConnectionString(new connectionStringRavenEtlModel(result));
@@ -114,7 +101,7 @@ class connectionStrings extends viewModelBase {
     }
 
     onEditSqlEtl(connectionStringName: string) {
-        new getConnectionStringInfoCommand(this.activeDatabase(), "Sql", connectionStringName)
+        return getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
                 this.editedSqlEtlConnectionString(new connectionStringSqlEtlModel(result));
@@ -151,12 +138,12 @@ class connectionStrings extends viewModelBase {
         // 1. Validate model
         if (this.editedRavenEtlConnectionString()) {
             type = "Raven";
-            if (!this.validate("Raven")) { 
+            if (!this.isValid(this.editedRavenEtlConnectionString().validationGroup)) { 
                 return;
             }
         } else {
             type = "Sql";
-            if (!this.validate("Sql")) {
+            if (!this.isValid(this.editedSqlEtlConnectionString().validationGroup)) {
                 return;
             }
         }
@@ -173,26 +160,6 @@ class connectionStrings extends viewModelBase {
 
                 this.dirtyFlag().reset();
             });
-    }
-
-    private validate(type: Raven.Client.ServerWide.ConnectionStringType): boolean {
-        let valid = true;
-
-        if (type === 'Raven') {
-            if (!this.isValid(this.editedRavenEtlConnectionString().validationGroup)) { 
-                valid = false;
-            }
-        } else {
-            if (!this.isValid(this.editedSqlEtlConnectionString().validationGroup)) {
-                valid = false;
-            } 
-        }
-
-        return valid;
-    }
-
-    truncateNameIfNeeded(name: string): string {
-        return _.truncate(name, { 'length': 70, 'omission': ' ...' });
     }
 }
 

@@ -23,7 +23,7 @@ class extensions {
 
         const regex1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
         if (!regex1.test(databaseName)) {
-            return `The database name can't contain any of the following characters: \\ / : * ? " < > |`;
+            return `Database name can't contain any of the following characters: \\ / : * ? " < > |`;
         }
 
         const regex2 = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
@@ -32,11 +32,15 @@ class extensions {
         }
 
         if (databaseName.startsWith(".")) {
-            return "The database name can't start with a dot!";
+            return "Database name can't start with a dot!";
         }
 
         if (databaseName.endsWith(".")) {
-            return "The database name can't end with a dot!";
+            return "Database name can't end with a dot!";
+        }
+
+        if (databaseName.length > 230) {
+            return "Database name can't exceed 230 characters";
         }
 
         return null;

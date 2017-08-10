@@ -5,32 +5,10 @@ import connectionStringRavenEtlModel = require("models/database/settings/connect
 import connectionStringSqlEtlModel = require("models/database/settings/connectionStringSqlEtlModel");
 
 class saveConnectionStringCommand extends commandBase {
-    private ravenEtlConnectionStringToSend: Raven.Client.ServerWide.ETL.RavenConnectionString;
-    private sqlEtlConnectionStringToSend: Raven.Client.ServerWide.ETL.SqlConnectionString;
 
     constructor(private db: database, private connectionStringType: Raven.Client.ServerWide.ConnectionStringType,
-                private ravenEtlConnectionString: connectionStringRavenEtlModel, private sqlEtlConnectionString: connectionStringSqlEtlModel) {
+        private ravenEtlConnectionString: connectionStringRavenEtlModel, private sqlEtlConnectionString: connectionStringSqlEtlModel) {
         super();
-
-        switch (connectionStringType) {
-            case "Raven":
-            {
-                this.ravenEtlConnectionStringToSend = {
-                    Type: "Raven",
-                    Name: ravenEtlConnectionString.connectionStringName(),
-                    Url: ravenEtlConnectionString.url(),
-                    Database: ravenEtlConnectionString.database()
-                };
-            } break;
-            case "Sql":
-            {
-                    this.sqlEtlConnectionStringToSend = {
-                    Type: "Sql",
-                    Name: sqlEtlConnectionString.connectionStringName(),
-                    ConnectionString: sqlEtlConnectionString.connectionString()
-                };
-            } break;
-        }
     }
  
     execute(): JQueryPromise<void> { 
@@ -45,13 +23,22 @@ class saveConnectionStringCommand extends commandBase {
         const url = endpoints.global.adminDatabases.adminConnectionStrings + this.urlEncodeArgs(args);
         
         const saveConnectionStringTask = $.Deferred<void>();
-
-        const payload =  this.connectionStringType === "Raven" ? this.ravenEtlConnectionStringToSend : this.sqlEtlConnectionStringToSend ;
+        
+        const payload = this.connectionStringType === "Raven" ?
+            {
+                Type: "Raven",
+                Name: this.ravenEtlConnectionString.connectionStringName(),
+                Url: this.ravenEtlConnectionString.url(),
+                Database: this.ravenEtlConnectionString.database()
+            } :
+            {
+                Type: "Sql",
+                Name: this.sqlEtlConnectionString.connectionStringName(),
+                ConnectionString: this.sqlEtlConnectionString.connectionString()
+            };
 
         this.put(url, JSON.stringify(payload))
-            .done((results: Array<void>) => { 
-                saveConnectionStringTask.resolve(results[0]);
-            })
+            .done(() => saveConnectionStringTask.resolve())
             .fail(response => saveConnectionStringTask.reject(response));
 
         return saveConnectionStringTask;

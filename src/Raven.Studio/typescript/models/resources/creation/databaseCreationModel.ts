@@ -210,7 +210,6 @@ class databaseCreationModel {
 
         this.name.extend({
             required: true,
-            maxLength: 230,
             validDatabaseName: true,
 
             validation: [

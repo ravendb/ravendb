@@ -16,8 +16,8 @@
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
                          data-bind="css: { 'panel-info': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
                         <div class="flex-grow">
-                            <h4><a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data + ' - Click to edit'}">
-                                    <span data-bind="text: $root.truncateNameIfNeeded($data)"></span>
+                            <h4><a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
+                                    <span data-bind="text: $data"></span>
                                 </a>
                             </h4>
                         </div>
@@ -41,8 +41,8 @@
                     <div class="panel padding padding-sm flex-horizontal destination-item" 
                          data-bind="css: { 'panel-info': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
                         <div class="flex-grow">
-                            <h4><a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data + ' - Click to edit'}">
-                                    <span data-bind="text: $root.truncateNameIfNeeded($data)"></span>
+                            <h4><a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
+                                    <span data-bind="text: $data"></span>
                                 </a>
                             </h4>
                         </div>

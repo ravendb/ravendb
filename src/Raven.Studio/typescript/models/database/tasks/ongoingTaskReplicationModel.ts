@@ -49,7 +49,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.destinationDB.extend({
             required: true,
-            maxLength: 230,
             validDatabaseName: true
         });
 
