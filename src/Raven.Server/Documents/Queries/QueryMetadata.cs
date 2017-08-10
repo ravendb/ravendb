@@ -422,6 +422,46 @@ namespace Raven.Server.Documents.Queries
                 string fieldName = null;
                 var previousType = ValueTokenType.Null;
 
+                var methodName = QueryExpression.Extract(_metadata.Query.QueryText, expression.Field);
+
+                var methodType = QueryMethod.GetMethodType(methodName);
+
+                switch (methodType)
+                {
+                    case MethodType.Count:
+                        if (arguments.Count != 1)
+                            throw new InvalidQueryException($"Invalid count() usage in WHERE, expected one argument, got {arguments.Count}", QueryText, parameters);
+
+                        if (arguments[0] is QueryExpression countExpression)
+                        {
+                            _metadata._aliasToName[methodName] = CountFieldName;
+                            countExpression.Field = expression.Field;
+
+                            Visit(countExpression, parameters);
+                            return;
+                        }
+
+                        throw new InvalidQueryException($"Invalid count() usage in WHERE, expected expression after count(), got {arguments[0].GetType()} type", QueryText, parameters);
+                    case MethodType.Sum:
+                        if (arguments.Count != 2)
+                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected two arguments, got {arguments.Count}", QueryText, parameters);
+
+                        var fieldToken = arguments[0] as FieldToken;
+
+                        if (fieldToken == null)
+                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected first argument to be field token, got {arguments[0].GetType()} type", QueryText, parameters);
+
+                        var sumExpression = arguments[1] as QueryExpression;
+
+                        if (sumExpression == null)
+                            throw new InvalidQueryException($"Invalid sum() usage in WHERE, expected expression after sum(), got {arguments[1].GetType()} type", QueryText, parameters);
+
+                        sumExpression.Field = fieldToken;
+                        Visit(sumExpression, parameters);
+                        return;
+                    // TODO arek - implement cases for all methods here and remove the below code
+                }
+
                 for (var i = 0; i < arguments.Count; i++)
                 {
                     var argument = arguments[i];
@@ -461,14 +501,18 @@ namespace Raven.Server.Documents.Queries
                     return;
                 }
 
-                var methodName = QueryExpression.Extract(_metadata.Query.QueryText, expression.Field);
-
-                if("exists".Equals(methodName, StringComparison.OrdinalIgnoreCase))
-                    _metadata.AddExistField(fieldName);
-                else if ("search".Equals(methodName, StringComparison.OrdinalIgnoreCase))
-                    _metadata.AddSearchField(fieldName, previousType);
-                else
-                    _metadata.AddWhereField(fieldName, previousType);
+                switch (methodType)
+                {
+                    case MethodType.Exists:
+                        _metadata.AddExistField(fieldName);
+                        break;
+                    case MethodType.Search:
+                        _metadata.AddSearchField(fieldName, previousType);
+                        break;
+                    default:
+                        _metadata.AddWhereField(fieldName, previousType);
+                        break;
+                }
             }
         }
 

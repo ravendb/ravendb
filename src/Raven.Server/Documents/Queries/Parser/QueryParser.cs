@@ -311,7 +311,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case NextTokenOptions.BinaryOp:
                     _state = NextTokenOptions.Parenthesis;
-                    if (Operator(out op) == false)
+                    if (Operator(true, out op) == false)
                         return false;
                     break;
                 default:
@@ -391,7 +391,7 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        private bool Operator(out QueryExpression op)
+        private bool Operator(bool fieldRequired, out QueryExpression op)
         {
             OperatorType type;
             FieldToken field = null;
@@ -400,14 +400,21 @@ namespace Raven.Server.Documents.Queries.Parser
                 type = OperatorType.True;
             else
             {
-                if (Field(out field) == false)
+                if (fieldRequired && Field(out field) == false)
                 {
                     op = null;
                     return false;
                 }
 
                 if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
+                {
+                    if (fieldRequired == false)
+                    {
+                        op = null;
+                        return false;
+                    }
                     ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
+                }
 
                 switch (match)
                 {
@@ -454,8 +461,18 @@ namespace Raven.Server.Documents.Queries.Parser
                     };
                     return true;
                 case OperatorType.Method:
-                    return Method(field, op: out op);
+                    var method = Method(field, op: out op);
 
+                    if (method && Operator(false, out var methodOperator))
+                    {
+                        if (op.Arguments == null)
+                            op.Arguments = new List<object>();
+
+                        op.Arguments.Add(methodOperator);
+                        return true;
+                    }
+
+                    return method;
                 case OperatorType.Between:
                     if (Value(out var fst) == false)
                         ThrowParseException("parsing Between, expected value (1st)");
