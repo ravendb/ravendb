@@ -56,28 +56,6 @@
                     </div>
                 </div>
 
-                <div class="row" data-bind="visible: isIndexMode()">
-                    <label class="control-label col-sm-3 col-lg-2">Index</label>
-
-                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                <span data-bind="text: patchDocument().selectedItem() || 'Select index...'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <div class="dropdown-menu has-info">
-                                <ul class="menu max-height" data-bind="foreach: indexNames">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
-                                </ul>
-                                <div class="bg-info">
-                                    <i class="icon-info text-info"></i> <span>Map-Reduce indexes are not available for patching</span>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
-                    </div>
-                </div>
-
                 <div class="row" data-bind="visible: isCollectionMode()">
                     <label class="control-label col-sm-3 col-lg-2">Collection</label>
 
@@ -103,19 +81,19 @@
                             <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: patchDocument().patchAll">
                             <label for="checkbox2">
                                 <span data-bind="visible: isCollectionMode">Patch all in collection</span>
-                                <span data-bind="visible: isIndexMode()">Patch all documents matching query</span>
+                                <span data-bind="visible: isQueryMode()">Patch all documents matching query</span>
                             </label>
                         </div>
                     </div>
                 </div>
-                <div class="row" data-bind="visible: isIndexMode">
+                <div class="row" data-bind="visible: isQueryMode">
                     <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info text-info"></i></small></label>
 
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
                                 <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene', completer:queryCompleter, completerHostObject: $root }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene' }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
                                 
                                 <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
                                     <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
@@ -341,7 +319,7 @@
                                 </div>
                                 <div class="col-xs-6">
                                     <div data-bind="with: previewItem()">
-                                        for: &nbsp;<strong data-bind="text: patchOnOption"></strong> - <strong data-bind="text: selectedItem"></strong>
+                                        for: &nbsp;<strong data-bind="text: patchOnOption"></strong> <strong data-bind="text: selectedItem() ? '-' + selectedItem() : ''"></strong>
                                     </div>
                                 </div>
                             </div>
