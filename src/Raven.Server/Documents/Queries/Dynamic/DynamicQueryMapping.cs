@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
@@ -21,13 +22,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public string[] HighlightedFields { get; private set; }
 
-        public bool IsMapReduce { get; private set; }
+        public bool IsGroupBy { get; private set; }
 
         public List<Index> SupercededIndexes;
 
         public IndexDefinitionBase CreateAutoIndexDefinition()
         {
-            if (IsMapReduce == false)
+            if (IsGroupBy == false)
             {
                 return new AutoMapIndexDefinition(ForCollection, MapFields.Select(field =>
                     {
@@ -139,7 +140,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (query.Metadata.IsGroupBy)
             {
-                result.IsMapReduce = true;
+                result.IsGroupBy = true;
 
                 var groupByFields = query.Metadata.GroupBy;
                 
@@ -204,7 +205,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
             }
 
-            result.MapFields = mapFields.Values.ToArray();
+            result.MapFields = new DynamicQueryMappingItem[mapFields.Count];
+
+            int index = 0;
+            foreach (var field in mapFields)
+            {
+                if (result.IsGroupBy && field.Value.AggregationOperation == AggregationOperation.None)
+                    throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText, query.QueryParameters);
+
+                result.MapFields[index++] = field.Value;
+            }
 
             result.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
 

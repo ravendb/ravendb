@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => x.Type.IsAuto() && (query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap()))
+                .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
                 .Select(x => x.Definition)
                 .ToList();
 
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match"));
             }
 
-            if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
+            if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)
             {
                 if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations) == false)
                 {
