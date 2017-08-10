@@ -15,8 +15,10 @@ namespace Raven.Server.Documents.Queries
 
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
 
-        public QueryMetadata(string query, BlittableJsonReaderObject parameters)
+        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey)
         {
+            CacheKey = cacheKey;
+
             var qp = new QueryParser();
             qp.Init(query);
             Query = qp.Parse();
@@ -36,14 +38,17 @@ namespace Raven.Server.Documents.Queries
 
             Build(parameters);
 
-            CanCache = true;
-            foreach (var kvp in WhereFields)
+            CanCache = cacheKey != 0;
+            if (CanCache)
             {
-                if (kvp.Value.Type != ValueTokenType.Null)
-                    continue;
+                foreach (var kvp in WhereFields)
+                {
+                    if (kvp.Value.Type != ValueTokenType.Null)
+                        continue;
 
-                CanCache = false;
-                break;
+                    CanCache = false;
+                    break;
+                }
             }
         }
 
@@ -56,6 +61,8 @@ namespace Raven.Server.Documents.Queries
         public readonly string CollectionName;
 
         public readonly string IndexName;
+
+        public string DynamicIndexName;
 
         public readonly Query Query;
 
@@ -70,6 +77,8 @@ namespace Raven.Server.Documents.Queries
         public (string Name, OrderByFieldType OrderingType, bool Ascending)[] OrderBy;
 
         public SelectField[] SelectFields;
+
+        public readonly ulong CacheKey;
 
         public readonly bool CanCache;
 
@@ -463,10 +472,10 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Intersect:
                     case MethodType.Exact:
                         for (var i = 0; i < arguments.Count; i++)
-                        {
+                    {
                             var expressionArgument = arguments[i] as QueryExpression;
-                            Visit(expressionArgument, parameters);
-                        }
+                        Visit(expressionArgument, parameters);
+                    }
                         return;
                     case MethodType.Count:
                         HandleCount(methodName, expression.Field, arguments, parameters);
@@ -481,7 +490,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)
-            {
+                    {
                 if (arguments.Count != 1)
                     throw new InvalidQueryException("Method count() expects no argument", QueryText, parameters);
 
@@ -491,7 +500,7 @@ namespace Raven.Server.Documents.Queries
                     countExpression.Field = methodNameToken;
 
                     Visit(countExpression, parameters);
-                }
+                    }
                 else
                     throw new InvalidQueryException($"Method count() expects expression after its invocation, got {arguments[0]}", QueryText, parameters);
             }
@@ -513,10 +522,10 @@ namespace Raven.Server.Documents.Queries
 
                 sumExpression.Field = fieldToken;
                 Visit(sumExpression, parameters);
-            }
+                }
 
             private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName)
-            {
+                {
                 var fieldArgument = arguments[0] as FieldToken;
 
                 if (fieldArgument == null)

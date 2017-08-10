@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"More like this query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = new QueryMetadata(result.Query, null);
+            result.Metadata = new QueryMetadata(result.Query, null, 0);
 
             if (result.Metadata.IsDynamic)
                 throw new InvalidOperationException("More like this query must be executed against static index.");
@@ -145,7 +145,7 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
-            result.Metadata = new QueryMetadata(result.Query, null);
+            result.Metadata = new QueryMetadata(result.Query, null, 0);
 
             if (result.Metadata.IsDynamic)
                 throw new InvalidOperationException("More like this query must be executed against static index.");
