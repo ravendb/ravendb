@@ -58,6 +58,8 @@ namespace Raven.Server.ServerWide
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
 
+        private const string LicenseStoargeKey = "License/Stoarge/Key";
+
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
@@ -82,6 +84,8 @@ namespace Raven.Server.ServerWide
 
         private long _lastClientConfigurationIndex;
 
+        public long LastLicenseIndex { get; private set; }
+
         public Operations Operations { get; }
 
         public ServerStore(RavenConfiguration configuration, RavenServer ravenServer)
@@ -100,7 +104,7 @@ namespace Raven.Server.ServerWide
 
             Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
 
-            LicenseManager = new LicenseManager(NotificationCenter);
+            LicenseManager = new LicenseManager(this);
 
             FeedbackSender = new FeedbackSender();
 
@@ -409,8 +413,11 @@ namespace Raven.Server.ServerWide
                     DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0, "Init"));
                 }
 
-                if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long etag) != null)
-                    _lastClientConfigurationIndex = etag;
+                if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
+                    _lastClientConfigurationIndex = clientConfigEtag;
+
+                if (_engine.StateMachine.Read(context, LicenseStoargeKey, out long licenseEtag) != null)
+                    LastLicenseIndex = licenseEtag;
             }
 
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
@@ -527,6 +534,10 @@ namespace Raven.Server.ServerWide
             {
                 case nameof(PutClientConfigurationCommand):
                     _lastClientConfigurationIndex = t.Index;
+                    break;
+                case nameof(PutLicenseCommand):
+                case nameof(DeactivateLicenseCommand):
+                    LastLicenseIndex = t.Index;
                     break;
             }
         }
@@ -1156,6 +1167,47 @@ namespace Raven.Server.ServerWide
             return (etag, id + result);
         }
 
+        public License LoadLicense()
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var licenseBlittable = Cluster.Read(context, LicenseStoargeKey);
+                if (licenseBlittable == null)
+                    return null;
+
+                return JsonDeserializationServer.License(licenseBlittable);
+            }
+        }
+
+        public async Task<long> PutLicense(License license)
+        {
+            var command = new PutLicenseCommand(LicenseStoargeKey, license);
+
+            var result = await SendToLeaderAsync(command);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Updating licnese id: {license.Id}");
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
+            return result.Etag;
+        }
+
+        public async Task DeactivateLicense(License license)
+        {
+            var command = new DeactivateLicenseCommand
+            {
+                Name = LicenseStoargeKey
+            };
+
+            var result = await SendToLeaderAsync(command);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Deactivating licnese id: {license.Id}");
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
+        }
+
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -1401,5 +1453,12 @@ namespace Raven.Server.ServerWide
             return _lastClientConfigurationIndex > index;
         }
 
+        public bool HasLicenseChanged(long index)
+        {
+            if (index < 0)
+                return false;
+
+            return LastLicenseIndex > index;
+        }
     }
 }

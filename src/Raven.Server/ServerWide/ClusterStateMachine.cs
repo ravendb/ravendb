@@ -18,6 +18,7 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands;
@@ -100,6 +101,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(DeleteValueCommand):
+                    case nameof(DeactivateLicenseCommand):
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):
@@ -170,6 +172,9 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateEtlProcessStateCommand):
                     case nameof(ToggleSubscriptionStateCommand):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutLicenseCommand):
+                        PutValue<License>(context, type, cmd, index, leader);
                         break;
                     case nameof(PutCertificateCommand):
                         PutValue<CertificateDefinition>(context, type, cmd, index, leader);
@@ -389,12 +394,14 @@ namespace Raven.Server.ServerWide
                 if (delCmd.Name.StartsWith("db/"))
                 {
                     NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot set " + delCmd.Name + " using DeleteValueCommand, only via dedicated Database calls"));
+                        new InvalidOperationException("Cannot delete " + delCmd.Name + " using DeleteValueCommand, only via dedicated database calls"));
                     return;
                 }
-                using (Slice.From(context.Allocator, delCmd.Name, out Slice str))
+
+                using (Slice.From(context.Allocator, delCmd.Name, out Slice _))
+                using (Slice.From(context.Allocator, delCmd.Name.ToLowerInvariant(), out Slice keyNameLowered))
                 {
-                    items.DeleteByKey(str);
+                    items.DeleteByKey(keyNameLowered);
                 }
             }
             finally
@@ -412,7 +419,7 @@ namespace Raven.Server.ServerWide
                 if (command.Name.StartsWith(Constants.Documents.Prefix))
                 {
                     NotifyLeaderAboutError(index, leader,
-                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated Database calls"));
+                        new InvalidOperationException("Cannot set " + command.Name + " using PutValueCommand, only via dedicated database calls"));
                     return;
                 }
 
@@ -685,6 +692,7 @@ namespace Raven.Server.ServerWide
             var doc = Read(context, "db/" + name.ToLowerInvariant(), out etag);
             if (doc == null)
                 return null;
+
             return JsonDeserializationCluster.DatabaseRecord(doc);
         }
 

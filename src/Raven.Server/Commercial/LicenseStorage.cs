@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -17,7 +16,6 @@ namespace Raven.Server.Commercial
 
         private readonly TableSchema _licenseStorageSchema = new TableSchema();
         private const string FirstServerStartDateKey = "FirstServerStartDate";
-        private const string LicenseStoargeKey = "LicenseStoargeKey";
 
         public LicenseStorage()
         {
@@ -96,54 +94,10 @@ namespace Raven.Server.Commercial
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             var ptr = reader.Read(LicenseInfoSchema.LicenseTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);
-        }
-
-        public unsafe void SaveLicense(License license)
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenWriteTransaction())
-            {
-                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
-
-                using (var id = context.GetLazyString(LicenseStoargeKey))
-                using (var json = context.ReadObject(license.ToJson(), LicenseStoargeKey,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                {
-                    using (table.Allocate(out TableValueBuilder tvb))
-                    {
-                        tvb.Add(id.Buffer, id.Size);
-                        tvb.Add(json.BasePointer, json.Size);
-
-                        table.Set(tvb);
-                    }
-                }
-                tx.Commit();
-            }
-        }
-
-        public License LoadLicense()
-        {
-            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (var tx = context.OpenReadTransaction())
-            {
-                var table = tx.InnerTransaction.OpenTable(_licenseStorageSchema, LicenseInfoSchema.LicenseTree);
-
-                TableValueReader reader;
-                using (Slice.From(context.Allocator, LicenseStoargeKey, out Slice key))
-                {
-                    if (table.ReadByKey(key, out reader) == false)
-                        return null;
-                }
-
-                using (var licenseJson = Read(context, ref reader))
-                {
-                    return JsonDeserializationServer.License(licenseJson);
-                }
-            }
         }
 
         public static class LicenseInfoSchema

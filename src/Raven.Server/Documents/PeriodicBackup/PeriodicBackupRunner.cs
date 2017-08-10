@@ -467,7 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
 
-                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Item1);
+                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
             }
             catch (Exception e)
             {

@@ -56,14 +56,23 @@ namespace Raven.Server.Commercial
         {
             get
             {
+                var expiration = Expiration;
+                return expiration?.ToString("d", CultureInfo.CurrentCulture);
+                
+            }
+        }
+
+        public DateTime? Expiration
+        {
+            get
+            {
                 if (Attributes == null)
                     return null;
 
                 if (Attributes.TryGetValue("expiration", out object expirationObject) &&
                     expirationObject is DateTime)
                 {
-                    var date = (DateTime)expirationObject;
-                    return date.ToString("d", CultureInfo.CurrentCulture);
+                    return (DateTime)expirationObject;
                 }
 
                 return null;

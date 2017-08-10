@@ -6,6 +6,7 @@ using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
+using Raven.Server.Commercial;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
@@ -76,6 +77,8 @@ namespace Raven.Server.ServerWide
             [nameof(ToggleTaskStateCommand)] = GenerateJsonDeserializationRoutine<ToggleTaskStateCommand>(),
             [nameof(AddDatabaseCommand)] = GenerateJsonDeserializationRoutine<AddDatabaseCommand>(),
             [nameof(DeleteValueCommand)] = GenerateJsonDeserializationRoutine<DeleteValueCommand>(),
+            [nameof(PutLicenseCommand)] = GenerateJsonDeserializationRoutine<PutLicenseCommand>(),
+            [nameof(DeactivateLicenseCommand)] = GenerateJsonDeserializationRoutine<DeactivateLicenseCommand>(),
             [nameof(PutCertificateCommand)] = GenerateJsonDeserializationRoutine<PutCertificateCommand>(),
             [nameof(PutClientConfigurationCommand)] = GenerateJsonDeserializationRoutine<PutClientConfigurationCommand>(),
             [nameof(RemoveNodeFromDatabaseCommand)] = GenerateJsonDeserializationRoutine<RemoveNodeFromDatabaseCommand>(),
