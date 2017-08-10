@@ -38,7 +38,7 @@ class connectionStrings extends viewModelBase {
     }
 
     private getAllConnectionStrings() {
-        new getConnectionStringsCommand(this.activeDatabase())
+        return new getConnectionStringsCommand(this.activeDatabase())
             .execute()
             .done((result: Raven.Client.ServerWide.Operations.ConnectionStrings.GetConnectionStringsResult) => {
                 this.ravenEtlConnectionStringsNames(Object.keys(result.RavenConnectionStrings));
