@@ -307,6 +307,43 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task Promote_immedtialty_should_work()
+        {
+            var databaseName = "Promote_immedtialty_should_work" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                var dbToplogy = await leaderStore.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+
+                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+
+                var nodeNotInDbGroup = Servers.Single(s => dbGroupNodes.Contains(s) == false)?.ServerStore.NodeTag;
+                leaderStore.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = await leaderStore.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(1, dbToplogy.Promotables.Count);
+                Assert.Equal(nodeNotInDbGroup, dbToplogy.Promotables[0]);
+
+                await leaderStore.Admin.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = await leaderStore.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+            }
+        }
+
         private static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
         {
             var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
