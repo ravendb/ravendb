@@ -1566,6 +1566,8 @@ namespace Raven.Server.Documents.Indexes
             {
                 await QueryInternal(result, query, documentsContext, token);
             }
+
+            QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
         public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query,
@@ -1597,12 +1599,9 @@ namespace Raven.Server.Documents.Indexes
                     throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
             }
 
-            if (resultToFill.SupportsInclude == false &&
-                ((query.Includes != null && query.Includes.Length > 0) ||
-                 (transformer != null && transformer.HasInclude)))
+            if (resultToFill.SupportsInclude == false
+                && (query.Includes != null && query.Includes.Length > 0 || transformer != null && transformer.HasInclude))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
-
-
 
             using (var marker = MarkQueryAsRunning(query, token))
 

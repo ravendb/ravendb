@@ -10,7 +10,7 @@ namespace Raven.Server.Documents.Queries
 
         private static readonly QueryMetadata[] Cache = new QueryMetadata[CacheSize];
 
-        public static bool TryGetMetadata(IndexQueryServerSide query, JsonOperationContext context, out ulong metadataHash, out QueryMetadata metadata)
+        public static bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong metadataHash, out QueryMetadata metadata)
         {
             metadataHash = 0;
             metadata = null;
@@ -28,18 +28,18 @@ namespace Raven.Server.Documents.Queries
             return true;
         }
 
-        public static void MaybeAddToCache(QueryMetadata metadata, DocumentQueryResult result)
+        public static void MaybeAddToCache(QueryMetadata metadata, string indexName)
         {
             if (metadata.CanCache == false)
                 return;
 
             if (metadata.IsDynamic)
-                metadata.DynamicIndexName = result.IndexName;
+                metadata.DynamicIndexName = indexName;
 
             Cache[metadata.CacheKey % CacheSize] = metadata;
         }
 
-        private static bool TryGetQueryMetadataHash(IndexQueryServerSide query, JsonOperationContext context, out ulong hash)
+        private static bool TryGetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong hash)
         {
             hash = 0;
 
