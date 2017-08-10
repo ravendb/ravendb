@@ -220,44 +220,6 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
-        public Task GetConnectionStrings()
-        {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            if (TryGetAllowedDbs(dbName, out var _, true) == false)
-                return Task.CompletedTask;
-
-            ServerStore.EnsureNotPassive();
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                DatabaseRecord record;
-                using (context.OpenReadTransaction())
-                {
-                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
-                }
-                var ravenConnectionString = record.RavenConnectionStrings;
-                var sqlConnectionstring = record.SqlConnectionStrings;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    var result = new GetConnectionStringsResult
-                    {
-                        RavenConnectionStrings = ravenConnectionString,
-                        SqlConnectionStrings = sqlConnectionstring
-                    };
-                    context.Write(writer, result.ToJson());
-                    writer.Flush();
-                }
-            }
-
-            return Task.CompletedTask;
-        }
-
         [RavenAction("/periodic-backup/next-backup-occurrence", "GET", AuthorizationStatus.ValidUser)]
         public Task GetNextBackupOccurrence()
         {
