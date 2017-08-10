@@ -125,6 +125,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteFacetedQueryResult(context, result);
             }
+
+            QueryMetadataCache.MaybeAddToCache(query.FacetQuery.Metadata, result.IndexName);
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
@@ -162,7 +164,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result);
+            QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 

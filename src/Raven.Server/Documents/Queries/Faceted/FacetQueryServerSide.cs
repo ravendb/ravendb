@@ -46,7 +46,10 @@ namespace Raven.Server.Documents.Queries.Faceted
                 facetsEtag = facets.FacetsEtag;
             }
 
-            result.Metadata = new QueryMetadata(result.Query, null, 0);
+            result.Metadata = QueryMetadataCache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
+                ? metadata
+                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
+
             return (result, facetsEtag);
         }
 
