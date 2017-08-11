@@ -12,7 +12,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
-import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
 import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
@@ -294,10 +293,7 @@ class patch extends viewModelBase {
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
-    collections = collectionsTracker.default.collections;
-
     isDocumentMode: KnockoutComputed<boolean>;
-    isCollectionMode: KnockoutComputed<boolean>;
     isQueryMode: KnockoutComputed<boolean>;
 
     documentIdSearchResults = ko.observableArray<string>();
@@ -323,7 +319,7 @@ class patch extends viewModelBase {
 
         this.initValidation();
 
-        this.bindToCurrentInstance("usePatchOption", "useCollection", "previewDocument");
+        this.bindToCurrentInstance("usePatchOption", "previewDocument");
         this.initObservables();
     }
 
@@ -397,7 +393,6 @@ class patch extends viewModelBase {
 
     private initObservables() {
         this.isDocumentMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Document");
-        this.isCollectionMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Collection");
         this.isQueryMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Query");
 
         this.patchDocument().selectedItem.throttle(250).subscribe(item => {
@@ -475,7 +470,7 @@ class patch extends viewModelBase {
 
         const grid = this.gridController();
         grid.withEvaluationContext(this.customFunctionsContext);
-        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
+        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, collectionsTracker.default.collections().map(x => x.name), {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
             createHyperlinks: false,
@@ -501,8 +496,6 @@ class patch extends viewModelBase {
                     return [];
                 case "Query":
                     return documentBasedColumnsProvider.extractUniquePropertyNames(results);
-                case "Collection":
-                    return results.availableColumns;
             }
         };
 
@@ -552,7 +545,7 @@ class patch extends viewModelBase {
         const patchDoc = this.patchDocument();
         patchDoc.selectedItem(null);
         patchDoc.patchOnOption(option);
-        patchDoc.patchAll(option === "Query" || option === "Collection");
+        patchDoc.patchAll(option === "Query");
 
         if (option !== "Query") {
             patchDoc.query(null);
@@ -561,35 +554,10 @@ class patch extends viewModelBase {
         this.runPatchValidationGroup.errors.showAllMessages(false);
     }
 
-    useCollection(collectionToUse: collection) {
-        this.columnsSelector.reset();
-
-        const fetcher = (skip: number, take: number, previewCols: string[], fullCols: string[]) => collectionToUse.fetchDocuments(skip, take, previewCols, fullCols);
-        this.fetcher(fetcher);
-
-        const patchDoc = this.patchDocument();
-        patchDoc.selectedItem(collectionToUse.name);
-        patchDoc.patchAll(true);
-    }
-
     usePatch(item: patchDocument) {
         const patchDoc = this.patchDocument();
 
-        //TODO: handle case when saved patch has collection which no longer exist, or index which is not available
-
         patchDoc.copyFrom(item);
-
-        switch (patchDoc.patchOnOption()) {
-            case "Query":
-                //TODO: this.useIndex(patchDoc.selectedItem()); 
-                break;
-            case "Collection":
-                const matchedCollection = this.collections().find(x => x.name === patchDoc.selectedItem());
-                if (matchedCollection) {
-                    this.useCollection(matchedCollection);
-                }
-                break;
-        }
     }
 
     removePatch(item: patchDocument) {
@@ -640,13 +608,6 @@ class patch extends viewModelBase {
                     this.patchOnDocuments(selectedIds);
                 }
                 break;
-            case "Collection":
-                if (patchDoc.patchAll()) {
-                    this.patchOnCollection();
-                } else {
-                    const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
-                    this.patchOnDocuments(selectedIds);
-                }
             }
         }
     }
@@ -720,28 +681,6 @@ class patch extends viewModelBase {
             });
     }
 
-    private patchOnCollection() {
-        eventsCollector.default.reportEvent("patch", "run", "collection");
-        const collectionToPatch = this.patchDocument().selectedItem();
-        const message = `Are you sure you want to apply this patch to all documents in '${collectionToPatch}' collection?`;
-
-        this.confirmationMessage("Patch", message, ["Cancel", "Patch all"])
-            .done(result => {
-                if (result.can) {
-
-                    const patch = {
-                        Script: this.patchDocument().script()
-                    } as Raven.Server.Documents.Patch.PatchRequest;
-
-                    new patchByCollectionCommand(collectionToPatch, patch, this.activeDatabase())
-                        .execute()
-                        .done((operationIdDto) => {
-                            notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operationIdDto.OperationId);
-                        });
-                }
-            });
-    }
-
     static fetchDocumentIdAutocomplete(prefix: string, db: database, output: KnockoutObservableArray<string>) {
         if (prefix && prefix.length > 1) {
             new getDocumentsMetadataByIDPrefixCommand(prefix, 10, db)
@@ -791,7 +730,6 @@ class patch extends viewModelBase {
             case "Document":
                 documentIdToUse = patchDoc.selectedItem();
                 break;
-            case "Collection":
             case "Query":
                 const selection = this.gridController().getSelectedItems();
                 if (selection.length > 0) {

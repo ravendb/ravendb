@@ -56,32 +56,12 @@
                     </div>
                 </div>
 
-                <div class="row" data-bind="visible: isCollectionMode()">
-                    <label class="control-label col-sm-3 col-lg-2">Collection</label>
-
-                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                <span data-bind="text: patchDocument().selectedItem() || 'Select collection...'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <div class="dropdown-menu">
-                                <ul class="menu max-height" data-bind="foreach: collections">
-                                    <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
-                    </div>
-                </div>
-
-                <div class="row" data-bind="visible: !isDocumentMode()">
+                <div class="row" data-bind="visible: isQueryMode">
                     <div class="col-sm-9 col-lg-4 col-sm-offset-3 col-lg-offset-2 margin-bottom">
                         <div class="checkbox">
                             <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: patchDocument().patchAll">
                             <label for="checkbox2">
-                                <span data-bind="visible: isCollectionMode">Patch all in collection</span>
-                                <span data-bind="visible: isQueryMode()">Patch all documents matching query</span>
+                                <span>Patch all documents matching query</span>
                             </label>
                         </div>
                     </div>
