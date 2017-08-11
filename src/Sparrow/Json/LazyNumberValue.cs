@@ -8,6 +8,7 @@ namespace Sparrow.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
+        private float? _floatVal;
         private decimal? _decimalVal;
         private long? _longVal;
         private ulong? _ulongVal;
@@ -54,11 +55,11 @@ namespace Sparrow.Json
 
         public static implicit operator float(LazyNumberValue self)
         {
-            if (self._val != null)
-                return (float)self._val;
+            if (self._floatVal != null)
+                return (float)self._floatVal;
 
             var val = float.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
-            self._val = (double)(decimal)val;
+            self._floatVal = val;
             return val;
         }
 

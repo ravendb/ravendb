@@ -449,6 +449,8 @@ namespace Sparrow.Json.Parsing
             switch (_state.Continuation)
             {
                 case JsonParserTokenContinuation.PartialNaN:
+                case JsonParserTokenContinuation.PartialPositiveInfinity:
+                case JsonParserTokenContinuation.PartialNegativeInfinity:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
                         return true;
