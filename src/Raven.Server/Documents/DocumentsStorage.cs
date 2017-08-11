@@ -200,6 +200,16 @@ namespace Raven.Server.Documents
                      : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
+            var basePath = _documentDatabase.Configuration.Core.DataDirectory;
+
+            var tempPath = _documentDatabase.Configuration.Storage.TempPath != null
+                ? _documentDatabase.Configuration.Storage.TempPath.FullPath
+                : basePath.Combine("Scratch").FullPath;
+
+            var journalPath = _documentDatabase.Configuration.Storage.JournalsStoragePath != null
+                ? _documentDatabase.Configuration.Storage.JournalsStoragePath.FullPath
+                : basePath.Combine("Journal").FullPath;
+
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
@@ -208,8 +218,8 @@ namespace Raven.Server.Documents
                     _documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
-                    _documentDatabase.Configuration.Storage.TempPath?.FullPath,
-                    _documentDatabase.Configuration.Storage.JournalsStoragePath?.FullPath,
+                    tempPath,
+                    journalPath,
                     _documentDatabase.IoChanges,
                     _documentDatabase.CatastrophicFailureNotification
                 );
