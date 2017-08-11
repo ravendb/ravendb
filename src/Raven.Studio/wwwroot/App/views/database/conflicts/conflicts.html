@@ -4,31 +4,51 @@
             <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'no-conflicts-found-template'"></virtual-grid>
         </div>
     </div>
-    <div class="flex-vertical flex-grow" data-bind="visible: hasDetailsLoaded">
+    <div class="flex-grow" data-bind="visible: !hasDetailsLoaded()">
+        <div class="panel padding">
+            <h2 class="text-center"><i class="icon-force"></i><span>Pick a conflicting document to reslove it</span></h2>
+        </div>
+    </div>
+    <div class="edit-conflict flex-vertical slidein-style" data-bind="visible: hasDetailsLoaded">
         
-        <h2 data-bind="text: 'Resolving conflict for: ' + documentId()"></h2>
+        <h3 data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
 
-        <div class="conflicted-files-cv flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
-            <div>Change vector:
-                <span data-bind="foreach: changeVector">
-                   <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
-               </span>
+        <div class="scroll-horizontal">
+            <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
+                <div class="conflicted-item flex-vertical">
+                    <div class="actions padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="file-info flex-grow">
+                                <i class="icon-clock"></i><span class="modify-date">2017-08-08 14:08:41</span><br /> <!-- TODO -->
+                                <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> <!-- TODO -->
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-warning usethis"><i class="icon-tick"></i><span>Use this</span></button>
+                                <button class="btn btn-sm btn-info" title="Show/hide change vector" data-bind="click: changeVectorVisible.toggle.bind(changeVectorVisible)"><i class="icon-info"></i></button>
+                            </div>
+                        </div>
+                        <div class="vectors" data-bind="collapse: changeVectorVisible">
+                            <div class="title"><small>Change vectors:</small></div>
+                            <div data-bind="foreach: changeVector">
+                                <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file scroll flex-grow flex-vertical">
+                        <pre data-bind="visible: !deletedMarker()" class="flex-grow"><code data-bind="html: formattedValue"></code></pre>
+                        <pre data-bind="visible: deletedMarker()" class="flex-grow"><code>Document was removed.</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
-            <div class="file">
-                <pre data-bind="visible: !deletedMarker()"><code data-bind="html: formattedValue"></code></pre>
-                <pre data-bind="visible: deletedMarker()"><code>Document was removed.</code></pre>
-            </div>
-        </div>
 
-        <div class="margin-bottom">
-            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save</span></button>
+        <div class="margin-bottom margin-bottom-sm">
             <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
                 <i class="icon-trash"></i>
                 <span>Delete</span>
             </button>
+
+            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save and resolve</span></button>
         </div>
 
         <div class="result-file flex-grow">

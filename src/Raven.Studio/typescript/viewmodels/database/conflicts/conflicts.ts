@@ -26,6 +26,7 @@ class conflictItem {
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
     changeVector = ko.observable<changeVectorItem[]>();
+    changeVectorVisible = ko.observable<boolean>(false);
 
     constructor(dto: Raven.Client.Documents.Commands.GetConflictsResult.Conflict, useLongChangeVectorFormat: boolean) {
         //TODO: use change vector? probably yes - latest db id from change vector allows us to get information on which node the modification was made. 
