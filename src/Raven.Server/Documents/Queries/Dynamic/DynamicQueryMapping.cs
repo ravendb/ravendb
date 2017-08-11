@@ -88,11 +88,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
                 {
-                    extendedMapFields.Add(new DynamicQueryMappingItem(field.Name, field.Aggregation));
+                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation));
                 }
             }
-
-            //TODO arek - HighlightedFields
 
             MapFields = extendedMapFields.ToArray();
         }
@@ -111,12 +109,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (field == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     continue;
 
-                var mapping = new DynamicQueryMappingItem(field, AggregationOperation.None);
-
-                if (query.Metadata.WhereFields.TryGetValue(field, out var whereField) && whereField.IsFullTextSearch)
-                    mapping.IsFullTextSearch = true;
-
-                mapFields[field] = mapping;
+                mapFields[field] = DynamicQueryMappingItem.Create(field, AggregationOperation.None, query.Metadata.WhereFields);
             }
 
             if (query.Metadata.OrderBy != null)
@@ -134,7 +127,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (fieldName.StartsWith(Constants.Documents.Indexing.Fields.CustomSortFieldName))
                         continue;
 
-                    mapFields[field.Name] = new DynamicQueryMappingItem(fieldName, AggregationOperation.None);
+                    if (mapFields.ContainsKey(field.Name))
+                        continue;
+
+                    mapFields.Add(field.Name, DynamicQueryMappingItem.Create(fieldName));
                 }
             }
 
@@ -169,29 +165,29 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 foreach (var field in query.Metadata.SelectFields)
                 {
-                    if (field.IsGroupByKey == false)
-                    {
-                        var fieldName = field.Name;
+                    if (field.IsGroupByKey)
+                        continue;
 
-                        if (mapFields.TryGetValue(fieldName, out var existingField) == false)
+                    var fieldName = field.Name;
+
+                    if (mapFields.TryGetValue(fieldName, out var existingField) == false)
+                    {
+                        switch (field.AggregationOperation)
                         {
-                            switch (field.AggregationOperation)
-                            {
-                                case AggregationOperation.None:
-                                    break;
-                                case AggregationOperation.Count:
-                                case AggregationOperation.Sum:
-                                    mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
-                                    break;
-                                default:
-                                    ThrowUnknownAggregationOperation(field.AggregationOperation);
-                                    break;
-                            }
+                            case AggregationOperation.None:
+                                break;
+                            case AggregationOperation.Count:
+                            case AggregationOperation.Sum:
+                                mapFields.Add(fieldName, DynamicQueryMappingItem.Create(fieldName, field.AggregationOperation));
+                                break;
+                            default:
+                                ThrowUnknownAggregationOperation(field.AggregationOperation);
+                                break;
                         }
-                        else if (field.AggregationOperation != AggregationOperation.None)
-                        {
-                            existingField.AggregationOperation = field.AggregationOperation;
-                        }
+                    }
+                    else if (field.AggregationOperation != AggregationOperation.None)
+                    {
+                        existingField.SetAggregation(field.AggregationOperation);
                     }
                 }
             }
@@ -202,12 +198,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 var groupByField = groupByFields[i];
 
-                var mapping = new DynamicQueryMappingItem(groupByField, AggregationOperation.None);
-
-                if (query.Metadata.WhereFields.TryGetValue(groupByField, out var whereField) && whereField.IsFullTextSearch)
-                    mapping.IsFullTextSearch = true;
-
-                result[i] = mapping;
+                result[i] = DynamicQueryMappingItem.Create(groupByField, AggregationOperation.None, query.Metadata.WhereFields);
 
                 mapFields.Remove(groupByField); // ensure we don't have duplicated group by fields
             }
