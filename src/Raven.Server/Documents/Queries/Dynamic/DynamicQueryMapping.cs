@@ -171,21 +171,6 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             {
                                 existingField.AggregationOperation = field.AggregationOperation;
                             }
-                            else
-                            {
-                                Debug.Assert(groupByFields.Contains(fieldName));
-                                // the field was specified in GROUP BY and WHERE
-                                // let's remove it since GROUP BY fields are passed separately
-
-                                mapFields.Remove(fieldName);
-                            }
-                        }
-                        else
-                        {
-                            foreach (var groupBy in field.GroupByKeys)
-                            {
-                                mapFields.Remove(groupBy);
-                            }
                         }
                     }
                 }
@@ -202,6 +187,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         mapping.IsFullTextSearch = true;
                     
                     result.GroupByFields[i] = mapping;
+
+                    mapFields.Remove(groupByField); // ensure we don't have duplicated group by fields
                 }
             }
 
@@ -211,7 +198,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             foreach (var field in mapFields)
             {
                 if (result.IsGroupBy && field.Value.AggregationOperation == AggregationOperation.None)
-                    throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText, query.QueryParameters);
+
+                    throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
+                        query.QueryParameters);
 
                 result.MapFields[index++] = field.Value;
             }
