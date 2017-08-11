@@ -23,6 +23,7 @@ import changeVectorUtils = require("common/changeVectorUtils");
 
 class conflictItem {
 
+    originalValue = ko.observable<string>();
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
     changeVector = ko.observable<changeVectorItem[]>();
@@ -31,7 +32,7 @@ class conflictItem {
         //TODO: use change vector? probably yes - latest db id from change vector allows us to get information on which node the modification was made. 
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
-            
+            this.originalValue(json);
             this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
             this.deletedMarker(false);
             
@@ -51,6 +52,7 @@ class conflicts extends viewModelBase {
     //TODO: spiners - block ace editor when saving/deleting?
 
     hasDetailsLoaded = ko.observable<boolean>(false);
+    changeVectorsVisible = ko.observable<boolean>(false);
 
     private isSaving = ko.observable<boolean>(false);
 
@@ -67,6 +69,8 @@ class conflicts extends viewModelBase {
 
     constructor() {
         super();
+        
+        this.bindToCurrentInstance("useThis");
 
         aceEditorBindingHandler.install();
         this.initValidation();
@@ -236,6 +240,10 @@ class conflicts extends viewModelBase {
         this.documentId(null);
         this.currentConflict(null);
         this.hasDetailsLoaded(false);
+    }
+    
+    useThis(itemToUse: conflictItem) {
+        this.suggestedResolution(itemToUse.originalValue());
     }
 }
 
