@@ -203,7 +203,7 @@ namespace Raven.Server.Documents
             var options = _documentDatabase.Configuration.Core.RunInMemory
                 ? StorageEnvironmentOptions.CreateMemoryOnly(
                     _documentDatabase.Configuration.Core.DataDirectory.FullPath,
-                    null,
+                    _documentDatabase.Configuration.Storage.TempPath?.FullPath,
                     _documentDatabase.IoChanges,
                     _documentDatabase.CatastrophicFailureNotification)
                 : StorageEnvironmentOptions.ForPath(

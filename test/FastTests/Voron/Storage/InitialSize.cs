@@ -28,8 +28,8 @@ namespace FastTests.Voron.Storage
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(options.BasePath.FullPath, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(options.TempPath.FullPath, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.Equal(GetExpectedInitialSize(), new FileInfo(dataFile).Length);
                 Assert.Equal(GetExpectedInitialSize(), new FileInfo(scratchFile).Length);
@@ -44,8 +44,8 @@ namespace FastTests.Voron.Storage
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(options.BasePath.FullPath, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(options.TempPath.FullPath, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 Assert.Equal(0, new FileInfo(dataFile).Length % GetExpectedInitialSize());
                 Assert.Equal(0, new FileInfo(scratchFile).Length % GetExpectedInitialSize());
@@ -60,8 +60,8 @@ namespace FastTests.Voron.Storage
 
             using (new StorageEnvironment(options))
             {
-                var dataFile = Path.Combine(DataDir, Constants.DatabaseFilename);
-                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var dataFile = Path.Combine(options.BasePath.FullPath, Constants.DatabaseFilename);
+                var scratchFile = Path.Combine(options.TempPath.FullPath, StorageEnvironmentOptions.ScratchBufferName(0));
 
                 if (StorageEnvironmentOptions.RunningOnPosix)
                 {

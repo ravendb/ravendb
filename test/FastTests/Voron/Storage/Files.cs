@@ -19,7 +19,7 @@ namespace FastTests.Voron.Storage
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
 
             Assert.Equal(DataDir, options.BasePath.FullPath);
-            Assert.Equal(options.BasePath, options.TempPath);
+            Assert.True(options.TempPath.FullPath.StartsWith(options.BasePath.FullPath));
         }
 
         [Fact]
@@ -37,7 +37,7 @@ namespace FastTests.Voron.Storage
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
             using (var env = new StorageEnvironment(options))
             {
-                var scratchFile = Path.Combine(DataDir, StorageEnvironmentOptions.ScratchBufferName(0));
+                var scratchFile = Path.Combine(env.Options.TempPath.FullPath, StorageEnvironmentOptions.ScratchBufferName(0));
                 Assert.True(File.Exists(scratchFile));
             }
         }
