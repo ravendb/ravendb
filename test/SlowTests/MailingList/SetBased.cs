@@ -69,7 +69,7 @@ namespace SlowTests.MailingList
 
                 store
                     .Operations
-                    .Send(new PatchByIndexOperation(
+                    .Send(new PatchByQueryOperation(
                         new IndexQuery { Query = $"FROM INDEX '{new Index1().IndexName}'" },
                         new PatchRequest
                         {

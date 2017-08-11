@@ -54,7 +54,7 @@ namespace SlowTests.Bugs
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = "FROM INDEX 'test'" }, new PatchRequest { Script = script }, new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'test'" }, new PatchRequest { Script = script }, new QueryOperationOptions())).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var session = store.OpenSession())
                 {
