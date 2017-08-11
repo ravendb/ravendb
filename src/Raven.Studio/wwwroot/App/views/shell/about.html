@@ -27,6 +27,7 @@
                         </div>
                     </div>
                     <button class="btn btn-lg" data-bind="click: register, visible: !registered()">Register</button>
+                    <button class="btn btn-lg" data-bind="click: deactivateLicense, visible: registered, disable: spinners.deactivatingLicense, css: { 'btn-spinner': spinners.deactivatingLicense }"> Deactivate</button>
                 </div>
                 <div class="col-sm-6 text-center">                   
                         <div>
