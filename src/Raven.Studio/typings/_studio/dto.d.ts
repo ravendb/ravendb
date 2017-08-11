@@ -294,6 +294,7 @@ interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
 interface clusterTopologyDto {
     Topology: Raven.Client.Http.ClusterTopology;
     Leader: string;
+    CurrentTerm: number;
     NodeTag: string;
     Status: { [key: string]: Raven.Client.Http.NodeStatus; };
 }
