@@ -1,4 +1,4 @@
-<div class="flex-window stretch patch content-margin">
+<div class="flex-window stretch patch content-margin" id="patchContainer">
     <div class="flex-window-head">
         <div id="patch-target" data-bind="collapse: !test.testMode()">
             <div class="clearfix">
@@ -155,8 +155,9 @@
                         </button>
                     </div>
                     <div class="test-controls">
-                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
-                            <i class="icon-rocket"></i><span>Test</span>
+                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
+                            <i class="icon-rocket"></i><span>Test</span><br />
+                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
                         <div class="flex-separator"></div>
                         <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode" title="Leave test mode">
