@@ -18,13 +18,15 @@ namespace Sparrow.Utils
             private const string TasksExecuterThreadName = "RavenDB Tasks Executer";
             private readonly ConcurrentQueue<(WaitCallback,object)> _actions = new ConcurrentQueue<(WaitCallback, object)>();
 
-            private readonly ManualResetEvent _event = new ManualResetEvent(false);
+            private readonly ManualResetEventSlim _event = new ManualResetEventSlim(false);
 
             private void Run()
             {
                 NativeMemory.EnsureRegistered();
+                
+                int tries = 0;
                 while (true)
-                {
+                {                    
                     (WaitCallback callback, object state) result;
                     while (_actions.TryDequeue(out result))
                     {
@@ -34,8 +36,24 @@ namespace Sparrow.Utils
                         }
                         catch { }
                     }
-                    _event.WaitOne();
-                    _event.Reset();
+
+                    // PERF: Entering a kernel lock even if the ManualResetEventSlim will try to avoid that doing some spin locking
+                    //       is very costly. This is a hack that is allowing amortize a bit very high frequency events. The proper
+                    //       way to handle requires infrastructure changes. http://issues.hibernatingrhinos.com/issue/RavenDB-8126
+                    if (tries < 5)
+                    {
+                        // Yield execution quantum. If we are in a high-frequency event we will be able to avoid the kernel lock. 
+                        Thread.Sleep(0);
+                        tries++;
+                    }
+                    else
+                    {
+                        _event.WaitHandle.WaitOne();
+                        _event.Reset();
+                        
+                        // Nothing we can do here, just block.
+                        tries = 0;
+                    }
                 }
             }
 
