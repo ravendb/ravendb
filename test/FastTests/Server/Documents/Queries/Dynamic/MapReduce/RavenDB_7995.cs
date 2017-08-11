@@ -7,7 +7,7 @@ using Xunit;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
-    public class RavenDB_7044 : RavenTestBase
+    public class RavenDB_7995 : RavenTestBase
     {
         [Fact]
         public void Cannot_filter_if_field_isnt_aggregation_nor_part_of_group_by_key()

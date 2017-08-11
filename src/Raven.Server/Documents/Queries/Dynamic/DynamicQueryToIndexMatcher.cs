@@ -200,6 +200,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
+                    if (groupByField.IsSpecifiedInWhere == false)
+                        continue;
+
                     if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
