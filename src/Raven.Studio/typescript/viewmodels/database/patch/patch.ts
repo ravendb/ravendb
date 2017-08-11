@@ -234,7 +234,7 @@ class patchTester extends viewModelBase {
         this.loadDocument();
     }
 
-    runTest() {
+    runTest(): void {
         eventsCollector.default.reportEvent("patch", "test");
 
         this.afterAsyncValidationCompleted(this.validationGroup, () => {
@@ -273,6 +273,7 @@ class patchTester extends viewModelBase {
 class patch extends viewModelBase {
 
     static readonly $body = $("body");
+    static readonly ContainerSelector = "#patchContainer";
 
     inSaveMode = ko.observable<boolean>();
     patchSaveName = ko.observable<string>();
@@ -437,6 +438,14 @@ class patch extends viewModelBase {
     attached() {
         super.attached();
 
+        this.createKeyboardShortcut("ctrl+enter", () => {
+            if (this.test.testMode()) {
+                this.test.runTest();
+            } else {
+                this.runPatch();
+            }
+        }, patch.ContainerSelector);
+        
         const jsCode = Prism.highlight("this.NewProperty = this.OldProperty + myParameter;\r\n" +
             "delete this.UnwantedProperty;\r\n" +
             "this.Comments.RemoveWhere(function(comment){\r\n" +
