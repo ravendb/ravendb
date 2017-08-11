@@ -52,6 +52,16 @@ namespace Sparrow.Json
             return self.Inner;
         }
 
+        public static implicit operator float(LazyNumberValue self)
+        {
+            if (self._val != null)
+                return (float)self._val;
+
+            var val = float.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            self._val = (double)(decimal)val;
+            return val;
+        }
+
         public static implicit operator decimal(LazyNumberValue self)
         {
             if (self._decimalVal != null)

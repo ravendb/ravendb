@@ -75,6 +75,35 @@ namespace RavenDB_7942
                 }
             }
         }
+
+        [Fact]
+        public void IndexingAFloatField()
+        {
+            using (var store = GetDocumentStore())
+            {
+                new FloatIndex().Execute(store);
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new TestFloat { Id = "Docs/1", FloatValue = 1 });
+                    session.SaveChanges();
+                }
+
+                WaitForUserToContinueTheTest(store);
+                WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session
+                        .Query<TestFloatView, FloatIndex>()
+                        .ProjectFromIndexFieldsInto<TestFloatView>()
+                        .ToArray();
+
+                    Assert.Equal(1, results[0].FloatValue);
+                    Assert.Equal(1, results.Length);
+                }
+            }
+        }
     }
 
     public class DoubleIndex : AbstractIndexCreationTask<TestDouble, TestDoubleView>
