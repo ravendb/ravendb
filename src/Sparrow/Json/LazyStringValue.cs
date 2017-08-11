@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
@@ -235,6 +236,24 @@ namespace Sparrow.Json
         {
             var valueAsString = (string)self;
             return Convert.FromBase64String(valueAsString);
+        }
+
+        public static explicit operator double(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (double.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out double result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to double");
+        }
+
+        public static explicit operator float(LazyStringValue self)
+        {
+            var valueAsString = (string)self;
+            if (float.TryParse(valueAsString, NumberStyles.Any, CultureInfo.InvariantCulture, out float result))
+                return result;
+
+            throw new InvalidCastException($"Couldn't convert {valueAsString} (LazyStringValue) to float");
         }
 
         public override bool Equals(object obj)

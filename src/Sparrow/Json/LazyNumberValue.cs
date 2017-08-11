@@ -196,6 +196,22 @@ namespace Sparrow.Json
             return Inner.Equals("NaN");
         }
 
+        public bool IsPositiveInfinity()
+        {
+            if (_val.HasValue && double.IsPositiveInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("Infinity");
+        }
+
+        public bool IsNegativeInfinity()
+        {
+            if (_val.HasValue && double.IsNegativeInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("-Infinity");
+        }
+
         public TypeCode GetTypeCode()
         {
             return TypeCode.Object;
