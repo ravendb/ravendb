@@ -52,11 +52,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_3659())
+                using (var test = new SlowTests.Core.Indexing.ReferencedDocuments())
                 {
                     try
                     {
-                        test.TenantDatabasesShouldInheritTempPathIfNoneSpecified().Wait();
+                        test.BasicLoadDocuments_Casing();
                     }
                     catch (Exception e)
                     {

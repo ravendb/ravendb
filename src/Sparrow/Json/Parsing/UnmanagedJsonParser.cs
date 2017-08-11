@@ -448,9 +448,15 @@ namespace Sparrow.Json.Parsing
             read = false;
             switch (_state.Continuation)
             {
+                case JsonParserTokenContinuation.PartialNegativeInfinity:
+                    // here we need to check if we have a negative number or negative
+                    // infinity 
+                    if(_expectedTokenBufferPosition  == 1 && 
+                        _inputBuffer[_pos] != (byte)'I')
+                        goto case JsonParserTokenContinuation.PartialNumber;
+                    goto case JsonParserTokenContinuation.PartialPositiveInfinity;
                 case JsonParserTokenContinuation.PartialNaN:
                 case JsonParserTokenContinuation.PartialPositiveInfinity:
-                case JsonParserTokenContinuation.PartialNegativeInfinity:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
                         return true;
