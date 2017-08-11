@@ -9,6 +9,15 @@ namespace Sparrow.Json.Parsing
     public unsafe class UnmanagedJsonParser : IJsonParser
     {
         private static readonly byte[] NaN = {(byte)'N', (byte)'a', (byte)'N'};
+        private static readonly byte[] PositiveInfinity =
+        {
+            (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
+        };
+        private static readonly byte[] NegativeInfinity =
+        {
+            (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y'
+        };
+
         public static readonly byte[] Utf8Preamble = Encoding.UTF8.GetPreamble();
 
         private readonly string _debugTag;
@@ -162,7 +171,7 @@ namespace Sparrow.Json.Parsing
                 if (b == '\'' || b == '"')
                     goto ParseString; // PERF: Avoid very lengthy method here; as we are going to return anyways.
 
-                if ((b >= '0' && b <= '9') || b == '-')
+                if ((b >= '0' && b <= '9') || IsPossibleNegativeNumber(b, bufferSize, pos, currentBuffer))
                     goto ParseNumber; // PERF: Avoid very lengthy method here; as we are going to return anyways.
 
                 if (b == '{')
@@ -267,6 +276,20 @@ namespace Sparrow.Json.Parsing
             goto MainLoop;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool IsPossibleNegativeNumber(byte b, uint bufferSize, uint pos, byte* currentBuffer)
+        {
+            if (b != '-')
+                return false;
+
+            if (pos >= bufferSize)
+                return false;
+
+            var nextChar = currentBuffer[pos];
+            // -Infinity is saved as a string
+            return nextChar != 'I';
+        }
+
         private bool ReadUnlikely(byte b, ref uint pos, out bool couldRead)
         {
             couldRead = false;
@@ -301,24 +324,20 @@ namespace Sparrow.Json.Parsing
 
                 case (byte)'N':
                 {
-                    _unmanagedWriteBuffer.Clear();
-                    _state.CurrentTokenType = JsonParserToken.Float;
-                    _expectedTokenBuffer = NaN;
-                    _expectedTokenBufferPosition = 1;
-                    _expectedTokenString = "NaN";
-                    if (EnsureRestOfToken(ref pos) == false)
-                    {
-                        _state.Continuation = JsonParserTokenContinuation.PartialNaN;
-                        {
-                            return true;
-                        }
-                    }
-                    _unmanagedWriteBuffer.Write(NaN, 0, NaN.Length);
-                    _unmanagedWriteBuffer.EnsureSingleChunk(_state);
-                    {
-                        couldRead = true;
-                        return true;
-                    }
+                    ReadToken(ref pos, ref couldRead, NaN, "NaN", JsonParserTokenContinuation.PartialNaN);
+                    return true;
+                }
+
+                case (byte)'I':
+                {
+                    ReadToken(ref pos, ref couldRead, PositiveInfinity, "Infinity", JsonParserTokenContinuation.PartialPositiveInfinity);
+                    return true;
+                }
+
+                case (byte)'-':
+                {
+                    ReadToken(ref pos, ref couldRead, NegativeInfinity, "-Infinity", JsonParserTokenContinuation.PartialNegativeInfinity);
+                    return true;
                 }
 
                 case (byte)'n':
@@ -330,14 +349,11 @@ namespace Sparrow.Json.Parsing
                     if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialNull;
-                        {
-                            return true;
-                        }
-                    }
-                    {
-                        couldRead = true;
                         return true;
                     }
+
+                    couldRead = true;
+                    return true;
                 }
 
                 case (byte)'t':
@@ -349,14 +365,11 @@ namespace Sparrow.Json.Parsing
                     if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialTrue;
-                        {
-                            return true;
-                        }
-                    }
-                    {
-                        couldRead = true;
                         return true;
                     }
+
+                    couldRead = true;
+                    return true;
                 }
 
                 case (byte)'f':
@@ -368,19 +381,35 @@ namespace Sparrow.Json.Parsing
                     if (EnsureRestOfToken(ref pos) == false)
                     {
                         _state.Continuation = JsonParserTokenContinuation.PartialFalse;
-                        {
-                            return true;
-                        }
-                    }
-                    {
-                        couldRead = true;
                         return true;
                     }
+
+                    couldRead = true;
+                    return true;
                 }
             }
 
             ThrowCannotHaveCharInThisPosition(b);
             return false;
+        }
+
+        private void ReadToken(ref uint pos, ref bool couldRead, byte[] tokenBuffer, 
+            string tokenString, JsonParserTokenContinuation jsonParserTokenContinuation)
+        {
+            _unmanagedWriteBuffer.Clear();
+            _state.CurrentTokenType = JsonParserToken.Float;
+            _expectedTokenBuffer = tokenBuffer;
+            _expectedTokenBufferPosition = 1;
+            _expectedTokenString = tokenString;
+            if (EnsureRestOfToken(ref pos) == false)
+            {
+                _state.Continuation = jsonParserTokenContinuation;
+                return;
+            }
+
+            _unmanagedWriteBuffer.Write(tokenBuffer, 0, tokenBuffer.Length);
+            _unmanagedWriteBuffer.EnsureSingleChunk(_state);
+            couldRead = true;
         }
 
         private void ThrowCannotHaveCharInThisPosition(byte b)

@@ -24,6 +24,14 @@ namespace Raven.Server.Json
                 return NumberParseResult.Double;
             }
 
+            if (value is float)
+            {
+                longResult = long.MinValue;
+                doubleResult = (double)(decimal)(float)value;
+
+                return NumberParseResult.Double;
+            }
+
             if (value is decimal)
             {
                 var d = (decimal)value;
