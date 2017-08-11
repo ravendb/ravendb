@@ -52,11 +52,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationOfConflicts())
+                using (var test = new SlowTests.Issues.RavenDB_3659())
                 {
                     try
                     {
-                        test.CanManuallyResolveConflict_with_tombstone().Wait();
+                        test.TenantDatabasesShouldInheritTempPathIfNoneSpecified().Wait();
                     }
                     catch (Exception e)
                     {

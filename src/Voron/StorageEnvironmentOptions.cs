@@ -727,6 +727,9 @@ namespace Voron
 
                 WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
 
+                if (Directory.Exists(tempPath.FullPath) == false)
+                    Directory.CreateDirectory(tempPath.FullPath);
+
                 _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
                     Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);
             }
