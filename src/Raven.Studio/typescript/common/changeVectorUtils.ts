@@ -13,6 +13,9 @@ class changeVectorUtils {
     }
     
     private static parse(input: string) {
+        if (!input) {
+            return [];
+        }
         let tokens = input.split(",").map(x => {
             const trimmedValue = _.trim(x);
 
