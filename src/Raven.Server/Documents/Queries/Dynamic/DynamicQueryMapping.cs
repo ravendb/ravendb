@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         Name = field.Name,
                         Storage = FieldStorage.No
                     };
-                    
+
                     if (field.IsFullTextSearch)
                         indexField.Indexing = FieldIndexing.Analyzed;
 
@@ -141,55 +141,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             if (query.Metadata.IsGroupBy)
             {
                 result.IsGroupBy = true;
-
-                var groupByFields = query.Metadata.GroupBy;
-                
-                if (query.Metadata.SelectFields != null)
-                {
-                    foreach (var field in query.Metadata.SelectFields)
-                    {
-                        if (field.IsGroupByKey == false)
-                        {
-                            var fieldName = field.Name;
-
-                            if (mapFields.TryGetValue(fieldName, out var existingField) == false)
-                            {
-                                switch (field.AggregationOperation)
-                                {
-                                    case AggregationOperation.None:
-                                        break;
-                                    case AggregationOperation.Count:
-                                    case AggregationOperation.Sum:
-                                        mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
-                                        break;
-                                    default:
-                                        ThrowUnknownAggregationOperation(field.AggregationOperation);
-                                        break;
-                                }
-                            }
-                            else if (field.AggregationOperation != AggregationOperation.None)
-                            {
-                                existingField.AggregationOperation = field.AggregationOperation;
-                            }
-                        }
-                    }
-                }
-
-                result.GroupByFields = new DynamicQueryMappingItem[groupByFields.Length];
-
-                for (int i = 0; i < groupByFields.Length; i++)
-                {
-                    var groupByField = groupByFields[i];
-                    
-                    var mapping = new DynamicQueryMappingItem(groupByField, AggregationOperation.None);
-                    
-                    if (query.Metadata.WhereFields.TryGetValue(groupByField, out var whereField) && whereField.IsFullTextSearch)
-                        mapping.IsFullTextSearch = true;
-                    
-                    result.GroupByFields[i] = mapping;
-
-                    mapFields.Remove(groupByField); // ensure we don't have duplicated group by fields
-                }
+                result.GroupByFields = CreateGroupByFields(query, mapFields);
             }
 
             result.MapFields = new DynamicQueryMappingItem[mapFields.Count];
@@ -198,14 +150,67 @@ namespace Raven.Server.Documents.Queries.Dynamic
             foreach (var field in mapFields)
             {
                 if (result.IsGroupBy && field.Value.AggregationOperation == AggregationOperation.None)
-
+                {
                     throw new InvalidQueryException($"Field '{field.Key}' isn't neither an aggregation operation nor part of the group by key", query.Metadata.QueryText,
                         query.QueryParameters);
+                }
 
                 result.MapFields[index++] = field.Value;
             }
 
-            result.HighlightedFields = query.HighlightedFields.EmptyIfNull().Select(x => x.Field).ToArray();
+            return result;
+        }
+
+        private static DynamicQueryMappingItem[] CreateGroupByFields(IndexQueryServerSide query, Dictionary<string, DynamicQueryMappingItem> mapFields)
+        {
+            var groupByFields = query.Metadata.GroupBy;
+
+            if (query.Metadata.SelectFields != null)
+            {
+                foreach (var field in query.Metadata.SelectFields)
+                {
+                    if (field.IsGroupByKey == false)
+                    {
+                        var fieldName = field.Name;
+
+                        if (mapFields.TryGetValue(fieldName, out var existingField) == false)
+                        {
+                            switch (field.AggregationOperation)
+                            {
+                                case AggregationOperation.None:
+                                    break;
+                                case AggregationOperation.Count:
+                                case AggregationOperation.Sum:
+                                    mapFields[fieldName] = new DynamicQueryMappingItem(fieldName, field.AggregationOperation);
+                                    break;
+                                default:
+                                    ThrowUnknownAggregationOperation(field.AggregationOperation);
+                                    break;
+                            }
+                        }
+                        else if (field.AggregationOperation != AggregationOperation.None)
+                        {
+                            existingField.AggregationOperation = field.AggregationOperation;
+                        }
+                    }
+                }
+            }
+
+            var result = new DynamicQueryMappingItem[groupByFields.Length];
+
+            for (int i = 0; i < groupByFields.Length; i++)
+            {
+                var groupByField = groupByFields[i];
+
+                var mapping = new DynamicQueryMappingItem(groupByField, AggregationOperation.None);
+
+                if (query.Metadata.WhereFields.TryGetValue(groupByField, out var whereField) && whereField.IsFullTextSearch)
+                    mapping.IsFullTextSearch = true;
+
+                result[i] = mapping;
+
+                mapFields.Remove(groupByField); // ensure we don't have duplicated group by fields
+            }
 
             return result;
         }
