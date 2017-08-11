@@ -2,7 +2,7 @@
 
 class copyToClipboard {
     static copy(toCopy: string, successMessage?: string, container = document.body) {
-        const dummy = document.createElement("input");
+        const dummy = document.createElement("textarea");
         // Add it to the document
         container.appendChild(dummy);
         try {
