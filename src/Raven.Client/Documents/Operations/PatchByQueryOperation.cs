@@ -16,21 +16,21 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class PatchByIndexOperation<TEntity, TIndexCreator> : PatchByIndexOperation<TEntity>
+    public class PatchByQueryOperation<TEntity, TIndexCreator> : PatchByQueryOperation<TEntity>
         where TIndexCreator : AbstractIndexCreationTask, new()
     {
-        public PatchByIndexOperation(Expression<Func<TEntity, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
+        public PatchByQueryOperation(Expression<Func<TEntity, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
             : base(new TIndexCreator().IndexName, expression, patch, options)
         {
         }
     }
 
-    public class PatchByIndexOperation<TEntity> : PatchByIndexOperation
+    public class PatchByQueryOperation<TEntity> : PatchByQueryOperation
     {
         private readonly string _indexName;
         private readonly Expression<Func<TEntity, bool>> _expression;
 
-        public PatchByIndexOperation(string indexName, Expression<Func<TEntity, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
+        public PatchByQueryOperation(string indexName, Expression<Func<TEntity, bool>> expression, PatchRequest patch, QueryOperationOptions options = null)
             : base(DummyQuery, patch, options)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
@@ -55,7 +55,7 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class PatchByIndexOperation : IOperation<OperationIdResult>
+    public class PatchByQueryOperation : IOperation<OperationIdResult>
     {
         protected static IndexQuery DummyQuery = new IndexQuery();
 
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Operations
         private readonly PatchRequest _patch;
         private readonly QueryOperationOptions _options;
 
-        public PatchByIndexOperation(IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
+        public PatchByQueryOperation(IndexQuery queryToUpdate, PatchRequest patch, QueryOperationOptions options = null)
         {
             _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
             _patch = patch ?? throw new ArgumentNullException(nameof(patch));

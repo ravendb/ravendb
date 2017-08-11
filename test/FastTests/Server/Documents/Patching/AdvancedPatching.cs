@@ -822,7 +822,7 @@ this.Value = another.Value;
                         .ToListAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new PatchByIndexOperation(
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Value = 1" },
                     new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }),
                     CancellationToken.None);
@@ -942,7 +942,7 @@ this.Value = another.Value;
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByIndexOperation(
+                var operation = store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Owner = 'Bob'" },
                     new PatchRequest { Script = SampleScript }));
 

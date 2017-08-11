@@ -356,7 +356,7 @@ namespace SlowTests.Server.Replication
                 WaitUntilHasConflict(store2, "foo/bar");
 
                 // /indexes/Raven/DocumentsByEntityName
-                var operation = store2.Operations.Send(new PatchByIndexOperation(new IndexQuery
+                var operation = store2.Operations.Send(new PatchByQueryOperation(new IndexQuery
                 {
                     Query = $"FROM INDEX '{userIndex.IndexName}'"
                 }, new PatchRequest

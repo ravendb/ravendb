@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var result = store.Operations.Send(new PatchByIndexOperation(
+                var result = store.Operations.Send(new PatchByQueryOperation(
                         new IndexQuery { Query = "FROM INDEX 'Users/ByName'"},
                         new PatchRequest
                         {
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var result = store.Operations.Send(new PatchByIndexOperation(
+                var result = store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'Users/ByName'" },
                     new PatchRequest
                     {

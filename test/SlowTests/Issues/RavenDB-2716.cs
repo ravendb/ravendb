@@ -78,7 +78,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
-                var op = store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
+                var op = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
                     new PatchRequest
                     {
                         Script = "this.Test = 'abc';"

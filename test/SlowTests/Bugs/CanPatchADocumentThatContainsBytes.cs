@@ -54,7 +54,7 @@ for (var i = 0; i < this.Skills.$values.length; i++) {
 "
                     };
 
-                    var operation = store.Operations.Send(new PatchByIndexOperation(index, patch));
+                    var operation = store.Operations.Send(new PatchByQueryOperation(index, patch));
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 

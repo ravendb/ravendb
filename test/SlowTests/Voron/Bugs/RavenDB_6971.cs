@@ -3,7 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
-using SlowTests.Utils;
+using Raven.Client.Documents.Queries;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -20,7 +20,7 @@ namespace SlowTests.Voron.Bugs
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                     {
                         Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -30,7 +30,7 @@ namespace SlowTests.Voron.Bugs
 
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
 
-                store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
+                store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                 {
                     Script = @"PutDocument(""orders|"", this);"
                 })).WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -55,7 +55,7 @@ namespace SlowTests.Voron.Bugs
 
                 for (int i = 0; i < 3; i++)
                 {
-                    store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                     {
                         Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
@@ -63,7 +63,7 @@ namespace SlowTests.Voron.Bugs
 
                 try
                 {
-                    store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                     {
                         Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(10));
@@ -76,7 +76,7 @@ namespace SlowTests.Voron.Bugs
                 Server.ServerStore.DatabasesLandlord.UnloadDatabase(store.Database);
                 try
                 {
-                    store.Operations.Send(new PatchCollectionOperation("Orders", new PatchRequest()
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                     {
                         Script = @"PutDocument(""orders/"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(10));

@@ -33,7 +33,7 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByIndexOperation(
+                store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'EntityEntityIdPatch'" },
                     new PatchRequest
                     {
