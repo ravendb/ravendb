@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using FastTests;
 using Raven.Server.Web;
 using Xunit;
 
 namespace SlowTests.Utils
 {
-    public class HtmlUtilTests
+    public class HtmlUtilTests : NoDisposalNeeded
     {
         [Fact]
         public void RenderUnsafePage()
