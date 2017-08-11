@@ -6,12 +6,22 @@
     </div>
     <div class="flex-grow" data-bind="visible: !hasDetailsLoaded()">
         <div class="panel padding">
-            <h2 class="text-center"><i class="icon-force"></i><span>Pick a conflicting document to reslove it</span></h2>
+            <h2 class="text-center"><i class="icon-force"></i><span>Pick a conflicting document to resolve it</span></h2>
         </div>
     </div>
     <div class="edit-conflict flex-vertical slidein-style" data-bind="visible: hasDetailsLoaded">
         
-        <h3 data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
+        <div class="flex-horizontal">
+            <h3 data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
+            <div class="flex-separator"></div>
+            <div>
+                <button class="btn btn-sm btn-info">
+                    <i class="icon-info"></i>
+                    <span data-bind="click: changeVectorsVisible.toggle.bind(changeVectorsVisible), text: changeVectorsVisible() ? 'Hide change vectors' : 'Show change vectors'"></span>
+                </button>
+            </div>
+        </div>
+        
 
         <div class="scroll-horizontal">
             <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
@@ -19,16 +29,16 @@
                     <div class="actions padding padding-sm">
                         <div class="flex-horizontal">
                             <div class="file-info flex-grow">
-                                <i class="icon-clock"></i><span class="modify-date">2017-08-08 14:08:41</span><br /> <!-- TODO -->
-                                <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> <!-- TODO -->
+                                <!-- TODO
+                                <i class="icon-clock"></i><span class="modify-date">2017-08-08 14:08:41</span><br /> 
+                                <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> -->
                             </div>
                             <div>
-                                <button class="btn btn-sm btn-warning usethis"><i class="icon-tick"></i><span>Use this</span></button>
-                                <button class="btn btn-sm btn-info" title="Show/hide change vector" data-bind="click: changeVectorVisible.toggle.bind(changeVectorVisible)"><i class="icon-info"></i></button>
+                                <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data)"><i class="icon-tick"></i><span>Use this</span></button>
                             </div>
                         </div>
-                        <div class="vectors" data-bind="collapse: changeVectorVisible">
-                            <div class="title"><small>Change vectors:</small></div>
+                        <div class="vectors" data-bind="collapse: $root.changeVectorsVisible">
+                            <div class="title"><small>Change vector:</small></div>
                             <div data-bind="foreach: changeVector">
                                 <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
                             </div>
@@ -48,7 +58,7 @@
                 <span>Delete</span>
             </button>
 
-            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save and resolve</span></button>
+            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Resolve and save</span></button>
         </div>
 
         <div class="result-file flex-grow">
