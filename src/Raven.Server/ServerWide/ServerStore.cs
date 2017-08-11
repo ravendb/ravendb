@@ -421,7 +421,7 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag, GetNodesStatuses()));
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
                 // If we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
@@ -497,7 +497,7 @@ namespace Raven.Server.ServerWide
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag, GetNodesStatuses()));
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)

@@ -33,7 +33,7 @@ class cluster extends viewModelBase {
         promote: ko.observableArray<string>([]),
         demote: ko.observableArray<string>([]),
         forceTimeout: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -66,7 +66,13 @@ class cluster extends viewModelBase {
                 return "";
             }
 
-            const serverUrl = topology.nodes().find(x => x.tag() === topology.leader()).serverUrl();
+            const leaderNode = topology.nodes().find(x => x.tag() === topology.leader());
+            
+            if (!leaderNode) {
+                return "";
+            }
+            
+            const serverUrl = leaderNode.serverUrl();
             const localPart = appUrl.forCluster();
 
             return appUrl.toExternalUrl(serverUrl, localPart);
