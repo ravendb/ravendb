@@ -9,7 +9,10 @@ class about extends viewModelBase {
     clientVersion = shell.clientVersion;
     serverVersion = shell.serverBuildVersion;
     licenseStatus = license.licenseStatus;
-    deactivating = ko.observable<boolean>(false);
+
+    spinners = {
+        deactivatingLicense: ko.observable<boolean>(false)
+    }
 
     formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = this.licenseStatus();
@@ -70,10 +73,10 @@ class about extends viewModelBase {
                     return;
                 }
 
-                this.deactivating(true);
+                this.spinners.deactivatingLicense(true);
                 new deactivateLicenseCommand().execute()
                     .done(() => this.licenseStatus(null))
-                    .always(() => this.deactivating(false));
+                    .always(() => this.spinners.deactivatingLicense(false));
             });
     }
 
