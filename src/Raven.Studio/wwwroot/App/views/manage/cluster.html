@@ -5,7 +5,7 @@
             <div class="flex-header flex-horizontal">
                 <button data-bind="click: addNode, enable: canAddNodes" class="btn btn-primary"><i class="icon-plus"></i> <span>Add Node to cluster</span></button>
                 <div class="flex-separator"></div>
-                <div>Current Term: <span data-bind="text: topology().currentTerm"></span></div>
+                <div>Term: <span data-bind="text: topology().currentTerm"></span></div>
             </div>
 
             <div class="scroll flex-grow" data-bind="foreach: topology().nodes">
