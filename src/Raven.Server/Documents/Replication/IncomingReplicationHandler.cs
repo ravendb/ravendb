@@ -262,10 +262,9 @@ namespace Raven.Server.Documents.Replication
                         }
                     case ReplicationMessageType.Heartbeat:
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
-
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
-                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector);
+                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _replicationFromAnotherSource);
                             if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                             {
                                 if (_log.IsInfoEnabled)
@@ -277,10 +276,7 @@ namespace Raven.Server.Documents.Replication
                             }
                             else
                             {
-                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask().ContinueWith(_ =>
-                                {
-                                    _replicationFromAnotherSource.Set();
-                                });
+                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask();
                             }
                         }
                         break;
@@ -827,9 +823,12 @@ namespace Raven.Server.Documents.Replication
         private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _changeVector;
-            public MergedUpdateDatabaseChangeVectorCommand(string chageVector)
+            private readonly AsyncManualResetEvent _trigger;
+
+            public MergedUpdateDatabaseChangeVectorCommand(string chageVector, AsyncManualResetEvent trigger)
             {
                 _changeVector = chageVector;
+                _trigger = trigger;
             }
             public override int Execute(DocumentsOperationContext context)
             {
@@ -839,6 +838,17 @@ namespace Raven.Server.Documents.Replication
                 {
                     var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
                     DocumentsStorage.SetDatabaseChangeVector(context, merged);
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                    {
+                        try
+                        {
+                            _trigger.Set();
+                        }
+                        catch
+                        {
+                            //
+                        }
+                    };
                     return 1;
                 }
                 return 0;

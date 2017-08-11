@@ -474,11 +474,13 @@ namespace Raven.Server.Documents.Replication
         private class UpdateSiblingCurrentEtag : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly ReplicationMessageReply _replicationBatchReply;
+            private readonly AsyncManualResetEvent _trigger;
             private Guid _dbId;
 
-            public UpdateSiblingCurrentEtag(ReplicationMessageReply replicationBatchReply)
+            public UpdateSiblingCurrentEtag(ReplicationMessageReply replicationBatchReply, AsyncManualResetEvent trigger)
             {
                 _replicationBatchReply = replicationBatchReply;
+                _trigger = trigger;
             }
 
             public bool InitAndValidate()
@@ -500,7 +502,22 @@ namespace Raven.Server.Documents.Replication
                 if (status != ConflictStatus.AlreadyMerged)
                     return 0;
 
-                return ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
+                var res = ChangeVectorUtils.TryUpdateChangeVector(_replicationBatchReply.NodeTag, _dbId, _replicationBatchReply.CurrentEtag, ref context.LastDatabaseChangeVector) ? 1 : 0;
+                if (res == 1)
+                {
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                    {
+                        try
+                        {
+                            _trigger.Set();
+                        }
+                        catch
+                        {
+                            //
+                        }
+                    };
+                }
+                return res;
             }
         }
 
@@ -511,18 +528,13 @@ namespace Raven.Server.Documents.Replication
             LastAcceptedChangeVector = replicationBatchReply.DatabaseChangeVector;
             if (_external == false)
             {
-                var update = new UpdateSiblingCurrentEtag(replicationBatchReply);
+                var update = new UpdateSiblingCurrentEtag(replicationBatchReply, _waitForChanges);
                 if (update.InitAndValidate())
                 {
                     // we intentionally not waiting here, there is nothing that depends on the timing on this, since this 
                     // is purely advisory. We just want to have the information up to date at some point, and we won't 
                     // miss anything much if this isn't there.
-                    _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions().ContinueWith(_ =>
-                    {
-                        // This should be safe to do because we compare the last etag with the last sent etag and only if they are equal we send
-                        // a heartbeat to the peers.
-                        _waitForChanges.Set();
-                    });
+                    _database.TxMerger.Enqueue(update).AsTask().IgnoreUnobservedExceptions();
                 }
             }
 
