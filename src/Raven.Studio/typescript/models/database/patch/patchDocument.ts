@@ -4,7 +4,7 @@ import document = require("models/database/documents/document");
 
 class patchDocument extends document {
 
-    static readonly allPatchOptions: Array<patchOption> = ["Document", "Collection", "Query"];
+    static readonly allPatchOptions: Array<patchOption> = ["Document", "Query"];
 
     patchOnOption = ko.observable<patchOption>();
     selectedItem = ko.observable<string>();
