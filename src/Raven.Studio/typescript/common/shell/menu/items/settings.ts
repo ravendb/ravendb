@@ -79,7 +79,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             moduleId: "viewmodels/database/settings/connectionStrings",
             title: "Connection Strings",
             nav: true,
-            css: 'icon-list',
+            css: 'icon-manage-connection-strings',
             dynamicHash: appUrls.connectionStrings,
             enabled: accessHelper.isGlobalAdmin
         }),
