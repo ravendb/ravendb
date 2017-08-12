@@ -32,6 +32,9 @@ namespace Sparrow.Utils
                 var now = DateTime.UtcNow;
                 foreach (var header in _pool.Values)
                 {
+                    if (header == null)
+                        continue;
+
                     var current = header.Head;
                     while (current != null)
                     {
