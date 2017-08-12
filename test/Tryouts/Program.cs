@@ -52,11 +52,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Core.Indexing.ReferencedDocuments())
+                using (var test = new FastTests.Client.Subscriptions.LimitSubscriptionsConnectionsAmount())
                 {
                     try
                     {
-                        test.BasicLoadDocuments_Casing();
+                        test.Run().Wait();
                     }
                     catch (Exception e)
                     {

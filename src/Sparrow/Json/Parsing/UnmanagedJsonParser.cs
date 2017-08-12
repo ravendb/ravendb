@@ -261,9 +261,7 @@ namespace Sparrow.Json.Parsing
             ReadContinuation: // PERF: This is a "manual procedure"
             if (state.Continuation != JsonParserTokenContinuation.None) // parse normally
             {
-                bool read;
-                if (ContinueParsingValue(out read))
-                    return read;
+                return ContinueParsingValue();
             }
 
             state.Continuation = JsonParserTokenContinuation.None;
@@ -336,6 +334,7 @@ namespace Sparrow.Json.Parsing
 
                 case (byte)'-':
                 {
+                    _zeroPrefix = false;
                     ReadToken(ref pos, ref couldRead, NegativeInfinity, "-Infinity", JsonParserTokenContinuation.PartialNegativeInfinity);
                     return true;
                 }
@@ -443,107 +442,103 @@ namespace Sparrow.Json.Parsing
             return true;
         }
 
-        private bool ContinueParsingValue(out bool read)
+        private bool ContinueParsingValue()
         {
-            read = false;
             switch (_state.Continuation)
             {
                 case JsonParserTokenContinuation.PartialNegativeInfinity:
                     // here we need to check if we have a negative number or negative
                     // infinity 
-                    if(_expectedTokenBufferPosition  == 1 && 
+                    if (_expectedTokenBufferPosition == 1 &&
                         _inputBuffer[_pos] != (byte)'I')
+                    {
+                        _isNegative = true;
+                        _state.Continuation = JsonParserTokenContinuation.PartialNumber;
                         goto case JsonParserTokenContinuation.PartialNumber;
+                    }
                     goto case JsonParserTokenContinuation.PartialPositiveInfinity;
                 case JsonParserTokenContinuation.PartialNaN:
                 case JsonParserTokenContinuation.PartialPositiveInfinity:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _state.Continuation = JsonParserTokenContinuation.None;
                     _state.CurrentTokenType = JsonParserToken.Float;
+                    _unmanagedWriteBuffer.Write(_expectedTokenBuffer, 0, _expectedTokenBuffer.Length);
                     _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
-                    read = true;
                     return true;
                 }
                 case JsonParserTokenContinuation.PartialNumber:
                 {
                     if (ParseNumber(ref _state.Long, ref _pos) == false)
-                        return true;
+                        return false;
 
                     if (_state.CurrentTokenType == JsonParserToken.Float)
                         _unmanagedWriteBuffer.EnsureSingleChunk(_state);
 
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    read = true;
                     return true;
 
                 }
                 case JsonParserTokenContinuation.PartialPreamble:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    break; // single case where we don't return 
+                    return false;
                 }
                 case JsonParserTokenContinuation.PartialString:
                 {
                     if (ParseString(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _unmanagedWriteBuffer.EnsureSingleChunk(_state);
                     _state.CurrentTokenType = JsonParserToken.String;
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    read = true;
                     return true;
 
                 }
                 case JsonParserTokenContinuation.PartialFalse:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _state.CurrentTokenType = JsonParserToken.False;
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    read = true;
                     return true;
 
                 }
                 case JsonParserTokenContinuation.PartialTrue:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _state.CurrentTokenType = JsonParserToken.True;
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    read = true;
                     return true;
                 }
                 case JsonParserTokenContinuation.PartialNull:
                 {
                     if (EnsureRestOfToken(ref _pos) == false)
-                        return true;
+                        return false;
 
                     _state.CurrentTokenType = JsonParserToken.Null;
                     _state.Continuation = JsonParserTokenContinuation.None;
 
-                    read = true;
                     return true;
                 }
                 default:
                     ThrowException("Somehow got continuation for single byte token " + _state.Continuation);
                     return false; // never hit
             }
-
-            return false;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
