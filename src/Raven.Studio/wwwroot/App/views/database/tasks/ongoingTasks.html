@@ -267,7 +267,10 @@
             <div class="flex-horizontal flex-header">
                 <h3>Database group topology</h3>
                 <div class="flex-separator"></div>
-                <button data-bind="click: graph.enterFullScreen" class="btn btn-default">Full screen mode</button>
+                <button data-bind="click: graph.enterFullScreen" class="btn btn-default">
+                    <i class="icon-fullscreen"></i>
+                    <span>Full screen mode</span>
+                </button>
                     
                 <div class="btn-group dropdown-right">
                     <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
@@ -281,7 +284,10 @@
             </div>
             <div class="panel flex-grow" id="databaseGroupGraphContainer">
                 <h3>Database group topology</h3>
-                <button class="btn btn-default exit-button" data-bind="click: graph.exitFullScreen">Exit full screen</button>
+                <button class="btn btn-default exit-button" data-bind="click: graph.exitFullScreen">
+                    <i class="icon-exit-fullscreen"></i>
+                    <span>Exit full screen</span>
+                </button>
             </div>
             <div class="legend">
                 <div class="row">
