@@ -408,9 +408,9 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
+                foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0, "Init"));
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init"));
                 }
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
