@@ -253,7 +253,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                Status = "Failed - " + e.Message;
+                Status = "Failed - " + e;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);
