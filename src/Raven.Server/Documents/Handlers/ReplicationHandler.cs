@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Handlers
                         array.Add(new DynamicJsonValue
                         {
                             [nameof(GetConflictsResult.Id)] = conflict.Id,
-                            [nameof(conflict.LastModified)] = conflict.LastModified
+                            [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
                         });
                     }
                 }
@@ -112,7 +112,8 @@ namespace Raven.Server.Documents.Handlers
                     array.Add(new DynamicJsonValue
                     {
                         [nameof(GetConflictsResult.Conflict.ChangeVector)] = conflict.ChangeVector,
-                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc
+                        [nameof(GetConflictsResult.Conflict.Doc)] = conflict.Doc,
+                        [nameof(GetConflictsResult.Conflict.LastModified)] = conflict.LastModified
                     });
                 }
 

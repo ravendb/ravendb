@@ -135,7 +135,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(Report)] = DynamicJsonValue.Convert(Report),
                 [nameof(LastGoodDatabaseStatus)] = DynamicJsonValue.Convert(LastGoodDatabaseStatus),
                 [nameof(Status)] = Status,
-                [nameof(Error)] = Error,
+                [nameof(Error)] = Error?.ToString(),
                 [nameof(UpdateDateTime)] = UpdateDateTime,
                 [nameof(LastSuccessfulUpdateDateTime)] = LastSuccessfulUpdateDateTime
             };
