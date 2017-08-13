@@ -149,10 +149,10 @@ namespace Raven.Server.Documents.Handlers
                     var subscription = running
                         ? Database
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, id.Value, name, history)
+                            .GetRunningSubscription(context, id, name, history)
                         : Database
                             .SubscriptionStorage
-                            .GetSubscription(context, name, history);
+                            .GetSubscription(context, id, name, history);
 
                     if (subscription == null)
                     {
@@ -169,7 +169,61 @@ namespace Raven.Server.Documents.Handlers
 
                     writer.WriteStartObject();
 
-                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(x, documentConventions, context));
+                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(new
+                    {
+                        x.SubscriptionId,
+                        x.SubscriptionName,
+                        x.ChangeVector,
+                        State =new
+                        {
+                            x.Connection?.SubscriptionState.ChangeVector,
+                            x.Connection?.SubscriptionState.Criteria,
+                            x.Connection?.SubscriptionState.LastEtagReachedInServer,
+                            x.Connection?.SubscriptionState.TimeOfLastClientActivity
+                        },
+                        Connection = new
+                        {
+                            x.Connection?.ClientUri,
+                            x.Connection?.Strategy,
+                            x.Connection?.Stats,
+                            ConnectionException = x.Connection?.ConnectionException?.Message
+                        },
+                        RecentConnections = x.RecentConnections?.Select(r=> new
+                        {
+                            r.SubscriptionState.SubscriptionId,
+                            r.SubscriptionState.SubscriptionName,
+                            State = new
+                            {
+                                r.SubscriptionState.ChangeVector,
+                                r.SubscriptionState.Criteria
+                            },
+                            Connection = new
+                            {
+                                r.ClientUri,
+                                r.Options.Strategy,
+                                r.Stats,
+                                r.ConnectionException?.Message
+                            }
+                        }).ToList(),
+                        FailedConnections = x.RecentRejectedConnections?.Select(r => new
+                        {
+                            r.SubscriptionState.SubscriptionId,
+                            r.SubscriptionState.SubscriptionName,
+                            State = new
+                            {
+                                r.SubscriptionState.ChangeVector,
+                                r.SubscriptionState.Criteria
+                            },
+                            Connection = new
+                            {
+                                r.ClientUri,
+                                r.Options.Strategy,
+                                r.Stats,
+                                r.ConnectionException?.Message
+                            }
+                        }).ToList()
+                        
+                    }, documentConventions, context));
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);
