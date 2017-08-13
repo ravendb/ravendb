@@ -12,6 +12,7 @@ using Raven.Client.Documents.Conventions;
 using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 
@@ -124,6 +125,60 @@ namespace Raven.Server.Documents.Handlers
             await NoContent();
         }
 
+        [RavenAction("/databases/*/subscriptions/SubscriptionConnectionDetails", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSubscriptionConnectionDetails()
+        {
+            var subscriptionId = GetLongQueryString("id", false);
+            var subscriptionName = GetStringQueryString("name", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (subscriptionId.HasValue == false && string.IsNullOrEmpty(subscriptionName))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var subscriptionData = Database
+                    .SubscriptionStorage
+                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
+                
+                var subscriptionConnection = subscriptionData.Connection;
+                if (subscriptionData == null || subscriptionConnection == null || subscriptionConnection.ConnectionException!= null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                context.Write(writer, new OngoingTaskSubscription
+                {
+                    TaskConnectionStatus = OngoingTaskConnectionStatus.Active,
+                    TimeOfLastClientActivity = subscriptionData.TimeOfLastClientActivity,
+                    Collection = subscriptionData.Criteria.Collection,
+                    LastChangeVector = subscriptionData.ChangeVector,
+                    TaskId = subscriptionData.SubscriptionId,
+                    TaskState = OngoingTaskState.Enabled,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = ServerStore.NodeTag,
+                        NodeUrl = ServerStore.NodeHttpServerUrl
+                    },
+                    TaskName = subscriptionData.SubscriptionName,
+                    ClientConnection = new OngoingTaskSubscription.ClientConnectionIfo
+                    {
+                        ClientUri = subscriptionConnection.ClientUri,
+                        Strategy = subscriptionConnection.Strategy,
+                        ClientConnectionTime = subscriptionConnection.Stats.ConnectedAt
+                    }
+                    
+                }.ToJson());
+
+                return Task.CompletedTask;
+            }
+        }
+
         [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
@@ -138,7 +193,7 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
-                if (id == null)
+                if (string.IsNullOrEmpty(name) && id == null)
                 {
                     subscriptions = running
                         ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
@@ -165,7 +220,6 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    DocumentConventions documentConventions = DocumentConventions.Default;
 
                     writer.WriteStartObject();
 
@@ -223,7 +277,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                         }).ToList()
                         
-                    }, documentConventions, context));
+                    }, DocumentConventions.Default, context));
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);
