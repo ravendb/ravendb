@@ -69,7 +69,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var suspend = GetBoolValueQueryString("value"); // in seconds
                 if (suspend.HasValue)
                 {
-                    Server.ServerStore.Observer.Suspened = suspend.Value;
+                    Server.ServerStore.Observer.Suspended = suspend.Value;
                 }
                 return Task.CompletedTask;
             }
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var json = new DynamicJsonValue{
                         ["LeaderNode"] = Server.ServerStore.NodeTag,
                         ["Term"] = Server.ServerStore.Engine.CurrentTerm,
-                        ["Suspended"] = Server.ServerStore.Observer.Suspened,
+                        ["Suspended"] = Server.ServerStore.Observer.Suspended,
                         ["Iteration"] = res.Iteration,
                         ["ObserverLog"] = new DynamicJsonArray(res.List)
                     };
