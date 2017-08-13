@@ -203,7 +203,6 @@ namespace FastTests.Server
                     using (var blittableObj = context.ReadObject(foo, "read test stuff"))
                     {
                         //TODO: Restore this.
-                        DevelopmentHelper.TimeBomb();
 
                         ////this shouldn't throw, since expected etag == null
                         //Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", blittableObj).Wait();
