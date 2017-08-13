@@ -55,7 +55,7 @@
                             </div>
                         </div>
                         <pre class="form-control editor query-source" 
-                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', completer:queryCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/sql', completer:queryCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
                         
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
                             <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
