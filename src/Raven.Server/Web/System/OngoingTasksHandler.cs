@@ -102,6 +102,7 @@ namespace Raven.Server.Web.System
                     Collection = subscriptionState.Criteria.Collection,
                     TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
                     LastChangeVector = subscriptionState.ChangeVector
+
                 };
             }
         }
@@ -398,7 +399,26 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            WriteResult(context, subscriptionState.ToJson());
+
+                            tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
+                            var ongoingSubscriptionTask = new OngoingTaskSubscription
+                            {
+                                Collection = subscriptionState.Criteria.Collection,
+                                TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
+                                LastChangeVector = subscriptionState.ChangeVector,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                TaskId = subscriptionState.SubscriptionId,
+                                TaskName = subscriptionState.SubscriptionName,
+                                // todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
+                                TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                            };
+                            WriteResult(context, ongoingSubscriptionTask);
+
+                            
 
                             break;
 
