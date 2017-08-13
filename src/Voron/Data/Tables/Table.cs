@@ -245,6 +245,11 @@ namespace Voron.Data.Tables
             }
         }
 
+        public bool IsOwned(long id)
+        {
+            return ActiveDataSmallSection.IsOwned(id);
+        }
+
         public void Delete(long id)
         {
             AssertWritableTable();

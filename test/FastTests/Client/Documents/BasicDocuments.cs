@@ -27,6 +27,33 @@ namespace FastTests.Client.Documents
         }
 
         [Fact]
+        public async Task CanChangeDocumentCollectionWithDeleteAndSave()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+
+        [Fact]
         public async Task GetAsync()
         {
             using (var store = GetDocumentStore())

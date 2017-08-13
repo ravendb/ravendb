@@ -4,7 +4,6 @@ using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Platform.Posix;
 using Sparrow.Platform.Win32;
-using Voron.Platform.Posix;
 
 namespace Sparrow.LowMemory
 {
@@ -35,7 +34,7 @@ namespace Sparrow.LowMemory
         }
 
         [return: MarshalAs(UnmanagedType.Bool)]
-        [DllImport("kernel32.dll",SetLastError = true)]
+        [DllImport("kernel32.dll", SetLastError = true)]
         public static extern unsafe bool GlobalMemoryStatusEx(MemoryStatusEx* lpBuffer);
 
         /// <summary>
@@ -61,13 +60,39 @@ namespace Sparrow.LowMemory
 
             try
             {
-                if (PlatformDetails.RunningOnPosix)
+                if (PlatformDetails.RunningOnPosix == false)
                 {
-                    // read both cgroup and sysinfo memory stats, and use the lowest if applicable
-                    long cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
-                    long cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+                    // Windows
+                    var memoryStatus = new MemoryStatusEx
+                    {
+                        dwLength = (uint)sizeof(MemoryStatusEx)
+                    };
+                    var result = GlobalMemoryStatusEx(&memoryStatus);
+                    if (result == false)
+                    {
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
+                        return FailedResult;
+                    }
 
-                    sysinfo_t info = new sysinfo_t();
+                    return new MemoryInfoResult
+                    {
+                        AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
+                        TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                    };
+                }
+
+                // read both cgroup and sysinfo memory stats, and use the lowest if applicable
+                var cgroupMemoryLimit = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.limit_in_bytes");
+                var cgroupMemoryUsage = KernelVirtualFileSystemUtils.ReadNumberFromCgroupFile("/sys/fs/cgroup/memory/memory.usage_in_bytes");
+
+                ulong availableRamInBytes;
+                ulong totalPhysicalMemoryInBytes;
+
+                if (PlatformDetails.RunningOnMacOsx == false)
+                {
+                    // Linux
+                    var info = new sysinfo_t();
                     if (Syscall.sysinfo(ref info) != 0)
                     {
                         if (Logger.IsInfoEnabled)
@@ -75,43 +100,58 @@ namespace Sparrow.LowMemory
                         return FailedResult;
                     }
 
-                    Size availableRam, totalPhysicalMemory;
-                    if (cgroupMemoryLimit < (long)info.TotalRam)
+                    availableRamInBytes = info.AvailableRam;
+                    totalPhysicalMemoryInBytes = info.TotalRam;
+                }
+                else
+                {
+                    // MacOS
+                    var mib = new[] {(int)TopLevelIdentifiersMacOs.CTL_HW, (int)CtkHwIdentifiersMacOs.HW_MEMSIZE};
+                    ulong physicalMemory = 0;
+                    var len = sizeof(ulong);
+
+                    if (Syscall.sysctl(mib, 2, &physicalMemory, &len, null, UIntPtr.Zero) != 0)
                     {
-                        availableRam = new Size(cgroupMemoryLimit - cgroupMemoryUsage, SizeUnit.Bytes);
-                        totalPhysicalMemory = new Size(cgroupMemoryLimit, SizeUnit.Bytes);
-                    }
-                    else
-                    {
-                        availableRam = new Size((long)info.AvailableRam, SizeUnit.Bytes);
-                        totalPhysicalMemory = new Size((long)info.TotalRam, SizeUnit.Bytes);
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failure when trying to read physical memory info from MacOS, error code was: " + Marshal.GetLastWin32Error());
+                        return FailedResult;
                     }
 
-                    return new MemoryInfoResult
+                    totalPhysicalMemoryInBytes = physicalMemory;
+
+                    uint pageSize;
+                    var vmStats = new vm_statistics64();
+
+                    var machPort = Syscall.mach_host_self();
+                    var count = sizeof(vm_statistics64) / sizeof(uint);
+
+                    if (Syscall.host_page_size(machPort, &pageSize) != 0 ||
+                        Syscall.host_statistics64(machPort, (int)FlavorMacOs.HOST_VM_INFO64, &vmStats, &count) != 0)
                     {
-                        AvailableMemory = availableRam,
-                        TotalPhysicalMemory = totalPhysicalMemory
-                    };
+                        if (Logger.IsInfoEnabled)
+                            Logger.Info("Failure when trying to get vm_stats from MacOS, error code was: " + Marshal.GetLastWin32Error());
+                        return FailedResult;
+                    }
+
+                    availableRamInBytes = vmStats.FreePagesCount * (ulong)pageSize;
                 }
 
-
-
-                var memoryStatus = new MemoryStatusEx
+                Size availableRam, totalPhysicalMemory;
+                if (cgroupMemoryLimit < (long)totalPhysicalMemoryInBytes)
                 {
-                    dwLength = (uint)sizeof(MemoryStatusEx)
-                };
-                var result = GlobalMemoryStatusEx(&memoryStatus);
-                if (result == false)
+                    availableRam = new Size(cgroupMemoryLimit - cgroupMemoryUsage, SizeUnit.Bytes);
+                    totalPhysicalMemory = new Size(cgroupMemoryLimit, SizeUnit.Bytes);
+                }
+                else
                 {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info("Failure when trying to read memory info from Windows, error code is: " + Marshal.GetLastWin32Error());
-                    return FailedResult;
+                    availableRam = new Size((long)availableRamInBytes, SizeUnit.Bytes);
+                    totalPhysicalMemory = new Size((long)totalPhysicalMemoryInBytes, SizeUnit.Bytes);
                 }
 
                 return new MemoryInfoResult
                 {
-                    AvailableMemory = new Size((long)memoryStatus.ullAvailPhys, SizeUnit.Bytes),
-                    TotalPhysicalMemory = new Size((long)memoryStatus.ullTotalPhys, SizeUnit.Bytes),
+                    AvailableMemory = availableRam,
+                    TotalPhysicalMemory = totalPhysicalMemory
                 };
             }
             catch (Exception e)
