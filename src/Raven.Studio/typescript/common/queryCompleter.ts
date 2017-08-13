@@ -10,45 +10,79 @@ import document = require("models/database/documents/document");
 
 class queryCompleter {
     private collectionsTracker: collectionsTracker;
+    private indexFieldsCache = new Map<string, string[]>();
     
-    constructor(private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+    constructor(private activeDatabase: KnockoutObservable<database>,
+                private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
         this.collectionsTracker = collectionsTracker.default;
     }
     
-    init(indexFields: KnockoutObservableArray<string>,
-         /*private activeDatabase: KnockoutObservable<database>*/
-        /*private activeDatabase: KnockoutObservable<database>,
-        private editor: AceAjax.Editor,
-        private session: AceAjax.IEditSession,
-        private callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void,
-        private collections: KnockoutObservableArray<collection>,
-        */) {
-    }
+    private getIndexName(session: AceAjax.IEditSession): [string, boolean] {
+        let keyword: string;
+        
+        for (let row = 0; row < session.getLength(); row++) {
+            let lineTokens: AceAjax.TokenInfo[] = session.getTokens(row);
 
-    /*private getIndexName(): [string, boolean] {
-        let indexName: string;
-
-       /!* for (let row = 0; row <= pos.row; row++) {
-            let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
-
-            for (let i = lineTokens.length - 1; i >= 0; i--) {
+            for (let i = 0; i < lineTokens.length; i++) {
                 const token = lineTokens[i];
                 switch (token.type) {
-                case "keyword":
-                    const keyword = token.value.toLowerCase();
-                    if (keyword === "from")
-                        return [indexName, false];
-                    if (keyword === "index")
-                        return [indexName, true];
-                    break;
-
-                case "identifier":
-                    indexName = token.value;
-                    break;
+                    case "keyword": {
+                        keyword = token.value.toLowerCase();
+                        break;
+                    }
+                    case "string": {
+                        const indexName = token.value.substr(1, token.value.length - 2);
+                        if (keyword === "from")
+                            return [indexName, false];
+                        if (keyword === "index")
+                            return [indexName, true];
+                        break;
+                    }
+                    case "identifier": {
+                        const indexName = token.value;
+                        if (keyword === "from")
+                            return [token.value, false];
+                        if (keyword === "index")
+                            return [indexName, true];
+                        break;
+                    }
                 }
             }
-        }*!/
-    }*/
+        }
+    }
+
+    private getIndexFields(session: AceAjax.IEditSession): JQueryPromise<string[]> {
+        
+        const [indexName, isStaticIndex] = this.getIndexName(session);
+        if (!indexName) {
+            return $.when<string[]>([]);
+        }
+
+        const cache = this.indexFieldsCache.get(indexName);
+        if (cache) {
+            return $.when<string[]>(cache);
+        }
+
+        if (isStaticIndex) {
+            return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
+                .execute()
+                .then((fields) => {
+                    this.indexFieldsCache.set(indexName, fields.Results);
+                    return $.when(fields.Results);
+                });
+        } else {
+            new collection(indexName, this.activeDatabase())
+                .fetchDocuments(0, 1)
+                .then(result => {
+                    // TODO: Modify the command to return also nested pathes, like Address.City
+                    if (result && result.items.length > 0) {
+                        const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
+                        this.indexFieldsCache.set(indexName, propertyNames);
+                        return $.when(propertyNames);
+                    }
+                });
+        }
+    }
 
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
@@ -91,7 +125,7 @@ class queryCompleter {
                         identifier = token.value;
                         break;
                     default:
-                        tokensAfterKeyword.push(token)
+                        tokensAfterKeyword.push(token);
                         break;
                     }
                 }
@@ -119,7 +153,12 @@ class queryCompleter {
             /* if (hasStringToken())
                  return;*/
             
-            callback(null, [{ name: "@all_docs", value: "@all_docs", score: 100, meta: "collection" }]);
+            if(!prefix ||
+                prefix.length === 0 ||
+                prefix.startsWith("@")) {
+                callback(null, [{name: "@all_docs", value: "@all_docs", score: 100, meta: "collection"}]);
+                callback(null, [{name: "@system", value: "@system", score: 9, meta: "collection"}]);
+            }
             callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
                     return {
                         name: collection,
@@ -128,29 +167,26 @@ class queryCompleter {
                         meta: "collection"
                     };
                 }));
-            callback(null, [{ name: "@system", value: "@system", score: 9, meta: "collection" }]);
             break;
         }
-        case "index":
-        {
+        case "index": {
             /* if (hasStringToken())
-                 return;*/
+             return;*/
             callback(null,
                 this.indexes().map(index => {
-                    return { name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index" };
+                    return {name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index"};
                 }));
             break;
         }
         case "select":
         case "by": // group by, order by
-        case "where":
-        {
-            /*callback(null,
-                indexFields().map(field => {
+        case "where": {
+            this.getIndexFields(session)
+                .done((indexFields) => callback(null, indexFields.map(field => {
                     return { name: field, value: field, score: 10, meta: "field" };
-                }));*/
+                })));
             break;
-            }
+        }
         case "where=":
         {
            /* // first, calculate and validate the column name
