@@ -228,13 +228,10 @@ namespace Raven.Server.Documents.Handlers
                         x.SubscriptionId,
                         x.SubscriptionName,
                         x.ChangeVector,
-                        State =new
-                        {
-                            x.Connection?.SubscriptionState.ChangeVector,
-                            x.Connection?.SubscriptionState.Criteria,
-                            x.Connection?.SubscriptionState.LastEtagReachedInServer,
-                            x.Connection?.SubscriptionState.TimeOfLastClientActivity
-                        },
+                        x.Criteria,
+                        x.Connection?.SubscriptionState.LastEtagReachedInServer,
+                        x.Connection?.SubscriptionState.TimeOfLastClientActivity
+                        ,
                         Connection = new
                         {
                             x.Connection?.ClientUri,
