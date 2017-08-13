@@ -1,5 +1,6 @@
 /// <reference path="../../typings/tsd.d.ts" />
 
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getIndexTermsCommand = require("commands/database/index/getIndexTermsCommand");
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import database = require("models/resources/database");
@@ -7,73 +8,53 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
-class queryUtil {
-
-    static readonly AutoPrefix = "auto/";
-    static readonly DynamicPrefix = "collection/";
-    static readonly AllDocs = "AllDocs";
-
-    /**
-     * Escapes lucene single term
-     * 
-     * Note: Do not use this method for escaping entire query unless you want to end up with: query\:value\ AND\ a\:b
-     * @param query query to escape
-     */
-    static escapeTerm(term: string) {
-        var output = "";
-
-        for (var i = 0; i < term.length; i++) {
-            var c = term.charAt(i);
-            if (c === '\\' || c === '+' || c === '-' || c === '!' || c === '(' || c === ')'
-                || c === ':' || c === '^' || c === '[' || c === ']' || c === '\"'
-                || c === '{' || c === '}' || c === '~' || c === '*' || c === '?'
-                || c === '|' || c === '&' || c === ' ') {
-                output += "\\";
-            }
-            output += c;
-        }
-
-        return output;
+class queryCompleter {
+    private collectionsTracker: collectionsTracker;
+    
+    constructor(private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+        this.collectionsTracker = collectionsTracker.default;
+    }
+    
+    init(indexFields: KnockoutObservableArray<string>,
+         /*private activeDatabase: KnockoutObservable<database>*/
+        /*private activeDatabase: KnockoutObservable<database>,
+        private editor: AceAjax.Editor,
+        private session: AceAjax.IEditSession,
+        private callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void,
+        private collections: KnockoutObservableArray<collection>,
+        */) {
     }
 
-    static fetchIndexFields(db: database, indexName: string, outputFields: KnockoutObservableArray<string>): void {
-        outputFields([]);
+    /*private getIndexName(): [string, boolean] {
+        let indexName: string;
 
-        // Fetch the index definition so that we get an updated list of fields to be used as sort by options.
-        // Fields don't show for All Documents.
-        const isAllDocumentsDynamicQuery = indexName === this.AllDocs;
-        if (!isAllDocumentsDynamicQuery) {
+       /!* for (let row = 0; row <= pos.row; row++) {
+            let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
 
-            //if index is not dynamic, get columns using index definition, else get it using first index result
-            if (indexName.startsWith(queryUtil.DynamicPrefix)) {
-                new collection(indexName.substr(queryUtil.DynamicPrefix.length), db)
-                    .fetchDocuments(0, 1)
-                    .done(result => {
-                        if (result && result.items.length > 0) {
-                            const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
-                            outputFields(propertyNames);
-                        }
-                    });
-            } else {
-                new getIndexEntriesFieldsCommand(indexName, db)
-                    .execute()
-                    .done((fields) => {
-                        //TODO: self.isTestIndex(result.IsTestIndex);
-                        outputFields(fields.Results);
-                    });
+            for (let i = lineTokens.length - 1; i >= 0; i--) {
+                const token = lineTokens[i];
+                switch (token.type) {
+                case "keyword":
+                    const keyword = token.value.toLowerCase();
+                    if (keyword === "from")
+                        return [indexName, false];
+                    if (keyword === "index")
+                        return [indexName, true];
+                    break;
+
+                case "identifier":
+                    indexName = token.value;
+                    break;
+                }
             }
-        }
-    }
+        }*!/
+    }*/
 
-    /*static queryCompleter(indexFields: KnockoutObservableArray<string>,
-        activeDatabase: KnockoutObservable<database>,
-        editor: any,
-        session: any,
-        pos: AceAjax.Position,
-        prefix: string,
-        callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void,
-        collections: KnockoutObservableArray<collection>,
-        indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+    complete(editor: AceAjax.Editor,
+             session: AceAjax.IEditSession,
+             pos: AceAjax.Position,
+             prefix: string,
+             callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
 
         let currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
         // If token is space, use the previous token
@@ -115,32 +96,7 @@ class queryUtil {
                     }
                 }
             }
-        }
-
-        const getIndexName: () => [string, boolean] = () => {
-            let indexName: string;
-
-            for (let row = 0; row <= pos.row; row++) {
-                let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
-
-                for (let i = lineTokens.length - 1; i >= 0; i--) {
-                    const token = lineTokens[i];
-                    switch (token.type) {
-                    case "keyword":
-                        const keyword = token.value.toLowerCase();
-                        if (keyword === "from")
-                            return [indexName, false];
-                        if (keyword === "index")
-                            return [indexName, true];
-                        break;
-
-                    case "identifier":
-                        indexName = token.value;
-                        break;
-                    }
-                }
-            }
-        }
+        };
 
         const lastKeyword = getLastKeyword();
         if (!lastKeyword)
@@ -153,36 +109,34 @@ class queryUtil {
                     return true;
                 }
             }
-        }
+        };
 
         //if (!currentToken || typeof currentToken.type === "string") {
         //   if (currentToken.type === "keyword") {
         switch (lastKeyword) {
         case "from":
         {
-            /!* if (hasStringToken())
-                 return;*!/
-
-            callback(null,
-                [{ name: "@all_docs", value: "@all_docs", score: 1000, meta: "all collections" }]);
-            callback(null,
-                collections().map(collection => {
-                    const documentCount = collection.documentCount();
+            /* if (hasStringToken())
+                 return;*/
+            
+            callback(null, [{ name: "@all_docs", value: "@all_docs", score: 100, meta: "collection" }]);
+            callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
                     return {
-                        name: collection.name,
-                        value: collection.name,
-                        score: documentCount + 10,
+                        name: collection,
+                        value: collection,
+                        score: 10,
                         meta: "collection"
                     };
                 }));
+            callback(null, [{ name: "@system", value: "@system", score: 9, meta: "collection" }]);
             break;
         }
         case "index":
         {
-            /!* if (hasStringToken())
-                 return;*!/
+            /* if (hasStringToken())
+                 return;*/
             callback(null,
-                indexes().map(index => {
+                this.indexes().map(index => {
                     return { name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index" };
                 }));
             break;
@@ -191,15 +145,15 @@ class queryUtil {
         case "by": // group by, order by
         case "where":
         {
-            callback(null,
+            /*callback(null,
                 indexFields().map(field => {
                     return { name: field, value: field, score: 10, meta: "field" };
-                }));
+                }));*/
             break;
             }
         case "where=":
         {
-            // first, calculate and validate the column name
+           /* // first, calculate and validate the column name
             let currentField = identifier;
             if (!currentField || !indexFields().find(x => x === currentField))
                 return;
@@ -214,7 +168,7 @@ class queryUtil {
                 }*!/
 
             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-            const [indexName, isStaticIndex] = getIndexName();
+            const [indexName, isStaticIndex] = getIndexName(pos);
             if (!indexName)
                 return; // todo: try to callback with error
                     
@@ -252,16 +206,16 @@ class queryUtil {
                 indexFields().map(field => {
                     return { name: field, value: field, score: 10, meta: "field" };
                 }));
-            break;
+            break;*/
         }
         default:
         {
             break;
         }
         }
-    }*/
+    }
 
-    static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
+    /*static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
         let query = `from index '${indexName}'`;
         if (predicates && predicates.length) {
             query = predicates.reduce((result, field) => {
@@ -270,7 +224,7 @@ class queryUtil {
         }
 
         return query;
-    }
+    }*/
 }
 
-export = queryUtil;
+export = queryCompleter;

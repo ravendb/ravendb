@@ -335,3 +335,15 @@ interface layoutable {
     x: number;
     y: number;
 }
+
+
+interface autoCompleteWordList {
+    name: string; 
+    value: string; 
+    score: number; 
+    meta: string 
+}
+
+interface autoCompleteCompleter {
+    complete: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void; 
+}

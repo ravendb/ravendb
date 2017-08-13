@@ -7,6 +7,7 @@ import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import appUrl = require("common/appUrl");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import database = require("models/resources/database");
 import document = require("models/database/documents/document");
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
@@ -32,7 +33,6 @@ class documentBasedColumnsProvider {
     private static readonly minColumnWidth = 150;
 
     showRowSelectionCheckbox: boolean;
-    private readonly collectionNames: string[];
     private readonly db: database;
     private readonly gridController: virtualGridController<document>;
     private readonly enableInlinePreview: boolean;
@@ -40,12 +40,12 @@ class documentBasedColumnsProvider {
     private readonly showSelectAllCheckbox: boolean;
     private readonly columnOptions: columnOptionsDto;
     private readonly customInlinePreview: (doc: document) => void;
+    private readonly collectionTracker: collectionsTracker;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 
-    constructor(db: database, gridController: virtualGridController<document>, collectionNames: string[], opts: documentBasedColumnsProviderOpts) {
+    constructor(db: database, gridController: virtualGridController<document>, opts: documentBasedColumnsProviderOpts) {
         this.showRowSelectionCheckbox = _.isBoolean(opts.showRowSelectionCheckbox) ? opts.showRowSelectionCheckbox : false;
-        this.collectionNames = collectionNames;
         this.db = db;
         this.gridController = gridController;
         this.enableInlinePreview = _.isBoolean(opts.enableInlinePreview) ? opts.enableInlinePreview : false;
@@ -53,6 +53,7 @@ class documentBasedColumnsProvider {
         this.createHyperlinks = _.isBoolean(opts.createHyperlinks) ? opts.createHyperlinks : true;
         this.columnOptions = opts.columnOptions;
         this.customInlinePreview = opts.customInlinePreview || documentBasedColumnsProvider.showPreview;
+        this.collectionTracker = collectionsTracker.default;
     }
 
     findColumns(viewportWidth: number, results: pagedResult<document>, prioritizedColumns?: string[]): virtualColumn[] {
@@ -148,7 +149,7 @@ class documentBasedColumnsProvider {
             //TODO: support url's in data as well
             if (_.isString(value) && value.match(documentBasedColumnsProvider.externalIdRegex)) {
                 const extractedCollectionName = value.split("/")[0].toLowerCase();
-                const matchedCollection = this.collectionNames.find(x => extractedCollectionName.startsWith(x.toLowerCase()));
+                const matchedCollection = this.collectionTracker.getCollectionNames().find(collection => extractedCollectionName.startsWith(collection.toLowerCase()));
                 return matchedCollection ? appUrl.forEditDoc(value, this.db, matchedCollection) : null;
             }
         }

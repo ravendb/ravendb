@@ -4,7 +4,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
@@ -12,6 +11,7 @@ import deleteDocsMatchingQueryCommand = require("commands/database/documents/del
 import notificationCenter = require("common/notifications/notificationCenter");
 
 import queryCommand = require("commands/database/query/queryCommand");
+import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
@@ -58,7 +58,6 @@ class query extends viewModelBase {
     recentQueries = ko.observableArray<storedQueryDto>();
     allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
-    collections = ko.observableArray<collection>([]);
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
     indexFields = ko.observableArray<string>();
     querySummary = ko.observable<string>();
@@ -86,6 +85,7 @@ class query extends viewModelBase {
     private columnPreview = new columnPreviewPlugin<document>();
 
     hasEditableIndex: KnockoutComputed<boolean>;
+    queryCompleter: queryCompleter;
 
     editIndexUrl: KnockoutComputed<string>;
     indexPerformanceUrl: KnockoutComputed<string>;
@@ -120,6 +120,7 @@ class query extends viewModelBase {
     constructor() {
         super();
 
+        this.queryCompleter = new queryCompleter(this.indexes);
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
@@ -281,7 +282,7 @@ class query extends viewModelBase {
         
         const db = this.activeDatabase();
 
-        return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db), this.fetchCustomFunctions(db))
+        return $.when<any>(this.fetchAllIndexes(db), this.fetchCustomFunctions(db))
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
@@ -317,7 +318,7 @@ class query extends viewModelBase {
         const grid = this.gridController();
         grid.withEvaluationContext(this.customFunctionsContext);
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true
         });
 
@@ -358,14 +359,6 @@ class query extends viewModelBase {
         return new getTransformersCommand(db)
             .execute()
             .done(transformers => this.allTransformers(transformers));
-    }
-
-    private fetchAllCollections(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db)
-            .execute()
-            .done((results: collectionsStats) => {
-                this.collections(results.collections);
-            });
     }
 
     private fetchCustomFunctions(db: database): JQueryPromise<customFunctions> {
@@ -622,16 +615,6 @@ class query extends viewModelBase {
         }
 
         return "";
-    }
-
-    queryCompleter(editor: any,
-        session: any,
-        pos: AceAjax.Position,
-        prefix: string,
-        callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.queriedIndex, this.activeDatabase, editor, session, pos, prefix,
-            callback, this.collections, this.indexes);
-        callback([], []);
     }
 
     deleteDocsMatchingQuery() {
