@@ -78,7 +78,7 @@ namespace SlowTests.Voron.Bugs
                 {
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = "FROM Orders" }, new PatchRequest()
                     {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Script = @"PutDocument(""orders|"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(10));
                 }
                 catch (TimeoutException)
