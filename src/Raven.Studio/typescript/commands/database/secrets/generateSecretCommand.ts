@@ -1,6 +1,5 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-import messagePublisher = require("../../../common/messagePublisher");
 
 class generateSecretCommand extends commandBase {
 
