@@ -51,7 +51,7 @@ var SqlHighlightRules = function() {
             regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
         }, {
             token : keywordMapper,
-            regex : "[a-zA-Z_$][a-zA-Z0-9_$]*\\b"
+            regex : "[a-zA-Z_$.][a-zA-Z0-9_$.]*\\b"
         }, {
             token : "keyword.operator",
             regex : "\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|="

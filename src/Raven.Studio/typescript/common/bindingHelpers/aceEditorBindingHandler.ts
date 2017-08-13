@@ -99,14 +99,18 @@ class aceEditorBindingHandler {
 
     static currentEditor: any;
 
-    static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
+    static customCompleters: { editorType: string; completer: autoCompleteCompleter }[] = [];
 
-    static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
+    static autoCompleteHub(editor: AceAjax.Editor, 
+                           session: AceAjax.IEditSession, 
+                           pos: AceAjax.Position, 
+                           prefix: string, 
+                           callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
         const curEditorType = editor.getOption("editorType");
-        const completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
+        const completerThreesome = aceEditorBindingHandler.customCompleters.find(x => x.editorType === curEditorType);
 
         if (!!completerThreesome) {
-            completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
+            completerThreesome.completer.complete(editor, session, pos, prefix, callback);
         } else {
             callback(null, []);
         }
@@ -127,9 +131,8 @@ class aceEditorBindingHandler {
             getFocus?: boolean;
             hasFocus?: KnockoutObservable<boolean>;
             readOnly?: boolean;
-            completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
+            completer?: autoCompleteCompleter;
             typeName?: string;
-            completerHostObject?: any;
             minHeight?: number;
             maxHeight?: number;
             selectAll?: boolean;
@@ -148,7 +151,7 @@ class aceEditorBindingHandler {
         const typeName = bindingValues.typeName;
         const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         let langTools: any = null;
-        const completerHostObject = bindingValues.completerHostObject;
+        const completer = bindingValues.completer;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
         this.allowResize = bindingValues.allowResize ? bindingValues.allowResize : false;
@@ -162,13 +165,15 @@ class aceEditorBindingHandler {
             throw new Error("code should be an observable");
         }
 
-        if (!!bindingValues.completer) {
+        if (!!completer) {
             langTools = ace.require("ace/ext/language_tools");
         }
 
         const aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
+        // TODO: aceEditor.setOption("enableSnippets", true);
+        // TODO: aceEditor.setOption("enableLiveAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
@@ -211,15 +216,18 @@ class aceEditorBindingHandler {
         // setup the autocomplete mechanism, bind recieved function with recieved type, will only work if both were recieved
         if (!!typeName) {
             aceEditor.setOption("editorType", typeName);
-
             if (!!langTools) {
                 if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
+                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completer: completer });
                 }
                 if (!!(<any>aceEditor).completers) {
                     let completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
                     if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
-                        langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
+                        langTools.addCompleter({
+                            moduleId: "aceEditoBindingHandler",
+                            getCompletions: aceEditorBindingHandler.autoCompleteHub,
+                            identifierRegexps: [/[a-zA-Z_0-9.\$\-\u00A2-\uFFFF]/]
+                        });
                     }
                 }
                 else {
@@ -300,8 +308,6 @@ class aceEditorBindingHandler {
             this.alterHeight(element, aceEditor);
         }
     }
-
-    
 
     alterHeight(element: HTMLElement, aceEditor: AceAjax.Editor) {
         if (!this.allowResize) {
