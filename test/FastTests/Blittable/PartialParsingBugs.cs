@@ -8,12 +8,14 @@ namespace FastTests.Blittable
     public class PartialParsingBugs : NoDisposalNeeded
     {
         [Theory]
+        [InlineData("{\"Neg1\":-9223372036854775808,\"Neg\":-6}")]
         [InlineData("{\"Val\": Infinity}")]
         [InlineData("{\"Val\": -Infinity}")]
         [InlineData("{\"Val\": NaN}")]
         [InlineData("{\"Val\": false}")]
         [InlineData("{\"Val\": true}")]
         [InlineData("{\"Val\": -1}")]
+        [InlineData("{\"Age\":6,\"Neg\":-6,\"IntMax\":2147483647}")]
         [InlineData("{\"Val\": null}")]
         [InlineData(
             "{\"TotalResults\":0,\"SkippedResults\":0,\"DurationInMs\":0,\"IndexName\":\"collection/Orders\",\"Results\":[],\"Includes\":[],\"IndexTimestamp\":\"0001-01-01T00:00:00.0000000\",\"LastQueryTime\":\"0001-01-01T00:00:00.0000000\",\"IsStale\":false,\"ResultEtag\":-4957615566507440024}")]

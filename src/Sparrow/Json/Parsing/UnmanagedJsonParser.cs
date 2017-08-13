@@ -452,7 +452,14 @@ namespace Sparrow.Json.Parsing
                     if (_expectedTokenBufferPosition == 1 &&
                         _inputBuffer[_pos] != (byte)'I')
                     {
+                        _zeroPrefix = false;
                         _isNegative = true;
+                        _isDouble = false;
+                        _isExponent = false;
+                        _state.Long = 0;
+                        _state.EscapePositions.Clear();
+                        _unmanagedWriteBuffer.Clear();
+                        _unmanagedWriteBuffer.WriteByte((byte)'-');
                         _state.Continuation = JsonParserTokenContinuation.PartialNumber;
                         goto case JsonParserTokenContinuation.PartialNumber;
                     }

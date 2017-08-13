@@ -53,11 +53,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new TestSubscriptionOnDisabledDatabase())
+                using (var test = new FastTests.Blittable.PartialParsingBugs())
                 {
                     try
                     {
-                        test.Run().Wait();
+                        test.TestOneCharAtATime("{\"Neg1\":-9223372036854775808,\"Neg\":-6}");
                     }
                     catch (Exception e)
                     {
