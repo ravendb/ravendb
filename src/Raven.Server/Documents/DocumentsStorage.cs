@@ -48,7 +48,7 @@ namespace Raven.Server.Documents
 
         private FastDictionary<string, CollectionName, OrdinalIgnoreCaseStringStructComparer> _collectionsCache;
 
-        private enum TombstoneTable
+        internal enum TombstoneTable
         {
             LowerId = 0,
             Etag = 1,
