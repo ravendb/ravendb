@@ -13,6 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
+using System.Text;
 using Raven.Client.ServerWide.Revisions;
 using static Raven.Server.Documents.DocumentsStorage;
 
@@ -401,7 +402,21 @@ namespace Raven.Server.Documents
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                tombstoneTable.DeleteByKey(id);
+                if (tombstoneTable.ReadByKey(id, out var reader) == false)
+                    return;
+
+                if (tombstoneTable.IsOwned(reader.Id))
+                {
+                    tombstoneTable.Delete(reader.Id);
+                    return;
+                }
+
+                // this is using a different collection, so we need to handle that.
+
+                var collectionPtr = reader.Read((int)TombstoneTable.Collection, out lowerSize);
+                collectionName = new CollectionName(Encoding.UTF8.GetString(collectionPtr, lowerSize));
+                tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                tombstoneTable.Delete(reader.Id);
             }
         }
 
