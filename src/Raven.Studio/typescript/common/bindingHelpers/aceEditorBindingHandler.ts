@@ -132,7 +132,6 @@ class aceEditorBindingHandler {
             hasFocus?: KnockoutObservable<boolean>;
             readOnly?: boolean;
             completer?: autoCompleteCompleter;
-            typeName?: string;
             minHeight?: number;
             maxHeight?: number;
             selectAll?: boolean;
@@ -148,7 +147,6 @@ class aceEditorBindingHandler {
         const fontSize = bindingValues.fontSize || this.defaults.fontSize;
         const lang = bindingValues.lang || this.defaults.lang;
         const readOnly = bindingValues.readOnly || this.defaults.readOnly;
-        const typeName = bindingValues.typeName;
         const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
         let langTools: any = null;
         const completer = bindingValues.completer;
@@ -214,7 +212,8 @@ class aceEditorBindingHandler {
         }
 
         // setup the autocomplete mechanism, bind recieved function with recieved type, will only work if both were recieved
-        if (!!typeName) {
+        if (!!completer) {
+            const typeName = "query";
             aceEditor.setOption("editorType", typeName);
             if (!!langTools) {
                 if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
