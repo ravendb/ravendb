@@ -71,7 +71,7 @@ class queryCompleter {
                     return $.when(fields.Results);
                 });
         } else {
-            new collection(indexName, this.activeDatabase())
+            return new collection(indexName, this.activeDatabase())
                 .fetchDocuments(0, 1)
                 .then(result => {
                     // TODO: Modify the command to return also nested pathes, like Address.City
@@ -80,6 +80,7 @@ class queryCompleter {
                         this.indexFieldsCache.set(indexName, propertyNames);
                         return $.when(propertyNames);
                     }
+                    return $.when<string[]>([]);
                 });
         }
     }
@@ -106,27 +107,27 @@ class queryCompleter {
                 for (let i = lineTokens.length - 1; i >= 0; i--) {
                     const token = lineTokens[i];
                     switch (token.type) {
-                    case "keyword":
-                        const keyword = token.value.toLowerCase();
-                        if (keyword === "desc" ||
-                            keyword === "asc" ||
-                            keyword === "and" ||
-                            keyword === "or")
-                            continue;
+                        case "keyword":
+                            const keyword = token.value.toLowerCase();
+                            if (keyword === "desc" ||
+                                keyword === "asc" ||
+                                keyword === "and" ||
+                                keyword === "or")
+                                continue;
 
-                        if (operator)
-                            return keyword + operator;
-                        return keyword;
+                            if (operator)
+                                return keyword + operator;
+                            return keyword;
 
-                    case "keyword.operator":
-                        operator = token.value;
-                        break;
-                    case "identifier":
-                        identifier = token.value;
-                        break;
-                    default:
-                        tokensAfterKeyword.push(token);
-                        break;
+                        case "keyword.operator":
+                            operator = token.value;
+                            break;
+                        case "identifier":
+                            identifier = token.value;
+                            break;
+                        default:
+                            tokensAfterKeyword.push(token);
+                            break;
                     }
                 }
             }
@@ -148,18 +149,17 @@ class queryCompleter {
         //if (!currentToken || typeof currentToken.type === "string") {
         //   if (currentToken.type === "keyword") {
         switch (lastKeyword) {
-        case "from":
-        {
-            /* if (hasStringToken())
+            case "from": {
+                /* if (hasStringToken())
                  return;*/
-            
-            if(!prefix ||
-                prefix.length === 0 ||
-                prefix.startsWith("@")) {
-                callback(null, [{name: "@all_docs", value: "@all_docs", score: 100, meta: "collection"}]);
-                callback(null, [{name: "@system", value: "@system", score: 9, meta: "collection"}]);
-            }
-            callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
+
+                if (!prefix ||
+                    prefix.length === 0 ||
+                    prefix.startsWith("@")) {
+                    callback(null, [{name: "@all_docs", value: "@all_docs", score: 100, meta: "collection"}]);
+                    callback(null, [{name: "@system", value: "@system", score: 9, meta: "collection"}]);
+                }
+                callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
                     return {
                         name: collection,
                         value: collection,
@@ -167,87 +167,96 @@ class queryCompleter {
                         meta: "collection"
                     };
                 }));
-            break;
-        }
-        case "index": {
-            /* if (hasStringToken())
-             return;*/
-            callback(null,
-                this.indexes().map(index => {
-                    return {name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index"};
-                }));
-            break;
-        }
-        case "select":
-        case "by": // group by, order by
-        case "where": {
-            this.getIndexFields(session)
-                .done((indexFields) => callback(null, indexFields.map(field => {
-                    return { name: field, value: field, score: 10, meta: "field" };
-                })));
-            break;
-        }
-        case "where=":
-        {
-           /* // first, calculate and validate the column name
-            let currentField = identifier;
-            if (!currentField || !indexFields().find(x => x === currentField))
-                return;
+                break;
+            }
+            case "index": {
+                /* if (hasStringToken())
+                 return;*/
+                callback(null,
+                    this.indexes().map(index => {
+                        return {name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index"};
+                    }));
+                break;
+            }
+            case "select":
+            case "by": // group by, order by
+            case "where": {
+                this.getIndexFields(session)
+                    .done((indexFields) => callback(null, indexFields.map(field => {
+                        return {name: field, value: field, score: 10, meta: "field"};
+                    })));
+                break;
+            }
+            case "where=": {
+                // first, calculate and validate the column name
+                let currentField = identifier;
+                if (!currentField) {
+                    return;
+                }
 
-            let currentValue: string = "";
+                this.getIndexFields(session)
+                    .done((indexFields) => {
+                        if (!indexFields.find(x => x === currentField)) {
+                            return;
+                        }
 
-                /!*currentValue = currentToken.value.trim();
-                const rowTokens: any[] = session.getTokens(pos.row);
-                if (!!rowTokens && rowTokens.length > 1) {
-                    currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                    currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
-                }*!/
+                        let currentValue: string = "";
 
-            // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-            const [indexName, isStaticIndex] = getIndexName(pos);
-            if (!indexName)
-                return; // todo: try to callback with error
-                    
-            if (isStaticIndex) {
-                new getIndexTermsCommand(indexName, field, activeDatabase(), 20)
-                    .execute()
-                    .done(terms => {
-                        if (terms && terms.Terms.length > 0) {
-                            callback(null,
-                                terms.Terms.map(curVal => {
-                                    return { name: curVal, value: curVal, score: 10, meta: "value" };
-                                }));
+                        /*currentValue = currentToken.value.trim();
+                         const rowTokens: any[] = session.getTokens(pos.row);
+                         if (!!rowTokens && rowTokens.length > 1) {
+                         currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
+                         currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
+                         }*/
+
+
+                        // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
+                        const [indexName, isStaticIndex] = this.getIndexName(session);
+                        if (!indexName)
+                            return; // todo: try to callback with error
+
+                        if (isStaticIndex) {
+                            new getIndexTermsCommand(indexName, currentField, this.activeDatabase(), 20)
+                                .execute()
+                                .done(terms => {
+                                    if (terms && terms.Terms.length > 0) {
+                                        callback(null,
+                                            terms.Terms.map(term => {
+                                                term = "'" + term + "'";
+                                                return {name: term, value: term, score: 10, meta: "value"};
+                                            }));
+                                    }
+                                });
+                        } else {
+                            if (currentValue.length > 0) {
+                                // TODO: Not sure what we want to show here?
+                                new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
+                                    .execute()
+                                    .done((results: metadataAwareDto[]) => {
+                                        if (results && results.length > 0) {
+                                            callback(null,
+                                                results.map(curVal => {
+                                                    const id = "'" + curVal["@metadata"]["@id"] + "'";
+                                                    return {
+                                                        name: id,
+                                                        value: id,
+                                                        score: 10,
+                                                        meta: "value"
+                                                    };
+                                                }));
+                                        }
+                                    });
+                            } else {
+                                callback([{error: "notext"}], null);
+                            }
                         }
                     });
-            } else {
-                if (currentValue.length > 0) {
-                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, activeDatabase())
-                        .execute()
-                        .done((results: metadataAwareDto[]) => {
-                            if (results && results.length > 0) {
-                                callback(null,
-                                    results.map(curVal => {
-                                        return { name: curVal["@metadata"]["@id"], value: curVal["@metadata"]["@id"], score: 10, meta: "value" };
-                                    }));
-                            }
-                        });
-                } else {
-                    callback([{ error: "notext" }], null);
-                }
+
+                break;
             }
-
-
-
-            callback(null,
-                indexFields().map(field => {
-                    return { name: field, value: field, score: 10, meta: "field" };
-                }));
-            break;*/
-        }
-        default:
-        {
-            break;
-        }
+            default: {
+                break;
+            }
         }
     }
 
