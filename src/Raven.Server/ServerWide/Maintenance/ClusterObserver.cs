@@ -137,7 +137,11 @@ namespace Raven.Server.ServerWide.Maintenance
                         var updateReason = UpdateDatabaseTopology(database, databaseRecord.Topology, clusterTopology, newStats, prevStats, ref deletions);
                         if (updateReason != null)
                         {
-                            _decisionsLog.Add(FormatDecision(_iteration,database,updateReason));
+                            if (_decisionsLog.Count > 99)
+                                _decisionsLog.Take();
+
+                            _decisionsLog.Add(FormatDecision(_iteration, database, updateReason));
+
                             var cmd = new UpdateTopologyCommand(database)
                             {
                                 Topology = databaseRecord.Topology,
