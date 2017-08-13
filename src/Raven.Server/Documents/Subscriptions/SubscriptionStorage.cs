@@ -211,9 +211,23 @@ namespace Raven.Server.Documents.Subscriptions
             }
         }
 
-        public SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, string name, bool history)
+        public SubscriptionGeneralDataAndStats GetSubscription(TransactionOperationContext context, long? id, string name, bool history)
         {
-            var subscription = GetSubscriptionFromServerStore(context, name);
+            SubscriptionGeneralDataAndStats subscription;
+
+            if (string.IsNullOrEmpty(name) == false)
+            {
+                subscription = GetSubscriptionFromServerStore(context, name);
+            }
+            else if (id.HasValue)
+            {
+                subscription = GetSubscriptionFromServerStore(context, id.ToString());
+            }
+            else
+            {
+                throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+            }
+            
 
             GetSubscriptionInternal(subscription, history);
 
@@ -232,17 +246,30 @@ namespace Raven.Server.Documents.Subscriptions
             return subscriptionJsonValue;
         }
 
-        public SubscriptionGeneralDataAndStats GetRunningSubscription(TransactionOperationContext context, long id, string name, bool history)
+        public SubscriptionGeneralDataAndStats GetRunningSubscription(TransactionOperationContext context, long? id, string name, bool history)
         {
-            if (_subscriptionConnectionStates.TryGetValue(id, out SubscriptionConnectionState subscriptionConnectionState) == false)
+            SubscriptionGeneralDataAndStats subscription;
+            if (string.IsNullOrEmpty(name) == false)
+            {
+                subscription = GetSubscriptionFromServerStore(context, name);
+            }
+            else if (id.HasValue)
+            {
+                subscription = GetSubscriptionFromServerStore(context, id.ToString());
+            }
+            else
+            {
+                throw new ArgumentNullException("Must receive either subscription id or subscription name in order to provide subscription data");
+            }
+
+            if (_subscriptionConnectionStates.TryGetValue(subscription.SubscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return null;
 
             if (subscriptionConnectionState.Connection == null)
                 return null;
-
-            var subscriptionJsonValue = GetSubscriptionFromServerStore(context, name);
-            GetRunningSubscriptionInternal(history, subscriptionJsonValue, subscriptionConnectionState);
-            return subscriptionJsonValue;
+            
+            GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionState);
+            return subscription;
         }
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
@@ -321,7 +348,9 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 foreach (var subscriptionStateKvp in _subscriptionConnectionStates)
                 {
-                    var subscriptionName = subscriptionStateKvp.Value.Connection.Options.SubscriptionName;
+                    var subscriptionName = subscriptionStateKvp.Value.Connection?.Options?.SubscriptionName;
+                    if (subscriptionName == null)
+                        continue;
                     var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(databaseRecord.DatabaseName, subscriptionName));
                     if (subscriptionBlittable == null)
                     {
