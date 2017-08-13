@@ -59,7 +59,6 @@ class query extends viewModelBase {
     allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
-    indexFields = ko.observableArray<string>();
     querySummary = ko.observable<string>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
@@ -120,7 +119,7 @@ class query extends viewModelBase {
     constructor() {
         super();
 
-        this.queryCompleter = new queryCompleter(this.indexes);
+        this.queryCompleter = new queryCompleter(this.activeDatabase, this.indexes);
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
@@ -461,7 +460,6 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
-                        queryUtil.fetchIndexFields(this.activeDatabase(), this.queriedIndex(), this.indexFields);
 
                         //TODO: this.indexSuggestions([]);
                         /* TODO
