@@ -175,9 +175,9 @@ class editSubscriptionTask extends viewModelBase {
             const extraClassProvider = (item: documentObject | Raven.Server.Documents.Handlers.DocumentWithException) => {
                 const documentItem = item as Raven.Server.Documents.Handlers.DocumentWithException;
                 return documentItem.Exception ? "exception-row" : "";
-            }
+            };
 
-            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
+            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), {
                 showRowSelectionCheckbox: false,
                 showSelectAllCheckbox: false,
                 enableInlinePreview: true,

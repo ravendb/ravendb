@@ -188,7 +188,7 @@ class documents extends viewModelBase {
         grid.headerVisible(true);
         grid.withEvaluationContext(this.customFunctionsContext);
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.tracker.getCollectionNames(),
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, 
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {

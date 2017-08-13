@@ -470,7 +470,7 @@ class patch extends viewModelBase {
 
         const grid = this.gridController();
         grid.withEvaluationContext(this.customFunctionsContext);
-        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, collectionsTracker.default.collections().map(x => x.name), {
+        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
             createHyperlinks: false,
