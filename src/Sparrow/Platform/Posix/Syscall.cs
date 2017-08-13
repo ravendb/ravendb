@@ -3,7 +3,6 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Security;
 using Voron.Platform.Posix;
-// ReSharper disable InconsistentNaming
 
 namespace Sparrow.Platform.Posix
 {
@@ -35,8 +34,8 @@ namespace Sparrow.Platform.Posix
             if (PlatformDetails.RunningOnMacOsx)
                 return 0; // TODO : Implement for OSX, note gettid is problematic in OSX. Ref : https://github.com/dotnet/coreclr/issues/12444
 
-            return (int) syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
-        }        
+            return (int)syscall0(PerPlatformValues.SyscallNumbers.SYS_gettid);
+        }
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int setpriority(int which, int who, int prio);
@@ -46,6 +45,18 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int sysinfo(ref sysinfo_t info);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int sysctl(int[] name, uint nameLen, void* oldP, int* oldLenP, void* newP, UIntPtr newLen);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int mach_host_self();
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int host_page_size(int machHost, uint* pageSize);
+
+        [DllImport(LIBC_6, SetLastError = true)]
+        public static extern int host_statistics64(int machHost, int flavor, void* hostInfoT, int* hostInfoCount);
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern int mkdir(
@@ -62,7 +73,7 @@ namespace Sparrow.Platform.Posix
 
         public static long pread(int fd, void* buf, ulong count, long offset)
         {
-            return (long) pread(fd, (IntPtr) buf, (UIntPtr) count, (UIntPtr) offset);
+            return (long)pread(fd, (IntPtr)buf, (UIntPtr)count, (UIntPtr)offset);
         }
 
         // posix_fallocate(P)
@@ -100,7 +111,7 @@ namespace Sparrow.Platform.Posix
 
         [DllImport(LIBC_6, SetLastError = true)]
         public static extern void free(IntPtr ptr);
-        
+
         // getpid(2)
         //    pid_t getpid(void);
         [DllImport(LIBC_6, SetLastError = true)]
@@ -123,7 +134,7 @@ namespace Sparrow.Platform.Posix
             FLockOperations operation);
 
         [Flags]
-        public enum FLockOperations 
+        public enum FLockOperations
         {
             LOCK_SH = 1,
             LOCK_EX = 2,
@@ -163,7 +174,7 @@ namespace Sparrow.Platform.Posix
 
         public static long read(int fd, void* buf, ulong count)
         {
-            return (long) read(fd, (IntPtr) buf, (UIntPtr) count);
+            return (long)read(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
@@ -174,7 +185,7 @@ namespace Sparrow.Platform.Posix
 
         public static long pwrite(int fd, void* buf, ulong count, long offset)
         {
-            return (long) pwrite(fd, (IntPtr) buf, (UIntPtr) count, (IntPtr) offset);
+            return (long)pwrite(fd, (IntPtr)buf, (UIntPtr)count, (IntPtr)offset);
         }
 
 
@@ -185,7 +196,7 @@ namespace Sparrow.Platform.Posix
 
         public static long write(int fd, void* buf, ulong count)
         {
-            return (long) write(fd, (IntPtr) buf, (UIntPtr) count);
+            return (long)write(fd, (IntPtr)buf, (UIntPtr)count);
         }
 
 
@@ -250,7 +261,7 @@ namespace Sparrow.Platform.Posix
                 if (retries-- > 0)
                     throw new IOException($"Tried too many times to call posix_fallocate {file}, but always got EINTR, cannot retry again");
             }
-            
+
             return result;
         }
 
@@ -305,7 +316,7 @@ namespace Sparrow.Platform.Posix
                         matchSize = mountNameSize;
                         switch (m.DriveFormat)
                         {
-                            // TODO : Add other types                            
+                            // TODO : Add other types
                             case "cifs":
                             case "nfs":
                                 syncAllowed = false;
@@ -334,10 +345,68 @@ namespace Sparrow.Platform.Posix
             return close(fd);
         }
     }
+
     [Flags]
     public enum FcntlCommands
     {
         F_NOCACHE = 0x00000030,
         F_FULLFSYNC = 0x00000033
+    }
+
+    public enum TopLevelIdentifiersMacOs
+    {
+        CTL_UNSPEC = 0,     /* unused */
+        CTL_KERN = 1,       /* "high kernel": proc, limits */
+        CTL_VM = 2,	        /* virtual memory */
+        CTL_VFS = 3,        /* file system, mount type is next */
+        CTL_NET = 4,        /* network, see socket.h */
+        CTL_DEBUG = 5,      /* debugging parameters */
+        CTL_HW = 6,         /* generic cpu/io */
+        CTL_MACHDEP = 7,    /* machine dependent */
+        CTL_USER = 8,       /* user-level */
+        CTL_MAXID = 9       /* number of valid top-level ids */
+    }
+
+    public enum CtkHwIdentifiersMacOs
+    {
+        HW_MACHINE = 1,         /* string: machine class */
+        HW_MODEL = 2,           /* string: specific machine model */
+        HW_NCPU = 3,            /* int: number of cpus */
+        HW_BYTEORDER = 4,       /* int: machine byte order */
+        HW_PHYSMEM = 5,         /* int: total memory */
+        HW_USERMEM = 6,	        /* int: non-kernel memory */
+        HW_PAGESIZE = 7,        /* int: software page size */
+        HW_DISKNAMES = 8,       /* strings: disk drive names */
+        HW_DISKSTATS = 9,       /* struct: diskstats[] */
+        HW_EPOCH = 10,          /* int: 0 for Legacy, else NewWorld */
+        HW_FLOATINGPT = 11,     /* int: has HW floating point? */
+        HW_MACHINE_ARCH = 12,   /* string: machine architecture */
+        HW_VECTORUNIT = 13,     /* int: has HW vector unit? */
+        HW_BUS_FREQ = 14,       /* int: Bus Frequency */
+        HW_CPU_FREQ = 15,       /* int: CPU Frequency */
+        HW_CACHELINE = 16,      /* int: Cache Line Size in Bytes */
+        HW_L1ICACHESIZE = 17,   /* int: L1 I Cache Size in Bytes */
+        HW_L1DCACHESIZE = 18,   /* int: L1 D Cache Size in Bytes */
+        HW_L2SETTINGS = 19,     /* int: L2 Cache Settings */
+        HW_L2CACHESIZE = 20,    /* int: L2 Cache Size in Bytes */
+        HW_L3SETTINGS = 21,     /* int: L3 Cache Settings */
+        HW_L3CACHESIZE = 22,    /* int: L3 Cache Size in Bytes */
+        HW_TB_FREQ = 23,        /* int: Bus Frequency */
+        HW_MEMSIZE = 24,        /* uint64_t: physical ram size */
+        HW_AVAILCPU = 25,       /* int: number of available CPUs */
+        HW_MAXID = 26           /* number of valid hw ids */
+    }
+
+    public enum FlavorMacOs
+    {
+        // host_statistics()
+        HOST_LOAD_INFO = 1,         /* System loading stats */
+        HOST_VM_INFO = 2,           /* Virtual memory stats */
+        HOST_CPU_LOAD_INFO = 3,     /* CPU load stats */
+
+        // host_statistics64()
+        HOST_VM_INFO64 = 4,         /* 64-bit virtual memory stats */
+        HOST_EXTMOD_INFO64 = 5,     /* External modification stats */
+        HOST_EXPIRED_TASK_INFO = 6  /* Statistics for expired tasks */
     }
 }
