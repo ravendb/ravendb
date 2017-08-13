@@ -56,7 +56,7 @@ namespace Raven.Server.ServerWide.Maintenance
             _observe = Run(_cts.Token);
         }
 
-        public bool Suspened = false; // don't really care about concurrency here
+        public bool Suspended = false; // don't really care about concurrency here
 
         private readonly BlockingCollection<string> _decisionsLog = new BlockingCollection<string>();
         private long _iteration;
@@ -73,7 +73,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 var delay = TimeoutManager.WaitFor(SupervisorSamplePeriod, token);
                 try
                 {
-                    if (Suspened == false)
+                    if (Suspended == false)
                     {
                         _iteration++;
                         var newStats = _maintenance.GetStats();

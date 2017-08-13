@@ -10,7 +10,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util.Helpers;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
