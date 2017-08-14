@@ -260,7 +260,7 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
 
-                StateChanged(index);
+                NotifyFeaturesAboutStateChange(record, index);
             }
             catch (Exception)
             {
@@ -647,7 +647,15 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                StateChanged(index);
+                DatabaseRecord record;
+                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    record = _serverStore.Cluster.ReadDatabase(context, Name);
+                }
+
+                NotifyFeaturesAboutValueChange(record);
+
             }
             catch
             {
@@ -740,6 +748,11 @@ namespace Raven.Server.Documents
                     throw;
                 }
             }
+        }
+
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
+        {
+            SubscriptionStorage?.HandleDatabaseValueChange(record);
         }
 
         public void RefreshFeatures()

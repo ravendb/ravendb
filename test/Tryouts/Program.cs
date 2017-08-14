@@ -25,7 +25,7 @@ namespace Tryouts
                 {
                     try
                     {
-                        test.Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs();
+                        test.No_script_and_applied_to_all_documents();
                     }
                     catch (Exception e)
                     {
