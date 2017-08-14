@@ -37,7 +37,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
             const emptyNodeId: Raven.Client.ServerWide.Operations.NodeId = { NodeTag: "", NodeUrl: "", ResponsibleNode: "" };
 
             
-const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription = {
+            const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription = {
                 Collection: dtoEditModel.Criteria.Collection,
                 TimeOfLastClientActivity: dto.TimeOfLastClientActivity,
                 ResponsibleNode: emptyNodeId,
@@ -46,7 +46,9 @@ const dtoListModel: Raven.Client.ServerWide.Operations.OngoingTaskSubscription =
                 TaskName: dtoEditModel.SubscriptionName,
                 TaskState: state,
                 TaskType: 'Subscription',
-                LastChangeVector:  dtoEditModel.ChangeVector
+                LastChangeVector: dtoEditModel.ChangeVector,
+                ClientConnection: null // temp fix - just for compilation - until issue 7551 is done..
+
             };
 
             super.update(dtoListModel);
