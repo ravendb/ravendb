@@ -330,7 +330,8 @@ namespace Raven.Client.Documents.Subscriptions
                 var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = databaseName
+                    DatabaseName = databaseName,
+                    OperationVersion = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Subscription]
                 }));
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));

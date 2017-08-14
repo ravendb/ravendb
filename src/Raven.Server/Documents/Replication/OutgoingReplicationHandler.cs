@@ -382,7 +382,8 @@ namespace Raven.Server.Documents.Replication
                 {
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
-                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag
+                    [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
+                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Replication]
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();

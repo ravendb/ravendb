@@ -815,9 +815,23 @@ namespace Raven.Server
             return stream;
         }
 
+
+
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
             msg = null;
+
+            if (TcpConnectionHeaderMessage.TcpVersions.TryGetValue(header.Operation, out var version) == false)
+            {
+                msg = $"Operation {header.Operation} is not supported";
+                return false;
+            }
+
+            if (version != header.OperationVersion)
+            {
+                msg = $"Operation {header.Operation} version is {header.OperationVersion} while our version is {version}";
+                return false;
+            }
 
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;
