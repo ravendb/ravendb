@@ -30,7 +30,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
-    <PackageReference Include="System.IO.Pipes" Version="4.3.0" />
     <PackageReference Include="System.ServiceProcess.ServiceController" Version="4.4.0" />
   </ItemGroup>
   <ItemGroup>
