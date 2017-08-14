@@ -246,18 +246,32 @@ namespace Raven.Server.Documents.Handlers.Admin
             var nodeUrl = GetStringQueryString("url");
             var watcher = GetBoolValueQueryString("watcher", false);
 
+            var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
+
+            if (HttpContext.Request.IsHttps != remoteIsHttps)
+            {
+                throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
+            }
+
+            NodeInfo nodeInfo;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
+            {
+                var infoCmd = new GetNodeInfoCommand();
+                await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                nodeInfo = infoCmd.Result;
+
+                if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
+                {
+                    throw new TopologyMismatchException("You can't add new node to an already existing cluster");
+                }
+            }
+
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
-
-                    if (HttpContext.Request.IsHttps != remoteIsHttps)
-                    {
-                        throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
-                    }
-
                     string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
@@ -269,56 +283,49 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
+                    
+                    if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
                     {
-                        var infoCmd = new GetNodeInfoCommand();
-                        await requestExecutor.ExecuteAsync(infoCmd, ctx);
-                        var nodeInfo = infoCmd.Result;
-
-                        if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
-                        {
-                            throw new TopologyMismatchException(
-                                $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
-                        }
-
-                        var nodeTag = nodeInfo.NodeTag == "?" 
-                            ? null : nodeInfo.NodeTag;
-
-                        if (remoteIsHttps)
-                        {
-                            if (nodeInfo.Certificate == null)
-                                throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
-
-                            var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
-                            
-                            if (certificate.NotBefore > DateTime.UtcNow)
-                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
-
-                            if (certificate.NotAfter < DateTime.UtcNow)
-                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
-
-                            var expected = GetStringQueryString("expectedThumbrpint", required: false);
-                            if (expected != null)
-                            {
-                                if (certificate.Thumbprint != expected)
-                                    throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
-                            }
-
-                            var certificateDefinition = new CertificateDefinition
-                            {
-                                Certificate = nodeInfo.Certificate,
-                                Thumbprint = certificate.Thumbprint
-                            };
-
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
-                            await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
-                        }
-
-                        
-                        await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
-                        NoContentStatus();
-                        return;
+                        throw new TopologyMismatchException(
+                            $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
                     }
+
+                    var nodeTag = nodeInfo.NodeTag == "?" 
+                        ? null : nodeInfo.NodeTag;
+
+                    if (remoteIsHttps)
+                    {
+                        if (nodeInfo.Certificate == null)
+                            throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
+
+                        var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
+                            
+                        if (certificate.NotBefore > DateTime.UtcNow)
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+
+                        if (certificate.NotAfter < DateTime.UtcNow)
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
+
+                        var expected = GetStringQueryString("expectedThumbrpint", required: false);
+                        if (expected != null)
+                        {
+                            if (certificate.Thumbprint != expected)
+                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
+                        }
+
+                        var certificateDefinition = new CertificateDefinition
+                        {
+                            Certificate = nodeInfo.Certificate,
+                            Thumbprint = certificate.Thumbprint
+                        };
+
+                        var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                        await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                    }
+                        
+                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
+                    NoContentStatus();
+                    return;
                 }
             }
             RedirectToLeader();

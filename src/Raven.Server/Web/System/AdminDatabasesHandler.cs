@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
@@ -249,19 +250,31 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
+            var waitingTasks = new List<Task>();
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
             try
             {
-
-                var waitingTasks = new List<Task>();
                 foreach (var member in members)
                 {
                     var url = clusterTopology.GetUrlFromTag(member);
                     var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
                     executors.Add(requester);
-                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
+                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
                 }
 
                 await Task.WhenAny(waitingTasks);
+                cts.Cancel();
+                foreach (var task in waitingTasks)
+                {
+                    try
+                    {
+                        await task;
+                    }
+                    catch (OperationCanceledException)
+                    {
+                        // expected
+                    }
+                }
             }
             finally
             {
@@ -269,6 +282,7 @@ namespace Raven.Server.Web.System
                 {
                     clusterRequestExecutor.Dispose();
                 }
+                cts.Dispose();
             }
         }
 
