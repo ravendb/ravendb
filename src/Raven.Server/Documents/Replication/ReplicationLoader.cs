@@ -123,9 +123,9 @@ namespace Raven.Server.Documents.Replication
         {
             _server = server;
             Database = database;
-            var reconnectTime = TimeSpan.FromSeconds(3);
+            var reconnectTime = TimeSpan.FromSeconds(30);
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
-            _reconnectAttemptTimer = new Timer(AttemptReconnectFailedOutgoing,
+            _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
                 null, reconnectTime, reconnectTime);
             MinimalHeartbeatInterval =
                (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
@@ -256,47 +256,29 @@ namespace Raven.Server.Documents.Replication
             {
                 newIncoming.Start();
                 IncomingReplicationAdded?.Invoke(newIncoming);
+                ForceTryReconnectAll();
             }
             else
                 newIncoming.Dispose();
         }
 
-        private void AttemptReconnectFailedOutgoing(object state)
+        private void ForceTryReconnectAll()
         {
-            var minDiff = TimeSpan.FromSeconds(30);
             foreach (var failure in _reconnectQueue)
             {
-                var diff = failure.RetryOn - DateTime.UtcNow;
-                if (diff < TimeSpan.Zero)
+                try
                 {
-                    try
+                    if (_reconnectQueue.TryRemove(failure) == false)
+                        continue;
+                    AddAndStartOutgoingReplication(failure.Node, failure.External);
+                }
+                catch (Exception e)
+                {
+                    if (_log.IsInfoEnabled)
                     {
-                        _reconnectQueue.TryRemove(failure);
-                        AddAndStartOutgoingReplication(failure.Node, failure.External);
-                    }
-                    catch (Exception e)
-                    {
-                        if (_log.IsInfoEnabled)
-                        {
-                            _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
-                        }
+                        _log.Info($"Failed to start outgoing replication to {failure.Node}", e);
                     }
                 }
-                else
-                {
-                    if (minDiff > diff)
-                        minDiff = diff;
-                }
-            }
-
-            try
-            {
-                //at this stage we can be already disposed, so ...
-                _reconnectAttemptTimer?.Change(minDiff, TimeSpan.FromDays(1));
-            }
-            catch (ObjectDisposedException)
-            {
-                // nothing we can do here
             }
         }
 
