@@ -411,23 +411,27 @@ class editDocument extends viewModelBase {
     }
 
     private defaultNameForNewDocument(collectionForNewDocument: string) {
-        //count how much capital letters we have in the string
-        let count = 0;
-        for (var i = 0, len = collectionForNewDocument.length; i < len; i++) {
-            const letter = collectionForNewDocument.charAt(i);
-            if (letter === letter.toLocaleUpperCase()) {
-                count++;
-                if (count >= 2) {
-                    // multiple capital letters, so probably something that we want to preserve caps on.
+
+        if (!collectionForNewDocument ||  collectionForNewDocument === "@empty") {
+            return "";
+        }
+
+        // Requested logic:
+        // If only first letter is upper than lower it
+        // If any other letter is upper - leave as is
+
+        const firstLetter = collectionForNewDocument.charAt(0);
+        if (firstLetter === firstLetter.toLocaleUpperCase()) {
+            for (let i = 1; i < collectionForNewDocument.length; i++) {
+                const letter = collectionForNewDocument.charAt(i);
+                if (letter === letter.toLocaleUpperCase()) {
                     return collectionForNewDocument + "/";
                 }
             }
+            return collectionForNewDocument.toLocaleLowerCase() + "/";
         }
 
-        // simple name, just lower case it
-        return collectionForNewDocument.toLocaleLowerCase() + "/";
-
-       
+        return collectionForNewDocument + "/";
     }
 
     toClipboard() {
@@ -481,11 +485,11 @@ class editDocument extends viewModelBase {
             const docText = this.stringify(docDto);
             this.documentText(docText);
 
-            // Make the initial suggested document Id contain collection name
-            docId = metaDto["@collection"] + "/";
+            // 3. Suggest initial document Id 
+            docId = this.defaultNameForNewDocument(metaDto["@collection"]);
         }
 
-        // 3. Clear data..
+        // 4. Clear data..
         this.document().__metadata.attachments([]); 
         this.connectedDocuments.gridController().reset(true);
         this.metadata().changeVector(undefined);
@@ -570,6 +574,8 @@ class editDocument extends viewModelBase {
         for (let prop in savedDocumentDto) {
             if (savedDocumentDto.hasOwnProperty(prop)) {
                 if (prop === "Type")
+                    continue;
+                if (prop === "@collection" && savedDocumentDto["@collection"] === "@empty")
                     continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }

@@ -191,7 +191,6 @@ namespace Raven.Server.Documents
                 AssertMetadataWasFiltered(document);
                 AttachmentsStorage.AssertAttachments(document, flags);
 #endif
-
                 return new PutOperationResults
                 {
                     Etag = newEtag,
