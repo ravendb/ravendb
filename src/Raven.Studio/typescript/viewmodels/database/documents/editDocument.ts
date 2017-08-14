@@ -605,7 +605,12 @@ class editDocument extends viewModelBase {
     }
 
     private attachReservedMetaProperties(id: string, target: documentMetadataDto) {
-        target['@collection'] = target['@collection'] || document.getCollectionFromId(id);
+        // Define a collection to be sent to server only if there is a relevant value 
+        const collectionIsDefined = target['@collection'] || document.getCollectionFromId(id);
+        if (collectionIsDefined) {
+            target['@collection'] = collectionIsDefined;
+        }
+        
         target['@id'] = id;
     }
 
