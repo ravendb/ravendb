@@ -7,7 +7,7 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var SqlHighlightRules = function() {
 
     var keywords = (
-        "select|from|where|and|or|group|by|order|as|desc|asc|not|null|index"
+        "select|from|where|and|or|group|by|order|as|desc|asc|not|null|index|in"
     );
 
     var builtinConstants = (
