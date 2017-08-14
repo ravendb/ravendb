@@ -12,10 +12,6 @@ using Sparrow.Json;
 using Sparrow.LowMemory;
 using Sparrow.Utils;
 
-#if VALIDATE
-using System.Threading;
-#endif
-
 namespace Sparrow
 {
     [Flags]
