@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
@@ -100,6 +101,20 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+                if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(
+                    options.ChangeVector, 
+                    out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorSpecialValue))
+                {
+                    switch (changeVectorSpecialValue)
+                    {
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.BeginningOfTime:
+                                options.ChangeVector = null;
+                                break;
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.LastDocument:
+                                options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, options.Criteria.Collection);
+                                break;
+                    }
+                }
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled);
@@ -109,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Id"] = subscriptionId
+                        ["Name"] = options.Name??subscriptionId.ToString()
                     });
                 }
             }
@@ -124,6 +139,39 @@ namespace Raven.Server.Documents.Handlers
 
             await NoContent();
         }
+
+        [RavenAction("/databases/*/subscriptions/SubscriptionState", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSubscriptionState()
+        {
+            var subscriptionName = GetStringQueryString("name", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (string.IsNullOrEmpty(subscriptionName))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var subscriptionState = Database
+                    .SubscriptionStorage
+                    .GetSubscriptionFromServerStore(subscriptionName);
+
+                
+                if (subscriptionState == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                context.Write(writer, subscriptionState.ToJson());
+
+                return Task.CompletedTask;
+            }
+        }
+
 
         [RavenAction("/databases/*/subscriptions/SubscriptionConnectionDetails", "GET", AuthorizationStatus.ValidUser)]
         public Task GetSubscriptionConnectionDetails()

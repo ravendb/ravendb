@@ -285,6 +285,7 @@ namespace Raven.Server.Documents.Subscriptions
                 ChangeVector = @base.ChangeVector;
                 SubscriptionId = @base.SubscriptionId;
                 TimeOfLastClientActivity = @base.TimeOfLastClientActivity;
+                SubscriptionName = @base.SubscriptionName;
             }
         }
         public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)

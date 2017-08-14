@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.TcpHandlers
         private bool _isDisposed;
         public SubscriptionState SubscriptionState;
 
-        public long SubscriptionId => _options.SubscriptionId;
+        public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
         
 
@@ -89,11 +89,8 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
                     throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
-
-                if (_options.SubscriptionId > 0 && _options.SubscriptionId != id)
-                    throw new SubscriptionClosedException("Subscription named " + _options.SubscriptionName + " has id of " + id + " but the subscription expected " + _options.SubscriptionId);
-
-                _options.SubscriptionId = id;
+                
+                SubscriptionId = id;
             }
         }
 
@@ -206,7 +203,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Failed to process subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}",
+                                $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
                                 e);
                         }
                         try
@@ -223,7 +220,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Finished processing subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}");
+                                $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
                         }
                     }
                 }
@@ -537,7 +534,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                                Options.SubscriptionId,
+                                SubscriptionId,
                                 Options.SubscriptionName,
                                 startEtag,
                                 lastChangeVector);

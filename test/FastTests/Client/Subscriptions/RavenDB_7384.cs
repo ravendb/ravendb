@@ -25,7 +25,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
+                var subscriptionName = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
                 {
                     Name = "Subs1"
                 });
@@ -56,14 +56,15 @@ namespace FastTests.Client.Subscriptions
 
                 var currentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
 
+                var subscriptionState = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
                 var operationIndex = await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr,
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
                     Criteria = new SubscriptionCriteria("Users")
 
 
-                }, subscriptionId, true);
+                }, subscriptionState.SubscriptionId, true);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
 
@@ -76,7 +77,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-                var subscriptionId = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
+                var subscriptionName = store.Subscriptions.Create<User>(new SubscriptionCreationOptions<User>()
                 {
                     Name = "Subs1",
                     Criteria = new SubscriptionCriteria<User>()
@@ -115,17 +116,20 @@ namespace FastTests.Client.Subscriptions
 
                 string changeVectorBeforeScriptUpdate = GetSubscriptionChangeVector(currentDatabase);
 
+                var subscriptionState = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
+
+
                 // updating only subscription script and making sure conneciton drops
                 await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr,
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
                     Criteria = new SubscriptionCriteria("Users")
                     {
                         Script = "return {Name:'Jorgen'}"
                     }
 
-                }, subscriptionId, true);
+                }, subscriptionState.SubscriptionId, true);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
 
