@@ -129,7 +129,7 @@ namespace FastTests.Client.Subscriptions
                         Script = "return {Name:'Jorgen'}"
                     }
 
-                }, subscriptionState.SubscriptionId, true);
+                }, subscriptionState.SubscriptionId);
 
                 Assert.Equal(subscriptionTask, await Task.WhenAny(subscriptionTask, Task.Delay(_reasonableWaitTime)));
 
@@ -159,8 +159,6 @@ namespace FastTests.Client.Subscriptions
                     session.Store(new User { });
                     session.SaveChanges();
                 }
-
-                await mre.WaitAsync();
 
                 Assert.True(await mre.WaitAsync(_reasonableWaitTime));
                 Assert.Equal("Jorgen", results[0].Name);
