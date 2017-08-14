@@ -192,6 +192,8 @@ namespace Raven.Server.Documents
                 AttachmentsStorage.AssertAttachments(document, flags);
 #endif
 
+                collectionName = (collectionName.Name == CollectionName.EmptyCollection) ? new CollectionName("") : collectionName;
+
                 return new PutOperationResults
                 {
                     Etag = newEtag,

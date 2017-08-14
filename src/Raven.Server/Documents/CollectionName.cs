@@ -218,7 +218,8 @@ namespace Raven.Server.Documents
 
             document.NoCache = true;
             if (document.TryGet(MetadataKeySegment, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(MetadataCollectionSegment, out string collectionName) == false)
+                metadata.TryGet(MetadataCollectionSegment, out string collectionName) == false ||
+                collectionName == null)
             {
                 collectionName = EmptyCollection;
             }
