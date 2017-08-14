@@ -110,6 +110,8 @@ class queryCompleter {
                         continue;
 
                     return [keyword, operator, identifier, text, paren];
+                case "support.function":
+                    return ["__support.function", operator, identifier, text, paren];
                 case "keyword.operator":
                     operator = token.value;
                     break;
@@ -137,6 +139,13 @@ class queryCompleter {
         return [null, null, null, null, null];
     }
 
+    private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
+        this.getIndexFields(session)
+            .done((indexFields) => callback(null, indexFields.map(field => {
+                return {name: field, value: field, score: this.defaultScore, meta: "field"};
+            })));
+    }
+
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
              pos: AceAjax.Position,
@@ -152,10 +161,7 @@ class queryCompleter {
                 if (identifier && text) {
                     if (paren > 0) {
                         // from (Collection, {show fields here})
-                        this.getIndexFields(session)
-                            .done((indexFields) => callback(null, indexFields.map(field => {
-                                return {name: field, value: field, score: this.defaultScore, meta: "field"};
-                            })));
+                        this.completeFields(session, callback);
                         return;
                     }
 
@@ -190,12 +196,16 @@ class queryCompleter {
                     }));
                 break;
             }
+            case "__support.function":
+                if (identifier && text) { // field already specified
+                    return;
+                }
+                
+                this.completeFields(session, callback);
+                break;
             case "select":
             case "by": // group by, order by
-                this.getIndexFields(session)
-                    .done((indexFields) => callback(null, indexFields.map(field => {
-                        return {name: field, value: field, score: this.defaultScore, meta: "field"};
-                    })));
+                this.completeFields(session, callback);
                 break;
                 
             case "where": {
@@ -266,10 +276,7 @@ class queryCompleter {
                     return;
                 }
                 
-                this.getIndexFields(session)
-                    .done((indexFields) => callback(null, indexFields.map(field => {
-                        return {name: field, value: field, score: this.defaultScore, meta: "field"};
-                    })));
+                this.completeFields(session, callback);
                 break;
             }
         }
