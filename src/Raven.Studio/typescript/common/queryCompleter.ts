@@ -85,6 +85,53 @@ class queryCompleter {
         }
     }
 
+    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string] {
+
+        // let tokensAfterKeyword: AceAjax.TokenInfo[] = []; // TODO: Can be deleted
+        let identifier: string;
+        let text: string;
+        let operator: string;
+        for (let row = 0; row <= pos.row; row++) {
+            let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
+
+            for (let i = lineTokens.length - 1; i >= 0; i--) {
+                const token = lineTokens[i];
+                switch (token.type) {
+                    case "keyword":
+                        let keyword = token.value.toLowerCase();
+                        if (keyword === "desc" ||
+                            keyword === "asc" ||
+                            keyword === "and" ||
+                            keyword === "or")
+                            continue;
+
+                        return [keyword, operator, identifier, text];
+
+                    case "keyword.operator":
+                        operator = token.value;
+                        break;
+                    case "identifier":
+                        identifier = token.value;
+                        break;
+                    case "string":
+                        const indexName = token.value.substr(1, token.value.length - 2);
+                        identifier = indexName;
+                        break;
+                    case "text":
+                        if  (!identifier) {
+                            text = token.value;
+                        }
+                        break;
+                    default:
+                        // tokensAfterKeyword.push(token);
+                        break;
+                }
+            }
+        }
+        
+        return [null, null, null, null];
+    }
+
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
              pos: AceAjax.Position,
@@ -97,61 +144,15 @@ class queryCompleter {
             currentToken = session.getTokenAt(pos.row, currentToken.start - 1);
         }
 
-        let identifier: string;
-        let tokensAfterKeyword: AceAjax.TokenInfo[] = [];
-        const getLastKeyword = () => {
-            let operator: string;
-            for (let row = 0; row <= pos.row; row++) {
-                let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
-
-                for (let i = lineTokens.length - 1; i >= 0; i--) {
-                    const token = lineTokens[i];
-                    switch (token.type) {
-                        case "keyword":
-                            const keyword = token.value.toLowerCase();
-                            if (keyword === "desc" ||
-                                keyword === "asc" ||
-                                keyword === "and" ||
-                                keyword === "or")
-                                continue;
-
-                            if (operator)
-                                return keyword + operator;
-                            return keyword;
-
-                        case "keyword.operator":
-                            operator = token.value;
-                            break;
-                        case "identifier":
-                            identifier = token.value;
-                            break;
-                        default:
-                            tokensAfterKeyword.push(token);
-                            break;
-                    }
-                }
-            }
-        };
-
-        const lastKeyword = getLastKeyword();
+        const [lastKeyword, operator, identifier, text] = this.getLastKeyword(session, pos);
         if (!lastKeyword)
             return;
 
-        const hasStringToken = () => {
-            for (var i = tokensAfterKeyword.length - 1; i >= 0; i--) {
-                const token = tokensAfterKeyword[i];
-                if (token.type === "string") {
-                    return true;
-                }
-            }
-        };
-
-        //if (!currentToken || typeof currentToken.type === "string") {
-        //   if (currentToken.type === "keyword") {
         switch (lastKeyword) {
             case "from": {
-                /* if (hasStringToken())
-                 return;*/
+                 if (identifier && text) { // collection name already specified
+                     return;
+                 }
 
                 if (!prefix ||
                     prefix.length === 0 ||
@@ -170,106 +171,95 @@ class queryCompleter {
                 break;
             }
             case "index": {
-                /* if (hasStringToken())
-                 return;*/
+                if (identifier && text) { // index name already specified
+                    return;
+                }
+                
                 callback(null,
                     this.indexes().map(index => {
-                        return {name: index.Name, value: `'${index.Name}'`, score: 10, meta: "index"};
+                        const name = `'${index.Name}'`;
+                        return {name: name, value: name, score: 10, meta: "index"};
                     }));
                 break;
             }
             case "select":
             case "by": // group by, order by
             case "where": {
+                if (operator === "=") {
+                    // first, calculate and validate the column name
+                    let currentField = identifier;
+                    if (!currentField) {
+                        return;
+                    }
+
+                    this.getIndexFields(session)
+                        .done((indexFields) => {
+                            if (!indexFields.find(x => x === currentField)) {
+                                return;
+                            }
+
+                            let currentValue: string = "";
+
+                            /*currentValue = currentToken.value.trim();
+                             const rowTokens: any[] = session.getTokens(pos.row);
+                             if (!!rowTokens && rowTokens.length > 1) {
+                             currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
+                             currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
+                             }*/
+
+
+                            // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
+                            const [indexName, isStaticIndex] = this.getIndexName(session);
+                            if (!indexName)
+                                return; // todo: try to callback with error
+
+                            if (isStaticIndex) {
+                                new getIndexTermsCommand(indexName, currentField, this.activeDatabase(), 20)
+                                    .execute()
+                                    .done(terms => {
+                                        if (terms && terms.Terms.length > 0) {
+                                            callback(null,
+                                                terms.Terms.map(term => {
+                                                    term = "'" + term + "'";
+                                                    return {name: term, value: term, score: 10, meta: "value"};
+                                                }));
+                                        }
+                                    });
+                            } else {
+                                if (currentValue.length > 0) {
+                                    // TODO: Not sure what we want to show here?
+                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
+                                        .execute()
+                                        .done((results: metadataAwareDto[]) => {
+                                            if (results && results.length > 0) {
+                                                callback(null,
+                                                    results.map(curVal => {
+                                                        const id = "'" + curVal["@metadata"]["@id"] + "'";
+                                                        return {
+                                                            name: id,
+                                                            value: id,
+                                                            score: 10,
+                                                            meta: "value"
+                                                        };
+                                                    }));
+                                            }
+                                        });
+                                } else {
+                                    callback([{error: "notext"}], null);
+                                }
+                            }
+                        });
+                    return;
+                }
+                
                 this.getIndexFields(session)
                     .done((indexFields) => callback(null, indexFields.map(field => {
                         return {name: field, value: field, score: 10, meta: "field"};
                     })));
                 break;
             }
-            case "where=": {
-                // first, calculate and validate the column name
-                let currentField = identifier;
-                if (!currentField) {
-                    return;
-                }
-
-                this.getIndexFields(session)
-                    .done((indexFields) => {
-                        if (!indexFields.find(x => x === currentField)) {
-                            return;
-                        }
-
-                        let currentValue: string = "";
-
-                        /*currentValue = currentToken.value.trim();
-                         const rowTokens: any[] = session.getTokens(pos.row);
-                         if (!!rowTokens && rowTokens.length > 1) {
-                         currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
-                         currentColumnName = currentColumnName.substring(0, currentColumnName.length - 1);
-                         }*/
-
-
-                        // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                        const [indexName, isStaticIndex] = this.getIndexName(session);
-                        if (!indexName)
-                            return; // todo: try to callback with error
-
-                        if (isStaticIndex) {
-                            new getIndexTermsCommand(indexName, currentField, this.activeDatabase(), 20)
-                                .execute()
-                                .done(terms => {
-                                    if (terms && terms.Terms.length > 0) {
-                                        callback(null,
-                                            terms.Terms.map(term => {
-                                                term = "'" + term + "'";
-                                                return {name: term, value: term, score: 10, meta: "value"};
-                                            }));
-                                    }
-                                });
-                        } else {
-                            if (currentValue.length > 0) {
-                                // TODO: Not sure what we want to show here?
-                                new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
-                                    .execute()
-                                    .done((results: metadataAwareDto[]) => {
-                                        if (results && results.length > 0) {
-                                            callback(null,
-                                                results.map(curVal => {
-                                                    const id = "'" + curVal["@metadata"]["@id"] + "'";
-                                                    return {
-                                                        name: id,
-                                                        value: id,
-                                                        score: 10,
-                                                        meta: "value"
-                                                    };
-                                                }));
-                                        }
-                                    });
-                            } else {
-                                callback([{error: "notext"}], null);
-                            }
-                        }
-                    });
-
-                break;
-            }
-            default: {
-                break;
-            }
         }
     }
-
-    /*static formatIndexQuery(indexName: string, ...predicates: { name?: string, value?: string }[]) {
-        let query = `from index '${indexName}'`;
-        if (predicates && predicates.length) {
-            query = predicates.reduce((result, field) => {
-                return `${result} where ${field.name} = '${field.value}'`;
-            }, query);
-        }
-
-        return query;
-    }*/
 }
 
 export = queryCompleter;
