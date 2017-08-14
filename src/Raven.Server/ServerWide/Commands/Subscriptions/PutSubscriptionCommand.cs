@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
@@ -56,7 +57,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (InitialChangeVector == Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
+                        if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(InitialChangeVector , 
+                            out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange)
                         {
                             if (receivedSubscriptionState.Modifications == null)
                                 receivedSubscriptionState.Modifications = new DynamicJsonValue();

@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Client.ServerWide.Operations;
@@ -100,6 +101,20 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+                if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(
+                    options.ChangeVector, 
+                    out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorSpecialValue))
+                {
+                    switch (changeVectorSpecialValue)
+                    {
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.BeginningOfTime:
+                                options.ChangeVector = null;
+                                break;
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.LastDocument:
+                                options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, options.Criteria.Collection);
+                                break;
+                    }
+                }
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled);
