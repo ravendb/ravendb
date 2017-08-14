@@ -170,8 +170,7 @@ class aceEditorBindingHandler {
         const aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
-        // TODO: aceEditor.setOption("enableSnippets", true);
-        // TODO: aceEditor.setOption("enableLiveAutocompletion", true);
+        // aceEditor.setOption("enableLiveAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
@@ -216,22 +215,14 @@ class aceEditorBindingHandler {
             const typeName = "query";
             aceEditor.setOption("editorType", typeName);
             if (!!langTools) {
-                if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completer: completer });
+                if (!aceEditorBindingHandler.customCompleters.find(x => x.editorType === typeName)) {
+                    aceEditorBindingHandler.customCompleters.push({editorType: typeName, completer: completer});
                 }
-                if (!!(<any>aceEditor).completers) {
-                    let completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
-                    if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
-                        langTools.addCompleter({
-                            moduleId: "aceEditoBindingHandler",
-                            getCompletions: aceEditorBindingHandler.autoCompleteHub,
-                            identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
-                        });
-                    }
-                }
-                else {
-                    langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
-                }
+                langTools.setCompleters([{
+                    moduleId: "aceEditoBindingHandler",
+                    getCompletions: aceEditorBindingHandler.autoCompleteHub,
+                    identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
+                }]);
             }
         }
 

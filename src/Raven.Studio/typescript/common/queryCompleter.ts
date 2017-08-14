@@ -51,6 +51,8 @@ class queryCompleter {
                 }
             }
         }
+        
+        return [null, null];
     }
 
     private getIndexFields(session: AceAjax.IEditSession): JQueryPromise<string[]> {
@@ -95,6 +97,10 @@ class queryCompleter {
 
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, pos.row, pos.column);
         do {
+            if ((<any>iterator).$tokenIndex < 0) {
+                text = "__new_line";
+                continue;
+            }
             const token = iterator.getCurrentToken();
             if (!token) {
                 break;
@@ -145,6 +151,12 @@ class queryCompleter {
                 return {name: field, value: field, score: this.defaultScore, meta: "field"};
             })));
     }
+    
+    private completeKeywords(keywords: [string, number][], callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
+        callback(null, keywords.map(([keyword, score]) => {
+            return {name: keyword, value: keyword, score: score, meta: "keyword"};
+        }));
+    }
 
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
@@ -153,9 +165,6 @@ class queryCompleter {
              callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
 
         const [lastKeyword, operator, identifier, text, paren] = this.getLastKeyword(session, pos);
-        if (!lastKeyword)
-            return;
-
         switch (lastKeyword) {
             case "from": {
                 if (identifier && text) {
@@ -165,6 +174,15 @@ class queryCompleter {
                         return;
                     }
 
+                    const keywords: [string, number][] = [
+                        ["order by", 1],
+                        ["where", 0]
+                    ];
+                    const [indexName, isStaticIndex] = this.getIndexName(session);
+                    if(isStaticIndex){
+                        keywords.push(["group by", 2])
+                    }
+                    this.completeKeywords(keywords, callback);
                     return;
                 }
 
@@ -279,6 +297,16 @@ class queryCompleter {
                 this.completeFields(session, callback);
                 break;
             }
+            case null:
+                this.completeKeywords([
+                    ["from", 1],
+                    ["from index", 1],
+                    ["select", 0]
+                    ], callback);
+                break;
+            default: 
+                debugger
+                break;
         }
     }
 }
