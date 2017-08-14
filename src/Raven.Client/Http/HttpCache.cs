@@ -38,6 +38,7 @@ namespace Raven.Client.Http
             public DateTime LastServerUpdate;
             public int Usages;
             public int Utilization;
+            public int Generation;
             public AllocatedMemoryData Allocation;
             public HttpCache Cache;
 
@@ -55,8 +56,11 @@ namespace Raven.Client.Http
                 if (Interlocked.CompareExchange(ref Usages, -(1000 * 1000), 0) != 0)
                     return;
 
-                Cache._unmanagedBuffersPool.Return(Allocation);
-                Interlocked.Add(ref Cache._totalSize, -Size);
+                if (Allocation != null)
+                {
+                    Cache._unmanagedBuffersPool.Return(Allocation);
+                    Interlocked.Add(ref Cache._totalSize, -Size);
+                }
                 Allocation = null;
                 GC.SuppressFinalize(this);
 
@@ -111,7 +115,8 @@ namespace Raven.Client.Http
                 Size = result.Size,
                 Allocation = mem,
                 LastServerUpdate = SystemTime.UtcNow,
-                Cache = this
+                Cache = this,
+                Generation = Generation
             };
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
@@ -119,6 +124,28 @@ namespace Raven.Client.Http
                 return httpCacheItem;
             });
         }
+
+        public void SetNotFound(string url)
+        {
+            var httpCacheItem = new HttpCacheItem
+            {
+                Usages = 1,
+                ChangeVector = "404 Response",
+                Ptr = null,
+                Size = 0,
+                Allocation = null,
+                LastServerUpdate = SystemTime.UtcNow,
+                Cache = this,
+                Generation = Generation
+            };
+            _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
+            {
+                oldItem.Release();
+                return httpCacheItem;
+            });
+        }
+
+        public int Generation;
 
         private void FreeSpace()
         {
@@ -186,6 +213,8 @@ namespace Raven.Client.Http
                 }
             }
 
+            public bool MightHaveBeenModified => Item.Generation != Item.Cache.Generation;
+
             public void NotModified()
             {
                 if (Item != null)
@@ -216,7 +245,7 @@ namespace Raven.Client.Http
                         Item = item
                     };
                     changeVector = item.ChangeVector;
-                    obj = new BlittableJsonReaderObject(item.Ptr, item.Size, context);
+                    obj = item.Ptr != null ? new BlittableJsonReaderObject(item.Ptr, item.Size, context) : null;
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Url returned from the cache with etag: {changeVector}. {url}.");
                     return releaser;

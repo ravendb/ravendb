@@ -53,11 +53,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_6886())
+                using (var test = new SlowTests.Server.Documents.Notifications.ChangesTests())
                 {
                     try
                     {
-                        test.Cluster_identity_for_multiple_documents_on_different_nodes_should_work().Wait();
+                        test.CanGetNotificationAboutSideBySideIndexReplacement().Wait();
                     }
                     catch (Exception e)
                     {

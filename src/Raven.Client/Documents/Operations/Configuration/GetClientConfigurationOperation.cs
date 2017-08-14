@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public class Result
         {
-            public long RaftCommandIndex { get; set; }
+            public long Etag { get; set; }
 
             public ClientConfiguration Configuration { get; set; }
         }

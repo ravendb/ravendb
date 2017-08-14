@@ -42,12 +42,12 @@ namespace Raven.Client.Http
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
-        protected ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
+        private readonly ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
 
         public X509Certificate2 Certificate { get; }
         private readonly string _databaseName;
 
-        protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
 
         protected readonly ReadBalanceBehavior _readBalanceBehavior;
@@ -67,6 +67,8 @@ namespace Raven.Client.Http
         protected NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
+
+        public long NumberOfServerRequests;
 
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url
@@ -106,16 +108,10 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        public event Action<string> SucceededRequest;
         public event Action<string, Exception> FailedRequest;
         public event Action<Topology> TopologyUpdated;
 
-        protected void OnSucceededRequest(string url)
-        {
-            SucceededRequest?.Invoke(url);
-        }
-
-        protected void OnFailedRequest(string url, Exception e)
+        private void OnFailedRequest(string url, Exception e)
         {
             FailedRequest?.Invoke(url, e);
         }
@@ -143,11 +139,6 @@ namespace Raven.Client.Http
             }
 
             _httpClient = lazyClient.Value;
-        }
-
-        public void ForceUpdateTopology(Topology topology)
-        {
-            _nodeSelector.OnUpdateTopology(topology, true);
         }
 
         public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -216,8 +207,8 @@ namespace Raven.Client.Http
                         return;
 
                     Conventions.UpdateFrom(result.Configuration);
-                    ClientConfigurationEtag = result.RaftCommandIndex;
-                    ClientConfigurationChanged?.Invoke(this, (result.RaftCommandIndex, result.Configuration));
+                    ClientConfigurationEtag = result.Etag;
+                    ClientConfigurationChanged?.Invoke(this, (result.Etag, result.Configuration));
                 }
             }
             finally
@@ -527,7 +518,10 @@ namespace Raven.Client.Http
                 if (cachedChangeVector != null)
                 {
                     var aggressiveCacheOptions = AggressiveCaching.Value;
-                    if (aggressiveCacheOptions != null && cachedItem.Age < aggressiveCacheOptions.Duration)
+                    if (aggressiveCacheOptions != null && 
+                        cachedItem.Age < aggressiveCacheOptions.Duration && 
+                        cachedItem.MightHaveBeenModified == false && 
+                        command.AggressiveCacheAllowed)
                     {
                         command.SetResponse(cachedValue, fromCache: true);
                         return;
@@ -547,13 +541,13 @@ namespace Raven.Client.Http
                 var responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
+                    Interlocked.Increment(ref NumberOfServerRequests);
                     var timeout = command.Timeout ?? _defaultTimeout;
                     if (timeout.HasValue)
                     {
                         if (timeout > GlobalHttpClientTimeout)
                             ThrowTimeoutTooLarge(timeout);
-
-
+                        
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(timeout.Value);
@@ -645,8 +639,6 @@ namespace Raven.Client.Http
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
 
-                    OnSucceededRequest(url);
-
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                     _lastReturnedResponse = DateTime.UtcNow;
                 }
@@ -711,6 +703,7 @@ namespace Raven.Client.Http
                 var request = CreateRequest(nodes[i], command, out var _);
                 try
                 {
+                    Interlocked.Increment(ref NumberOfServerRequests);
                     tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
                     {
                         try
@@ -792,6 +785,7 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
+                    Cache.SetNotFound(url);
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)

@@ -56,7 +56,8 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private long _lastTopologyIndex;
+        private long _lastTopologyIndex = -1;
+        private long _lastClientConfigurationIndex = -1;
 
         public void ResetIdleTime()
         {
@@ -259,7 +260,7 @@ namespace Raven.Server.Documents
 
                 SubscriptionStorage.Initialize();
 
-                NotifyFeaturesAboutStateChange(record, index);
+                StateChanged(index);
             }
             catch (Exception)
             {
@@ -529,12 +530,16 @@ namespace Raven.Server.Documents
         public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
         {
             // TODO :: more storage environments ?
-            yield return
-                new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                    DocumentsStorage.Environment);
+            var documentsStorage = DocumentsStorage;
+            if (documentsStorage != null)
+                yield return
+                    new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+                        documentsStorage.Environment);
+            var configurationStorage = ConfigurationStorage;
+            if(configurationStorage != null)
             yield return
                 new StorageEnvironmentWithType("Configuration",
-                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
+                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
 
             //check for null to prevent NRE when disposing the DocumentDatabase
             foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
@@ -642,14 +647,7 @@ namespace Raven.Server.Documents
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
-                DatabaseRecord record;
-                using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    record = _serverStore.Cluster.ReadDatabase(context, Name);
-                }
-
-                NotifyFeaturesAboutValueChange(record);
+                StateChanged(index);
             }
             catch
             {
@@ -680,6 +678,9 @@ namespace Raven.Server.Documents
 
                 if (_lastTopologyIndex < record.Topology.Stamp.Index)
                     _lastTopologyIndex = record.Topology.Stamp.Index;
+
+                ClientConfiguration = record.Client;
+                _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 
                 NotifyFeaturesAboutStateChange(record, index);
             }
@@ -728,7 +729,7 @@ namespace Raven.Server.Documents
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);
-
+                    SubscriptionStorage?.HandleDatabaseValueChange(record);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
                 }
@@ -739,11 +740,6 @@ namespace Raven.Server.Documents
                     throw;
                 }
             }
-        }
-
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
-        {
-            SubscriptionStorage?.HandleDatabaseValueChange(record);
         }
 
         public void RefreshFeatures()
@@ -759,7 +755,6 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
             NotifyFeaturesAboutStateChange(record, index);
-            NotifyFeaturesAboutValueChange(record);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
@@ -791,10 +786,9 @@ namespace Raven.Server.Documents
 
         public bool HasClientConfigurationChanged(long index)
         {
-            if (index < 0)
-                return false;
+            var actual = Hashing.Combine(_lastClientConfigurationIndex, ServerStore.LastClientConfigurationIndex);
 
-            return LastDatabaseRecordIndex > index || ServerStore.HasClientConfigurationChanged(index);
+            return index != actual;
         }
     }
 

@@ -33,7 +33,6 @@ namespace Raven.Client.Http
         public Dictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
-        public int AuthenticationRetries;
         public abstract bool IsReadRequest { get; }
 
         public HttpStatusCode StatusCode;
@@ -41,6 +40,7 @@ namespace Raven.Client.Http
         public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }
+        public bool AggressiveCacheAllowed { get; protected set; }
 
         protected RavenCommand()
         {

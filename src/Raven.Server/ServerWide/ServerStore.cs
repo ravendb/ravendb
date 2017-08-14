@@ -82,7 +82,7 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        private long _lastClientConfigurationIndex;
+        public long LastClientConfigurationIndex { get; private set; }
 
         public long LastLicenseIndex { get; private set; }
 
@@ -414,7 +414,7 @@ namespace Raven.Server.ServerWide
                 }
 
                 if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
-                    _lastClientConfigurationIndex = clientConfigEtag;
+                    LastClientConfigurationIndex = clientConfigEtag;
 
                 if (_engine.StateMachine.Read(context, LicenseStoargeKey, out long licenseEtag) != null)
                     LastLicenseIndex = licenseEtag;
@@ -533,7 +533,7 @@ namespace Raven.Server.ServerWide
             switch (t.Type)
             {
                 case nameof(PutClientConfigurationCommand):
-                    _lastClientConfigurationIndex = t.Index;
+                    LastClientConfigurationIndex = t.Index;
                     break;
                 case nameof(PutLicenseCommand):
                 case nameof(DeactivateLicenseCommand):
@@ -1443,14 +1443,6 @@ namespace Raven.Server.ServerWide
             };
             return json;
 
-        }
-
-        public bool HasClientConfigurationChanged(long index)
-        {
-            if (index < 0)
-                return false;
-
-            return _lastClientConfigurationIndex > index;
         }
 
         public bool HasLicenseChanged(long index)

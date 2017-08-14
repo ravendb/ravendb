@@ -5,6 +5,8 @@ namespace Raven.Client.ServerWide
 {
     public class ClientConfiguration
     {
+        public long Etag { get; set; }
+
         public bool Disabled { get; set; }
 
         public int? MaxNumberOfRequestsPerSession { get; set; }
@@ -18,6 +20,7 @@ namespace Raven.Client.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(Disabled)] = Disabled,
+                [nameof(Etag)] = Etag,
                 [nameof(MaxNumberOfRequestsPerSession)] = MaxNumberOfRequestsPerSession,
                 [nameof(PrettifyGeneratedLinqExpressions)] = PrettifyGeneratedLinqExpressions,
                 [nameof(ReadBalanceBehavior)] = ReadBalanceBehavior

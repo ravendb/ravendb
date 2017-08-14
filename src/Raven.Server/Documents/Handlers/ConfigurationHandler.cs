@@ -6,6 +6,7 @@ using Raven.Client.ServerWide;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
@@ -17,18 +18,19 @@ namespace Raven.Server.Documents.Handlers
         {
             var inherit = GetBoolValueQueryString("inherit", required: false) ?? true;
 
-            var configuration = GetDatabaseClientConfiguration(out long index);
+            var configuration = Database.ClientConfiguration;
+            long etag = configuration?.Etag ?? -1;
+            var serverConfiguration = GetServerClientConfiguration(out long serverIndex);
+            etag = Hashing.Combine(etag, serverConfiguration?.Etag ?? -2);
             if (inherit)
             {
-                if (configuration == null)
-                    configuration = GetServerClientConfiguration(out index);
-                else if (configuration.Disabled)
+            
+                if (configuration == null || configuration.Disabled)
                 {
-                    var serverConfiguration = GetServerClientConfiguration(out long serverIndex);
-                    if (serverConfiguration != null && serverConfiguration.Disabled == false)
+                    if (serverConfiguration != null)
                     {
                         configuration = serverConfiguration;
-                        index = serverIndex;
+                        etag = serverIndex;
                     }
                 }
             }
@@ -47,8 +49,8 @@ namespace Raven.Server.Documents.Handlers
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.RaftCommandIndex));
-                    writer.WriteInteger(index);
+                    writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.Etag));
+                    writer.WriteInteger(etag);
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.Configuration));
@@ -73,12 +75,6 @@ namespace Raven.Server.Documents.Handlers
                         : null;
                 }
             }
-        }
-
-        private ClientConfiguration GetDatabaseClientConfiguration(out long index)
-        {
-            index = Database.LastDatabaseRecordIndex;
-            return Database.ClientConfiguration;
         }
     }
 }
