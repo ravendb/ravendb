@@ -85,17 +85,32 @@ class queryCompleter {
         }
     }
 
-    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string] {
-
+    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string, number] {
+        let currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
+        // If token is space, use the previous token
+        if (currentToken && currentToken.start > 0 && /^\s+$/g.test(currentToken.value)) {
+            currentToken = session.getTokenAt(pos.row, currentToken.start - 1);
+        }
+        
         // let tokensAfterKeyword: AceAjax.TokenInfo[] = []; // TODO: Can be deleted
         let identifier: string;
         let text: string;
         let operator: string;
+        let paren = 0;
         for (let row = 0; row <= pos.row; row++) {
             let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
 
             for (let i = lineTokens.length - 1; i >= 0; i--) {
                 const token = lineTokens[i];
+                
+                if (token.start) {
+                    if (token.start >= pos.column) {
+                        continue;
+                    }
+                } else if (currentToken && token.value !== currentToken.value) {
+                    continue;
+                }
+                
                 switch (token.type) {
                     case "keyword":
                         let keyword = token.value.toLowerCase();
@@ -105,7 +120,7 @@ class queryCompleter {
                             keyword === "or")
                             continue;
 
-                        return [keyword, operator, identifier, text];
+                        return [keyword, operator, identifier, text, paren];
 
                     case "keyword.operator":
                         operator = token.value;
@@ -116,6 +131,12 @@ class queryCompleter {
                     case "string":
                         const indexName = token.value.substr(1, token.value.length - 2);
                         identifier = indexName;
+                        break;
+                    case "paren.lparen":
+                        paren++;
+                        break;
+                    case "paren.rparen":
+                        paren--;
                         break;
                     case "text":
                         if  (!identifier) {
@@ -129,7 +150,7 @@ class queryCompleter {
             }
         }
         
-        return [null, null, null, null];
+        return [null, null, null, null, null];
     }
 
     complete(editor: AceAjax.Editor,
@@ -138,21 +159,23 @@ class queryCompleter {
              prefix: string,
              callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
 
-        let currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
-        // If token is space, use the previous token
-        if (currentToken && currentToken.start > 0 && /^\s+$/g.test(currentToken.value)) {
-            currentToken = session.getTokenAt(pos.row, currentToken.start - 1);
-        }
-
-        const [lastKeyword, operator, identifier, text] = this.getLastKeyword(session, pos);
+        const [lastKeyword, operator, identifier, text, paren] = this.getLastKeyword(session, pos);
         if (!lastKeyword)
             return;
 
         switch (lastKeyword) {
             case "from": {
-                 if (identifier && text) { // collection name already specified
-                     return;
-                 }
+                if (identifier && text) {
+                    if (paren > 0) {
+                        this.getIndexFields(session)
+                            .done((indexFields) => callback(null, indexFields.map(field => {
+                                return {name: field, value: field, score: 10, meta: "field"};
+                            })));
+                        return;
+                    }
+
+                    return;
+                }
 
                 if (!prefix ||
                     prefix.length === 0 ||
@@ -174,7 +197,7 @@ class queryCompleter {
                 if (identifier && text) { // index name already specified
                     return;
                 }
-                
+
                 callback(null,
                     this.indexes().map(index => {
                         const name = `'${index.Name}'`;
@@ -184,6 +207,12 @@ class queryCompleter {
             }
             case "select":
             case "by": // group by, order by
+                this.getIndexFields(session)
+                    .done((indexFields) => callback(null, indexFields.map(field => {
+                        return {name: field, value: field, score: 10, meta: "field"};
+                    })));
+                break;
+                
             case "where": {
                 if (operator === "=") {
                     // first, calculate and validate the column name
