@@ -612,7 +612,7 @@ namespace Raven.Server
                                         $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+                            bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
 
                             using (var writer = new BlittableJsonTextWriter(context, stream))

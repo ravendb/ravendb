@@ -325,12 +325,13 @@ namespace Raven.Client.Documents.Subscriptions
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
-                var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+                var serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     DatabaseName = databaseName,
                     OperationVersion = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Subscription]
-                }));
+                });
+                var header = Encodings.Utf8.GetBytes(serializeObject);
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
 

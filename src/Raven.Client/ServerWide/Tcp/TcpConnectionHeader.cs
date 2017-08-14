@@ -23,10 +23,10 @@ namespace Raven.Client.ServerWide.Tcp
 
         public static readonly Dictionary<OperationTypes, int> TcpVersions = new Dictionary<OperationTypes, int>
         {
-            {OperationTypes.Cluster, 1},
-            {OperationTypes.Heartbeats, 1},
-            {OperationTypes.Replication, 1},
-            {OperationTypes.Subscription, 1}
+            {OperationTypes.Cluster, 10},
+            {OperationTypes.Heartbeats, 20},
+            {OperationTypes.Replication, 30},
+            {OperationTypes.Subscription, 40}
         };
     }
 }

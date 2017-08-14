@@ -274,8 +274,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                     writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                    writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
                     writer.WriteInteger(TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Heartbeats]);
+                    writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
                 }

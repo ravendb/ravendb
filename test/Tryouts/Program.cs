@@ -17,47 +17,15 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            //using (var store = new DocumentStore
-            //{
-            //    Urls = new string[] { "http://192.168.0.100:8080" },
-            //    Database = "Demo"
-            //}.Initialize())
-            //{
-            //    store.SetRequestsTimeout(TimeSpan.FromSeconds(1));
-
-            //    while (true)
-            //    {
-            //        using (var session = store.OpenSession())
-            //        {
-            //            session.Load<dynamic>("users/1");
-            //            Console.WriteLine("a");
-            //        }
-            //        Console.ReadLine();
-            //    }
-
-            //    //var sub = store.Subscriptions.Open(new Raven.Client.Documents.Subscriptions.SubscriptionConnectionOptions(11));
-            //    //sub.Run(batch =>
-            //    //{
-            //    //    foreach (var item in batch.Items)
-            //    //    {
-            //    //        Console.WriteLine(item.Id);
-            //    //    }
-            //    //}).Wait();
-            //}
-            RunTest();
-        }
-
-        private static void RunTest()
-        {
             for (int i = 0; i < 100; i++)
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Documents.Notifications.ChangesTests())
+                using (var test = new SlowTests.Server.Documents.ETL.Raven.RavenDB_6711_RavenEtl())
                 {
                     try
                     {
-                        test.CanGetNotificationAboutSideBySideIndexReplacement().Wait();
+                        test.Script_defined_for_all_documents_with_filtering_and_loads_to_the_same_collection_for_some_docs();
                     }
                     catch (Exception e)
                     {
