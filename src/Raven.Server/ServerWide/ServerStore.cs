@@ -82,7 +82,7 @@ namespace Raven.Server.ServerWide
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        public long LastClientConfigurationIndex { get; private set; }
+        public long LastClientConfigurationIndex { get; private set; } = -2;
 
         public long LastLicenseIndex { get; private set; }
 

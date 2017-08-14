@@ -35,15 +35,14 @@ namespace Raven.Server.Documents.Handlers
                 }
             }
 
-            if (configuration == null)
-            {
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                return Task.CompletedTask;
-            }
-
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
-                var clientConfigurationJson = context.ReadObject(configuration.ToJson(), Constants.Configuration.ClientId);
+                BlittableJsonReaderObject clientConfigurationJson = null;
+                if (configuration != null)
+                {
+                    var val = configuration.ToJson();
+                    clientConfigurationJson = context.ReadObject(val, Constants.Configuration.ClientId);
+                }
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -54,7 +53,14 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteComma();
 
                     writer.WritePropertyName(nameof(GetClientConfigurationOperation.Result.Configuration));
-                    writer.WriteObject(clientConfigurationJson);
+                    if (clientConfigurationJson != null)
+                    {
+                        writer.WriteObject(clientConfigurationJson);
+                    }
+                    else
+                    {
+                        writer.WriteNull();
+                    }
 
                     writer.WriteEndObject();
                 }

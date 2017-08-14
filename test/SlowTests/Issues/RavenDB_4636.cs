@@ -23,7 +23,7 @@ namespace SlowTests.Issues
                 var result = store.Admin.Send(new GetClientConfigurationOperation());
                 var serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
                 Assert.Null(serverResult);
-                Assert.Null(result);
+                Assert.Null(result.Configuration);
 
                 store.Admin.Server.Send(new PutServerWideClientConfigurationOperation(new ClientConfiguration { MaxNumberOfRequestsPerSession = 10 }));
 

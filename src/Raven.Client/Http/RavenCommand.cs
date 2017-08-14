@@ -45,6 +45,7 @@ namespace Raven.Client.Http
         protected RavenCommand()
         {
             ResponseType = RavenCommandResponseType.Object;
+            AggressiveCacheAllowed = true;
         }
 
         public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
