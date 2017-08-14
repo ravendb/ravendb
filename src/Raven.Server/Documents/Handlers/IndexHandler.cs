@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
