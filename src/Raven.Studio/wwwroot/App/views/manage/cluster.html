@@ -25,14 +25,16 @@
                                                 </a>
                                             </h3>
                                         </div>
-                                        <div data-bind="visible: $root.topology().leader() === tag()">
-                                            <i class="icon-crown text-warning" title="Leader"></i>
-                                        </div>
                                     </div>
                                 </div>
                                 <div class="node-type">
                                     <h5>TYPE</h5>
-                                    <h3><i data-bind="attr: { class: cssIcon, title: type }" ></i> <span data-bind="text: type"></span></h3>
+                                    <h3 data-bind="visible: $root.topology().leader() === tag()">
+                                        <i title="Leader" class="icon-node-leader"></i> <span>Leader</span>
+                                    </h3>
+                                    <h3 data-bind="visible: $root.topology().leader() !== tag()">
+                                        <i data-bind="attr: { class: cssIcon, title: type }" ></i> <span data-bind="text: type"></span>
+                                    </h3>
                                 </div>
                             </div>
                             <div class="address">
