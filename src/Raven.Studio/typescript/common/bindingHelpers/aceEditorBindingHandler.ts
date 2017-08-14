@@ -225,7 +225,7 @@ class aceEditorBindingHandler {
                         langTools.addCompleter({
                             moduleId: "aceEditoBindingHandler",
                             getCompletions: aceEditorBindingHandler.autoCompleteHub,
-                            identifierRegexps: [/[a-zA-Z_0-9.\$\-\u00A2-\uFFFF]/]
+                            identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
                         });
                     }
                 }
