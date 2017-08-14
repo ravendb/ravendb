@@ -14,7 +14,7 @@ namespace SlowTests.Bugs
         {
             var store = GetDocumentStore();
             store.DisableAggressiveCaching();
-            
+
             using (var session = store.OpenSession())
             {
                 session.Store(new User());
@@ -47,7 +47,7 @@ namespace SlowTests.Bugs
 
         [Fact]
         public void CanAggressivelyCacheLoads()
-        {     
+        {
             using (var store = InitAggressiveCaching())
             {
                 var requestExecutor = store.GetRequestExecutor();
@@ -118,13 +118,16 @@ namespace SlowTests.Bugs
             {
                 var requestExecutor = store.GetRequestExecutor();
                 var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
-                using (var session = store.OpenSession())
+                for (var i = 0; i < 5; i++)
                 {
-                    using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                    using (var session = store.OpenSession())
                     {
-                        session.Query<User>()
-                            .Customize(x => x.WaitForNonStaleResults())
-                            .ToList();
+                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        {
+                            session.Query<User>()
+                                .Customize(x => x.WaitForNonStaleResults())
+                                .ToList();
+                        }
                     }
                 }
                 Assert.NotEqual(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
