@@ -412,7 +412,7 @@ class editDocument extends viewModelBase {
 
     private defaultNameForNewDocument(collectionForNewDocument: string) {
 
-        if (collectionForNewDocument === "@empty") {
+        if (!collectionForNewDocument ||  collectionForNewDocument === "@empty") {
             return "";
         }
 
@@ -575,7 +575,7 @@ class editDocument extends viewModelBase {
             if (savedDocumentDto.hasOwnProperty(prop)) {
                 if (prop === "Type")
                     continue;
-                if (prop === "@collection" && !savedDocumentDto["@collection"])
+                if (prop === "@collection" && savedDocumentDto["@collection"] === "@empty")
                     continue;
                 metadata[prop] = (savedDocumentDto as any)[prop];
             }
