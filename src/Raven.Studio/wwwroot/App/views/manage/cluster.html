@@ -45,20 +45,35 @@
                             <div class="actions">
                                 <button class="btn btn-default" title="Promote watcher to become member/promotable" 
                                         data-bind="click: _.partial($parent.promote, $data), css: { 'btn-spinner': _.includes($root.spinners.promote(), tag()) }, disable: _.includes($root.spinners.promote(), tag()), visible: createCanBePromotedObservable($root.topology)" >
-                                    <i class="icon-arrow-filled-up"></i> <span>Promote</span>
+                                    <i class="icon-promote"></i> <span>Promote</span>
                                 </button>
                                 <button class="btn btn-default" title="Demote cluster node to watcher" 
                                         data-bind="click: _.partial($parent.demote, $data), css: { 'btn-spinner': _.includes($root.spinners.demote(), tag()) }, disable: _.includes($root.spinners.demote(), tag()), visible: createCanBeDemotedObservable($root.topology)" >
-                                    <i class="icon-arrow-filled-down"></i> <span>Demote</span>
+                                    <i class="icon-demote"></i> <span>Demote</span>
                                 </button>
-                                <button class="btn btn-default" 
-                                        data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
-                                    <i class="icon-stepdown"></i> <span>Step down</span>
-                                </button>
-                                <button class="btn btn-default"   title="Force stop waiting for leader"
-                                        data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'btn-spinner': $root.spinners.forceTimeout() }, disable: $root.spinners.forceTimeout(), visible: $root.topology().nodeTag() === tag()" >
-                                    <i class="icon-waiting"></i>
-                                </button>
+
+                                <div class="btn-group">
+                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" 
+                                        data-bind="enable: $root.topology().leader() === tag() || $root.topology().nodeTag() === tag()">
+                                        <span>Operations</span>
+                                        <span class="caret"></span>
+                                        <span class="sr-only">Toggle Dropdown</span>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li>
+                                            <a href="#" data-bind="click: _.partial($parent.stepDown, $data), visible: $root.topology().leader() === tag(), css: { 'btn-spinner': $root.spinners.stepdown }, disable: $root.spinners.stepdown">
+                                                <i class="icon-stepdown"></i> <span>Step down</span>
+                                            </a>
+                                        </li>
+                                        <li>
+                                            <a href="#" data-bind="click: _.partial($parent.forceTimeout, $data), css: { 'btn-spinner': $root.spinners.forceTimeout() }, disable: $root.spinners.forceTimeout(), visible: $root.topology().nodeTag() === tag()">
+                                                <i class="icon-waiting"></i>
+                                                <span>Force timeout</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                               
                                 <button class="btn btn-danger" 
                                         data-bind="click: _.partial($parent.deleteNode, $data), enable: $root.canDeleteNodes() && !_.includes($root.spinners.delete(), tag()), css: { 'btn-spinner': _.includes($root.spinners.delete(), tag()) }" 
                                         title="Remove node from cluster">
