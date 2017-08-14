@@ -261,7 +261,7 @@ namespace Raven.Server.Web.System
                     waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
                 }
 
-                await Task.WhenAll(waitingTasks);
+                await Task.WhenAny(waitingTasks);
             }
             finally
             {
