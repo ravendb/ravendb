@@ -109,7 +109,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Id"] = subscriptionId
+                        ["Name"] = options.Name??subscriptionId.ToString()
                     });
                 }
             }
@@ -124,6 +124,39 @@ namespace Raven.Server.Documents.Handlers
 
             await NoContent();
         }
+
+        [RavenAction("/databases/*/subscriptions/SubscriptionState", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSubscriptionState()
+        {
+            var subscriptionName = GetStringQueryString("name", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (string.IsNullOrEmpty(subscriptionName))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var subscriptionState = Database
+                    .SubscriptionStorage
+                    .GetSubscriptionFromServerStore(subscriptionName);
+
+                
+                if (subscriptionState == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                context.Write(writer, subscriptionState.ToJson());
+
+                return Task.CompletedTask;
+            }
+        }
+
 
         [RavenAction("/databases/*/subscriptions/SubscriptionConnectionDetails", "GET", AuthorizationStatus.ValidUser)]
         public Task GetSubscriptionConnectionDetails()

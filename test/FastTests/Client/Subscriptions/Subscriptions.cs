@@ -21,15 +21,17 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria("People")
                 };  
-                var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                var subsName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 var subscriptionsConfig = await store.Subscriptions.GetSubscriptionsAsync(0, 10);
-
+                var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(subsName);
+                
                 Assert.Equal(1, subscriptionsConfig.Count);
                 Assert.Equal(subscriptionCreationParams.Criteria.Collection, subscriptionsConfig[0].Criteria.Collection);
                 Assert.Equal(subscriptionCreationParams.Criteria.Script, subscriptionsConfig[0].Criteria.Script);
                 Assert.Null(subscriptionsConfig[0].ChangeVector);
-                Assert.Equal(subsId, subscriptionsConfig[0].SubscriptionId);
+                Assert.Equal(subsName, subscriptionsConfig[0].SubscriptionName);
+                Assert.Equal(subscripitonState.SubscriptionId, subscriptionsConfig[0].SubscriptionId);
             }
         }
 

@@ -21,7 +21,7 @@ namespace Subscriptions.Benchmark
     public class SingleSubscriptionBenchmark : IDisposable
     {
         private int _batchSize;
-        private long _subscriptionId;
+        private string _subscriptionName;
         private readonly string _collectionName;
         private DocumentStore _store;
 
@@ -57,17 +57,17 @@ namespace Subscriptions.Benchmark
         {
             try
             {
-                if (_subscriptionId == 0)
+                if (string.IsNullOrEmpty(_subscriptionName) )
                 {
                     var subscriptionCreationParams = new SubscriptionCreationOptions
                     {
                         Criteria = new SubscriptionCriteria(_collectionName)
                     };
-                    _subscriptionId = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
+                    _subscriptionName = await _store.Subscriptions.CreateAsync(subscriptionCreationParams).ConfigureAwait(false);
                 }
 
 
-                using (var subscription = _store.Subscriptions.Open(new SubscriptionConnectionOptions(_subscriptionId)
+                using (var subscription = _store.Subscriptions.Open(new SubscriptionConnectionOptions(_subscriptionName)
                 {
                     Strategy = SubscriptionOpeningStrategy.WaitForFree
                 }))
