@@ -51,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
             public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes";
+                url = $"{node.Url}/databases/{node.Database}/admin/indexes";
 
                 var request = new HttpRequestMessage
                 {
