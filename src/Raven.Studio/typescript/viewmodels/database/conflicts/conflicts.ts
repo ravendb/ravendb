@@ -22,8 +22,11 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import changeVectorUtils = require("common/changeVectorUtils");
 
 class conflictItem {
+    
+    private static readonly dateFormat = "DD/MM/YYYY HH:mm:ss";
 
     originalValue = ko.observable<string>();
+    lastModified = ko.observable<string>();
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
     changeVector = ko.observable<changeVectorItem[]>();
@@ -33,6 +36,7 @@ class conflictItem {
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
             this.originalValue(json);
+            this.lastModified(moment.utc(dto.LastModified).local().format(conflictItem.dateFormat));
             this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
             this.deletedMarker(false);
             
