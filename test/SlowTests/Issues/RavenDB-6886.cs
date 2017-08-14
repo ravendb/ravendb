@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                 {
                     //id ending with "/" should trigger cluster identity id so
                     //after tx commit, the id would be "users/1"
-                    session.Store(new User { Name = "John Dow" }, "users/");
+                    session.Store(new User { Name = "John Dow" }, "users|");
                     session.SaveChanges();
                 }
 
@@ -88,7 +88,7 @@ namespace SlowTests.Issues
                         //after tx commit, the id would be "users/1"
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "John Dow"}, "users/");
+                            session.Store(new User {Name = "John Dow"}, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -100,7 +100,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "Jane Dow"}, "users/");
+                            session.Store(new User {Name = "Jane Dow"}, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -112,7 +112,7 @@ namespace SlowTests.Issues
                     {
                         for (int i = 0; i < docsInEachNode; i++)
                         {
-                            session.Store(new User {Name = "Jake Dow"}, "users/");
+                            session.Store(new User {Name = "Jake Dow"}, "users|");
                         }
                         session.SaveChanges();
                     }
@@ -183,19 +183,19 @@ namespace SlowTests.Issues
                 {
                     //id ending with "/" should trigger cluster identity id so
                     //after tx commit, the id would be "users/1"
-                    session.Store(new User { Name = "John Dow" }, "users/");
+                    session.Store(new User { Name = "John Dow" }, "users|");
                     session.SaveChanges();
                 }
 
                 using (var session = followerA.OpenSession())
                 {
-                    session.Store(new User { Name = "Jane Dow" }, "users/");
+                    session.Store(new User { Name = "Jane Dow" }, "users|");
                     session.SaveChanges();
                 }
 
                 using (var session = followerB.OpenSession())
                 {
-                    session.Store(new User { Name = "Jake Dow" }, "users/");
+                    session.Store(new User { Name = "Jake Dow" }, "users|");
                     session.SaveChanges();
                 }
 
@@ -268,7 +268,7 @@ namespace SlowTests.Issues
                             {
                                 //id ending with "/" should trigger cluster identity id so
                                 //after tx commit, the id would be "users/1"
-                                session.Store(new User {Name = "John Dow"}, "users/");
+                                session.Store(new User {Name = "John Dow"}, "users|");
                                 session.SaveChanges();
                             }
                         },
@@ -276,7 +276,7 @@ namespace SlowTests.Issues
                         {
                             using (var session = followerA.OpenSession())
                             {
-                                session.Store(new User {Name = "Jane Dow"}, "users/");
+                                session.Store(new User {Name = "Jane Dow"}, "users|");
                                 session.SaveChanges();
                             }
                         },
@@ -284,7 +284,7 @@ namespace SlowTests.Issues
                         {
                             using (var session = followerB.OpenSession())
                             {
-                                session.Store(new User {Name = "Jake Dow"}, "users/");
+                                session.Store(new User {Name = "Jake Dow"}, "users|");
                                 session.SaveChanges();
                             }
                         });
@@ -340,17 +340,17 @@ namespace SlowTests.Issues
                 {
                     //id ending with "/" should trigger cluster identity id so
                     //after tx commit, the id would be "users/1"
-                    session.Store(new User { Name = "John Dow" }, "users/");
+                    session.Store(new User { Name = "John Dow" }, "users|");
                     session.SaveChanges();
                 }
                 using (var session = leaderStore.OpenSession())
                 {
-                    session.Store(new User { Name = "Jane Dow" }, "users/");
+                    session.Store(new User { Name = "Jane Dow" }, "users|");
                     session.SaveChanges();
                 }
                 using (var session = leaderStore.OpenSession())
                 {
-                    session.Store(new User { Name = "Jake Dow" }, "users/");
+                    session.Store(new User { Name = "Jake Dow" }, "users|");
                     session.SaveChanges();
                 }
 

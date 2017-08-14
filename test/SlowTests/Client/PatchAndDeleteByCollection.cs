@@ -19,7 +19,7 @@ namespace SlowTests.Client
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        x.Store(new User { }, "users/");
+                        x.Store(new User { }, "users|");
                     }
                     x.SaveChanges();
                 }
@@ -42,7 +42,7 @@ namespace SlowTests.Client
                 {
                     for (int i = 0; i < 100; i++)
                     {
-                        x.Store(new User { }, "users/");
+                        x.Store(new User { }, "users|");
                     }
                     x.SaveChanges();
                 }

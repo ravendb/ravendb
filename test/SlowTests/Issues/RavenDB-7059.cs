@@ -42,9 +42,9 @@ namespace SlowTests.Issues
                 await CreateDatabasesInCluster(clusterSize, databaseName, leaderStore);
                 using (var session = leaderStore.OpenSession())
                 {
-                    session.Store(new User { Name = "John Dow" }, "users/");
-                    session.Store(new User { Name = "Jake Dow" }, "users/");
-                    session.Store(new User { Name = "Jessie Dow" }, "users/");
+                    session.Store(new User { Name = "John Dow" }, "users|");
+                    session.Store(new User { Name = "Jake Dow" }, "users|");
+                    session.Store(new User { Name = "Jessie Dow" }, "users|");
                     session.SaveChanges();                   
                 }
 
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
                 
                 using (var session = leaderStore.OpenSession())
                 {
-                    session.Store(new User { Name = "Julie Dow" }, "users/");
+                    session.Store(new User { Name = "Julie Dow" }, "users|");
                     session.SaveChanges();                   
                 }
 

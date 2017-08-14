@@ -192,7 +192,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument('posts|',
+                            var postId = PutDocument('posts/',
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;
@@ -307,7 +307,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var postId = PutDocument('posts|',
+                            var postId = PutDocument('posts/',
                                 { 'Title' : 'unknown post id' }
                             );
                             this.Title = postId;

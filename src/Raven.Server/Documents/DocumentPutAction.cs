@@ -261,12 +261,12 @@ namespace Raven.Server.Documents
             {
                 // We use if instead of switch so the JIT will better inline this method
                 var lastChar = id[id.Length - 1];
-                if (lastChar == '/')
+                if (lastChar == '|')
                 {
                     ThrowInvalidDocumentId(id);
                 }
 
-                if (lastChar == '|')
+                if (lastChar == '/')
                 {
                     knownNewId = true;
                     id = _documentsStorage.Identities.AppendNumericValueToId(id, newEtag);
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents
 
         private static void ThrowInvalidDocumentId(string id)
         {
-            throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id +
+            throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 

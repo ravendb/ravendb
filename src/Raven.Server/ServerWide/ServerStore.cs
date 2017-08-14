@@ -1164,7 +1164,7 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (etag, id + result);
+            return (etag, id.Substring(0, id.Length -1) + '/' + result);
         }
 
         public License LoadLicense()

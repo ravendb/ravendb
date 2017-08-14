@@ -679,10 +679,14 @@ more responsive application.
                 DocumentsById.Add(documentInfo);
         }
 
-        protected virtual void AssertNoNonUniqueInstance(object entity, string id)
+        protected void AssertNoNonUniqueInstance(object entity, string id)
         {
             DocumentInfo info;
-            if (id == null || id.EndsWith("/") || DocumentsById.TryGetValue(id, out info) == false || ReferenceEquals(info.Entity, entity))
+            if (string.IsNullOrEmpty(id) || 
+                id[id.Length-1] == '|' ||
+                id[id.Length - 1] == '/' ||
+                DocumentsById.TryGetValue(id, out info) == false || 
+                ReferenceEquals(info.Entity, entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");

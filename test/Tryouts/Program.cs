@@ -53,11 +53,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new FastTests.Blittable.PartialParsingBugs())
+                using (var test = new SlowTests.Issues.RavenDB_6886())
                 {
                     try
                     {
-                        test.TestOneCharAtATime("{\"Neg1\":-9223372036854775808,\"Neg\":-6}");
+                        test.Cluster_identity_for_multiple_documents_on_different_nodes_should_work().Wait();
                     }
                     catch (Exception e)
                     {

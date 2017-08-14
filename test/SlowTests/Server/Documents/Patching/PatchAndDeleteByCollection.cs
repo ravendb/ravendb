@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.Patching
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        x.Store(new User { }, "users/");
+                        x.Store(new User { }, "users|");
                     }
                     x.SaveChanges();
                 }
