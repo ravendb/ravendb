@@ -103,7 +103,7 @@ namespace Raven.Server
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
 
-                            Console.WriteLine(RuntimeSettings.Describe());
+                            new RuntimeSettings(Console.Out).Print();
 
                             if (CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
