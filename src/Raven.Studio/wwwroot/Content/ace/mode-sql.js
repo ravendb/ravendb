@@ -39,13 +39,13 @@ var SqlHighlightRules = function() {
             end : "\\*/"
         }, {
             token : "string",           // " string
-            regex : '".*?"'
+            regex : '"[^"]*"?'
         }, {
             token : "string",           // ' string
-            regex : "'.*?'"
+            regex : "'[^']*'?"
         }, {
             token : "string",           // ` string (apache drill)
-            regex : "`.*?`"
+            regex : "`[^`]*`?"
         }, {
             token : "constant.numeric", // float
             regex : "[+-]?\\d+(?:(?:\\.\\d*)?(?:[eE][+-]?\\d+)?)?\\b"
