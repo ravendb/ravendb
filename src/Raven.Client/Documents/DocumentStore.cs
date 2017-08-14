@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents.BulkInsert;
@@ -17,6 +18,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Sparrow.Collections;
 
 namespace Raven.Client.Documents
 {
@@ -26,6 +28,8 @@ namespace Raven.Client.Documents
     public class DocumentStore : DocumentStoreBase
     {
         private readonly AtomicDictionary<IDatabaseChanges> _databaseChanges = new AtomicDictionary<IDatabaseChanges>(StringComparer.OrdinalIgnoreCase);
+
+        private ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>> _aggressiveCacheChanges = new ConcurrentDictionary<string, Lazy<EvictItemsFromCacheBasedOnChanges>>();
 
         private readonly ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges> _observeChangesAndEvictItemsFromCacheForDatabases = new ConcurrentDictionary<string, EvictItemsFromCacheBasedOnChanges>();
 
@@ -40,6 +44,7 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
+        private bool _aggressiveCachingUsed;
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -75,7 +80,8 @@ namespace Raven.Client.Documents
             var tasks = new List<Task>();
             foreach (var changes in _databaseChanges)
             {
-                using (changes.Value) { }
+                using (changes.Value)
+                { }
             }
 
             // try to wait until all the async disposables are completed
@@ -237,18 +243,13 @@ namespace Raven.Client.Documents
         /// queries that have been marked with WaitForNonStaleResults, we temporarily disable
         /// aggressive caching.
         /// </remarks>
-        public override IDisposable DisableAggressiveCaching()
+        public override IDisposable DisableAggressiveCaching(string database = null)
         {
-            //WIP
             AssertInitialized();
-            var re = GetRequestExecutor(Database);
-            if (re.AggressiveCaching.Value != null)
-            {
-                var old = re.AggressiveCaching.Value.Duration;
-                re.AggressiveCaching.Value.Duration = null;
-                return new DisposableAction(() => re.AggressiveCaching.Value.Duration = old);
-            }
-            return null;
+            var re = GetRequestExecutor(database ?? Database);
+            var old = re.AggressiveCaching.Value;
+            re.AggressiveCaching.Value = null;
+            return new DisposableAction(() => re.AggressiveCaching.Value = old);
         }
 
         /// <summary>
@@ -269,30 +270,40 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>
-        /// <param name="cacheDuration">Specify the aggressive cache duration</param>
         /// <remarks>
         /// Aggressive caching means that we will not check the server to see whether the response
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration)
+        public override IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null)
         {
-            throw new NotImplementedException("This feature is not yet implemented");
-
-            /*AssertInitialized();
-
-            if (cacheDuration.TotalSeconds < 1)
-                throw new ArgumentException("cacheDuration must be longer than a single second");
-
-            var old = jsonRequestFactory.AggressiveCacheDuration;
-            jsonRequestFactory.AggressiveCacheDuration = cacheDuration;
-
-            aggressiveCachingUsed = true;
-
-            return new DisposableAction(() =>
+            AssertInitialized();
+            database = database ?? Database;
+            if (_aggressiveCachingUsed == false)
             {
-                jsonRequestFactory.AggressiveCacheDuration = old;
-            });*/
+                ListenToChangesAndUpdateTheCache(database);
+            }
+            var re = GetRequestExecutor(database);
+            var old = re.AggressiveCaching.Value;
+            re.AggressiveCaching.Value = new AggressiveCacheOptions
+            {
+                Duration = cacheDuration
+            };
+            return new DisposableAction(() => re.AggressiveCaching.Value = old);
+        }
+
+        private void ListenToChangesAndUpdateTheCache(string database)
+        {
+            Debug.Assert(database != null);
+            // this is intentionally racy, most cases, we'll already 
+            // have this set once, so we won't need to do it again
+            _aggressiveCachingUsed = true;
+            if (_aggressiveCacheChanges.TryGetValue(database, out var lazy) == false)
+            {
+                lazy = _aggressiveCacheChanges.GetOrAdd(database, new Lazy<EvictItemsFromCacheBasedOnChanges>(
+                    () => new EvictItemsFromCacheBasedOnChanges(this, database)));
+            }
+            GC.KeepAlive(lazy.Value); // here we force it to be evaluated
         }
 
         private AsyncDocumentSession OpenAsyncSessionInternal(SessionOptions options)
@@ -335,8 +346,6 @@ namespace Raven.Client.Documents
         /// </summary>
         public override event EventHandler AfterDispose;
 
-        public Func<HttpMessageHandler> HttpMessageHandlerFactory { get; set; }
-
         public DatabaseSmuggler Smuggler => _smuggler ?? (_smuggler = new DatabaseSmuggler(this));
 
         public override AdminOperationExecutor Admin => _adminOperationExecutor ?? (_adminOperationExecutor = new AdminOperationExecutor(this));
@@ -346,21 +355,6 @@ namespace Raven.Client.Documents
         public override BulkInsertOperation BulkInsert(string database = null)
         {
             return new BulkInsertOperation(database ?? Database, this);
-        }
-
-        protected override void AfterSessionCreated(InMemoryDocumentSessionOperations session)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            /*if (Conventions.ShouldAggressiveCacheTrackChanges && aggressiveCachingUsed)
-            {
-                var databaseName = session.DatabaseName ?? Constants.SystemDatabase;
-                observeChangesAndEvictItemsFromCacheForDatabases.GetOrAdd(databaseName,
-                    _ => new EvictItemsFromCacheBasedOnChanges(databaseName,
-                        Changes(databaseName),
-                        jsonRequestFactory.ExpireItemsFromCache));
-            }
-
-            base.AfterSessionCreated(session);*/
         }
     }
 }

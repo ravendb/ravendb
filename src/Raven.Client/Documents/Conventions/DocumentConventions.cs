@@ -504,6 +504,7 @@ namespace Raven.Client.Documents.Conventions
                 if (_originalConfiguration == null)
                     _originalConfiguration = new ClientConfiguration
                     {
+                        Etag = -1,
                         MaxNumberOfRequestsPerSession = MaxNumberOfRequestsPerSession,
                         PrettifyGeneratedLinqExpressions = PrettifyGeneratedLinqExpressions,
                         ReadBalanceBehavior = ReadBalanceBehavior

@@ -24,30 +24,56 @@ namespace SlowTests.Bugs
             return store;
         }
 
-        [Fact(Skip = "Wait for http://issues.hibernatingrhinos.com/issue/RavenDB-6244")]
-        public void CanAggressivelyCacheLoads()
-        {     
+        [Fact]
+        public void CanAggressivelyCacheLoads_404()
+        {
             using (var store = InitAggressiveCaching())
             {
+                var requestExecutor = store.GetRequestExecutor();
+                var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
                 for (var i = 0; i < 5; i++)
                 {
                     using (var session = store.OpenSession())
                     {
                         using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
                         {
-                            session.Load<User>("users/1");
+                            session.Load<User>("users/not-there");
                         }
                     }
                 }
-                Assert.Equal(1, Server.Metrics.RequestsMeter.Count);
+                Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
             }
         }
 
-        [Fact(Skip = "Wait for http://issues.hibernatingrhinos.com/issue/RavenDB-6244")]
+        [Fact]
+        public void CanAggressivelyCacheLoads()
+        {     
+            using (var store = InitAggressiveCaching())
+            {
+                var requestExecutor = store.GetRequestExecutor();
+                var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
+                for (var i = 0; i < 5; i++)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
+                        {
+                            session.Load<User>("users/1-A");
+                        }
+                    }
+                }
+                Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
+            }
+        }
+
+        [Fact]
         public async Task CanAggressivelyCacheLoads_Async()
         {
             using (var store = InitAggressiveCaching())
             {
+                var requestExecutor = store.GetRequestExecutor();
+                var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
+
                 for (var i = 0; i < 5; i++)
                 {
                     using (var session = store.OpenAsyncSession())
@@ -58,16 +84,19 @@ namespace SlowTests.Bugs
                         }
                     }
                 }
-                Assert.Equal(1, Server.Metrics.RequestsMeter.Count);
+                Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
             }
         }
 
 
-        [Fact(Skip = "Wait for http://issues.hibernatingrhinos.com/issue/RavenDB-6244")]
+        [Fact]
         public void CanAggressivelyCacheQueries()
         {
             using (var store = InitAggressiveCaching())
             {
+                var requestExecutor = store.GetRequestExecutor();
+                var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
+
                 for (var i = 0; i < 5; i++)
                 {
                     using (var session = store.OpenSession())
@@ -78,16 +107,17 @@ namespace SlowTests.Bugs
                         }
                     }
                 }
-                Assert.Equal(1, Server.Metrics.RequestsMeter.Count);
-            }           
+                Assert.Equal(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
+            }
         }
 
-        // TODO: NOTE: I think this test is not complete, since the assertion here is exactly the same as in CanAggressivelyCacheQueries.
-        [Fact(Skip = "Wait for http://issues.hibernatingrhinos.com/issue/RavenDB-6244")]
+        [Fact]
         public void WaitForNonStaleResultsIgnoresAggressiveCaching()
         {
             using (var store = InitAggressiveCaching())
             {
+                var requestExecutor = store.GetRequestExecutor();
+                var oldNumOfRequests = requestExecutor.NumberOfServerRequests;
                 using (var session = store.OpenSession())
                 {
                     using (session.Advanced.DocumentStore.AggressivelyCacheFor(TimeSpan.FromMinutes(5)))
@@ -97,7 +127,7 @@ namespace SlowTests.Bugs
                             .ToList();
                     }
                 }
-                Assert.Equal(1, Server.Metrics.RequestsMeter.Count);
+                Assert.NotEqual(oldNumOfRequests + 1, requestExecutor.NumberOfServerRequests);
             }
         }
     }

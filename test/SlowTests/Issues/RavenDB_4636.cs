@@ -31,7 +31,6 @@ namespace SlowTests.Issues
                 serverResult = store.Admin.Server.Send(new GetServerWideClientConfigurationOperation());
                 Assert.NotNull(serverResult);
                 Assert.Equal(10, serverResult.MaxNumberOfRequestsPerSession.Value);
-                Assert.Equal(result.RaftCommandIndex, requestExecutor.ClientConfigurationEtag);
 
                 using (var session = store.OpenSession())
                 {

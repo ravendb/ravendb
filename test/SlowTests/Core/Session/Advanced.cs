@@ -421,7 +421,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact(Skip = "RavenDB-6244")]
+        [Fact]
         public void CanAggressivelyCacheFor()
         {
             using (var store = GetDocumentStore())
