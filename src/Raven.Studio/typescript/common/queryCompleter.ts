@@ -9,8 +9,10 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
 class queryCompleter {
+    private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private collectionsTracker: collectionsTracker;
     private indexFieldsCache = new Map<string, string[]>();
+    private defaultScore = 10000;
     
     constructor(private activeDatabase: KnockoutObservable<database>,
                 private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
@@ -86,70 +88,52 @@ class queryCompleter {
     }
 
     private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string, number] {
-        let currentToken: AceAjax.TokenInfo = session.getTokenAt(pos.row, pos.column);
-        // If token is space, use the previous token
-        if (currentToken && currentToken.start > 0 && /^\s+$/g.test(currentToken.value)) {
-            currentToken = session.getTokenAt(pos.row, currentToken.start - 1);
-        }
-        
-        // let tokensAfterKeyword: AceAjax.TokenInfo[] = []; // TODO: Can be deleted
         let identifier: string;
         let text: string;
         let operator: string;
         let paren = 0;
-        for (let row = 0; row <= pos.row; row++) {
-            let lineTokens: AceAjax.TokenInfo[] = session.getTokens(pos.row - row);
 
-            for (let i = lineTokens.length - 1; i >= 0; i--) {
-                const token = lineTokens[i];
-                
-                if (token.start) {
-                    if (token.start >= pos.column) {
-                        continue;
-                    }
-                } else if (currentToken && token.value !== currentToken.value) {
-                    continue;
-                }
-                
-                switch (token.type) {
-                    case "keyword":
-                        let keyword = token.value.toLowerCase();
-                        if (keyword === "desc" ||
-                            keyword === "asc" ||
-                            keyword === "and" ||
-                            keyword === "or")
-                            continue;
-
-                        return [keyword, operator, identifier, text, paren];
-
-                    case "keyword.operator":
-                        operator = token.value;
-                        break;
-                    case "identifier":
-                        identifier = token.value;
-                        break;
-                    case "string":
-                        const indexName = token.value.substr(1, token.value.length - 2);
-                        identifier = indexName;
-                        break;
-                    case "paren.lparen":
-                        paren++;
-                        break;
-                    case "paren.rparen":
-                        paren--;
-                        break;
-                    case "text":
-                        if  (!identifier) {
-                            text = token.value;
-                        }
-                        break;
-                    default:
-                        // tokensAfterKeyword.push(token);
-                        break;
-                }
+        const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, pos.row, pos.column);
+        do {
+            const token = iterator.getCurrentToken();
+            if (!token) {
+                break;
             }
-        }
-        
+
+            switch (token.type) {
+                case "keyword":
+                    let keyword = token.value.toLowerCase();
+                    if (keyword === "desc" ||
+                        keyword === "asc" ||
+                        keyword === "and" ||
+                        keyword === "or")
+                        continue;
+
+                    return [keyword, operator, identifier, text, paren];
+                case "keyword.operator":
+                    operator = token.value;
+                    break;
+                case "identifier":
+                    identifier = token.value;
+                    break;
+                case "string":
+                    const indexName = token.value.substr(1, token.value.length - 2);
+                    identifier = indexName;
+                    break;
+                case "paren.lparen":
+                    paren++;
+                    break;
+                case "paren.rparen":
+                    paren--;
+                    break;
+                case "text":
+                    if (!identifier) {
+                        text = token.value;
+                    }
+                    break;
+            }
+        } while (iterator.stepBackward());
+
         return [null, null, null, null, null];
     }
 
@@ -167,9 +151,10 @@ class queryCompleter {
             case "from": {
                 if (identifier && text) {
                     if (paren > 0) {
+                        // from (Collection, {show fields here})
                         this.getIndexFields(session)
                             .done((indexFields) => callback(null, indexFields.map(field => {
-                                return {name: field, value: field, score: 10, meta: "field"};
+                                return {name: field, value: field, score: this.defaultScore, meta: "field"};
                             })));
                         return;
                     }
@@ -180,14 +165,14 @@ class queryCompleter {
                 if (!prefix ||
                     prefix.length === 0 ||
                     prefix.startsWith("@")) {
-                    callback(null, [{name: "@all_docs", value: "@all_docs", score: 100, meta: "collection"}]);
-                    callback(null, [{name: "@system", value: "@system", score: 9, meta: "collection"}]);
+                    callback(null, [{name: "@all_docs", value: "@all_docs", score: this.defaultScore * 10, meta: "collection"}]);
+                    callback(null, [{name: "@system", value: "@system", score: this.defaultScore - 1, meta: "collection"}]);
                 }
                 callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
                     return {
                         name: collection,
                         value: collection,
-                        score: 10,
+                        score: this.defaultScore,
                         meta: "collection"
                     };
                 }));
@@ -201,7 +186,7 @@ class queryCompleter {
                 callback(null,
                     this.indexes().map(index => {
                         const name = `'${index.Name}'`;
-                        return {name: name, value: name, score: 10, meta: "index"};
+                        return {name: name, value: name, score: this.defaultScore, meta: "index"};
                     }));
                 break;
             }
@@ -209,7 +194,7 @@ class queryCompleter {
             case "by": // group by, order by
                 this.getIndexFields(session)
                     .done((indexFields) => callback(null, indexFields.map(field => {
-                        return {name: field, value: field, score: 10, meta: "field"};
+                        return {name: field, value: field, score: this.defaultScore, meta: "field"};
                     })));
                 break;
                 
@@ -250,14 +235,14 @@ class queryCompleter {
                                             callback(null,
                                                 terms.Terms.map(term => {
                                                     term = "'" + term + "'";
-                                                    return {name: term, value: term, score: 10, meta: "value"};
+                                                    return {name: term, value: term, score: this.defaultScore, meta: "value"};
                                                 }));
                                         }
                                     });
                             } else {
                                 if (currentValue.length > 0) {
                                     // TODO: Not sure what we want to show here?
-                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 10, this.activeDatabase())
+                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, this.defaultScore, this.activeDatabase())
                                         .execute()
                                         .done((results: metadataAwareDto[]) => {
                                             if (results && results.length > 0) {
@@ -267,7 +252,7 @@ class queryCompleter {
                                                         return {
                                                             name: id,
                                                             value: id,
-                                                            score: 10,
+                                                            score: this.defaultScore,
                                                             meta: "value"
                                                         };
                                                     }));
@@ -283,7 +268,7 @@ class queryCompleter {
                 
                 this.getIndexFields(session)
                     .done((indexFields) => callback(null, indexFields.map(field => {
-                        return {name: field, value: field, score: 10, meta: "field"};
+                        return {name: field, value: field, score: this.defaultScore, meta: "field"};
                     })));
                 break;
             }
