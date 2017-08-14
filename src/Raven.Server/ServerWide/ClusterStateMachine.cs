@@ -786,7 +786,8 @@ namespace Raven.Server.ServerWide
                     var msg = new DynamicJsonValue
                     {
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
-                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster
+                        [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
+                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Cluster]
                     };
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var msgJson = context.ReadObject(msg, "message"))
