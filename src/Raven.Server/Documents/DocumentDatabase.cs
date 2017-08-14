@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private long _lastTopologyIndex;
+        private long _lastTopologyIndex = -1;
 
         public void ResetIdleTime()
         {
@@ -794,7 +794,7 @@ namespace Raven.Server.Documents
             if (index < 0)
                 return false;
 
-            return LastDatabaseRecordIndex > index || ServerStore.HasClientConfigurationChanged(index);
+            return ServerStore.HasClientConfigurationChanged(index);
         }
     }
 
