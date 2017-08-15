@@ -37,6 +37,12 @@ namespace Raven.Server.Documents.Replication
 
             return 0;
         }
+       
+
+        public static int ParseNodeTag(this string nodeTag)
+        {
+            return ParseNodeTag(nodeTag, 0, nodeTag.Length - 1);
+        }
 
         public static int ParseNodeTag(string changeVector, int start, int end)
         {

@@ -19,7 +19,6 @@ namespace Raven.Client.Documents.Subscriptions
         public string SubscriptionName { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
         public bool Disabled { get; set; }
-        public Dictionary<string, long> LastEtagReachedInServer { get; set; }
 
         public ulong GetTaskKey()
         {
