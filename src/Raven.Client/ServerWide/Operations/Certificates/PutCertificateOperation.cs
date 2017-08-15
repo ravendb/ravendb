@@ -26,7 +26,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         private class PutCertificateCommand : RavenCommand
         {
-            private readonly JsonOperationContext _context;
             private readonly string _name;
             private readonly BlittableJsonReaderObject _certificate;
 
@@ -36,13 +35,14 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     throw new ArgumentNullException(nameof(conventions));
                 if (certificate == null)
                     throw new ArgumentNullException(nameof(certificate));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
 
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _certificate = EntityToBlittable.ConvertEntityToBlittable(certificate, conventions, context);
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 
@@ -51,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _certificate);
+                        ctx.Write(stream, _certificate);
                     })
                 };
             }

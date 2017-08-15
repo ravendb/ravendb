@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Operations
             _fromNode = fromNode;
         }
 
-        public RavenCommand<DeleteDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DeleteDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new DeleteDatabaseCommand(_name, _hardDelete, _fromNode);
         }
@@ -38,7 +38,7 @@ namespace Raven.Client.ServerWide.Operations
                 ResponseType = RavenCommandResponseType.Object;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={_name}";
                 if (_hardDelete)

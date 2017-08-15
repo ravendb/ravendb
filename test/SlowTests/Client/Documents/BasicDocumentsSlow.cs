@@ -38,7 +38,7 @@ namespace SlowTests.Client.Documents
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var getDocumentCommand = new GetDocumentCommand(new[] {"users/1-A", "users/2-A" }, includes: null, transformer: transformer.TransformerName,
-                        transformerParameters: null, metadataOnly: false, context: context);
+                        transformerParameters: null, metadataOnly: false);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -77,7 +77,7 @@ namespace SlowTests.Client.Documents
                     }
 
                     getDocumentCommand = new GetDocumentCommand(new[] { "users/1-A", "users/2-A" }, includes: null, transformer: transformer.TransformerName,
-                        transformerParameters: null, metadataOnly: true, context: context);
+                        transformerParameters: null, metadataOnly: true);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);

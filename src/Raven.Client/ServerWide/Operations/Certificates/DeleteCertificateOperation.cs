@@ -29,7 +29,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                 _name = name ?? throw new ArgumentNullException(nameof(name));
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 

@@ -12,21 +12,19 @@ namespace Raven.Client.Documents.Commands.MultiGet
 {
     public class MultiGetCommand : RavenCommand<List<GetResponse>>
     {
-        private readonly JsonOperationContext _context;
         private readonly HttpCache _cache;
         private readonly List<GetRequest> _commands;
 
         private string _baseUrl;
 
-        public MultiGetCommand(JsonOperationContext context, HttpCache cache, List<GetRequest> commands)
+        public MultiGetCommand(HttpCache cache, List<GetRequest> commands)
         {
-            _context = context;
             _cache = cache;
             _commands = commands;
             ResponseType = RavenCommandResponseType.Raw;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             _baseUrl = $"{node.Url}/databases/{node.Database}";
 
@@ -35,7 +33,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
 
@@ -49,7 +47,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                             first = false;
                             var cacheKey = GetCacheKey(command, out string _);
-                            using (_cache.Get(_context, cacheKey, out string cachedChangeVector, out var _))
+                            using (_cache.Get(ctx, cacheKey, out string cachedChangeVector, out var _))
                             {
                                 var headers = new DynamicJsonValue();
                                 if (cachedChangeVector != null)
@@ -89,7 +87,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
 
                                 writer.WritePropertyName(nameof(GetRequest.Content));
                                 if (command.Content != null)
-                                    command.Content.WriteContent(writer, _context);
+                                    command.Content.WriteContent(writer, ctx);
                                 else
                                     writer.WriteNull();
 
@@ -119,7 +117,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
         {
             var state = new JsonParserState();
             using (var parser = new UnmanagedJsonParser(context, state, "multi_get/response"))
-            using (_context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
+            using (context.GetManagedBuffer(out JsonOperationContext.ManagedPinnedBuffer buffer))
             {
                 if (UnmanagedJsonParserHelper.Read(stream, parser, state, buffer) == false)
                     ThrowInvalidResponse();
@@ -138,7 +136,7 @@ namespace Raven.Client.Documents.Commands.MultiGet
                     var command = _commands[i];
 
                     MaybeSetCache(getResponse, command);
-                    MaybeReadFromCache(getResponse, command);
+                    MaybeReadFromCache(getResponse, command, context);
 
                     Result.Add(getResponse);
 
@@ -247,13 +245,13 @@ namespace Raven.Client.Documents.Commands.MultiGet
             return getResponse;
         }
 
-        private void MaybeReadFromCache(GetResponse getResponse, GetRequest command)
+        private void MaybeReadFromCache(GetResponse getResponse, GetRequest command, JsonOperationContext context)
         {
             if (getResponse.StatusCode != HttpStatusCode.NotModified)
                 return;
 
             var cacheKey = GetCacheKey(command, out string _);
-            using (_cache.Get(_context, cacheKey, out string _, out BlittableJsonReaderObject cachedResponse))
+            using (_cache.Get(context, cacheKey, out string _, out BlittableJsonReaderObject cachedResponse))
             {
                 getResponse.Result = cachedResponse;
             }

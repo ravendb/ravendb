@@ -26,31 +26,28 @@ namespace Raven.Client.ServerWide.Operations
             ResolveToLatest = resolveToLatest;
         }
 
-        public RavenCommand<ModifySolverResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifySolverResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ModifyConflictSolverCommand(conventions, context, _database, this);
+            return new ModifyConflictSolverCommand(conventions, _database, this);
         }
 
         private class ModifyConflictSolverCommand : RavenCommand<ModifySolverResult>
         {
             private readonly ModifyConflictSolverOperation _solver;
-            private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly string _databaseName;
     
             public ModifyConflictSolverCommand(
                 DocumentConventions conventions,
-                JsonOperationContext context,
                 string database,
                 ModifyConflictSolverOperation solver)
             {
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _solver = solver;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/update-resolver?name={_databaseName}";
 
@@ -64,8 +61,8 @@ namespace Raven.Client.ServerWide.Operations
                             ResolveByCollection = _solver.CollectionByScript,
                             ResolveToLatest = _solver.ResolveToLatest,
                             DatabaseResolverId = _solver.ResolverDbId
-                        }, _conventions, _context);
-                        _context.Write(stream, solver);
+                        }, _conventions, ctx);
+                        ctx.Write(stream, solver);
                     })
                 };
 

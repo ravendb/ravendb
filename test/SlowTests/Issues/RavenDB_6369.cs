@@ -34,7 +34,7 @@ namespace SlowTests.Issues
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new TestQueryCommand(store.Conventions, context, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
+                    var command = new TestQueryCommand(store.Conventions, new IndexQuery { Query = $"FROM INDEX '{new Users_ByName().IndexName}'", WaitForNonStaleResultsTimeout = TimeSpan.FromMilliseconds(100), WaitForNonStaleResults = true });
 
                     var sw = Stopwatch.StartNew();
                     Assert.Throws<AllTopologyNodesDownException>(() => requestExecuter.Execute(command, context));
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
 
         private class TestQueryCommand : QueryCommand
         {
-            public TestQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, context, indexQuery, metadataOnly, indexEntriesOnly)
+            public TestQueryCommand(DocumentConventions conventions, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false) : base(conventions, indexQuery, metadataOnly, indexEntriesOnly)
             {
                 Timeout = TimeSpan.FromMilliseconds(100);
             }

@@ -18,7 +18,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             _databaseName = databaseName;
         }
 
-        public RavenCommand<GetConnectionStringsResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetConnectionStringsResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetConnectionStringCommand(_databaseName);
         }
@@ -34,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/connection-strings?name={_databaseName}";
 

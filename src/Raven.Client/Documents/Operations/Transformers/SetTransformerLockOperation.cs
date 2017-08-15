@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.Transformers
                 _mode = mode;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/transformers/set-lock?name={Uri.EscapeDataString(_transformerName)}&mode={_mode}";
 

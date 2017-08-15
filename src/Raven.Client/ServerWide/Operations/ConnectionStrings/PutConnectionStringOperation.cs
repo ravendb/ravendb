@@ -19,27 +19,25 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
             _databaseName = databaseName;
         }
 
-        public RavenCommand<PutConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<PutConnectionStringResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new PutConnectionStringCommand(_connectionString, _databaseName, context);
+            return new PutConnectionStringCommand(_connectionString, _databaseName);
         }
 
         public class PutConnectionStringCommand : RavenCommand<PutConnectionStringResult>
         {
             private readonly T _connectionString;
             private readonly string _databaseName;
-            private readonly JsonOperationContext _context;
 
-            public PutConnectionStringCommand(T connectionString, string databaseName, JsonOperationContext context)
+            public PutConnectionStringCommand(T connectionString, string databaseName)
             {
                 _connectionString = connectionString;
                 _databaseName = databaseName;
-                _context = context;
             }
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/connection-strings?name={_databaseName}";
 
@@ -48,8 +46,8 @@ namespace Raven.Client.ServerWide.Operations.ConnectionStrings
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_connectionString, DocumentConventions.Default, _context);
-                        _context.Write(stream, config);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_connectionString, DocumentConventions.Default, ctx);
+                        ctx.Write(stream, config);
                     })
                 };
 

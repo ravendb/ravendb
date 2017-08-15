@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Commands
             _base64Key = base64Key;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/admin/secrets?name={_name}";
 

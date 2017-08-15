@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Operations
                 _collectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/collections/docs?name={_collectionName}";
 

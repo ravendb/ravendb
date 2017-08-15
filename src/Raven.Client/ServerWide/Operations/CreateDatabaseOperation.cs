@@ -21,42 +21,41 @@ namespace Raven.Client.ServerWide.Operations
             _replicationFactor = replicationFactor;
         }
 
-        public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new CreateDatabaseCommand(conventions, context, _databaseRecord, this);
+            return new CreateDatabaseCommand(conventions, _databaseRecord, this);
         }
 
         private class CreateDatabaseCommand : RavenCommand<DatabasePutResult>
         {
-            private readonly JsonOperationContext _context;
+            private readonly DocumentConventions _conventions;
+            private readonly DatabaseRecord _databaseRecord;
             private readonly CreateDatabaseOperation _createDatabaseOperation;
-            private readonly BlittableJsonReaderObject _databaseDocument;
             private readonly string _databaseName;
 
-            public CreateDatabaseCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseRecord databaseRecord,
+            public CreateDatabaseCommand(DocumentConventions conventions, DatabaseRecord databaseRecord,
                 CreateDatabaseOperation createDatabaseOperation)
             {
-                if (conventions == null)
-                    throw new ArgumentNullException(nameof(conventions));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+                _databaseRecord = databaseRecord;
                 _createDatabaseOperation = createDatabaseOperation;
                 _databaseName = databaseRecord?.DatabaseName ?? throw new ArgumentNullException(nameof(databaseRecord));
-                _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);
+             
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={_databaseName}";
                 
                 url += "&replication-factor=" + _createDatabaseOperation._replicationFactor;
+                var databaseDocument = EntityToBlittable.ConvertEntityToBlittable(_databaseRecord, _conventions, ctx);
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _databaseDocument);
+                        ctx.Write(stream, databaseDocument);
                     })
                 };
 

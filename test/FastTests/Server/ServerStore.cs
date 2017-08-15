@@ -75,7 +75,7 @@ namespace FastTests.Server
                 this.databaseDocument = databaseDocument;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 
@@ -105,7 +105,7 @@ namespace FastTests.Server
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 

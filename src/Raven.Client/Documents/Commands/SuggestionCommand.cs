@@ -14,32 +14,30 @@ namespace Raven.Client.Documents.Commands
     public class SuggestionCommand : RavenCommand<SuggestionQueryResult>
     {
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly SuggestionQuery _query;
 
-        public SuggestionCommand(DocumentConventions conventions, JsonOperationContext context, SuggestionQuery query)
+        public SuggestionCommand(DocumentConventions conventions, SuggestionQuery query)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
                 .Append("/queries?op=suggest&query-hash=")
-                .Append(_query.GetQueryHash(_context));
+                .Append(_query.GetQueryHash(ctx));
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteSuggestionQuery(_conventions, _context, _query);
+                            writer.WriteSuggestionQuery(_conventions, ctx, _query);
                         }
                     }
                 )

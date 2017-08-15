@@ -58,7 +58,7 @@ namespace SlowTests.Issues
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE exists(Name) AND Name = 'First' ORDER BY Name DESC" });
+                    var command = new QueryCommand(store.Conventions, new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE exists(Name) AND Name = 'First' ORDER BY Name DESC" });
 
                     requestExecuter.Execute(command, context);
 
@@ -97,7 +97,7 @@ namespace SlowTests.Issues
 
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new QueryCommand(store.Conventions, context, new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE exists(Name) AND NOT Name = 'Second'" });
+                    var command = new QueryCommand(store.Conventions, new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE exists(Name) AND NOT Name = 'Second'" });
 
                     requestExecuter.Execute(command, context);
 

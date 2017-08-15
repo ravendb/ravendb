@@ -14,20 +14,18 @@ namespace Raven.Client.Documents.Commands
     public class GetFacetsCommand : RavenCommand<FacetedQueryResult>
     {
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly FacetQuery _query;
 
         public GetFacetsCommand(DocumentConventions conventions, JsonOperationContext context, FacetQuery query)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _query = query ?? throw new ArgumentNullException(nameof(query));
 
             if (_query.WaitForNonStaleResultsTimeout.HasValue && _query.WaitForNonStaleResultsTimeout != TimeSpan.MaxValue)
                 Timeout = _query.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             if (string.IsNullOrWhiteSpace(_query.FacetSetupDoc) == false && _query.Facets != null && _query.Facets.Count > 0)
                 throw new InvalidOperationException($"You cannot specify both '{nameof(FacetQuery.FacetSetupDoc)}' and '{nameof(FacetQuery.Facets)}'.");
@@ -36,16 +34,16 @@ namespace Raven.Client.Documents.Commands
                 .Append("/databases/")
                 .Append(node.Database)
                 .Append("/queries?op=facets&query-hash=")
-                .Append(_query.GetQueryHash(_context));
+                .Append(_query.GetQueryHash(ctx));
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
-                        writer.WriteFacetQuery(_conventions, _context, _query);
+                        writer.WriteFacetQuery(_conventions, ctx, _query);
                     }
                 })
             };

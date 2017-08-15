@@ -13,7 +13,6 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public class BatchCommand : RavenCommand<BlittableArrayResult>, IDisposable
     {
-        private readonly JsonOperationContext _context;
         private readonly BlittableJsonReaderObject[] _commands;
         private readonly HashSet<Stream> _attachmentStreams;
         private readonly BatchOptions _options;
@@ -24,14 +23,14 @@ namespace Raven.Client.Documents.Commands.Batches
                 throw new ArgumentNullException(nameof(conventions));
             if (commands == null)
                 throw new ArgumentNullException(nameof(commands));
-
-            _context = context ?? throw new ArgumentNullException(nameof(context));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             _commands = new BlittableJsonReaderObject[commands.Count];
             for (var i = 0; i < commands.Count; i++)
             {
                 var command = commands[i];
-                _commands[i] = _context.ReadObject(command.ToJson(conventions, context), "command");
+                _commands[i] = context.ReadObject(command.ToJson(conventions, context), "command");
 
                 if (command is PutAttachmentCommandData putAttachmentCommandData)
                 {
@@ -50,14 +49,14 @@ namespace Raven.Client.Documents.Commands.Batches
             Timeout = options?.RequestTimeout;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
                         writer.WriteArray("Commands", _commands);

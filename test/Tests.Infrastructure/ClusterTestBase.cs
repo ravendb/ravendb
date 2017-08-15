@@ -98,7 +98,7 @@ namespace Tests.Infrastructure
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 

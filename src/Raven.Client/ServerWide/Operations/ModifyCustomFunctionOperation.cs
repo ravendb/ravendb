@@ -19,9 +19,9 @@ namespace Raven.Client.ServerWide.Operations
             _functions = functions;
         }
 
-        public RavenCommand<ModifyCustomFunctionsResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyCustomFunctionsResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new ModifyCustomFunctionsCommand(_database, _functions, context);
+            return new ModifyCustomFunctionsCommand(_database, _functions);
         }
     }
 
@@ -29,17 +29,15 @@ namespace Raven.Client.ServerWide.Operations
     {
         private readonly string _database;
         private readonly string _functions;
-        private readonly JsonOperationContext _context;
         public override bool IsReadRequest => false;
 
-        public ModifyCustomFunctionsCommand(string database, string functions, JsonOperationContext context)
+        public ModifyCustomFunctionsCommand(string database, string functions)
         {
             _database = database;
             _functions = functions;
-            _context = context;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/admin/modify-custom-functions?name={_database}";
             var request = new HttpRequestMessage
@@ -52,7 +50,7 @@ namespace Raven.Client.ServerWide.Operations
                         ["Functions"] = _functions
                     };
 
-                    _context.Write(stream, _context.ReadObject(json, "modify-custom-functions"));
+                    ctx.Write(stream, ctx.ReadObject(json, "modify-custom-functions"));
                 })
             };
 

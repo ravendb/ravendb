@@ -20,27 +20,25 @@ namespace Raven.Client.ServerWide.Operations
             _databaseName = databaseName;
         }
 
-        public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<UpdatePeriodicBackupOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdatePeriodicBackupCommand(_configuration, _databaseName, context);
+            return new UpdatePeriodicBackupCommand(_configuration, _databaseName);
         }
 
         public class UpdatePeriodicBackupCommand : RavenCommand<UpdatePeriodicBackupOperationResult>
         {
             private readonly PeriodicBackupConfiguration _configuration;
             private readonly string _databaseName;
-            private readonly JsonOperationContext _context;
 
-            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName, JsonOperationContext context)
+            public UpdatePeriodicBackupCommand(PeriodicBackupConfiguration configuration, string databaseName)
             {
                 _configuration = configuration;
                 _databaseName = databaseName;
-                _context = context;
             }
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/periodic-backup?name={_databaseName}";
 
@@ -49,8 +47,8 @@ namespace Raven.Client.ServerWide.Operations
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, _context);
-                        _context.Write(stream, config);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, ctx);
+                        ctx.Write(stream, config);
                     })
                 };
 

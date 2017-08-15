@@ -24,7 +24,7 @@ namespace Raven.Client.Documents.Commands
             _lastRangeMax = lastRangeMax;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var path = $"hilo/next?tag={_tag}&lastBatchSize={_lastBatchSize}&lastRangeAt={_lastRangeAt:o}&identityPartsSeparator={_identityPartsSeparator}&lastMax={_lastRangeMax}";
 

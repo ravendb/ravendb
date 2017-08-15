@@ -26,7 +26,6 @@ namespace Raven.Client.Documents.Operations.Transformers
 
         private class PutTransformerCommand : RavenCommand<PutTransformerResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly string _transformerName;
             private readonly BlittableJsonReaderObject _transformerDefinition;
 
@@ -36,13 +35,13 @@ namespace Raven.Client.Documents.Operations.Transformers
                     throw new ArgumentNullException(nameof(conventions));
                 if (transformerDefinition == null)
                     throw new ArgumentNullException(nameof(transformerDefinition));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
                 _transformerName = transformerDefinition.Name ?? throw new ArgumentNullException(nameof(transformerDefinition.Name));
-                _transformerDefinition = EntityToBlittable.ConvertEntityToBlittable(transformerDefinition, conventions, _context);
+                _transformerDefinition = EntityToBlittable.ConvertEntityToBlittable(transformerDefinition, conventions, context);
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/transformers?name=" + Uri.EscapeDataString(_transformerName);
 
@@ -51,7 +50,7 @@ namespace Raven.Client.Documents.Operations.Transformers
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _transformerDefinition);
+                        ctx.Write(stream, _transformerDefinition);
                     })
                 };
 

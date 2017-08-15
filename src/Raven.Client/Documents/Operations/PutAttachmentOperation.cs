@@ -56,7 +56,7 @@ namespace Raven.Client.Documents.Operations
                 PutAttachmentCommandHelper.ValidateStream(stream);
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 PutAttachmentCommandHelper.PrepareStream(_stream);
 

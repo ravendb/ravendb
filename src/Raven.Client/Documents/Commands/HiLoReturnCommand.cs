@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using Raven.Client.Http;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -22,7 +23,7 @@ namespace Raven.Client.Documents.Commands
             _end = end;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/hilo/return?tag={_tag}&end={_end}&last={_last}";
 

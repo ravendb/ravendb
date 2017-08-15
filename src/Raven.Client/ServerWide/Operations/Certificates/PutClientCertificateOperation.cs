@@ -24,7 +24,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutClientCertificateCommand(context, _certificate, _permissions, _serverAdmin);
+            return new PutClientCertificateCommand(_certificate, _permissions, _serverAdmin);
         }
 
         private class PutClientCertificateCommand : RavenCommand
@@ -32,19 +32,17 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             private readonly X509Certificate2 _certificate;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly bool _serverAdmin;
-            private readonly JsonOperationContext _context;
 
-            public PutClientCertificateCommand(JsonOperationContext context, X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
+            public PutClientCertificateCommand(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
             {
                 _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _serverAdmin = serverAdmin;
             }
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates";
 
@@ -53,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteStartObject();
 

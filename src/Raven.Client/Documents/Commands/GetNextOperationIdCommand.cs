@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Commands
     class GetNextOperationIdCommand : RavenCommand<long>
     {
         public override bool IsReadRequest => false; // disable caching
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/operations/next-operation-id";
             return new HttpRequestMessage

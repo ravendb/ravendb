@@ -20,27 +20,25 @@ namespace Raven.Client.ServerWide.Operations.ETL
             _databaseName = databaseName;
         }
 
-        public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<AddEtlOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new AddEtlCommand(_configuration, _databaseName, context);
+            return new AddEtlCommand(_configuration, _databaseName);
         }
 
         public class AddEtlCommand : RavenCommand<AddEtlOperationResult>
         {
             private readonly EtlConfiguration<T> _configuration;
             private readonly string _databaseName;
-            private readonly JsonOperationContext _context;
 
-            public AddEtlCommand(EtlConfiguration<T> configuration, string databaseName, JsonOperationContext context)
+            public AddEtlCommand(EtlConfiguration<T> configuration, string databaseName)
             {
                 _configuration = configuration;
                 _databaseName = databaseName;
-                _context = context;
             }
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/etl?name={_databaseName}";
 
@@ -49,8 +47,8 @@ namespace Raven.Client.ServerWide.Operations.ETL
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, _context);
-                        _context.Write(stream, config);
+                        var config = EntityToBlittable.ConvertEntityToBlittable(_configuration, DocumentConventions.Default, ctx);
+                        ctx.Write(stream, config);
                     })
                 };
 

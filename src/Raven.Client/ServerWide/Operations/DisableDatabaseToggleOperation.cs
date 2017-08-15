@@ -18,8 +18,7 @@ namespace Raven.Client.ServerWide.Operations
             _ifDisableRequest = ifDisableRequest;
         }
 
-        public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions,
-            JsonOperationContext context)
+        public RavenCommand<DisableDatabaseToggleResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new DisableDatabaseToggleCommand(_databaseName, _ifDisableRequest);
         }
@@ -36,7 +35,7 @@ namespace Raven.Client.ServerWide.Operations
                 _ifDisableRequest = ifDisableRequest;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 var toggle = _ifDisableRequest ? "disable" : "enable";
                 url = $"{node.Url}/admin/databases/{toggle}?name={_databaseName}";

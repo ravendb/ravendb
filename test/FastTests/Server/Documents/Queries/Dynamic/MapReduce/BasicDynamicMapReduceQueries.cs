@@ -295,7 +295,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 using (var commands = store.Commands())
                 {
                     // create auto map reduce index
-                    var command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    var command = new QueryCommand(store.Conventions, new IndexQuery
                     {
                         Query = "SELECT count() as TotalCount FROM Addresses GROUP BY City",
                         WaitForNonStaleResultsAsOfNow = true
@@ -304,7 +304,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     // retrieve only City field
-                    command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    command = new QueryCommand(store.Conventions, new IndexQuery
                     {
                         Query = "SELECT City FROM Addresses GROUP BY City",
                         WaitForNonStaleResultsAsOfNow = true
