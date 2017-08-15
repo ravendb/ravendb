@@ -59,7 +59,7 @@ namespace FastTests.Server.Basic
 
                     var json = context.ReadObject(djv, "users/1");
 
-                    var putCommand = new PutDocumentCommand("users/1", null, json, context);
+                    var putCommand = new PutDocumentCommand("users/1", null, json);
 
                     requestExecuter.Execute(putCommand, context);
 
@@ -70,7 +70,7 @@ namespace FastTests.Server.Basic
 
                     json = context.ReadObject(djv, "users/1");
 
-                    putCommand = new PutDocumentCommand("users/1", null, json, context);
+                    putCommand = new PutDocumentCommand("users/1", null, json);
 
                     requestExecuter.Execute(putCommand, context);
                 }
