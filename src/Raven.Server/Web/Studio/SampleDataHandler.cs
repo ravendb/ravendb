@@ -29,7 +29,7 @@ namespace Raven.Server.Web.Studio
                     }
                 }
 
-                using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind_3.5.35168.ravendbdump"))
+                using (var sampleData = typeof(SampleDataHandler).GetTypeInfo().Assembly.GetManifestResourceStream("Raven.Server.Web.Studio.EmbeddedData.Northwind.ravendbdump"))
                 {
                     using (var stream = new GZipStream(sampleData, CompressionMode.Decompress))
                     {
