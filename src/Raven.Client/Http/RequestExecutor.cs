@@ -28,6 +28,7 @@ using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using AuthenticationException = Raven.Client.Exceptions.Security.AuthenticationException;
 
 namespace Raven.Client.Http
 {
@@ -397,14 +398,20 @@ namespace Raven.Client.Http
                 try
                 {
                     await UpdateTopologyAsync(new ServerNode
-                    {
-                        Url = url,
-                        Database = _databaseName
-                    }, Timeout.Infinite)
+                        {
+                            Url = url,
+                            Database = _databaseName
+                        }, Timeout.Infinite)
                         .ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
                     return;
+                }
+                catch (AuthorizationException)
+                {
+                    // auth exceptions will always happen, on all nodes
+                    // so errors immediately
+                    throw;
                 }
                 catch (Exception e)
                 {
