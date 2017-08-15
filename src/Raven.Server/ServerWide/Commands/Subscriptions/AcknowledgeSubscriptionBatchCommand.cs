@@ -37,9 +37,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
             
-            if (subscription.LastEtagReachedInServer == null)
-                subscription.LastEtagReachedInServer = new Dictionary<string, long>();
-            subscription.LastEtagReachedInServer[DbId.ToString()] = LastDocumentEtagAckedInNode;
             subscription.ChangeVector = ChangeVector;
             subscription.TimeOfLastClientActivity = DateTime.UtcNow;
 

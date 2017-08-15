@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -566,16 +568,19 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
-                {
-                    return startEtag;
-                }
-
                 if (string.IsNullOrEmpty(subscription.ChangeVector))
-                {
                     return startEtag;
-                }
-                return startEtag;
+
+                var changeVector = subscription.ChangeVector.ToChangeVector();
+                
+                var matchingCV = changeVector.FirstOrDefault(
+                    x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
+                    x.DbId == TcpConnection.DocumentDatabase.DbId);
+
+                if (matchingCV.DbId == Guid.Empty && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
+                    return startEtag;
+
+                return matchingCV.Etag;
             }
         }
 

@@ -277,7 +277,6 @@ namespace Raven.Server.Documents.Handlers
                         x.SubscriptionName,
                         x.ChangeVector,
                         x.Criteria,
-                        x.Connection?.SubscriptionState.LastEtagReachedInServer,
                         x.Connection?.SubscriptionState.TimeOfLastClientActivity
                         ,
                         Connection = new
