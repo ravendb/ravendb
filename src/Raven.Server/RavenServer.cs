@@ -614,8 +614,30 @@ namespace Raven.Server
                                         $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
+                            if (MatchingOperationVersion(header, out var error) == false)
+                            {
+                                using (var writer = new BlittableJsonTextWriter(context, stream))
+                                {
+                                    writer.WriteStartObject();
+                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.WrongOperationTcpVersion));
+                                    writer.WriteBool(true);
+                                    writer.WriteComma();
+                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
+                                    writer.WriteString(error);                                                                                                            
+                                    writer.WriteEndObject();
+                                    writer.Flush();
+                                }
+                                if (Logger.IsInfoEnabled)
+                                {
+                                    Logger.Info(
+                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
+                                        $" {error}");
+                                }
+                                return; //we will not accept not matching versions
+                            }
+
+                            bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
                             using (var writer = new BlittableJsonTextWriter(context, stream))
                             {
@@ -668,6 +690,18 @@ namespace Raven.Server
                     }
                 }
             });
+        }
+
+        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error)
+        {
+            var version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
+            if (version == header.OperationVersion)
+            {
+                error = null;
+                return true;
+            }
+            error = $"Message of type {header.Operation} version should be {version} but got a message with version {header.OperationVersion}";
+            return false;
         }
 
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
@@ -821,19 +855,7 @@ namespace Raven.Server
 
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
-            msg = null;
-
-            if (TcpConnectionHeaderMessage.TcpVersions.TryGetValue(header.Operation, out var version) == false)
-            {
-                msg = $"Operation {header.Operation} is not supported";
-                return false;
-            }
-
-            if (version != header.OperationVersion)
-            {
-                msg = $"Operation {header.Operation} version is {header.OperationVersion} while our version is {version}";
-                return false;
-            }
+            msg = null;            
 
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;

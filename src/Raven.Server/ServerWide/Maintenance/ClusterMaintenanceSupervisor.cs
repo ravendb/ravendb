@@ -255,6 +255,10 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
+                        if (headerResponse.WrongOperationTcpVersion == true)
+                        {
+                            throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
+                        }
                         if (headerResponse.AuthorizationSuccessful == false)
                         {
                             throw new UnauthorizedAccessException(
@@ -276,7 +280,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
-                    writer.WriteInteger(TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Heartbeats]);
+                    writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
                     writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
