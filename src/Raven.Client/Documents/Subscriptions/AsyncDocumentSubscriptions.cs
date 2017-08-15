@@ -66,7 +66,7 @@ namespace Raven.Client.Documents.Subscriptions
             var requestExecutor = _store.GetRequestExecutor(database ?? _store.Database);
             requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context);
             
-            var command = new CreateSubscriptionCommand(subscriptionCreationOptions, context);
+            var command = new CreateSubscriptionCommand(subscriptionCreationOptions);
             await requestExecutor.ExecuteAsync(command, context).ConfigureAwait(false);
 
             return command.Result.Name;

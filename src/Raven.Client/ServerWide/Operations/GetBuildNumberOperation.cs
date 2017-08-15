@@ -8,7 +8,7 @@ namespace Raven.Client.ServerWide.Operations
 {
     public class GetBuildNumberOperation : IServerOperation<BuildNumber>
     {
-        public RavenCommand<BuildNumber> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<BuildNumber> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetBuildNumberCommand();
         }
@@ -17,7 +17,7 @@ namespace Raven.Client.ServerWide.Operations
         {
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/build/version";
 

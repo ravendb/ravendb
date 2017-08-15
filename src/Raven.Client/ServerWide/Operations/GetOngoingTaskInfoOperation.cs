@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations
             _type = type;
         }
 
-        public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<OngoingTask> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetOngoingTaskInfoCommand(_database, _taskId, _type);
         }
@@ -43,7 +43,7 @@ namespace Raven.Client.ServerWide.Operations
                 _type = type;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{_databaseName}/task?key={_taskId}&type={_type}";
 

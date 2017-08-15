@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Commands
         }
 
         public override bool IsReadRequest => true;
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = _commandUrl.StartsWith("/") ? 
                 $"{node.Url}{_commandUrl}" : 

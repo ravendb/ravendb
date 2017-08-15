@@ -48,7 +48,7 @@ namespace Raven.Client.Http
             AggressiveCacheAllowed = true;
         }
 
-        public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
+        public abstract HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url);
 
         public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {

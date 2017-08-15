@@ -7,7 +7,7 @@ namespace Raven.Client.ServerWide.Commands
 {
     public class GetClusterTopologyCommand : RavenCommand<ClusterTopologyResponse>
     {
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/cluster/topology";
            

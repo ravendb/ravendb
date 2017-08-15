@@ -40,15 +40,15 @@ namespace Raven.Client.Documents.Operations
                 foreach (var q in queries)
                     commands.Add(new LazyFacetsOperation(conventions, q).CreateRequest(context));
 
-                _command = new MultiGetCommand(context, cache, commands);
+                _command = new MultiGetCommand(cache, commands);
                 ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                return _command.CreateRequest(node, out url);
+                return _command.CreateRequest(ctx, node, out url);
             }
 
             public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)

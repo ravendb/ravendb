@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Operations
             _database = database;
         }
 
-        public RavenCommand<DatabaseTopology> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DatabaseTopology> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetDatabaseTopologyCommand(_database);
         }
@@ -34,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations
             _database = database;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/admin/databases?name={_database}";
             return new HttpRequestMessage

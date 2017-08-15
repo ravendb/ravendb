@@ -21,29 +21,23 @@ namespace Raven.Client.ServerWide.Operations
             _newWatcher = newWatcher;
         }
 
-        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new UpdateExternalReplication(context, _database, _newWatcher);
+            return new UpdateExternalReplication(_database, _newWatcher);
         }
 
         private class UpdateExternalReplication : RavenCommand<ModifyOngoingTaskResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly string _databaseName;
             private readonly ExternalReplication _newWatcher;
 
-            public UpdateExternalReplication(
-                JsonOperationContext context,
-                string database,
-                ExternalReplication newWatcher
-            )
+            public UpdateExternalReplication(string database, ExternalReplication newWatcher)
             {
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _databaseName = database ?? throw new ArgumentNullException(nameof(database));
                 _newWatcher = newWatcher;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{_databaseName}/admin/tasks/external-replication";
 
@@ -57,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations
                             ["Watcher"] = _newWatcher.ToJson()
                         };
 
-                        _context.Write(stream, _context.ReadObject(json, "update-replication"));
+                        ctx.Write(stream, ctx.ReadObject(json, "update-replication"));
                     })
                 };
 

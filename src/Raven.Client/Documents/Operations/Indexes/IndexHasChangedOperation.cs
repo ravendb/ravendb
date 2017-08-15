@@ -25,7 +25,6 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class IndexHasChangedCommand : RavenCommand<bool>
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _definition;
 
             public IndexHasChangedCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition definition)
@@ -36,14 +35,14 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(definition));
                 if (string.IsNullOrWhiteSpace(definition.Name))
                     throw new ArgumentNullException(nameof(definition.Name));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
                 _definition = EntityToBlittable.ConvertEntityToBlittable(definition, conventions, context);
             }
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/has-changed";
 
@@ -52,7 +51,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _definition);
+                        ctx.Write(stream, _definition);
                     })
                 };
             }

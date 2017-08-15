@@ -507,7 +507,7 @@ namespace FastTests.Server.Documents.Revisions
                     _ids = ids;
                 }
 
-                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/admin/revisions?");
 

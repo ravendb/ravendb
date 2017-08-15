@@ -78,7 +78,6 @@ namespace Raven.Client.Documents.Operations
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
             private readonly DocumentConventions _conventions;
-            private readonly JsonOperationContext _context;
             private readonly IndexQuery _queryToUpdate;
             private readonly BlittableJsonReaderObject _patch;
             private readonly QueryOperationOptions _options;
@@ -89,13 +88,14 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(patch));
 
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
                 _queryToUpdate = queryToUpdate ?? throw new ArgumentNullException(nameof(queryToUpdate));
-                _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, _context);
+                _patch = EntityToBlittable.ConvertEntityToBlittable(patch, conventions, context);
                 _options = options ?? new QueryOperationOptions();
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 var path = new StringBuilder(node.Url)
                     .Append("/databases/")
@@ -120,12 +120,12 @@ namespace Raven.Client.Documents.Operations
                     Method = HttpMethods.Patch,
                     Content = new BlittableJsonContent(stream =>
                         {
-                            using (var writer = new BlittableJsonTextWriter(_context, stream))
+                            using (var writer = new BlittableJsonTextWriter(ctx, stream))
                             {
                                 writer.WriteStartObject();
 
                                 writer.WritePropertyName("Query");
-                                writer.WriteIndexQuery(_conventions, _context, _queryToUpdate);
+                                writer.WriteIndexQuery(_conventions, ctx, _queryToUpdate);
                                 writer.WriteComma();
 
                                 writer.WritePropertyName("Patch");

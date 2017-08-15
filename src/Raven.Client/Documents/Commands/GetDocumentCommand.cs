@@ -30,8 +30,6 @@ namespace Raven.Client.Documents.Commands
         private readonly string _exclude;
         private readonly string _startAfter;
 
-        private readonly JsonOperationContext _context;
-
         public GetDocumentCommand(int start, int pageSize)
         {
             _start = start;
@@ -47,7 +45,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly, JsonOperationContext context)
+        public GetDocumentCommand(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
@@ -57,7 +55,6 @@ namespace Raven.Client.Documents.Commands
             _transformer = transformer;
             _transformerParameters = transformerParameters;
             _metadataOnly = metadataOnly;
-            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
         public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, string transformer, Dictionary<string, object> transformerParameters, int start, int pageSize)
@@ -72,7 +69,7 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
@@ -124,7 +121,7 @@ namespace Raven.Client.Documents.Commands
             }
             else if (_ids != null)
             {
-                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, _context);
+                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, ctx);
             }
 
             url = pathBuilder.ToString();

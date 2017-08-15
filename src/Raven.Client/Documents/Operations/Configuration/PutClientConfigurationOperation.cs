@@ -25,7 +25,6 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         private class PutClientConfigurationCommand : RavenCommand
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _configuration;
 
             public PutClientConfigurationCommand(DocumentConventions conventions, JsonOperationContext context, ClientConfiguration configuration)
@@ -34,12 +33,13 @@ namespace Raven.Client.Documents.Operations.Configuration
                     throw new ArgumentNullException(nameof(conventions));
                 if (configuration == null)
                     throw new ArgumentNullException(nameof(configuration));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
 
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _configuration = EntityToBlittable.ConvertEntityToBlittable(configuration, conventions, context);
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/admin/configuration/client";
 
@@ -48,7 +48,7 @@ namespace Raven.Client.Documents.Operations.Configuration
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _configuration);
+                        ctx.Write(stream, _configuration);
                     })
                 };
             }

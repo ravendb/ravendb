@@ -26,7 +26,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateClientCertificateCommand(context, _name, _permissions, _serverAdmin, _password);
+            return new CreateClientCertificateCommand( _name, _permissions, _serverAdmin, _password);
         }
 
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
@@ -35,12 +35,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             private readonly Dictionary<string, DatabaseAccess> _permissions;
             private readonly bool _serverAdmin;
             private readonly string _password;
-            private readonly JsonOperationContext _context;
 
-            public CreateClientCertificateCommand(JsonOperationContext context, string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
+            public CreateClientCertificateCommand(string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
                 _serverAdmin = serverAdmin;
                 _password = password;
@@ -49,7 +47,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates";
 
@@ -60,7 +58,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                 request.Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
 

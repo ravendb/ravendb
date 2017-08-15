@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Session.Operations
 
             _session.IncrementRequestCount();
 
-            return new QueryStreamCommand(_session.Conventions, _session.Context, query);
+            return new QueryStreamCommand(_session.Conventions, query);
         }
 
         public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)

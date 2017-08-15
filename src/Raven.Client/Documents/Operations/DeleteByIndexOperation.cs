@@ -71,25 +71,23 @@ namespace Raven.Client.Documents.Operations
 
         public virtual RavenCommand<OperationIdResult> GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteByIndexCommand(conventions, context, _queryToDelete, _options);
+            return new DeleteByIndexCommand(conventions, _queryToDelete, _options);
         }
 
         private class DeleteByIndexCommand : RavenCommand<OperationIdResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery _queryToDelete;
             private readonly QueryOperationOptions _options;
 
-            public DeleteByIndexCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery queryToDelete, QueryOperationOptions options = null)
+            public DeleteByIndexCommand(DocumentConventions conventions, IndexQuery queryToDelete, QueryOperationOptions options = null)
             {
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));
                 _options = options ?? new QueryOperationOptions();
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 var path = new StringBuilder(node.Url)
                     .Append("/databases/")
@@ -114,9 +112,9 @@ namespace Raven.Client.Documents.Operations
                     Method = HttpMethod.Delete,
                     Content = new BlittableJsonContent(stream =>
                         {
-                            using (var writer = new BlittableJsonTextWriter(_context, stream))
+                            using (var writer = new BlittableJsonTextWriter(ctx, stream))
                             {
-                                writer.WriteIndexQuery(_conventions, _context, _queryToDelete);
+                                writer.WriteIndexQuery(_conventions, ctx, _queryToDelete);
                             }
                         }
                     )

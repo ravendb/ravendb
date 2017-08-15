@@ -19,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations
             _node = node;
         }
 
-        public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<DatabasePutResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new PromoteDatabaseNodeCommand(_databaseName, _node);
         }
@@ -41,7 +41,7 @@ namespace Raven.Client.ServerWide.Operations
                 _node = node;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases/promote?name={_databaseName}&node={_node}";
 

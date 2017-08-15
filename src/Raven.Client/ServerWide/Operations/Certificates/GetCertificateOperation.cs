@@ -32,7 +32,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
 

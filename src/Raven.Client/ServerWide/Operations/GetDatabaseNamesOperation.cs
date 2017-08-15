@@ -16,7 +16,7 @@ namespace Raven.Client.ServerWide.Operations
             _pageSize = pageSize;
         }
 
-        public RavenCommand<string[]> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<string[]> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetDatabaseNamesCommand(_start, _pageSize);
         }
@@ -34,7 +34,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases?start={_start}&pageSize={_pageSize}&namesOnly=true";
 

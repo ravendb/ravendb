@@ -1291,7 +1291,7 @@ namespace Raven.Server.ServerWide
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                var command = new PutRaftCommand(context, cmdJson);
+                var command = new PutRaftCommand(cmdJson);
 
                 if (_clusterRequestExecutor == null
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
@@ -1309,17 +1309,15 @@ namespace Raven.Server.ServerWide
 
         private class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
 
-            public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
+            public PutRaftCommand(BlittableJsonReaderObject command)
             {
-                _context = context;
                 _command = command;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/rachis/send";
 
@@ -1328,7 +1326,7 @@ namespace Raven.Server.ServerWide
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteObject(_command);
                         }

@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {

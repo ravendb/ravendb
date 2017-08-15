@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.Transformers
                 _newName = newName ?? throw new ArgumentNullException(nameof(newName));
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/transformers/rename?name={Uri.EscapeUriString(_name)}&newName={Uri.EscapeUriString(_newName)}";
 

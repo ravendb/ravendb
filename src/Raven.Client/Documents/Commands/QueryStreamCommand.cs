@@ -13,29 +13,27 @@ namespace Raven.Client.Documents.Commands
     public class QueryStreamCommand : RavenCommand<StreamResult>
     {
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly IndexQuery _indexQuery;
         public readonly bool UsedTransformer;
 
-        public QueryStreamCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery query)
+        public QueryStreamCommand(DocumentConventions conventions, IndexQuery query)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _indexQuery = query ?? throw new ArgumentNullException(nameof(query));
             UsedTransformer = string.IsNullOrWhiteSpace(query.Transformer) == false;
             ResponseType = RavenCommandResponseType.Empty;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
-                        writer.WriteIndexQuery(_conventions, _context, _indexQuery);
+                        writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                     }
                 })
             };
