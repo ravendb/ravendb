@@ -341,8 +341,16 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
                 {
                     var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                    if (reply.AuthorizationSuccessful == false)
-                        throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
+                    switch (reply.Status)
+                    {
+                        case TcpConnectionStatus.Ok:
+                            break;
+                        case TcpConnectionStatus.UnAuthorization:
+                            throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
+                        case TcpConnectionStatus.TcpVersionMissmatch:
+                            throw new InvalidOperationException($"Can't connect to database {databaseName} because: {Environment.NewLine} {reply.Message}");
+                    }
+                        
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 

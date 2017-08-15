@@ -2,8 +2,14 @@
 {
     public class TcpConnectionHeaderResponse
     {
-        public bool AuthorizationSuccessful { get; set; }
-        public bool WrongOperationTcpVersion { get; set; }
+        public TcpConnectionStatus Status { get; set; }
         public string Message { get; set; }
+    }
+
+    public enum TcpConnectionStatus
+    {
+        Ok,
+        UnAuthorization,
+        TcpVersionMissmatch
     }
 }

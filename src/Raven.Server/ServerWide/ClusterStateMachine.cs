@@ -797,13 +797,14 @@ namespace Raven.Server.ServerWide
                     using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
                     {
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
-                        if (reply.WrongOperationTcpVersion == true)
+                        switch (reply.Status)
                         {
-                            throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
-                        }
-                        if (reply.AuthorizationSuccessful == false)
-                        {
-                            throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
+                            case TcpConnectionStatus.Ok:
+                                break;
+                            case TcpConnectionStatus.UnAuthorization:
+                                throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
+                            case TcpConnectionStatus.TcpVersionMissmatch:
+                                throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
                         }
                     }
                 }

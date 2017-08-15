@@ -255,15 +255,16 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        if (headerResponse.WrongOperationTcpVersion == true)
+                        switch (headerResponse.Status)
                         {
-                            throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
-                        }
-                        if (headerResponse.AuthorizationSuccessful == false)
-                        {
-                            throw new UnauthorizedAccessException(
-                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
-                        }
+                            case TcpConnectionStatus.Ok:
+                                break;
+                            case TcpConnectionStatus.UnAuthorization:
+                                throw new UnauthorizedAccessException(
+                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
+                            case TcpConnectionStatus.TcpVersionMissmatch:
+                                throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
+                        }                        
                     }
 
                     WriteClusterMaintenanceConnectionHeader(writer);
