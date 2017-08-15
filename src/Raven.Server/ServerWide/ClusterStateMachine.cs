@@ -787,7 +787,7 @@ namespace Raven.Server.ServerWide
                     {
                         [nameof(TcpConnectionHeaderMessage.DatabaseName)] = null,
                         [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Cluster,
-                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Cluster]
+                        [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ClusterTcpVersion
                     };
                     using (var writer = new BlittableJsonTextWriter(context, stream))
                     using (var msgJson = context.ReadObject(msg, "message"))
@@ -797,9 +797,13 @@ namespace Raven.Server.ServerWide
                     using (var response = context.ReadForMemory(stream, "cluster-ConnectToPeer-header-response"))
                     {
                         var reply = JsonDeserializationServer.TcpConnectionHeaderResponse(response);
+                        if (reply.WrongOperationTcpVersion == true)
+                        {
+                            throw new InvalidOperationException($"Unable to access  {url} because {reply.Message}");
+                        }
                         if (reply.AuthorizationSuccessful == false)
                         {
-                            throw new AuthorizationException("Unable to access " + url + " because " + reply.Message);
+                            throw new AuthorizationException($"Unable to access  {url} because {reply.Message}");
                         }
                     }
                 }

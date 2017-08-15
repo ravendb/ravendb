@@ -72,8 +72,12 @@ namespace Raven.Server.Web.System
                 using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-
-                    if(headerResponse.AuthorizationSuccessful == false)
+                    if (headerResponse.WrongOperationTcpVersion == true)
+                    {
+                        result["Success"] = false;
+                        result["Error"] =  $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
+                    }
+                    else if (headerResponse.AuthorizationSuccessful == false)
                     {
                         result["Success"] = false;
                         result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
@@ -95,7 +99,7 @@ namespace Raven.Server.Web.System
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
-                writer.WriteInteger(TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Heartbeats]);
+                writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteNull();
             }

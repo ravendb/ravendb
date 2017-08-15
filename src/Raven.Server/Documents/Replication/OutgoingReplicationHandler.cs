@@ -383,7 +383,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(TcpConnectionHeaderMessage.DatabaseName)] = Destination.Database,// _parent.Database.Name,
                     [nameof(TcpConnectionHeaderMessage.Operation)] = TcpConnectionHeaderMessage.OperationTypes.Replication.ToString(),
                     [nameof(TcpConnectionHeaderMessage.SourceNodeTag)] = _parent._server.NodeTag,
-                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Replication]
+                    [nameof(TcpConnectionHeaderMessage.OperationVersion)] = TcpConnectionHeaderMessage.ReplicationTcpVersion
                 });
                 writer.Flush();
                 ReadHeaderResponseAndThrowIfUnAuthorized();
@@ -422,6 +422,10 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
+                if (headerResponse.WrongOperationTcpVersion == true)
+                {
+                    throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                }
                 if (headerResponse.AuthorizationSuccessful == false)
                 {
                     throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");

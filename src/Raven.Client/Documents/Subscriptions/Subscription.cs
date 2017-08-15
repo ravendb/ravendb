@@ -329,7 +329,7 @@ namespace Raven.Client.Documents.Subscriptions
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
                     DatabaseName = databaseName,
-                    OperationVersion = TcpConnectionHeaderMessage.TcpVersions[TcpConnectionHeaderMessage.OperationTypes.Subscription]
+                    OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion
                 });
                 var header = Encodings.Utf8.GetBytes(serializeObject);
 
