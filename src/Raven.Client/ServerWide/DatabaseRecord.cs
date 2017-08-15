@@ -43,8 +43,6 @@ namespace Raven.Client.ServerWide
 
         public Dictionary<string, AutoIndexDefinition> AutoIndexes;
 
-        public Dictionary<string, long> Identities;
-
         public Dictionary<string, string> Settings = new Dictionary<string, string>();
 
         //todo: see how we can protect this

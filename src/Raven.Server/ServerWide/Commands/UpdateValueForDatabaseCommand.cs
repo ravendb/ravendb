@@ -48,7 +48,6 @@ namespace Raven.Server.ServerWide.Commands
             {
                 ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, itemBlittable);
             }
-            
         }
 
         public abstract void FillJson(DynamicJsonValue json);

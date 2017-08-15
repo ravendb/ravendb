@@ -9,6 +9,8 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public DatabaseRecord DatabaseRecord { get; set; }
 
+        public Dictionary<string, long> Identities { get; set; }
+
         public Dictionary<string, object> DatabaseValues { get; set; }
     }
 }

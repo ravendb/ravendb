@@ -1,47 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Extensions;
-using Raven.Client.ServerWide;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class UpdateClusterIdentityCommand : UpdateDatabaseCommand
+    public class UpdateClusterIdentityCommand : CommandBase
     {
+        public string DatabaseName { get; set; }
         public Dictionary<string,long> Identities { get; set; }
 
-        public UpdateClusterIdentityCommand() : base(null)
+        public UpdateClusterIdentityCommand()
         {            
         }
 
-        public UpdateClusterIdentityCommand(string databaseName, IDictionary<string, long> identities) : base(databaseName)
+        public UpdateClusterIdentityCommand(string databaseName, IDictionary<string, long> identities)
         {
+            DatabaseName = databaseName;
             Identities = new Dictionary<string, long>(identities);
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public void ApplyIdentityValues(Dictionary<string, long> existingIdentities)
         {
-            
             foreach (var kvp in Identities)
             {
-                if (record.Identities.TryGetValue(kvp.Key, out long existingValue))
+                if (existingIdentities.TryGetValue(kvp.Key, out var existingValue))
                 {
-                    record.Identities[kvp.Key] = Math.Max(existingValue, kvp.Value);
+                    existingIdentities[kvp.Key] = Math.Max(existingValue, kvp.Value);
                 }
                 else
                 {
-                    record.Identities.Add(kvp.Key, kvp.Value);
+                    existingIdentities.Add(kvp.Key, kvp.Value);
                 }
             }
-            return null;
         }
 
-        public override void FillJson(DynamicJsonValue json)
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
-            if(Identities == null)
-                Identities = new Dictionary<string, long>();
+            var json = base.ToJson(context);
 
-            json[nameof(Identities)] = Identities.ToJson();
+            FillJson(json);
+            return json;
+        }
+
+        private void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(DatabaseName)] = DatabaseName;
+            json[nameof(Identities)] = (Identities ?? new Dictionary<string, long>()).ToJson();
         }
     }
 }

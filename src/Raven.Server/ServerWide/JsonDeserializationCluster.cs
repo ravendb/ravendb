@@ -20,6 +20,12 @@ namespace Raven.Server.ServerWide
 {
     public class JsonDeserializationCluster : JsonDeserializationBase
     {
+        public static readonly Func<BlittableJsonReaderObject, UpdateClusterIdentityCommand> UpdateClusterIdentityCommand = GenerateJsonDeserializationRoutine<UpdateClusterIdentityCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, IncrementClusterIdentityCommand> IncrementClusterIdentityCommand = GenerateJsonDeserializationRoutine<IncrementClusterIdentityCommand>();
+
+        public static readonly Func<BlittableJsonReaderObject, Dictionary<string, long>> Identities = GenerateJsonDeserializationRoutine<Dictionary<string, long>>();
+
         public static readonly Func<BlittableJsonReaderObject, SubscriptionState> SubscriptionState = GenerateJsonDeserializationRoutine<SubscriptionState>();
 
         public static readonly Func<BlittableJsonReaderObject, DeleteValueCommand> DeleteValueCommand = GenerateJsonDeserializationRoutine<DeleteValueCommand>();
