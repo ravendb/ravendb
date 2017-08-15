@@ -29,6 +29,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         RecoveryError,
         RestoreError,
         ClusterTopologyWarning,
+        DatabaseTopologyWarning,
         SwappingHddInsteadOfSsd,
 
         RevisionsConfigurationNotValid

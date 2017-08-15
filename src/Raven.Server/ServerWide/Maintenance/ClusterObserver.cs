@@ -33,6 +33,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ServerStore _server;
         private readonly long _stabilizationTime;
         private readonly TimeSpan _breakdownTimeout;
+        private NotificationCenter.NotificationCenter NotificationCenter => _server.NotificationCenter;
 
         public ClusterObserver(
             ServerStore server,
@@ -109,7 +110,7 @@ namespace Raven.Server.ServerWide.Maintenance
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var updateCommands = new List<UpdateTopologyCommand>();
+                var updateCommands = new List<(UpdateTopologyCommand Update, string Reason)>();
                 List<DeleteDatabaseCommand> deletions = null;
                 using (context.OpenReadTransaction())
                 {
@@ -117,6 +118,14 @@ namespace Raven.Server.ServerWide.Maintenance
                     foreach (var database in _engine.StateMachine.GetDatabaseNames(context))
                     {
                         var databaseRecord = _engine.StateMachine.ReadDatabase(context, database, out long etag);
+                        if (databaseRecord == null)
+                        {
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info($"Can't analyze the stats of database the {database}, because the database record is null.");
+                            }
+                            continue;
+                        }
                         var topologyStamp = databaseRecord?.Topology?.Stamp ?? new LeaderStamp
                         {
                             Index = -1,
@@ -148,7 +157,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 RaftCommandIndex = etag
                             };
 
-                            updateCommands.Add(cmd);
+                            updateCommands.Add((cmd, updateReason));
                         }
                     }
                 }
@@ -157,7 +166,14 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     try
                     {
-                        await UpdateTopology(command);
+                        await UpdateTopology(command.Update);
+                        var alert = AlertRaised.Create(
+                            $"Topology of database '{command.Update.DatabaseName}' was changed",
+                            command.Reason,
+                            AlertType.DatabaseTopologyWarning,
+                            NotificationSeverity.Warning
+                        );
+                        NotificationCenter.Add(alert);
                     }
                     catch (ConcurrencyException)
                     {
@@ -181,11 +197,11 @@ namespace Raven.Server.ServerWide.Maintenance
             var alert = AlertRaised.Create(
                 "No living nodes in the database topology",
                 alertMsg,
-                AlertType.ClusterTopologyWarning,
+                AlertType.DatabaseTopologyWarning,
                 NotificationSeverity.Warning
             );
 
-            _server.NotificationCenter.Add(alert);
+            NotificationCenter.Add(alert);
             if (_logger.IsOperationsEnabled)
             {
                 _logger.Operations(alertMsg);
@@ -265,7 +281,16 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
+                    {
+                        if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
+                            || currentStatus != DatabasePromotionStatus.NotResponding)
+                        {
+                            topology.DemotionReasons[promotable] = "Not responding";
+                            topology.PromotablesStatus[promotable] = DatabasePromotionStatus.NotResponding;
+                            return $"Node {promotable} is currently not responding";
+                        }
                         continue;
+                    }
 
                     //replace the bad promotable otherwise we will continute to add more and more nodes.
                     topology.Promotables.Add(node);
