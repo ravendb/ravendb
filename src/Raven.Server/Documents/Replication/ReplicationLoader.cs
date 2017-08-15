@@ -366,6 +366,7 @@ namespace Raven.Server.Documents.Replication
                 _internalDestinations.Clear();
                 _externalDestinations.Clear();
                 _destinations.Clear();
+                DisposeConnections(instancesToDispose);
                 return;
             }
 
@@ -376,6 +377,11 @@ namespace Raven.Server.Documents.Replication
             destinations.AddRange(_externalDestinations);
             _destinations = destinations;
 
+            DisposeConnections(instancesToDispose);
+        }
+
+        private void DisposeConnections(List<OutgoingReplicationHandler> instancesToDispose)
+        {
             foreach (var instance in instancesToDispose)
             {
                 try
