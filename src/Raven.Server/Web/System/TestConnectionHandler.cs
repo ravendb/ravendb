@@ -72,19 +72,19 @@ namespace Raven.Server.Web.System
                 using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                    if (headerResponse.WrongOperationTcpVersion == true)
+                    switch (headerResponse.Status)
                     {
-                        result["Success"] = false;
-                        result["Error"] =  $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
-                    }
-                    else if (headerResponse.AuthorizationSuccessful == false)
-                    {
-                        result["Success"] = false;
-                        result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
-                    }
-                    else
-                    {
-                        result["Success"] = true;
+                        case TcpConnectionStatus.Ok:
+                            result["Success"] = true;
+                            break;
+                        case TcpConnectionStatus.UnAuthorization:
+                            result["Success"] = false;
+                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
+                            break;
+                        case TcpConnectionStatus.TcpVersionMissmatch:
+                            result["Success"] = false;
+                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
+                            break;
                     }
                 }
 

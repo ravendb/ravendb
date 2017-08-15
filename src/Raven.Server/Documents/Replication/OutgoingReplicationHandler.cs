@@ -422,13 +422,14 @@ namespace Raven.Server.Documents.Replication
                     ThrowConnectionClosed();
                 }
                 var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(replicationTcpConnectReplyMessage.Document);
-                if (headerResponse.WrongOperationTcpVersion == true)
+                switch (headerResponse.Status)
                 {
-                    throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
-                }
-                if (headerResponse.AuthorizationSuccessful == false)
-                {
-                    throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                    case TcpConnectionStatus.Ok:
+                        break;
+                    case TcpConnectionStatus.UnAuthorization:
+                        throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
+                    case TcpConnectionStatus.TcpVersionMissmatch:
+                        throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                 }
             }
         }

@@ -617,17 +617,7 @@ namespace Raven.Server
 
                             if (MatchingOperationVersion(header, out var error) == false)
                             {
-                                using (var writer = new BlittableJsonTextWriter(context, stream))
-                                {
-                                    writer.WriteStartObject();
-                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.WrongOperationTcpVersion));
-                                    writer.WriteBool(true);
-                                    writer.WriteComma();
-                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
-                                    writer.WriteString(error);                                                                                                            
-                                    writer.WriteEndObject();
-                                    writer.Flush();
-                                }
+                                RespondToTcpConnection(stream, context, error,TcpConnectionStatus.TcpVersionMissmatch);
                                 if (Logger.IsInfoEnabled)
                                 {
                                     Logger.Info(
@@ -639,20 +629,7 @@ namespace Raven.Server
 
                             bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
-                            {
-                                writer.WriteStartObject();
-                                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.AuthorizationSuccessful));
-                                writer.WriteBool(authSuccessful);
-                                if (err != null)
-                                {
-                                    writer.WriteComma();
-                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
-                                    writer.WriteString(err);
-                                }
-                                writer.WriteEndObject();
-                                writer.Flush();
-                            }
+                            RespondToTcpConnection(stream, context, error, authSuccessful? TcpConnectionStatus.Ok:TcpConnectionStatus.UnAuthorization);
 
                             if (authSuccessful == false)
                             {
@@ -690,6 +667,24 @@ namespace Raven.Server
                     }
                 }
             });
+        }
+
+        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
+                writer.WriteString(status.ToString());
+                if (error != null)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
+                    writer.WriteString(error);
+                }
+                writer.WriteEndObject();
+                writer.Flush();
+            }
         }
 
         private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error)
