@@ -1,34 +1,40 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.ServerWide;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class IncrementClusterIdentityCommand : UpdateDatabaseCommand
+    public class IncrementClusterIdentityCommand : CommandBase
     {
+        public string DatabaseName { get; set; }
         public string Prefix { get; set; }
 
-        public IncrementClusterIdentityCommand() : base(null)
+        public IncrementClusterIdentityCommand()
         {
         }
 
-        public IncrementClusterIdentityCommand(string databaseName) : base(databaseName)
+        public IncrementClusterIdentityCommand(string databaseName)
         {
+            DatabaseName = databaseName;
         }
 
-        public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
+        public void Increment(Dictionary<string,long> identities)
         {
-            if (record.Identities == null)
-                record.Identities = new Dictionary<string, long>();
-
-            record.Identities.TryGetValue(Prefix, out var prev);
-            record.Identities[Prefix] = prev + 1;
-
-            return null;
+            identities.TryGetValue(Prefix, out var prev);
+            identities[Prefix] = prev + 1;
         }
 
-        public override void FillJson(DynamicJsonValue json)
+        public override DynamicJsonValue ToJson(JsonOperationContext context)
         {
+            var json = base.ToJson(context);
+            FillJson(json);
+
+            return json;
+        }
+
+        private void FillJson(DynamicJsonValue json)
+        {
+            json[nameof(DatabaseName)] = DatabaseName;
             json[nameof(Prefix)] = Prefix;
         }
     }

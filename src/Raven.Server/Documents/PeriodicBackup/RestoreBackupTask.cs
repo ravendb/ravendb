@@ -99,7 +99,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                             // we only have a smuggler restore
                             // use the encryption key to encrypt the database
                             Encrypted = _hasEncryptionKey
-                        }
+                        },
+                        Identities = new Dictionary<string, long>()
                     };
 
                     DatabaseHelper.Validate(databaseName, restoreSettings.DatabaseRecord);
@@ -140,7 +141,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     if (snapshotRestore)
                         options |= InitializeOptions.GenerateNewDatabaseId;
                     database.Initialize(options);
-                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, onProgress, restoreResult);
+                    SmugglerRestore(_restoreConfiguration.BackupLocation, database, databaseRecord, restoreSettings.Identities, onProgress, restoreResult);
                 }
 
                 databaseRecord.Topology = new DatabaseTopology();
@@ -272,6 +273,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             string backupDirectory, 
             DocumentDatabase database, 
             DatabaseRecord databaseRecord,
+            Dictionary<string, long> identities,
             Action<IOperationProgress> onProgress,
             RestoreResult restoreResult)
         {
@@ -296,7 +298,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we do have at least one smuggler backup
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
-            databaseRecord.Identities = new Dictionary<string, long>();
 
             // restore the smuggler backup
             var options = new DatabaseSmugglerOptions();
@@ -337,7 +338,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 throw new ArgumentOutOfRangeException();
                         }
                     },
-                    onIdentityAction: keyValuePair => databaseRecord.Identities[keyValuePair.Key] = keyValuePair.Value);
+                    onIdentityAction: keyValuePair => identities[keyValuePair.Key] = keyValuePair.Value);
             }
         }
 

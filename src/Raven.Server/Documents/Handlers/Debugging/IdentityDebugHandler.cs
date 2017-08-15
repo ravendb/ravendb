@@ -1,8 +1,6 @@
 ﻿using System.Threading.Tasks;
-using Raven.Client.Extensions;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -14,14 +12,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (Database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var record = Database.ServerStore.Cluster.ReadDatabase(context, Database.Name);
-                var identitiesAsJson = record.Identities.ToJson();
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, identitiesAsJson);
-                    writer.Flush();
-                }
+                var identitiesBlittable = Database.ServerStore.Cluster.ReadIdentitiesAsBlittable(context, Database.Name,out _);
+                context.Write(ResponseBodyStream(), identitiesBlittable);
             }
             return Task.CompletedTask;
         }
