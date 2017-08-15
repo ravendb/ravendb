@@ -14,13 +14,11 @@ namespace Raven.Client.Documents.Commands
         private readonly string _changeVector;
         private readonly BlittableJsonReaderObject _document;
 
-        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document, JsonOperationContext context)
+        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _changeVector = changeVector;
             _document = document ?? throw new ArgumentNullException(nameof(document));
-            if (context == null)
-                throw new ArgumentNullException(nameof(context));
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
