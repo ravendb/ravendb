@@ -46,6 +46,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
+using Sparrow.LowMemory;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using Voron.Debugging;
@@ -66,7 +67,7 @@ namespace Raven.Server.Documents.Indexes
         }
     }
 
-    public abstract class Index : IDocumentTombstoneAware, IDisposable
+    public abstract class Index : IDocumentTombstoneAware, IDisposable, ILowMemoryHandler
     {
         private long _writeErrors;
 
@@ -86,7 +87,20 @@ namespace Raven.Server.Documents.Indexes
 
         private readonly AsyncManualResetEvent _indexingBatchCompleted = new AsyncManualResetEvent();
 
-        private CancellationTokenSource _cts;
+        /// <summary>
+        /// Cancelled if the database is in shutdown process.
+        /// </summary>
+        private CancellationTokenSource _indexingProcessCancellationTokenSource;
+
+        /// <summary>
+        /// If not null, a batch of indexing work is in progress. Cancelling
+        /// this token source will force the current indexing batch work to 
+        /// end prematurely. This does NOT abort the indexing process, but
+        /// merely forces the batch to restart.
+        /// 
+        /// Example usage is adjusting the memory allocation parameters.
+        /// </summary>
+        private CancellationTokenSource _batchProcessCancellationTokenSource;
 
         protected DocumentDatabase DocumentDatabase;
 
@@ -138,7 +152,7 @@ namespace Raven.Server.Documents.Indexes
         protected PerformanceHintsConfiguration PerformanceHints;
 
         private bool _allocationCleanupNeeded;
-        private Size _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+        private Size _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
@@ -154,6 +168,8 @@ namespace Raven.Server.Documents.Indexes
             MaxNumberOutputsPerDocument = int.MinValue,
             Suggestion = "Please verify this index definition and consider a re-design of your entities or index for better indexing performance"
         };
+
+        private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
@@ -386,7 +402,7 @@ namespace Raven.Server.Documents.Indexes
 
                     _indexValidationStalenessCheck = () =>
                     {
-                        if (_cts.IsCancellationRequested)
+                        if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
                             return true;
 
                         using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -446,7 +462,7 @@ namespace Raven.Server.Documents.Indexes
 
                 SetState(IndexState.Normal);
 
-                _cts = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
+                _indexingProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(DocumentDatabase.DatabaseShutdown);
 
                 _indexingThread = new Thread(() =>
                 {
@@ -484,7 +500,7 @@ namespace Raven.Server.Documents.Indexes
                 if (_indexingThread == null)
                     return;
 
-                _cts.Cancel();
+                _indexingProcessCancellationTokenSource.Cancel();
 
                 var indexingThread = _indexingThread;
                 _indexingThread = null;
@@ -532,7 +548,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _disposed = true;
 
-                _cts?.Cancel();
+                _indexingProcessCancellationTokenSource?.Cancel();
 
                 DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
 
@@ -574,7 +590,7 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
-                    _cts?.Dispose();
+                    _indexingProcessCancellationTokenSource?.Dispose();
                 });
 
                 exceptionAggregator.ThrowIfNeeded();
@@ -752,20 +768,40 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 try
                                 {
-                                    _cts.Token.ThrowIfCancellationRequested();
+                                    _indexingProcessCancellationTokenSource.Token.ThrowIfCancellationRequested();
+                                    _batchProcessCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(_indexingProcessCancellationTokenSource.Token);
 
-                                    bool didWork;
+                                    bool didWork = false;
                                     try
                                     {
                                         TimeSpentIndexing.Start();
-                                        didWork = DoIndexingWork(scope, _cts.Token);
+                                        didWork = DoIndexingWork(scope, _batchProcessCancellationTokenSource.Token);
+                                    }
+                                    catch (OperationCanceledException)
+                                    {
+                                        // We are here because the batch has been cancelled. This may happen
+                                        // because the database is shutting down, or the batch has been
+                                        // cancelled by some other internal process. If the database is
+                                        // shutting down, then we throw again to handle shutdown.
+                                        if (_indexingProcessCancellationTokenSource.IsCancellationRequested)
+                                        {
+                                            throw;
+                                        }
                                     }
                                     finally
                                     {
                                         TimeSpentIndexing.Stop();
+
+                                        // If we are here, then the previous block did not throw. There's two
+                                        // possibilities: either the batch was not cancelled, and we really
+                                        // did finish the work, or the batch was cancelled, but not because of
+                                        // a database shutdown
+                                        batchCompleted = !_batchProcessCancellationTokenSource.IsCancellationRequested;
+                                        _batchProcessCancellationTokenSource = null;
                                     }
 
-                                    _indexingBatchCompleted.SetAndResetAtomically();
+                                    if (batchCompleted)
+                                        _indexingBatchCompleted.SetAndResetAtomically();
 
                                     if (didWork)
                                         ResetErrors();
@@ -784,14 +820,12 @@ namespace Raven.Server.Documents.Indexes
                                         // this can fail if the indexes lock is currently held, so we'll retry
                                         // however, we might be requested to shutdown, so we want to skip replacing
                                         // in this case, worst case scenario we'll handle this in the next batch
-                                        while (_cts.IsCancellationRequested == false)
+                                        while (_indexingProcessCancellationTokenSource.IsCancellationRequested == false)
                                         {
                                             if (DocumentDatabase.IndexStore.TryReplaceIndexes(originalName, Definition.Name))
                                                 break;
                                         }
                                     }
-
-                                    batchCompleted = true;
                                 }
                                 catch (OutOfMemoryException oome)
                                 {
@@ -823,6 +857,9 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (OperationCanceledException)
                                 {
+                                    // We are here only in the case of indexing process cancellation.
+                                    Debug.Assert(!_batchProcessCancellationTokenSource.IsCancellationRequested);
+                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested);
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
                                 }
@@ -879,7 +916,7 @@ namespace Raven.Server.Documents.Indexes
                                     new Size(NativeMemory.ThreadAllocations.Value.Allocations, SizeUnit.Bytes));
                             }
 
-                            if (_mre.Wait(timeToWaitForMemoryCleanup, _cts.Token) == false)
+                            if (_mre.Wait(timeToWaitForMemoryCleanup, _indexingProcessCancellationTokenSource.Token) == false)
                             {
                                 _allocationCleanupNeeded = false;
 
@@ -890,7 +927,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 var numberOfSetEvents =
                                     WaitHandle.WaitAny(new[]
-                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _cts.Token.WaitHandle});
+                                        {_mre.WaitHandle, _logsAppliedEvent.WaitHandle, _indexingProcessCancellationTokenSource.Token.WaitHandle});
 
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
@@ -968,7 +1005,7 @@ namespace Raven.Server.Documents.Indexes
             _contextPool.Clean();
             ByteStringMemoryCache.CleanForCurrentThread();
             IndexPersistence.Clean();
-            _currentMaximumAllowedMemory = new Size(32, SizeUnit.Megabytes);
+            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
 
 
             var afterFree = NativeMemory.ThreadAllocations.Value.Allocations;
@@ -2477,6 +2514,21 @@ namespace Raven.Server.Documents.Indexes
         public override string ToString()
         {
             return Name;
+        }
+
+        public void LowMemory()
+        {
+            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+            _allocationCleanupNeeded = true;
+            _batchProcessCancellationTokenSource?.Cancel();
+        }
+
+        /// <summary>
+        /// We don't need to do anything when the low memory problem is over,
+        /// the class will automatically raise memory usage.
+        /// </summary>
+        public void LowMemoryOver()
+        {
         }
     }
 }
