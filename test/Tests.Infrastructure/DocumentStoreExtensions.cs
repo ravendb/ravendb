@@ -107,7 +107,7 @@ namespace FastTests
                     }
 
 
-                    var command = new PutDocumentCommand(id, changeVector, documentJson, Context);
+                    var command = new PutDocumentCommand(id, changeVector, documentJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
