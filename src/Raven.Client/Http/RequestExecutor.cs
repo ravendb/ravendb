@@ -700,12 +700,13 @@ namespace Raven.Client.Http
                     continue;
                 }
 
-                JsonOperationContext tmpCtx;
-                var disposable = ContextPool.AllocateOperationContext(out tmpCtx);
-                var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
+                IDisposable disposable = null;
 
                 try
                 {
+                    disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
+                    var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
+
                     Interlocked.Increment(ref NumberOfServerRequests);
                     tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
                     {
@@ -724,7 +725,7 @@ namespace Raven.Client.Http
                         }
                         finally 
                         {
-                            disposable.Dispose();
+                            disposable?.Dispose();
                         }
                     }, token);
                 }
@@ -733,6 +734,7 @@ namespace Raven.Client.Http
                     numberOfFailedTasks++;
                     // nothing we can do about it
                     tasks[i] = NeverEndingRequest;
+                    disposable?.Dispose();
                 }
             }
 
