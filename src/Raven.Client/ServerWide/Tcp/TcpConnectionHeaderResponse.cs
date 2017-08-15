@@ -9,7 +9,7 @@
     public enum TcpConnectionStatus
     {
         Ok,
-        UnAuthorization,
+        AuthorizationFailed,
         TcpVersionMissmatch
     }
 }

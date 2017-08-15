@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.Replication
                 {
                     case TcpConnectionStatus.Ok:
                         break;
-                    case TcpConnectionStatus.UnAuthorization:
+                    case TcpConnectionStatus.AuthorizationFailed:
                         throw new UnauthorizedAccessException($"{Destination.FromString()} replied with failure {headerResponse.Message}");
                     case TcpConnectionStatus.TcpVersionMissmatch:
                         throw new InvalidOperationException($"{Destination.FromString()} replied with failure {headerResponse.Message}");

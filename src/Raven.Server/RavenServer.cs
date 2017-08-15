@@ -629,7 +629,7 @@ namespace Raven.Server
 
                             bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
-                            RespondToTcpConnection(stream, context, error, authSuccessful? TcpConnectionStatus.Ok:TcpConnectionStatus.UnAuthorization);
+                            RespondToTcpConnection(stream, context, error, authSuccessful? TcpConnectionStatus.Ok:TcpConnectionStatus.AuthorizationFailed);
 
                             if (authSuccessful == false)
                             {

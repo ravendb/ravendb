@@ -77,7 +77,7 @@ namespace Raven.Server.Web.System
                         case TcpConnectionStatus.Ok:
                             result["Success"] = true;
                             break;
-                        case TcpConnectionStatus.UnAuthorization:
+                        case TcpConnectionStatus.AuthorizationFailed:
                             result["Success"] = false;
                             result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
                             break;

@@ -345,10 +345,10 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         case TcpConnectionStatus.Ok:
                             break;
-                        case TcpConnectionStatus.UnAuthorization:
+                        case TcpConnectionStatus.AuthorizationFailed:
                             throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
                         case TcpConnectionStatus.TcpVersionMissmatch:
-                            throw new InvalidOperationException($"Can't connect to database {databaseName} because: {Environment.NewLine} {reply.Message}");
+                            throw new InvalidOperationException($"Can't connect to database {databaseName} because: {reply.Message}");
                     }
                         
                 }

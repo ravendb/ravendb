@@ -259,7 +259,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             case TcpConnectionStatus.Ok:
                                 break;
-                            case TcpConnectionStatus.UnAuthorization:
+                            case TcpConnectionStatus.AuthorizationFailed:
                                 throw new UnauthorizedAccessException(
                                     $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
                             case TcpConnectionStatus.TcpVersionMissmatch:
