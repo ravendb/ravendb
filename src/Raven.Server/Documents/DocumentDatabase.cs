@@ -715,7 +715,8 @@ namespace Raven.Server.Documents
                 Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                     $"{Name} != {record.DatabaseName}");
 
-                if (LastDatabaseRecordIndex >= index)
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                if (LastDatabaseRecordIndex > index)
                 {
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Skipping record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName} because it was already precessed.");
@@ -725,7 +726,7 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
 
-                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, "Should never happen");
+                Debug.Assert(index >= RachisLogIndexNotifications.LastModifiedIndex, $"Should never happen");
 
                 try
                 {

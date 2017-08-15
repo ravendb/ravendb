@@ -252,13 +252,16 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (FailedDatabaseInstanceOrNode(clusterTopology, promotable, dbName, current) == DatabaseHealth.Bad)
                 {
                     // node distribution is off and the node is down
-                    if (topology.DynamicNodesDistribution == false && (
-                            topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
-                            || currentStatus != DatabasePromotionStatus.NotResponding))
+                    if (topology.DynamicNodesDistribution == false)
                     {
-                        topology.DemotionReasons[promotable] = "Not responding";
-                        topology.PromotablesStatus[promotable] = DatabasePromotionStatus.NotResponding;
-                        return $"Node {promotable} is currently not responding";
+                        if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
+                            || currentStatus != DatabasePromotionStatus.NotResponding)
+                        {
+                            topology.DemotionReasons[promotable] = "Not responding";
+                            topology.PromotablesStatus[promotable] = DatabasePromotionStatus.NotResponding;
+                            return $"Node {promotable} is currently not responding";
+                        }
+                        continue;
                     }
 
                     if (TryFindFitNode(promotable, dbName, topology, clusterTopology, current, out var node) == false)
@@ -305,6 +308,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 switch (health)
                 {
                     case DatabaseHealth.Bad:
+                        if(topology.DynamicNodesDistribution == false)
+                            continue;
+
                         if (goodMembers < topology.ReplicationFactor &&
                             TryFindFitNode(rehab, dbName, topology, clusterTopology, current, out var node))
                         {
@@ -357,9 +363,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private bool TryMoveToRehab(string dbName, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, string member)
         {
-            if (topology.DynamicNodesDistribution == false)
-                return false;
-
             DatabaseStatusReport dbStats = null;
             if (current.TryGetValue(member, out var nodeStats) &&
                 nodeStats.Status == ClusterNodeStatusReport.ReportStatus.Ok &&

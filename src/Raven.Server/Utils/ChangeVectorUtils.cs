@@ -22,6 +22,9 @@ namespace Raven.Server.Utils
             if (remoteAsString == localAsString)
                 return ConflictStatus.AlreadyMerged;
 
+            if(string.IsNullOrEmpty(remoteAsString))
+                return ConflictStatus.AlreadyMerged;
+
             if (string.IsNullOrEmpty(remoteAsString) || string.IsNullOrEmpty(localAsString))
                 return ConflictStatus.Update;
 

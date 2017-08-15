@@ -113,6 +113,8 @@ namespace Raven.Server.Rachis
             Leader
         }
 
+        public const string InitialTag = "?";
+
         public State CurrentState { get; private set; }
 
         public string LastStateChangeReason => _lastStateChangeReason;
@@ -242,7 +244,7 @@ namespace Raven.Server.Rachis
                     var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
 
                     var readResult = state.Read(TagSlice);
-                    _tag = readResult == null ? "?" : readResult.Reader.ToStringValue();
+                    _tag = readResult == null ? InitialTag : readResult.Reader.ToStringValue();
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
@@ -475,7 +477,17 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    beforeStateChangedEvent?.Invoke();
+                    try
+                    {
+                        beforeStateChangedEvent?.Invoke();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("Before state change invocation function failed.", e);
+                        }
+                    }
 
                     try
                     {
@@ -703,12 +715,12 @@ namespace Raven.Server.Rachis
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
-                    if (_tag == "?")
+                    if (_tag == InitialTag)
                     {
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
-                            if (_tag == "?")// double checked locking under tx write lock
+                            if (_tag == InitialTag)// double checked locking under tx write lock
                             {
                                 UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
                                 context.Transaction.Commit();
@@ -1297,7 +1309,10 @@ namespace Raven.Server.Rachis
                 if (CurrentState != State.Passive && forNewCluster == false)
                     return;
 
-                if (forNewCluster == false)
+                var lastNode = _tag == InitialTag ? "A" : GetTopology(ctx).LastNodeId;
+                // If we were kicked out form a cluster we want to keep the old cluster's tag and lastNode
+                // but if we are new born we will set our tag to A. 
+                if (forNewCluster == false && _tag == InitialTag)
                 {
                     UpdateNodeTag(ctx, "A");
                 }
@@ -1310,9 +1325,9 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    "A"
+                    lastNode
                 );
-                
+
                 SetTopology(null, ctx, topology);
 
                 SwitchToSingleLeader(ctx);

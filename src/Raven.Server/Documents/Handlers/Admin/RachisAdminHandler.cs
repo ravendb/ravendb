@@ -290,7 +290,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                             $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
                     }
 
-                    var nodeTag = nodeInfo.NodeTag == "?" 
+                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag
                         ? null : nodeInfo.NodeTag;
 
                     if (remoteIsHttps)
