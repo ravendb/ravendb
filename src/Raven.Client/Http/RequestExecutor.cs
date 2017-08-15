@@ -511,7 +511,7 @@ namespace Raven.Client.Http
             bool shouldRetry = true,
             int? sessionId = null)
         {
-            var request = CreateRequest(chosenNode, command, out string url);
+            var request = CreateRequest(context, chosenNode, command, out string url);
 
             using (var cachedItem = GetFromCache(context, command, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
@@ -670,7 +670,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public bool InSpeedTestPhase => _nodeSelector.InSpeedTestPhase;
+        public bool InSpeedTestPhase => _nodeSelector?.InSpeedTestPhase ?? false;
 
         private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
         {
@@ -700,7 +700,10 @@ namespace Raven.Client.Http
                     continue;
                 }
 
-                var request = CreateRequest(nodes[i], command, out var _);
+                JsonOperationContext tmpCtx;
+                var disposable = ContextPool.AllocateOperationContext(out tmpCtx);
+                var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
+
                 try
                 {
                     Interlocked.Increment(ref NumberOfServerRequests);
@@ -718,6 +721,10 @@ namespace Raven.Client.Http
                         catch (Exception)
                         {
                             // there is really nothing we can do here
+                        }
+                        finally 
+                        {
+                            disposable.Dispose();
                         }
                     }, token);
                 }
@@ -767,9 +774,9 @@ namespace Raven.Client.Http
 
         public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
 
-        private HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
+        private HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
-            var request = command.CreateRequest(node, out url);
+            var request = command.CreateRequest(ctx, node, out url);
 
             request.RequestUri = new Uri(url);
 
