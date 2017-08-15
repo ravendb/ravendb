@@ -150,7 +150,6 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                      IncludeRevisions: false
                 },
                 ChangeVector: null,
-                LastEtagReachedInServer: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,
                 TimeOfLastClientActivity: null
