@@ -12,7 +12,6 @@ using System.Linq;
 using System.Net;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide.PeriodicBackup;
@@ -26,12 +25,13 @@ namespace Raven.Server.Documents.PeriodicBackup
         private readonly string _userName;
         private readonly string _password;
         private readonly string _certificateAsBase64;
+        private readonly string _certificateFileName;
         private readonly bool _useSsl;
         private const int DefaultBufferSize = 81920;
         private const int DefaultFtpPort = 21;
 
         public RavenFtpClient(string url, int? port, string userName, string password, string certificateAsBase64,
-            UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
+            string certificateFileName, UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
             : base(uploadProgress, cancellationToken)
         {
             _url = url;
@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             _userName = userName;
             _password = password;
             _certificateAsBase64 = certificateAsBase64;
+            _certificateFileName = certificateFileName;
 
             if (_url.StartsWith("ftp://", StringComparison.OrdinalIgnoreCase) == false &&
                 _url.StartsWith("ftps://", StringComparison.OrdinalIgnoreCase) == false)
@@ -122,12 +123,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private void ExtractUrlAndDirectories(out string url, out List<string> dirs)
         {
-            var address = Regex.Match(_url, @"^(ftp://)?(\w*|.?)*/").Value.Replace("ftp://", "").Replace("/", "");
-            dirs = Regex.Split(_url.Replace(address, "").Replace("ftp://", ""), "/").Where(x => x.Length > 0).ToList();
-            address = $"ftp://{address}";
-            var uri = new Uri(address);
-            var port = uri.Port > 0 ? uri.Port : (_port ?? DefaultFtpPort);
+            var uri = new Uri(_url);
 
+            dirs = uri.AbsolutePath.TrimStart('/').TrimEnd('/').Split("/").ToList();
+            var port = uri.Port > 0 ? uri.Port : (_port ?? DefaultFtpPort);
             if (port < 1 || port > 65535)
                 throw new ArgumentException("Port number range: 1-65535");
 
@@ -152,7 +151,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException("This is not a valid certicate file!", e);
+                    throw new ArgumentException($"This is not a valid certificate, file name: {_certificateFileName}", e);
                 }
             }
                 

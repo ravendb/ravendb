@@ -483,8 +483,8 @@ namespace Raven.Server.Web.System
                         break;
                     case PeriodicBackupTestConnectionType.FTP:
                         var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, 
-                            ftpSettings.UserName, ftpSettings.Password, ftpSettings.CertificateAsBase64))
+                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName, 
+                            ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
                         {
                             await ftpClient.TestConnection();
                         }

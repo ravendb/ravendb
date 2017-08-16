@@ -630,7 +630,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress)
         {
             using (var client = new RavenFtpClient(settings.Url, settings.Port, settings.UserName, 
-                settings.Password, settings.CertificateAsBase64, uploadProgress, _cancellationToken.Token))
+                settings.Password, settings.CertificateAsBase64, settings.CertificateFileName, uploadProgress, _cancellationToken.Token))
             {
                 await client.UploadFile(folderName, fileName, stream);
                 if (_logger.IsInfoEnabled)
