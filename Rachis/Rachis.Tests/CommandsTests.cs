@@ -43,7 +43,7 @@ namespace Rachis.Tests
         }
 
         //this test is a show-case of how to check for command commit time-out
-        [Fact]
+        [Fact(Skip="Flaky test")]
         public void Command_not_committed_after_timeout_CompletionTaskSource_is_notified()
         {
             const int CommandCount = 5;
