@@ -116,12 +116,13 @@ namespace Raven.Server
 
             try
             {
-                Action<KestrelServerOptions> kestrelOptions = options => { };
+                var certificateLoaded = LoadCertificate();
 
-                bool certificateLoaded = LoadCertificate();
-                if (certificateLoaded)
+                void ConfigureKestrel(KestrelServerOptions options)
                 {
-                    kestrelOptions += options =>
+                    options.Limits.MaxRequestBodySize = null;
+
+                    if (certificateLoaded)
                     {
                         var adapterOptions = new HttpsConnectionAdapterOptions
                         {
@@ -134,8 +135,7 @@ namespace Raven.Server
                                     // this is because we don't actually require trust, we just use the certificate
                                     // as a way to authenticate. The admin is going to tell us which specific certs
                                     // we can trust anyway, so we can ignore such errors.
-                                    errors == SslPolicyErrors.RemoteCertificateChainErrors ||
-                                    errors == SslPolicyErrors.None
+                                    errors == SslPolicyErrors.RemoteCertificateChainErrors || errors == SslPolicyErrors.None
                         };
 
                         var uri = new Uri(Configuration.Core.ServerUrl);
@@ -147,17 +147,14 @@ namespace Raven.Server
 
                         foreach (var address in ipAddresses)
                         {
-                            options.Listen(address, uri.Port, listenOptions =>
-                            {
-                                listenOptions.ConnectionAdapters.Add(adapter);
-                            });
+                            options.Listen(address, uri.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
                         }
-                    };
+                    }
                 }
 
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(kestrelOptions)
+                    .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
@@ -617,7 +614,7 @@ namespace Raven.Server
 
                             if (MatchingOperationVersion(header, out var error) == false)
                             {
-                                RespondToTcpConnection(stream, context, error,TcpConnectionStatus.TcpVersionMissmatch);
+                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMissmatch);
                                 if (Logger.IsInfoEnabled)
                                 {
                                     Logger.Info(
@@ -629,7 +626,7 @@ namespace Raven.Server
 
                             bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
-                            RespondToTcpConnection(stream, context, error, authSuccessful? TcpConnectionStatus.Ok:TcpConnectionStatus.AuthorizationFailed);
+                            RespondToTcpConnection(stream, context, error, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed);
 
                             if (authSuccessful == false)
                             {
@@ -850,7 +847,7 @@ namespace Raven.Server
 
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
-            msg = null;            
+            msg = null;
 
             if (configuration.Security.AuthenticationEnabled == false)
                 return true;
