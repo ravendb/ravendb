@@ -5,6 +5,7 @@ interface computedAppUrls {
 
     databases: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
+    clientConfiguration: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;

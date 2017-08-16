@@ -29,6 +29,7 @@ class appUrl {
 
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
+        clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -186,6 +187,10 @@ class appUrl {
 
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";
+    }
+    
+    static forGlobalClientConfiguration(): string {
+        return "#admin/settings/clientConfiguration";
     }
 
     static forStudioConfig(): string {
@@ -426,6 +431,10 @@ class appUrl {
 
     static forManageDatabaseGroup(db: database | databaseInfo): string {
         return "#databases/manageDatabaseGroup?" + appUrl.getEncodedDbPart(db);
+    }
+    
+    static forClientConfiguration(db: database | databaseInfo): string {
+        return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDocuments(collectionName: string, db: database | databaseInfo): string {
