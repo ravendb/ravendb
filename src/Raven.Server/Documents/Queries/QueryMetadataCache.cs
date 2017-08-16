@@ -1,5 +1,8 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Threading;
 using Raven.Client.Documents.Queries;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -8,7 +11,7 @@ namespace Raven.Server.Documents.Queries
     {
         private const int CacheSize = 512;
 
-        private readonly Dictionary<ulong, QueryMetadata>[] _cache = new Dictionary<ulong, QueryMetadata>[CacheSize];
+        private readonly QueryMetadata[] _cache = new QueryMetadata[CacheSize];
 
         public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong metadataHash, out QueryMetadata metadata)
         {
@@ -20,10 +23,16 @@ namespace Raven.Server.Documents.Queries
 
             metadataHash = GetQueryMetadataHash(query, context);
 
-            var dictionary = _cache[metadataHash % CacheSize];
-            if (dictionary == null || dictionary.TryGetValue(metadataHash, out metadata) == false)
+            metadata = _cache[metadataHash % CacheSize];
+            if (metadata == null)
                 return false;
-
+            if (metadata.CacheKey != metadataHash)
+            {
+                var nextProbe = Hashing.Mix(metadataHash) % CacheSize;
+                metadata = _cache[nextProbe];
+                if (metadata == null || metadata.CacheKey != metadataHash)
+                    return false;
+            }
             return true;
         }
 
@@ -35,17 +44,27 @@ namespace Raven.Server.Documents.Queries
             if (metadata.IsDynamic)
                 metadata.DynamicIndexName = indexName;
 
-            var cacheKey = metadata.CacheKey % CacheSize;
-            var dictionary = _cache[cacheKey];
-            if (dictionary != null && dictionary.ContainsKey(metadata.CacheKey))
+            // we are intentionally racy here, to avoid locking
+            var bestLocation = metadata.CacheKey % CacheSize;
+            var existing = _cache[bestLocation];
+            if (existing == null)
+            {
+                _cache[bestLocation] = metadata;
                 return;
+            }
+            if (existing.CacheKey == metadata.CacheKey)
+                return; // another copy
 
-            var newDictionary = dictionary == null
-                ? new Dictionary<ulong, QueryMetadata>()
-                : new Dictionary<ulong, QueryMetadata>(dictionary);
-            newDictionary[metadata.CacheKey] = metadata;
-
-            _cache[cacheKey] = newDictionary;
+            var nextProbe = Hashing.Mix(metadata.CacheKey) % CacheSize;
+            existing = _cache[nextProbe];
+            if (existing == null) // use the probe location
+            {
+                _cache[nextProbe] = metadata;
+                return;
+            }
+            // both are full, need to kick one out, we use GetHashCode as effective random value
+            var loc = metadata.GetHashCode() % 2 == 0 ? bestLocation : nextProbe;
+            _cache[loc] = metadata;
         }
 
         private static ulong GetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context)
