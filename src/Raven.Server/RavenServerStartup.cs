@@ -1,10 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
 using System.Net;
-using System.Reflection;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -93,7 +90,7 @@ namespace Raven.Server
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
-                writer.WriteString(String.Join(" ", UnsafeWarning));
+                writer.WriteString(string.Join(" ", UnsafeWarning));
                 writer.WriteComma();
                 writer.WritePropertyName("MessageAsArray");
                 writer.WriteStartArray();
@@ -133,7 +130,7 @@ namespace Raven.Server
             "Running in a potentially unsafe mode.",
             "Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.",
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateExec) }",
-            $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } setting value." 
+            $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } setting value."
         };
 
         private async Task RequestHandler(HttpContext context)
