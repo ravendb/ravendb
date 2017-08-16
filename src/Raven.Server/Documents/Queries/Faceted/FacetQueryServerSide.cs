@@ -46,14 +46,11 @@ namespace Raven.Server.Documents.Queries.Faceted
                 facetsEtag = facets.FacetsEtag;
             }
 
-            result.Metadata = QueryMetadataCache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
-                ? metadata
-                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
-
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
             return (result, facetsEtag);
         }
 
-        public static unsafe (FacetQueryServerSide FacetQuery, long? FacetsEtag) Create(BlittableJsonReaderObject json)
+        public static unsafe (FacetQueryServerSide FacetQuery, long? FacetsEtag) Create(BlittableJsonReaderObject json, JsonOperationContext context, QueryMetadataCache cache)
         {
             var result = JsonDeserializationServer.FacetQuery(json);
 
@@ -68,7 +65,9 @@ namespace Raven.Server.Documents.Queries.Faceted
             if (json.TryGet(nameof(Facets), out BlittableJsonReaderArray facetsArray) && facetsArray != null)
                 facetsEtag = Hashing.XXHash32.Calculate(facetsArray.Parent.BasePointer, facetsArray.Parent.Size);
 
-            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, 0);
+            result.Metadata = cache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
+                ? metadata
+                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
             return (result, facetsEtag);
         }
     }

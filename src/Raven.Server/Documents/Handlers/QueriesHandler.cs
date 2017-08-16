@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteFacetedQueryResult(context, result);
             }
 
-            QueryMetadataCache.MaybeAddToCache(query.FacetQuery.Metadata, result.IndexName);
+            Database.QueryMetadataCache.MaybeAddToCache(query.FacetQuery.Metadata, result.IndexName);
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
@@ -164,7 +164,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
-            QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
+            Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Handlers
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            return IndexQueryServerSide.Create(json, context);
+            return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
         private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
 
             // read from cache here
 
-            return FacetQueryServerSide.Create(json);
+            return FacetQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
         private SuggestionQueryServerSide GetSuggestionQuery(JsonOperationContext context, HttpMethod method)
@@ -294,7 +294,7 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             var reader = context.Read(RequestBodyStream(), "queries/delete");
-            var query = IndexQueryServerSide.Create(reader, context);
+            var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
 
             ExecuteQueryOperation(query.Metadata, (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.Handlers
                 throw new BadRequestException("Missing 'Query' property.");
 
             var patch = PatchRequest.Parse(patchJson);
-            var query = IndexQueryServerSide.Create(queryJson, context);
+            var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
 
             if (query.Metadata.IsDynamic == false)
             {
@@ -332,7 +332,7 @@ namespace Raven.Server.Documents.Handlers
                     (runner, options, onProgress, token) => runner.Collection.ExecutePatch(query.Metadata.CollectionName, options.Collection, patch, onProgress, token),
                     context, returnContextToPool, Operations.Operations.OperationType.UpdateByCollection);
             }
-            
+
             return Task.CompletedTask;
         }
 
@@ -353,7 +353,7 @@ namespace Raven.Server.Documents.Handlers
 
             if (queryMetadata.IsDynamic == false)
             {
-            var queryRunner = new QueryRunner(Database, context);
+                var queryRunner = new QueryRunner(Database, context);
                 task = Database.Operations.AddOperation(Database, queryMetadata.IndexName, operationType,
                     onProgress => operation((queryRunner, null), (options, null), onProgress, token), operationId, token);
             }
@@ -361,7 +361,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 var collectionRunner = new CollectionRunner(Database, context);
 
-                task = Database.Operations.AddOperation(Database, queryMetadata.CollectionName, operationType, 
+                task = Database.Operations.AddOperation(Database, queryMetadata.CollectionName, operationType,
                     onProgress => operation((null, collectionRunner), (null, new CollectionOperationOptions()
                     {
                         MaxOpsPerSecond = options.MaxOpsPerSecond

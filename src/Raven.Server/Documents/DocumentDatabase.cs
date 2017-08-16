@@ -17,6 +17,7 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
@@ -109,6 +110,7 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
@@ -207,6 +209,8 @@ namespace Raven.Server.Documents
         public ClientConfiguration ClientConfiguration { get; private set; }
 
         public long LastDatabaseRecordIndex { get; private set; }
+
+        public readonly QueryMetadataCache QueryMetadataCache;
 
         public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
@@ -536,10 +540,10 @@ namespace Raven.Server.Documents
                     new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
                         documentsStorage.Environment);
             var configurationStorage = ConfigurationStorage;
-            if(configurationStorage != null)
-            yield return
-                new StorageEnvironmentWithType("Configuration",
-                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
+            if (configurationStorage != null)
+                yield return
+                    new StorageEnvironmentWithType("Configuration",
+                        StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
 
             //check for null to prevent NRE when disposing the DocumentDatabase
             foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())

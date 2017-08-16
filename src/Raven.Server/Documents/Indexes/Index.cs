@@ -1567,7 +1567,7 @@ namespace Raven.Server.Documents.Indexes
                 await QueryInternal(result, query, documentsContext, token);
             }
 
-            QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
+            DocumentDatabase.QueryMetadataCache.MaybeAddToCache(query.Metadata, Name);
         }
 
         public virtual async Task<DocumentQueryResult> Query(IndexQueryServerSide query,
