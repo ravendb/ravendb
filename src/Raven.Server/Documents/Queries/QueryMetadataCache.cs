@@ -1,5 +1,5 @@
-﻿using Raven.Client.Documents.Queries;
-using Raven.Server.Documents.Queries.Parser;
+﻿using System.Collections.Generic;
+using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -8,7 +8,7 @@ namespace Raven.Server.Documents.Queries
     {
         private const int CacheSize = 512;
 
-        private readonly QueryMetadata[] _cache = new QueryMetadata[CacheSize];
+        private readonly Dictionary<ulong, QueryMetadata>[] _cache = new Dictionary<ulong, QueryMetadata>[CacheSize];
 
         public bool TryGetMetadata(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong metadataHash, out QueryMetadata metadata)
         {
@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.Queries
             if (TryGetQueryMetadataHash(query, context, out metadataHash) == false)
                 return false;
 
-            metadata = _cache[metadataHash % CacheSize];
-            if (metadata == null || metadata.CacheKey != metadataHash)
+            var dictionary = _cache[metadataHash % CacheSize];
+            if (dictionary == null || dictionary.TryGetValue(metadataHash, out metadata) == false)
                 return false;
 
             return true;
@@ -36,7 +36,17 @@ namespace Raven.Server.Documents.Queries
             if (metadata.IsDynamic)
                 metadata.DynamicIndexName = indexName;
 
-            _cache[metadata.CacheKey % CacheSize] = metadata;
+            var cacheKey = metadata.CacheKey % CacheSize;
+            var dictionary = _cache[cacheKey];
+            if (dictionary != null && dictionary.ContainsKey(metadata.CacheKey))
+                return;
+
+            var newDictionary = dictionary == null
+                ? new Dictionary<ulong, QueryMetadata>()
+                : new Dictionary<ulong, QueryMetadata>(dictionary);
+            newDictionary[metadata.CacheKey] = metadata;
+
+            _cache[cacheKey] = newDictionary;
         }
 
         private static bool TryGetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong hash)
@@ -53,9 +63,6 @@ namespace Raven.Server.Documents.Queries
                     query.QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
 
                     var tokenType = QueryBuilder.GetValueTokenType(propertyDetails.Value, query.Query, query.QueryParameters, unwrapArrays: true);
-                    if (tokenType == ValueTokenType.Null)
-                        return false;
-
                     hasher.Write((int)tokenType);
                 }
 
