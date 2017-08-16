@@ -39,17 +39,6 @@ namespace Raven.Server.Documents.Queries
             Build(parameters);
 
             CanCache = cacheKey != 0;
-            if (CanCache)
-            {
-                foreach (var kvp in WhereFields)
-                {
-                    if (kvp.Value.Type != ValueTokenType.Null)
-                        continue;
-
-                    CanCache = false;
-                    break;
-                }
-            }
         }
 
         public readonly bool IsDistinct;
