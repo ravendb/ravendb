@@ -44,6 +44,15 @@ function getManageServerMenuItem() {
             css: 'icon-administrator-js-console',
             dynamicHash: appUrl.forAdminJsConsole,
             enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/clientConfiguration',
+            moduleId: 'viewmodels/manage/clientConfiguration',
+            title: 'Client Configuration',
+            nav: true,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrl.forGlobalClientConfiguration,
+            enabled: accessHelper.isGlobalAdmin
         })
         /* TODO
         new leafMenuItem({

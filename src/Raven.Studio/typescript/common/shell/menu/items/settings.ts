@@ -99,6 +99,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-topology',
             dynamicHash: appUrls.manageDatabaseGroup
         }),
+        new leafMenuItem({
+            route: 'databases/settings/clientConfiguration',
+            moduleId: 'viewmodels/database/settings/clientConfiguration',
+            title: 'Client Configuration',
+            nav: true,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrls.clientConfiguration
+        }),
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',
