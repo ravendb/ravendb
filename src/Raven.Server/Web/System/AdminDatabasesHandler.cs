@@ -38,6 +38,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Commands.ConnectionStrings;
+using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
@@ -250,7 +251,11 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
-            var waitingTasks = new List<Task>();
+            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000));
+            var waitingTasks = new List<Task>
+            {
+                timeoutTask
+            };
             var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
             try
             {
@@ -262,22 +267,23 @@ namespace Raven.Server.Web.System
                     waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
                 }
 
-                await Task.WhenAny(waitingTasks);
-                cts.Cancel();
-                foreach (var task in waitingTasks)
+                while (true)
                 {
-                    try
+                    var task = await Task.WhenAny(waitingTasks);
+                    if(task == timeoutTask)
+                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
+                    if (task.IsCompletedSuccessfully)
                     {
-                        await task;
+                        break;
                     }
-                    catch (OperationCanceledException)
-                    {
-                        // expected
-                    }
+                    waitingTasks.Remove(task);
+                    if (waitingTasks.Count == 1) // only the timeout task is left
+                        throw task.Exception;
                 }
             }
             finally
             {
+                cts.Cancel();
                 foreach (var clusterRequestExecutor in executors)
                 {
                     clusterRequestExecutor.Dispose();
