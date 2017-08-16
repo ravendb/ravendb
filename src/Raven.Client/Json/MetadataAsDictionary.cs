@@ -18,6 +18,11 @@ namespace Raven.Client.Json
             _source = metadata;
         }
 
+        public MetadataAsDictionary():this(new Dictionary<string, object>())
+        {
+            
+        }
+
         public MetadataAsDictionary(Dictionary<string, object> metadata)
         {
             _metadata = metadata;
