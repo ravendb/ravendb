@@ -29,7 +29,7 @@ namespace SlowTests.SlowTests.Bugs
 #pragma warning restore 414,649
         }
 
-        [Fact(Skip = "RavenDB-6274")]
+        [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
             using (var store = GetDocumentStore(modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
