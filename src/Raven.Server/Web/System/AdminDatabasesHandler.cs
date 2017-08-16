@@ -229,7 +229,7 @@ namespace Raven.Server.Web.System
                 topology.ReplicationFactor = topology.Members.Count;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
 
-                await WaitForExecutionOnRelevantNodes(context, clusterTopology, databaseRecord.Topology.Members, newIndex);
+                await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, databaseRecord.Topology.Members, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -247,7 +247,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
+        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
@@ -278,7 +278,7 @@ namespace Raven.Server.Web.System
                     }
                     waitingTasks.Remove(task);
                     if (waitingTasks.Count == 1) // only the timeout task is left
-                        throw task.Exception;
+                        throw new InvalidDataException($"The database '{database}' was create but is not accessible, because all of the nodes on which this database was supose to be created, had thrown an exception.", task.Exception);
                 }
             }
             finally
