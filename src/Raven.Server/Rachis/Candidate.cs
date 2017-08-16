@@ -186,7 +186,7 @@ namespace Raven.Server.Rachis
 
             foreach (var voter in _voters)
             {
-                var nodeStatus = new NodeStatus { Connected = voter.Status.Equals("Connected") };
+                var nodeStatus = new NodeStatus { Connected = voter.Status.StartsWith("Connected") };
                 if (nodeStatus.Connected == false)
                 {
                     nodeStatus.ErrorDetails = voter.Status;

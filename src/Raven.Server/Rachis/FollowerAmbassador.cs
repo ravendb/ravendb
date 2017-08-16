@@ -82,7 +82,7 @@ namespace Raven.Server.Rachis
             _tag = tag;
             _url = url;
             _certificate = certificate;
-            Status = "Started";
+            Status = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -113,7 +113,7 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            Status = "Failed - " + e.Message;
+                            Status = $"Failed to connect with {_tag}.{Environment.NewLine}" + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
@@ -122,7 +122,7 @@ namespace Raven.Server.Rachis
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
-                        Status = "Connected";
+                        Status = $"Connected with {_tag}";
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
@@ -238,7 +238,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        Status = "Failed - " + e;
+                        Status = $"Failed to talk with {_tag}.{Environment.NewLine}" + e;
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
@@ -250,10 +250,10 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         stream?.Dispose();
-                        if (Status == "Connected")
+                        if (Status.StartsWith("Connected"))
                             Status = "Disconnected";
                         else
-                            Status = "Disconnected " + Status;
+                            Status = "Disconnected due to :" + Status;
                     }
                 }
             }
@@ -272,7 +272,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                Status = "Failed - " + e.Message;
+                Status = $"Failed to talk with {_tag}.{Environment.NewLine}" + e.Message;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
