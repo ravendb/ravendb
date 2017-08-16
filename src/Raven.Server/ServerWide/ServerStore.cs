@@ -730,7 +730,15 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> DeleteDatabaseAsync(string db, bool hardDelete, string[] fromNodes)
         {
-            var deleteCommand = new DeleteDatabaseCommand(db)
+            var nodes = new List<string>();
+
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (ctx.OpenReadTransaction())
+            {
+                nodes.AddRange(GetClusterTopology(ctx).AllNodes.Keys);
+            }
+            
+            var deleteCommand = new DeleteDatabaseCommand(db, nodes)
             {
                 HardDelete = hardDelete,
                 FromNodes = fromNodes
