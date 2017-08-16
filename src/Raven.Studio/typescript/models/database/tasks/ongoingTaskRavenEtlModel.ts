@@ -5,9 +5,12 @@ import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class ongoingTaskRavenEtlModel extends ongoingTask {
-    
-    // TODO... 
-  
+
+    // TODO...
+
+    protected generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTask): string {
+        throw new Error("Method not implemented.");
+    }
 }
 
 export = ongoingTaskRavenEtlModel;

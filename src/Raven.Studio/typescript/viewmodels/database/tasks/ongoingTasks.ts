@@ -104,8 +104,8 @@ class ongoingTasks extends viewModelBase {
         return new ongoingTasksCommand(db)
             .execute()
             .done((info) => {
+                this.processTasksResult(info);
                 this.graph.onTasksChanged(info);
-                return this.processTasksResult(info);
             });
     }
 
@@ -125,7 +125,7 @@ class ongoingTasks extends viewModelBase {
 
             switch (task.TaskType) {
                 case 'Replication':
-                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication));
+                    this.replicationTasks.push(new ongoingTaskReplication(task as Raven.Client.ServerWide.Operations.OngoingTaskReplication, false));
                     taskTypesSet.add("External Replication");
                     break;
                 case 'Backup':

@@ -2,7 +2,6 @@
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
 class ongoingTaskSQLModel extends ongoingTask {
-
     destinationServer = ko.observable<string>();
     destinationDatabase = ko.observable<string>();
     destinationDatabaseText: KnockoutComputed<string>;
@@ -29,6 +28,10 @@ class ongoingTaskSQLModel extends ongoingTask {
 
     editTask() {
         // TODO...
+    }
+
+    protected generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskSqlEtl): string {
+        throw new Error("Method not implemented.");
     }
 }
 
