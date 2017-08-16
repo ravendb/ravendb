@@ -88,7 +88,7 @@ namespace Raven.Tests.Raft.Client
             servers.Clear();
         }
 
-        [Theory]
+        [Theory(Skip = "Flaky test")]
         [PropertyData("Nodes")]
         public void PutShouldBePropagated(int numberOfNodes)
         {
