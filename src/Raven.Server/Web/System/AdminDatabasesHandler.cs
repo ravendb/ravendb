@@ -475,7 +475,7 @@ namespace Raven.Server.Web.System
                             await azureClient.TestConnection();
                         }
                         break;
-                    case PeriodicBackupTestConnectionType.Ftp:
+                    case PeriodicBackupTestConnectionType.FTP:
                         var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
                         using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, 
                             ftpSettings.UserName, ftpSettings.Password, ftpSettings.CertificateAsBase64))
