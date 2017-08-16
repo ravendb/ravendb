@@ -12,6 +12,8 @@ abstract class ongoingTaskModel {
     badgeText: KnockoutComputed<string>;
     badgeClass: KnockoutComputed<string>;
 
+    isEdit: boolean = false;
+
     protected initializeObservables() {
         
         this.badgeClass = ko.pureComputed(() => {
@@ -47,6 +49,10 @@ abstract class ongoingTaskModel {
     }
 
     protected update(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
+        if (!this.isEdit) {
+            this.updateTaskNameIfNeeded(dto);
+        }
+
         this.taskId = dto.TaskId;
         this.taskName(dto.TaskName);
         this.taskType(dto.TaskType);
@@ -54,6 +60,17 @@ abstract class ongoingTaskModel {
         this.taskState(dto.TaskState);
         this.taskConnectionStatus(dto.TaskConnectionStatus);
     }
+
+    private updateTaskNameIfNeeded(dto: Raven.Client.ServerWide.Operations.OngoingTask) {
+        dto.TaskName = dto.TaskName ? dto.TaskName.trim() : dto.TaskName;
+        if (dto.TaskName) {
+            return;
+        }
+
+        dto.TaskName = this.generateTaskName(dto);
+    }
+
+    protected abstract generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTask): string;
 }
 
 export = ongoingTaskModel;

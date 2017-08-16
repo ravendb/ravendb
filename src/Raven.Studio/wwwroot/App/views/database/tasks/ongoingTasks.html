@@ -176,7 +176,6 @@
                         </div>
                         <div data-bind="foreach: backupTasks">
                             <div class="panel destination-item periodic-backup">
-                                <!--<div data-bind="text: !taskName ? ('Backup Task #' + taskId) : taskName"></div>-->
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
@@ -187,7 +186,9 @@
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h4>
-                                                <a title="Backup destinations" class="destination-name"><i class="icon-backup"></i><span data-bind="text: backupDestinations"></span></a>
+                                                <a title="Backup destinations" class="destination-name">
+                                                    <i class="icon-backup"></i><span data-bind="text: taskName"></span>
+                                                </a>
                                             </h4>
                                             <div data-bind="visible: lastFullBackup">
                                                 Last full backup: <strong data-bind="text: lastFullBackup"></strong>
