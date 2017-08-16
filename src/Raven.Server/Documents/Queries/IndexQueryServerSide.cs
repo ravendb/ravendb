@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Queries
             Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context)
+        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context, QueryMetadataCache cache)
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = QueryMetadataCache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
+            result.Metadata = cache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
                 ? metadata
                 : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
 
