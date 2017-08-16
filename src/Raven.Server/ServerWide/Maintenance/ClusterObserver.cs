@@ -126,7 +126,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             }
                             continue;
                         }
-                        var topologyStamp = databaseRecord?.Topology?.Stamp ?? new LeaderStamp
+                        var topologyStamp = databaseRecord.Topology?.Stamp ?? new LeaderStamp
                         {
                             Index = -1,
                             LeadersTicks = -1,
@@ -212,8 +212,6 @@ namespace Raven.Server.ServerWide.Maintenance
             Dictionary<string, ClusterNodeStatusReport> previous,
             ref List<DeleteDatabaseCommand> deletions)
         {
-            //TODO: RavenDB-7914 - any change here requires generating alerts
-
             var hasLivingNodes = false;
             foreach (var member in topology.Members)
             {
@@ -250,15 +248,19 @@ namespace Raven.Server.ServerWide.Maintenance
 
             if (hasLivingNodes == false)
             {
+                var recoverable = new List<string>();
                 foreach (var rehab in topology.Rehabs)
                 {
-                    //TODO: RavenDB-7911 - Find the most up to date rehab node
-                    if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) != DatabaseHealth.Good)
-                        continue;
-                    topology.Rehabs.Remove(rehab);
-                    topology.Members.Add(rehab);
-                    RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {rehab} from rehab to avoid making the database completely unreachable");
-                    return $"All nodes are not responding, promoting {rehab} from rehab";
+                    if (FailedDatabaseInstanceOrNode(clusterTopology, rehab, dbName, current) == DatabaseHealth.Good)
+                        recoverable.Add(rehab);
+                }
+                if (recoverable.Count > 0)
+                {
+                    var node = FindMostUpToDateNode(recoverable, dbName, current);
+                    topology.Rehabs.Remove(node);
+                    topology.Members.Add(node);
+                    RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, promoting {node} from rehab to avoid making the database completely unreachable");
+                    return $"All nodes are not responding, promoting {node} from rehab";
                 }
                 RaiseNoLivingNodesAlert($"It appears that all nodes of the {dbName} database are not responding to the supervisor, the database is not reachable");
             }
@@ -627,6 +629,36 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             return true;
+        }
+
+        private string FindMostUpToDateNode(List<string> nodes, string database, Dictionary<string, ClusterNodeStatusReport> current)
+        {
+            var updated = nodes[0];
+            var highestChangeVectors = current[updated].Report[database].LastChangeVector;
+            var maxDocsCount = current[updated].Report[database].NumberOfDocuments;
+            for (var index = 1; index < nodes.Count; index++)
+            {
+                var node = nodes[index];
+                var report = current[node].Report[database];
+                var cv = report.LastChangeVector;
+                var status = ChangeVectorUtils.GetConflictStatus(cv, highestChangeVectors);
+                if (status == ConflictStatus.Update)
+                {
+                    highestChangeVectors = cv;
+                }
+                // In conflict we need to choose between 2 nodes that are not synced. 
+                // So we take the one with the most documents.  
+                if (status == ConflictStatus.Conflict)
+                {
+                    if (report.NumberOfDocuments > maxDocsCount)
+                    {
+                        highestChangeVectors = cv;
+                        maxDocsCount = report.NumberOfDocuments;
+                        updated = node;
+                    }
+                }
+            }
+            return updated;
         }
 
         private static bool CheckIndexProgress(
