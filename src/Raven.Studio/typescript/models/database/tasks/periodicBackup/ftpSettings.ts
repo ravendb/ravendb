@@ -26,6 +26,11 @@ class ftpSettings extends backupSettings {
         this.certificateAsBase64(dto.CertificateAsBase64);
         this.certificateFileName(dto.CertificateFileName);
 
+        if (this.certificateAsBase64() && !this.certificateFileName()) {
+            // the configuration was updated using the client api
+            this.certificateFileName("certificate.cer");
+        }
+
         this.connectionType = "FTP";
         this.initValidation();
     }
