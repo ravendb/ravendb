@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
                     json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ServerCertificateHolder.CertificateForClients;
-                    json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
+                    json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -176,7 +176,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
-                        [nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus()
+                        [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)

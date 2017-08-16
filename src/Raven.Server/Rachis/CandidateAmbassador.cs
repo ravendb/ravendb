@@ -31,9 +31,8 @@ namespace Raven.Server.Rachis
             _tag = tag;
             _url = url;
             _certificate = certificate;
-            Status = "Started";
+            Status = $"Started Candidate Ambasaddor for {_engine.Tag} > {_tag}";
         }
-
 
         public void Start()
         {
@@ -87,7 +86,7 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            Status = "Failed - " + e.Message;
+                            Status = $"Failed to connect with {_tag}.{Environment.NewLine} " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to connect to remote peer: " + _url, e);
@@ -96,7 +95,7 @@ namespace Raven.Server.Rachis
                             _candidate.WaitForChangeInState();
                             continue; // we'll retry connecting
                         }
-                        Status = "Connected";
+                        Status = $"Connected to {_tag}";
                         using (var connection = new RemoteConnection(_tag, _engine.Tag, _conenctToPeer))
                         {
                             try
@@ -225,7 +224,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        Status = "Failed - " + e.Message;
+                        Status = $"Failed to get vote from {_tag}.{Environment.NewLine}" + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
@@ -253,7 +252,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                Status = "Failed - " + e;
+                Status = $"Failed to talk to {_url}.{Environment.NewLine}" + e;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);

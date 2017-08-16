@@ -123,7 +123,7 @@ namespace Raven.Server.Rachis
                 {
                     var status = new NodeStatus
                     {
-                        Connected = kvp.Value.Status.Equals("Connected"),
+                        Connected = kvp.Value.Status.StartsWith("Connected"),
                         LastMatchingIndex = kvp.Value.FollowerMatchIndex,
                         LastReply = kvp.Value.LastReplyFromFollower,
                         LastSent = kvp.Value.LastSendToFollower,
@@ -332,7 +332,7 @@ namespace Raven.Server.Rachis
                 }
                 try
                 {
-                    _engine.SwitchToCandidateState("An error occurred during leadership - " + e);
+                    _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
                 }
                 catch (Exception e2)
                 {

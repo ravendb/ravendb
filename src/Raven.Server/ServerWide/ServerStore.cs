@@ -1369,7 +1369,7 @@ namespace Raven.Server.ServerWide
             await _engine.WaitForCommitIndexChange(modification, value);
         }
 
-        public string ClusterStatus()
+        public string LastStateChangeReason()
         {
             return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
         }
