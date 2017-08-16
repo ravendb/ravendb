@@ -257,6 +257,7 @@ class aceEditorBindingHandler {
         
         if ($(element).height() < this.minHeight) {
             $(element).height(this.minHeight);
+            aceEditor.resize();
         }
 
         this.alterHeight(element, aceEditor);
