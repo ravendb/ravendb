@@ -1,10 +1,9 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace RavenDB_7942
+namespace FastTests.Issues
 {
     public class NumericIndexingTest : RavenTestBase
     {
@@ -111,13 +110,13 @@ namespace RavenDB_7942
         public DoubleIndex()
         {
             Map = docs => from doc in docs
-                select new TestDoubleView
-                {
-                    Id = doc.Id,
-                    DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
-                        ? doc.DoubleValue
-                        : (double?)null,
-                };
+                          select new TestDoubleView
+                          {
+                              Id = doc.Id,
+                              DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
+                                  ? doc.DoubleValue
+                                  : (double?)null,
+                          };
         }
     }
 
@@ -138,13 +137,13 @@ namespace RavenDB_7942
         public FloatIndex()
         {
             Map = docs => from doc in docs
-                select new TestFloatView
-                {
-                    Id = doc.Id,
-                    FloatValue = !float.IsNaN((float)(doc.FloatValue)) && !float.IsInfinity((float)(doc.FloatValue))
-                        ? doc.FloatValue
-                        : (float?)null,
-                };
+                          select new TestFloatView
+                          {
+                              Id = doc.Id,
+                              FloatValue = !float.IsNaN((float)(doc.FloatValue)) && !float.IsInfinity((float)(doc.FloatValue))
+                                  ? doc.FloatValue
+                                  : (float?)null,
+                          };
         }
     }
 

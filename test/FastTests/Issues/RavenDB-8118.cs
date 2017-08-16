@@ -1,9 +1,8 @@
 ﻿using System.Linq;
-using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace RavenDB_8118
+namespace FastTests.Issues
 {
     public class CanDeployIndex : RavenTestBase
     {
@@ -32,13 +31,13 @@ namespace RavenDB_8118
         public DocIndex1()
         {
             Map = docs => from doc in docs
-                select new
-                {
-                    Id = doc.Id,
-                    DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
-                        ? doc.DoubleValue
-                        : (double?)null,
-                };
+                          select new
+                          {
+                              Id = doc.Id,
+                              DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
+                                  ? doc.DoubleValue
+                                  : (double?)null,
+                          };
         }
     }
 
@@ -47,13 +46,13 @@ namespace RavenDB_8118
         public DocIndex2()
         {
             Map = docs => from doc in docs
-                select new
-                {
-                    Id = doc.Id,
-                    DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
-                        ? doc.DoubleValue
-                        : (double?)null,
-                };
+                          select new
+                          {
+                              Id = doc.Id,
+                              DoubleValue = !double.IsNaN((double)(doc.DoubleValue)) && !double.IsInfinity((double)(doc.DoubleValue))
+                                  ? doc.DoubleValue
+                                  : (double?)null,
+                          };
         }
     }
 
