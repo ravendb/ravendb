@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.BulkInsert;
+using Raven.Client;
+using Raven.Client.Json;
 using Xunit;
 
 namespace FastTests.Client.BulkInsert
@@ -116,6 +118,33 @@ namespace FastTests.Client.BulkInsert
                     var exception = Assert.Throws<NotSupportedException>(() =>
                             bulkInsert.Store(new FooBar { Name = "John Doe" }, "foobars/"));
                     Assert.Contains("Document ids cannot end with '/', but was called with foobars/", exception.Message);
+                }
+            }
+        }
+
+        [Fact]
+        public void CanModifyMetadataWithBulkInsert()
+        {
+            var expirationDate = DateTime.Today.AddYears(1).ToString("O");
+            using (var store = GetDocumentStore())
+            {
+                using (var bulkInsert = store.BulkInsert())
+                {
+                    bulkInsert.Store(new FooBar
+                    {
+                        Name = "Jon Snow"
+                    }, new MetadataAsDictionary
+                    {
+                        [Constants.Documents.Expiration.ExpirationDate] = expirationDate
+                    });
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var entity = session.Load<FooBar>("FooBars/1-A");
+                    var metadataExpirationDate = session.Advanced.GetMetadataFor(entity)[Constants.Documents.Expiration.ExpirationDate];
+
+                    Assert.Equal(expirationDate, metadataExpirationDate);
                 }
             }
         }
