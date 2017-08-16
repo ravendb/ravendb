@@ -123,6 +123,12 @@ class editPeriodicBackupTask extends viewModelBase {
             {
                 content: this.textForPopover("Vault")   
             });
+
+        popoverUtils.longWithHover($("#ftp-host-info"),
+            {
+                content: "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
+                    "You can also enter a complete URL e.g. <strong>ftp://my.host.name/backup-folder/Northwind</strong>"
+            });
     }
 
     private textForPopover(storageName: string): string {
@@ -177,6 +183,9 @@ class editPeriodicBackupTask extends viewModelBase {
             valid = false;
 
         if (!this.isValid(this.configuration().glacierSettings().validationGroup))
+            valid = false;
+
+        if (!this.isValid(this.configuration().ftpSettings().validationGroup))
             valid = false;
 
         return valid;

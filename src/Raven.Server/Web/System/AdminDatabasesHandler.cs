@@ -481,12 +481,22 @@ namespace Raven.Server.Web.System
                             await azureClient.TestConnection();
                         }
                         break;
+                    case PeriodicBackupTestConnectionType.Ftp:
+                        var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, 
+                            ftpSettings.UserName, ftpSettings.Password, ftpSettings.CertificateAsBase64))
+                        {
+                            await ftpClient.TestConnection();
+                        }
+                        break;
                     case PeriodicBackupTestConnectionType.Local:
                     case PeriodicBackupTestConnectionType.None:
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
             }
+
+            NoContentStatus();
         }
 
         [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.ServerAdmin)]

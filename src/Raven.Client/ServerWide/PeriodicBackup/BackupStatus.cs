@@ -90,6 +90,11 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
     }
 
+    public class UploadToFtp : CloudUploadStatus
+    {
+
+    }
+
     public class UploadProgress
     {
         public UploadProgress()

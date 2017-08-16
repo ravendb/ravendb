@@ -16,7 +16,7 @@ class testPeriodicBackupCredentialsCommand extends commandBase {
                 type: this.type
             });
 
-        return this.post(url, JSON.stringify(this.connectionConfiguration))
+        return this.post(url, JSON.stringify(this.connectionConfiguration), null, { dataType: undefined })
             .done(() => this.reportSuccess(`Connection to ${this.type} was successful`))
             .fail(response => this.reportError(`Connection to ${this.type} failed`,
                     response.responseText, response.statusText));
