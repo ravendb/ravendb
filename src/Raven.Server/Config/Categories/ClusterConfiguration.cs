@@ -60,5 +60,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.TcpTimeout")]
         public TimeSetting TcpConnectionTimeout { get; set; }
 
+        [Description("Set hard/soft delete for a database that was removed by the observer form the cluster topology in order to maintain the replication factor.")]
+        [DefaultValue(true)]
+        [ConfigurationEntry("Cluster.HardDeleteOnReplacement")]
+        public bool HardDeleteOnReplacement { get; set; }
+
     }
 }

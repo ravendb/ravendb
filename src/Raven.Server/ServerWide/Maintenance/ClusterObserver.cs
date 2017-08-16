@@ -33,6 +33,8 @@ namespace Raven.Server.ServerWide.Maintenance
         private readonly ServerStore _server;
         private readonly long _stabilizationTime;
         private readonly TimeSpan _breakdownTimeout;
+        private readonly bool _hardDeleteOnReplacement;
+
         private NotificationCenter.NotificationCenter NotificationCenter => _server.NotificationCenter;
 
         public ClusterObserver(
@@ -54,6 +56,7 @@ namespace Raven.Server.ServerWide.Maintenance
             SupervisorSamplePeriod = config.SupervisorSamplePeriod.AsTimeSpan;
             _stabilizationTime = (long)config.StabilizationTime.AsTimeSpan.TotalMilliseconds;
             _breakdownTimeout = config.AddReplicaTimeout.AsTimeSpan;
+            _hardDeleteOnReplacement = config.HardDeleteOnReplacement;
             _observe = Run(_cts.Token);
         }
 
@@ -66,6 +69,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         private readonly BlockingCollection<string> _decisionsLog = new BlockingCollection<string>();
         private long _iteration;
+
         public (string[] List, long Iteration) ReadDecisionsForDatabase()
         {
             return (_decisionsLog.ToArray(), _iteration);
@@ -301,7 +305,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         ErrorOnDatabaseDoesNotExists = false,
                         DatabaseName = dbName,
                         FromNodes = new[] { promotable },
-                        HardDelete = true,
+                        HardDelete = _hardDeleteOnReplacement,
                         UpdateReplicationFactor = false
                     };
 
@@ -532,7 +536,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 ErrorOnDatabaseDoesNotExists = false,
                 DatabaseName = dbName,
                 FromNodes = nodesToDelete.ToArray(),
-                HardDelete = true,
+                HardDelete = _hardDeleteOnReplacement,
                 UpdateReplicationFactor = false
             };
 
