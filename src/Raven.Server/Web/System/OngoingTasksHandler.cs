@@ -114,17 +114,23 @@ namespace Raven.Server.Web.System
 
             foreach (var watcher in watchers)
             {
+                NodeId responsibale = null;
+
                 var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
+                if (tag != null)
+                {
+                    responsibale = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    };
+                }
 
                 yield return new OngoingTaskReplication
                 {
                     TaskId = watcher.TaskId,
                     TaskName = watcher.Name,
-                    ResponsibleNode = new NodeId
-                    {
-                        NodeTag = tag,
-                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                    },
+                    ResponsibleNode = responsibale,
                     DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     DestinationUrl = watcher.Url
