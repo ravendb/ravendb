@@ -3,6 +3,7 @@ import localSettings = require("models/database/tasks/periodicBackup/localSettin
 import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
+import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
 
 class periodicBackupConfiguration {
@@ -16,6 +17,7 @@ class periodicBackupConfiguration {
     s3Settings = ko.observable<s3Settings>();
     glacierSettings = ko.observable<glacierSettings>();
     azureSettings = ko.observable<azureSettings>();
+    ftpSettings = ko.observable<ftpSettings>();
 
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
@@ -49,6 +51,7 @@ class periodicBackupConfiguration {
         this.s3Settings(!dto.S3Settings ? s3Settings.empty() : new s3Settings(dto.S3Settings));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty() : new glacierSettings(dto.GlacierSettings));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
+        this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
 
         this.fullBackupHumanReadable = ko.pureComputed(() => {
             return periodicBackupConfiguration.getHumanReadable(
@@ -244,7 +247,8 @@ class periodicBackupConfiguration {
             LocalSettings: this.localSettings().toDto(),
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
-            AzureSettings: this.azureSettings().toDto()
+            AzureSettings: this.azureSettings().toDto(),
+            FtpSettings: this.ftpSettings().toDto()
         };
     }
 
@@ -259,7 +263,8 @@ class periodicBackupConfiguration {
             LocalSettings: localSettings.empty().toDto(),
             S3Settings: s3Settings.empty().toDto(),
             GlacierSettings: glacierSettings.empty().toDto(),
-            AzureSettings: azureSettings.empty().toDto()
+            AzureSettings: azureSettings.empty().toDto(),
+            FtpSettings: ftpSettings.empty().toDto()
         });
     }
 }

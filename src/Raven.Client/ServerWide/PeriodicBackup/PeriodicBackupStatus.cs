@@ -23,6 +23,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public UploadToAzure UploadToAzure;
 
+        public UploadToFtp UploadToFtp;
+
         public long? LastEtag { get; set; }
 
         public string FolderName { get; set; }

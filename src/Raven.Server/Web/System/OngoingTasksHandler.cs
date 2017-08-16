@@ -189,6 +189,8 @@ namespace Raven.Server.Web.System
                 backupDestinations.Add("S3");
             if (backupConfiguration.GlacierSettings != null && backupConfiguration.GlacierSettings.Disabled == false)
                 backupDestinations.Add("Glacier");
+            if (backupConfiguration.FtpSettings != null && backupConfiguration.FtpSettings.Disabled == false)
+                backupDestinations.Add("FTP");
 
             return backupDestinations;
         }
