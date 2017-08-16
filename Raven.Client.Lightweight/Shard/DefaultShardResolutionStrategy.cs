@@ -132,11 +132,15 @@ namespace Raven.Client.Shard
         {
             if (requestData.Query != null)
             {
+                //The issue was introduced when we added escaping for forward facing dashes so they won't be counted as comments
+                //using Lucene unescaping may cause backward compatibility issues since people may have based their sharded strategy on 
+                //the query format and we can't break change that.
+                var unescapedQuery = requestData.Query.Query.Replace("\\/", "/");
                 Regex regex;
                 if (regexToCaptureShardIdFromQueriesByType.TryGetValue(requestData.EntityType, out regex) == false)
                     return PotentialShardsFor(requestData, null); // we have no special knowledge, let us just query everything
     
-                var collection = regex.Matches(requestData.Query.Query);
+                var collection = regex.Matches(unescapedQuery);
                 if (collection.Count == 0)
                     return PotentialShardsFor(requestData, null); // we don't have the sharding field, we have to query over everything
 
