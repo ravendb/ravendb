@@ -18,8 +18,7 @@ namespace Raven.Server.Documents.Queries
             if (query == null || query.Query == null || query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return false;
 
-            if (TryGetQueryMetadataHash(query, context, out metadataHash) == false)
-                return false;
+            metadataHash = GetQueryMetadataHash(query, context);
 
             var dictionary = _cache[metadataHash % CacheSize];
             if (dictionary == null || dictionary.TryGetValue(metadataHash, out metadata) == false)
@@ -49,10 +48,8 @@ namespace Raven.Server.Documents.Queries
             _cache[cacheKey] = newDictionary;
         }
 
-        private static bool TryGetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context, out ulong hash)
+        private static ulong GetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context)
         {
-            hash = 0;
-
             using (var hasher = new QueryHashCalculator(context))
             {
                 hasher.Write(query.Query);
@@ -66,8 +63,7 @@ namespace Raven.Server.Documents.Queries
                     hasher.Write((int)tokenType);
                 }
 
-                hash = hasher.GetHash();
-                return true;
+                return hasher.GetHash();
             }
         }
     }
