@@ -110,8 +110,11 @@ namespace Raven.Server
 
                             new ClusterMessage(Console.Out, server.ServerStore).Print();
 
-                            Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
-
+                            var prevColor = Console.ForegroundColor;
+                            Console.Write("Server available on: ");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"{server.ServerStore.NodeHttpServerUrl}");
+                            Console.ForegroundColor = prevColor;
                             var consoleMre = new ManualResetEvent(false);
 
                             server.GetTcpServerStatusAsync()
@@ -119,7 +122,11 @@ namespace Raven.Server
                                 {
                                     if (tcp.IsCompleted)
                                     {
-                                        Console.WriteLine($"Tcp listening on {string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                        prevColor = Console.ForegroundColor;
+                                        Console.Write("Tcp listening on ");
+                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        Console.WriteLine($"{string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                        Console.ForegroundColor = prevColor;
                                     }
                                     else
                                     {
