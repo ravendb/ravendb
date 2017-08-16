@@ -48,7 +48,8 @@ namespace Raven.Server.Documents.Handlers
                         {
                             await parser.Init();
 
-                            var list = new List<BatchRequestParser.CommandData>();
+                            var array = new BatchRequestParser.CommandData[8];
+                            var numberOfCommands = 0;
                             long totalSize = 0;
                             while (true)
                             {
@@ -59,21 +60,25 @@ namespace Raven.Server.Documents.Handlers
                                 token.ThrowIfCancellationRequested();
 
                                 // if we are going to wait on the network, flush immediately
-                                if ((task.IsCompleted == false && list.Count > 0) ||
+                                if ((task.IsCompleted == false && numberOfCommands > 0) ||
                                     // but don't batch too much anyway
                                     totalSize > 16 * Voron.Global.Constants.Size.Megabyte)
                                 {
-                                    await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                                    using (ReplaceContextIfCurrentlyInUse(task, numberOfCommands, array))
                                     {
-                                        Commands = list,
-                                        Database = Database,
-                                        Logger = logger,
-                                        TotalSize = totalSize
-                                    });
+                                        await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
+                                        {
+                                            Commands = array,
+                                            NumberOfCommands = numberOfCommands,
+                                            Database = Database,
+                                            Logger = logger,
+                                            TotalSize = totalSize
+                                        });
+                                    }
 
                                     progress.BatchCount++;
-                                    progress.Processed += list.Count;
-                                    progress.LastProcessedId = list.Last().Id;
+                                    progress.Processed += numberOfCommands;
+                                    progress.LastProcessedId = array.Last().Id;
 
                                     onProgress(progress);
 
@@ -81,7 +86,7 @@ namespace Raven.Server.Documents.Handlers
                                     previousCtxReset = currentCtxReset;
                                     currentCtxReset = ContextPool.AllocateOperationContext(out docsCtx);
 
-                                    list.Clear();
+                                    numberOfCommands = 0;
                                     totalSize = 0;
                                 }
 
@@ -90,21 +95,24 @@ namespace Raven.Server.Documents.Handlers
                                     break;
 
                                 totalSize += commandData.Document.Size;
-                                list.Add(commandData);
+                                if (numberOfCommands >= array.Length)
+                                    Array.Resize(ref array, array.Length * 2);
+                                array[numberOfCommands++] = commandData;
                             }
-                            if (list.Count > 0)
+                            if (numberOfCommands > 0)
                             {
                                 await Database.TxMerger.Enqueue(new MergedInsertBulkCommand
                                 {
-                                    Commands = list,
+                                    Commands = array,
+                                    NumberOfCommands = numberOfCommands,
                                     Database = Database,
                                     Logger = logger,
                                     TotalSize = totalSize
                                 });
 
                                 progress.BatchCount++;
-                                progress.Processed += list.Count;
-                                progress.LastProcessedId = list.Last().Id;
+                                progress.Processed += numberOfCommands;
+                                progress.LastProcessedId = array[numberOfCommands-1].Id;
 
                                 onProgress(progress);
                             }
@@ -131,25 +139,49 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        private IDisposable ReplaceContextIfCurrentlyInUse(Task<BatchRequestParser.CommandData> task, int numberOfCommands, BatchRequestParser.CommandData[] array)
+        {
+            if (task.IsCompleted)
+                return null;
+
+            var disposable = ContextPool.AllocateOperationContext(out JsonOperationContext tempCtx);
+            // the docsCtx is currently in use, so we 
+            // cannot pass it to the tx merger, we'll just
+            // copy the documents to a temporary ctx and 
+            // use that ctx instead. Copying the documents
+            // is safe, because they are immutables
+
+            for (int i = 0; i < numberOfCommands; i++)
+            {
+                if (array[i].Document != null)
+                {
+                    array[i].Document = array[i].Document.Clone(tempCtx);
+                }
+            }
+            return disposable;
+        }
+
 
         private class MergedInsertBulkCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             public Logger Logger;
             public DocumentDatabase Database;
-            public List<BatchRequestParser.CommandData> Commands;
+            public BatchRequestParser.CommandData[] Commands;
+            public int NumberOfCommands;
             public long TotalSize;
             public override int Execute(DocumentsOperationContext context)
             {
-                foreach (var cmd in Commands)
+                for (int i = 0; i < NumberOfCommands; i++)
                 {
+                    var cmd = Commands[i];
                     Debug.Assert(cmd.Type == CommandType.PUT);
                     Database.DocumentsStorage.Put(context, cmd.Id, null, cmd.Document);
                 }
                 if (Logger.IsInfoEnabled)
                 {
-                    Logger.Info($"Merged {Commands.Count:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
+                    Logger.Info($"Merged {NumberOfCommands:#,#;;0} operations and {Math.Round(TotalSize / 1024d, 1):#,#.#;;0} kb");
                 }
-                return Commands.Count;
+                return NumberOfCommands;
             }
         }
     }
