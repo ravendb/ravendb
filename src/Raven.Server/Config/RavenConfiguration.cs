@@ -48,6 +48,8 @@ namespace Raven.Server.Config
 
         public ServerConfiguration Server { get; }
 
+        public TestingConfiguration Testing { get; }
+
         public MemoryConfiguration Memory { get; }
 
         public StudioConfiguration Studio { get; }
@@ -92,6 +94,7 @@ namespace Raven.Server.Config
             Patching = new PatchingConfiguration();
             Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
+            Testing = new TestingConfiguration();
             Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
@@ -139,6 +142,7 @@ namespace Raven.Server.Config
 
         public RavenConfiguration Initialize()
         {
+            Testing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);

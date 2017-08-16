@@ -766,6 +766,28 @@ namespace Raven.Server.Utils.Cli
             _reader = textReader;
             _consoleColoring = consoleColoring;
 
+            var parentProcessId = server.Configuration.Testing.ParentProcessId;
+            if (parentProcessId != null)
+            {
+                void OnParentProcessExit(object o, EventArgs e)
+                {
+                    WriteText("Parent process " + parentProcessId + " has exited, closing",
+                        ErrorColor, this);
+                    Environment.Exit(-0xDEAD);
+                }
+
+                var parent = Process.GetProcessById(parentProcessId.Value);
+                if (parent == null)
+                {
+                    OnParentProcessExit(this, EventArgs.Empty);
+                    return false;
+                }
+                parent.EnableRaisingEvents = true;
+                parent.Exited += OnParentProcessExit;
+                if(parent.HasExited)
+                    OnParentProcessExit(this, EventArgs.Empty);
+            }
+
             try
             {
                 return StartCli(consoleMre);
