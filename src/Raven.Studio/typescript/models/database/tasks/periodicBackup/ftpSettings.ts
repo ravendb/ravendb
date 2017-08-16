@@ -26,7 +26,7 @@ class ftpSettings extends backupSettings {
         this.certificateAsBase64(dto.CertificateAsBase64);
         this.certificateFileName(dto.CertificateFileName);
 
-        this.connectionType = "Ftp";
+        this.connectionType = "FTP";
         this.initValidation();
     }
 
@@ -41,7 +41,7 @@ class ftpSettings extends backupSettings {
                         if (!url)
                             return false;
 
-                        var urlLower = url.toLowerCase();
+                        const urlLower = url.toLowerCase();
                         if (urlLower.includes("://") && !urlLower.startsWith("ftp://") && !urlLower.startsWith("ftps://")) {
                             return false;
                         }
@@ -121,6 +121,7 @@ class ftpSettings extends backupSettings {
             this.certificateAsBase64(result);
             this.isLoadingFile(false);
         };
+        fileReader.onerror = () => this.isLoadingFile(false);
     }
 
     toDto(): Raven.Client.ServerWide.PeriodicBackup.FtpSettings {

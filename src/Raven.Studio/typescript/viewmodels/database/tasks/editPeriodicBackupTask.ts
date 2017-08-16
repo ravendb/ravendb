@@ -126,8 +126,10 @@ class editPeriodicBackupTask extends viewModelBase {
 
         popoverUtils.longWithHover($("#ftp-host-info"),
             {
-                content: "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
-                    "You can also enter a complete URL e.g. <strong>ftp://my.host.name/backup-folder/Northwind</strong>"
+                content:
+                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
+                    "If no protocol is specified the default one (ftp://) will be used.<br>" +
+                    "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
             });
     }
 

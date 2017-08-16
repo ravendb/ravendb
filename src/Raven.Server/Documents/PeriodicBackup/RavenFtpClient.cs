@@ -124,7 +124,14 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             var address = Regex.Match(_url, @"^(ftp://)?(\w*|.?)*/").Value.Replace("ftp://", "").Replace("/", "");
             dirs = Regex.Split(_url.Replace(address, "").Replace("ftp://", ""), "/").Where(x => x.Length > 0).ToList();
-            url = $@"ftp://{address}:{_port ?? DefaultFtpPort}";
+            address = $"ftp://{address}";
+            var uri = new Uri(address);
+            var port = uri.Port > 0 ? uri.Port : (_port ?? DefaultFtpPort);
+
+            if (port < 1 || port > 65535)
+                throw new ArgumentException("Port number range: 1-65535");
+
+            url = $"ftp://{uri.Host}:{port}";
         }
 
         private FtpWebRequest CreateFtpWebRequest(string url, string method, bool keepAlive)
