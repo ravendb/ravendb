@@ -282,15 +282,9 @@ namespace Raven.Server.ServerWide
                 }
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
-                if (databaseRecord.Topology.AllNodes.Any() == false)
+                if (databaseRecord.DeletionInProgress.Any() == false)
                 {
-                    // delete database record
-                    items.DeleteByKey(lowerKey);
-
-                    // delete all values linked to database record - for subscription, etl etc.
-                    CleanupDatabaseRelatedValues(context, items, databaseName);
-
-                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+                    DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
                     return;
                 }
 
@@ -300,6 +294,17 @@ namespace Raven.Server.ServerWide
 
                 NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
             }
+        }
+
+        private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
+        {
+            // delete database record
+            items.DeleteByKey(lowerKey);
+
+            // delete all values linked to database record - for subscription, etl etc.
+            CleanupDatabaseRelatedValues(context, items, databaseName);
+
+            NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
         }
 
         private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
@@ -541,6 +546,12 @@ namespace Raven.Server.ServerWide
                             {
                                 items.DeleteByKey(valueNameToDeleteLowered);
                             }
+                        }
+
+                        if (databaseRecord.Topology.AllNodes.Any() == false && databaseRecord.DeletionInProgress.Any() == false)
+                        {
+                            DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                            return null;
                         }
                     }
                     catch (Exception e)
