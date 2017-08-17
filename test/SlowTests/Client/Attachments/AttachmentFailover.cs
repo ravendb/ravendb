@@ -20,7 +20,7 @@ namespace SlowTests.Client.Attachments
         [Fact]
         public async Task PutAttachmentsWithFailover_Session()
         {
-            const int size = 512 * 1024,;
+            const int size = 512 * 1024;
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             var leader = await CreateRaftClusterAndGetLeader(3);
             using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
