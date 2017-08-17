@@ -1,21 +1,15 @@
 import viewModelBase = require("viewmodels/viewModelBase");
-import globalClientConfigurationModel = require("models/database/settings/globalClientConfigurationModel");
+import clientConfigurationModel = require("models/database/settings/clientConfigurationModel");
 import saveGlobalClientConfigurationCommand = require("commands/resources/saveGlobalClientConfigurationCommand");
 import getGlobalClientConfigurationCommand = require("commands/resources/getGlobalClientConfigurationCommand");
 
 class clientConfiguration extends viewModelBase {
 
-    model: globalClientConfigurationModel;
+    model: clientConfigurationModel;
     
     spinners = {
         save: ko.observable<boolean>(false)
     };
-    
-    readBalanceBehaviorLabel = ko.pureComputed(() => {
-        const value = this.model.readBalanceBehavior();
-        const kv = globalClientConfigurationModel.readModes;
-        return value ? kv.find(x => x.value === value).label : "None";
-    });
     
     activate(args: any) {
         super.activate(args);
@@ -25,7 +19,7 @@ class clientConfiguration extends viewModelBase {
         return new getGlobalClientConfigurationCommand()
             .execute()
             .done((dto) => {
-                this.model = new globalClientConfigurationModel(dto);
+                this.model = new clientConfigurationModel(dto);
             });
     }
 
@@ -54,6 +48,7 @@ class clientConfiguration extends viewModelBase {
         }
         
         this.spinners.save(true);
+        this.model.disabled(this.model.isDefined().length === 0);
         
         new saveGlobalClientConfigurationCommand(this.model.toDto())
             .execute()

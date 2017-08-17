@@ -23,7 +23,7 @@
                             <div class="dropdown" style="display:block;">
                                 <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
                                         data-bind="enable: _.includes(model.isDefined(), 'readBalanceBehavior')">
-                                    <span data-bind="text: readBalanceBehaviorLabel"></span> <span class="caret"></span>
+                                    <span data-bind="text: model.readBalanceBehaviorLabel"></span> <span class="caret"></span>
                                 </button>
                                 <ul class="dropdown-menu" data-bind="foreach: model.constructor.readModes">
                                     <li><a href="#" data-bind="text: label, click: _.partial($root.setReadMode, value)"></a></li>
