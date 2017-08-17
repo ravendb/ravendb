@@ -9,7 +9,6 @@ namespace FastTests.Server.Documents.Queries.Parser
     {
         [Theory]
         [InlineData("FROM Users", "{\"From\":{\"Index\":false,\"Source\":\"Users\"}}")]
-        [InlineData("select Name    as User, e.Name as employer  with doc(Employer) as e from User as u", "{\"Select\":[{\"Expression\":\"Name\",\"Alias\":\"User\"},{\"Expression\":\"e.Name\",\"Alias\":\"employer\"}],\"With\":[{\"Expression\":{\"Type\":\"Method\",\"Method\":\"doc\",\"Arguments\":[{\"Field\":\"Employer\"}]},\"Alias\":\"e\"}],\"From\":{\"Index\":false,\"Source\":\"User\",\"Alias\":\"u\"}}")]
         [InlineData("FROM Users AS u", "{\"From\":{\"Index\":false,\"Source\":\"Users\",\"Alias\":\"u\"}}")]
         [InlineData("FROM Users WHERE search(Name, 'oren')", "{\"From\":{\"Index\":false,\"Source\":\"Users\"},\"Where\":{\"Type\":\"Method\",\"Method\":\"search\",\"Arguments\":[{\"Field\":\"Name\"},\"oren'\"]}}")]
         [InlineData(@"FROM (Users, IsActive = null)

@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Queries
                         if (with.Expression.Arguments[0] is FieldToken f)
                             includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, f)));
                         else if (with.Expression.Arguments[0] is ValueToken v)
-                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, v)));
+                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, v, stripQuotes:true)));
                         else
                             ThrowInvalidWith(with, "WITH clause 'include' method argument is unknown, expected field or value but got:");
                     }
