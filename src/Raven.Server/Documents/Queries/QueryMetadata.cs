@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.From.Alias != null)
             {
                 var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
-                RootAliasPaths[fromAlias] = string.Empty;
+                RootAliasPaths[fromAlias] = null;
             }
 
             if (Query.GroupBy != null)
