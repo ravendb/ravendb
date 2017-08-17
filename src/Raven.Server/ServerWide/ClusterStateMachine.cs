@@ -87,7 +87,6 @@ namespace Raven.Server.ServerWide
                 return;
             }
 
-
             try
             {
                 string errorMessage;
@@ -99,7 +98,9 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveNodeFromDatabaseCommand):
                         RemoveNodeFromDatabase(context, cmd, index, leader);
                         break;
-
+                    case nameof(RemoveNodeFromClusterCommand):
+                        RemoveNodeFromCluster(context, cmd, index, leader);
+                        break;
                     case nameof(DeleteValueCommand):
                     case nameof(DeactivateLicenseCommand):
                         DeleteValue(context, type, cmd, index, leader);
@@ -193,6 +194,42 @@ namespace Raven.Server.ServerWide
             catch (Exception e)
             {
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException($"Cannot execute command of type {type}", e));
+            }
+        }
+
+        private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var removed = JsonDeserializationCluster.RemoveNodeFromClusterCommand(cmd).RemovedNode;
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            foreach (var record in ReadAllDatabases(context))
+            {
+                try
+                {
+                    //record.Topology.RemoveFromTopology(removed);
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
+                    {
+                        if (record.DeletionInProgress != null)
+                        {
+                            record.DeletionInProgress?.Remove(removed);
+                            if (record.DeletionInProgress.Any() == false && record.Topology.AllNodes.Any() == false)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                                continue;
+                            }
+                        }
+
+                        var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
+
+                        UpdateValue(index, items, lowerKey, key, updated);
+                    }
+                    NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
+                }
+                catch (Exception e)
+                {
+                    NotifyLeaderAboutError(index, leader, e);
+                }
             }
         }
 
@@ -673,6 +710,25 @@ namespace Raven.Server.ServerWide
                         yield break;
 
                     yield return GetCurrentItemKey(result.Value).Substring(3);
+                }
+            }
+        }
+
+        private IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            const string dbKey = "db/";
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                {
+                    if (take-- <= 0)
+                        yield break;
+                    var doc = Read(context, GetCurrentItemKey(result.Value));
+                    if(doc == null)
+                        continue;
+                    yield return JsonDeserializationCluster.DatabaseRecord(doc);
                 }
             }
         }
