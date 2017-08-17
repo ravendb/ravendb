@@ -1321,11 +1321,28 @@ If you really want to do in memory filtering on the data returned from the query
 
             BuildSelect(queryText);
             BuildFrom(queryText);
+            BuildWith(queryText);
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
 
             return queryText.ToString();
+        }
+
+        private void BuildWith(StringBuilder queryText)
+        {
+            if (Includes == null || Includes.Count == 0)
+                return;
+
+            queryText.Append(" WITH ");
+            bool first = true;
+            foreach (var include in Includes)
+            {
+                if (first == false)
+                    queryText.Append(",");
+                first = false;
+                queryText.Append("include('").Append(include.Replace("'","\\'")).Append("')");
+            }
         }
 
         /// <summary>
