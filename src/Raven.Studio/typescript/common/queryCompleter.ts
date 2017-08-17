@@ -8,6 +8,15 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
+interface AutoCompleteLastKeyword {
+    keyword: string,
+    keywordModifier: string,
+    operator: string,
+    identifier: string,
+    text: string,
+    paren: number,
+}
+
 class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private collectionsTracker: collectionsTracker;
@@ -89,7 +98,7 @@ class queryCompleter {
         }
     }
 
-    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string, string, number] {
+    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): AutoCompleteLastKeyword {
         let keyword: string;
         let keywordModifier: string;
         let identifier: string;
@@ -134,9 +143,23 @@ class queryCompleter {
                         continue;
                     }
 
-                    return [keyword, keywordModifier, operator, identifier, text, paren];
+                    return {
+                        keyword: keyword,
+                        keywordModifier: keywordModifier,
+                        operator: operator,
+                        identifier: identifier,
+                        text: text,
+                        paren: paren,
+                    };
                 case "support.function":
-                    return ["__support.function", keywordModifier, operator, identifier, text, paren];
+                    return {
+                        keyword: "__support.function",
+                        keywordModifier: keywordModifier,
+                        operator: operator,
+                        identifier: identifier,
+                        text: text,
+                        paren: paren,
+                    };
                 case "keyword.operator":
                     operator = token.value;
                     break;
@@ -166,7 +189,7 @@ class queryCompleter {
             }
         } while (iterator.stepBackward());
 
-        return [null, null, null, null, null, null];
+        return null;
     }
 
     private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
@@ -189,11 +212,21 @@ class queryCompleter {
              prefix: string,
              callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
 
-        const [lastKeyword, keywordModifier, operator, identifier, text, paren] = this.getLastKeyword(session, pos);
-        switch (lastKeyword) {
+        const lastKeyword = this.getLastKeyword(session, pos);
+        if (!lastKeyword || !lastKeyword.keyword){
+            this.completeKeywords([
+                ["from ", 1],
+                ["from index ", 1],
+                ["select ", 0]
+            ], callback);
+            
+            return;
+        }
+        
+        switch (lastKeyword.keyword) {
             case "from": {
-                if (identifier && text) {
-                    if (paren > 0) {
+                if (lastKeyword.identifier && lastKeyword.text) {
+                    if (lastKeyword.paren > 0) {
                         // from (Collection, {show fields here})
                         this.completeFields(session, callback);
                         return;
@@ -207,7 +240,7 @@ class queryCompleter {
                     if(!isStaticIndex){
                         keywords.push(["group by ", 2])
                     }
-                    if(!keywordModifier){
+                    if(!lastKeyword.keywordModifier){
                         keywords.push(["as ", 3])
                     }
                     this.completeKeywords(keywords, callback);
@@ -215,7 +248,6 @@ class queryCompleter {
                 }
 
                 if (!prefix ||
-                    prefix.length === 0 ||
                     prefix.startsWith("@")) {
                     callback(null, [{name: "@all_docs", value: "@all_docs ", score: this.defaultScore * 10, meta: "collection"}]);
                     callback(null, [{name: "@system", value: "@system ", score: this.defaultScore - 1, meta: "collection"}]);
@@ -232,7 +264,7 @@ class queryCompleter {
                 break;
             }
             case "index": {
-                if (identifier && text) { // index name already specified
+                if (lastKeyword.identifier && lastKeyword.text) { // index name already specified
                     return;
                 }
 
@@ -244,7 +276,7 @@ class queryCompleter {
                 break;
             }
             case "__support.function":
-                if (identifier && text) { // field already specified
+                if (lastKeyword.identifier && lastKeyword.text) { // field already specified
                     return;
                 }
                 
@@ -254,14 +286,14 @@ class queryCompleter {
                 this.completeFields(session, callback);
                 break;
             case "group by":
-                if (identifier && text) { // field already specified
+                if (lastKeyword.identifier && lastKeyword.text) { // field already specified
                     return;
                 }
                 this.completeFields(session, callback);
                 break;
             case "order by":
-                if (identifier && text !== ",") { // field already specified but there is not comma separator for next field
-                    if (!keywordModifier){
+                if (lastKeyword.identifier && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
+                    if (!lastKeyword.keywordModifier){
                         this.completeKeywords([
                             ["asc ", 0],
                             ["desc ", 1]
@@ -275,9 +307,9 @@ class queryCompleter {
                 break;
                 
             case "where": {
-                if (operator === "=") {
+                if (lastKeyword.operator === "=") {
                     // first, calculate and validate the column name
-                    let currentField = identifier;
+                    let currentField = lastKeyword.identifier;
                     if (!currentField) {
                         return;
                     }
@@ -350,13 +382,6 @@ class queryCompleter {
                 this.completeKeywords([
                     ["by ", 0]
                 ], callback);
-                break;
-            case null:
-                this.completeKeywords([
-                    ["from ", 1],
-                    ["from index ", 1],
-                    ["select ", 0]
-                    ], callback);
                 break;
             default: 
                 debugger
