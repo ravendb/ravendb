@@ -338,7 +338,7 @@ interface layoutable {
 
 
 interface autoCompleteWordList {
-    name: string; 
+    caption: string; 
     value: string; 
     score: number; 
     meta: string 
