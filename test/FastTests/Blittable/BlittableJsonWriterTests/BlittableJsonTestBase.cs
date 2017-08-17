@@ -1,9 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Dynamic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Xunit;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
@@ -120,10 +125,8 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         protected static unsafe void AssertComplexEmployee(string str, BlittableJsonReaderObject doc,
          JsonOperationContext blittableContext)
         {
-            throw new NotImplementedException();
-
-            /*
-            dynamic dynamicRavenJObject = new DynamicJsonObject(RavenJObject.Parse(str));
+            var converter = new ExpandoObjectConverter();
+            dynamic dynamicRavenJObject = JsonConvert.DeserializeObject<ExpandoObject>(str, converter);
             dynamic dynamicBlittableJObject = new DynamicBlittableJson(doc);
 
             Assert.Equal(dynamicRavenJObject.Age, dynamicBlittableJObject.Age);
@@ -151,7 +154,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             blittableContext.Write(ms, doc);
 
             Assert.Equal(str, Encoding.UTF8.GetString(ms.ToArray()));
-            */
+
         }
     }
 }
