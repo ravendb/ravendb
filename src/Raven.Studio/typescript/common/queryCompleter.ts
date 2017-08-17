@@ -21,7 +21,6 @@ class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
     private collectionsTracker: collectionsTracker;
     private indexFieldsCache = new Map<string, string[]>();
-    private defaultScore = 10000;
     
     constructor(private activeDatabase: KnockoutObservable<database>,
                 private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
@@ -192,34 +191,29 @@ class queryCompleter {
         return null;
     }
 
-    private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
+    private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], wordList: autoCompleteWordList[]) => void): void {
         this.getIndexFields(session)
             .done((indexFields) => callback(null, indexFields.map(field => {
                 field += " ";
-                return {name: field, value: field, score: this.defaultScore, meta: "field"};
+                return {name: field, value: field, score: 1, meta: "field"};
             })));
-    }
-    
-    private completeKeywords(keywords: [string, number][], callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
-        callback(null, keywords.map(([keyword, score]) => {
-            return {name: keyword, value: keyword, score: score, meta: "keyword"};
-        }));
     }
 
     complete(editor: AceAjax.Editor,
              session: AceAjax.IEditSession,
              pos: AceAjax.Position,
              prefix: string,
-             callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
+             callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
 
         const lastKeyword = this.getLastKeyword(session, pos);
-        if (!lastKeyword || !lastKeyword.keyword){
-            this.completeKeywords([
-                ["from ", 1],
-                ["from index ", 1],
-                ["select ", 0]
-            ], callback);
-            
+        if (!lastKeyword || !lastKeyword.keyword) {
+
+            const keywords = [
+                {value: "from", score: 1, meta: "keyword"},
+                {value: "select", score: 0, meta: "keyword"}
+            ];
+            this.completeWords(callback, keywords);
+
             return;
         }
         
@@ -232,35 +226,23 @@ class queryCompleter {
                         return;
                     }
 
-                    const keywords: [string, number][] = [
-                        ["order by ", 1],
-                        ["where ", 0]
+                    const keywords = [
+                        {value: "order", score: 1, meta: "keyword"},
+                        {value: "where", score: 0, meta: "keyword"}
                     ];
                     const [indexName, isStaticIndex] = this.getIndexName(session);
                     if(!isStaticIndex){
-                        keywords.push(["group by ", 2])
+                        keywords.push({value: "group", score: 2, meta: "keyword"})
                     }
                     if(!lastKeyword.keywordModifier){
-                        keywords.push(["as ", 3])
+                        keywords.push({value: "as", score: 3, meta: "keyword"})
                     }
-                    this.completeKeywords(keywords, callback);
+
+                    this.completeWords(callback, keywords);
                     return;
                 }
 
-                if (!prefix ||
-                    prefix.startsWith("@")) {
-                    callback(null, [{name: "@all_docs", value: "@all_docs ", score: this.defaultScore * 10, meta: "collection"}]);
-                    callback(null, [{name: "@system", value: "@system ", score: this.defaultScore - 1, meta: "collection"}]);
-                }
-                callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
-                    collection += " ";
-                    return {
-                        name: collection,
-                        value: collection,
-                        score: this.defaultScore,
-                        meta: "collection"
-                    };
-                }));
+                this.completeFrom(callback);
                 break;
             }
             case "index": {
@@ -271,7 +253,7 @@ class queryCompleter {
                 callback(null,
                     this.indexes().map(index => {
                         const name = `'${index.Name}' `;
-                        return {name: name, value: name, score: this.defaultScore, meta: "index"};
+                        return {name: name, value: name, score: 1, meta: "index"};
                     }));
                 break;
             }
@@ -294,10 +276,11 @@ class queryCompleter {
             case "order by":
                 if (lastKeyword.identifier && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
                     if (!lastKeyword.keywordModifier){
-                        this.completeKeywords([
-                            ["asc ", 0],
-                            ["desc ", 1]
-                        ], callback);
+                        const keywords = [
+                            {value: "asc", score: 0, meta: "keyword"},
+                            {value: "desc", score: 1, meta: "keyword"}
+                        ];
+                        this.completeWords(callback, keywords);
                     }
                     
                     return;
@@ -343,14 +326,14 @@ class queryCompleter {
                                             callback(null,
                                                 terms.Terms.map(term => {
                                                     term = "'" + term + "' ";
-                                                    return {name: term, value: term, score: this.defaultScore, meta: "value"};
+                                                    return {name: term, value: term, score: 1, meta: "value"};
                                                 }));
                                         }
                                     });
                             } else {
                                 if (currentValue.length > 0) {
                                     // TODO: Not sure what we want to show here?
-                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, this.defaultScore, this.activeDatabase())
+                                    new getDocumentsMetadataByIDPrefixCommand(currentValue, 1, this.activeDatabase())
                                         .execute()
                                         .done((results: metadataAwareDto[]) => {
                                             if (results && results.length > 0) {
@@ -360,7 +343,7 @@ class queryCompleter {
                                                         return {
                                                             name: id,
                                                             value: id,
-                                                            score: this.defaultScore,
+                                                            score: 1,
                                                             meta: "value"
                                                         };
                                                     }));
@@ -379,14 +362,40 @@ class queryCompleter {
             }
             case "group":
             case "order":
-                this.completeKeywords([
-                    ["by ", 0]
-                ], callback);
+                this.completeWords(callback, [{value: "by", score: 0, meta: "keyword"}]);
                 break;
             default: 
-                debugger
+                debugger;
                 break;
         }
+    }
+
+    private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
+        const fromWords = this.collectionsTracker.getCollectionNames().map(collection => {
+            collection += " ";
+            return {
+                value: collection,
+                score: 2,
+                meta: "collection"
+            };
+        });
+
+        fromWords.push({value: "index", score: 4, meta: "keyword"});
+       /* if (!prefix ||
+            prefix.startsWith("@")) {*/
+            fromWords.push({value: "@all_docs", score: 3, meta: "collection"});
+            fromWords.push({value: "@system", score: 1, meta: "collection"});
+        // }
+
+        this.completeWords(callback, fromWords);
+    }
+
+    private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: ({value: string; score: number; meta: string})[]) {
+        callback(null,  keywords.map(keyword  => {
+            const word = <autoCompleteWordList>keyword;
+            word.name = keyword.value;
+            return word;
+        }))
     }
 }
 

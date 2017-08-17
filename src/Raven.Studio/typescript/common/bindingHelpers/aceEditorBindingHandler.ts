@@ -170,7 +170,7 @@ class aceEditorBindingHandler {
         const aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
-        // aceEditor.setOption("enableLiveAutocompletion", true);
+        aceEditor.setOption("enableLiveAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
