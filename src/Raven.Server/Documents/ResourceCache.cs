@@ -108,5 +108,26 @@ namespace Raven.Server.Documents
                 return value;
             }
         }
+
+        public Task<TResource> Replace(string databaseName, Task<TResource> task)
+        {
+            lock (this)
+            {
+                Task<TResource> existingTask = null;
+                _caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
+                {
+                    existingTask = existing;
+                    return task;
+                });
+                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
+                {
+                    foreach (var mapping in mappings)
+                    {
+                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                    }
+                }
+                return existingTask;
+            }
+        }
     }
 }

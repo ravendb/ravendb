@@ -6,6 +6,7 @@ using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Exceptions.Documents;
+using Raven.Server.Config;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -200,29 +201,8 @@ namespace Raven.Server.Documents
                      : _documentDatabase.Configuration.Core.DataDirectory.FullPath));
             }
 
-            var basePath = _documentDatabase.Configuration.Core.DataDirectory;
-
-            var tempPath = _documentDatabase.Configuration.Storage.TempPath != null
-                ? _documentDatabase.Configuration.Storage.TempPath.FullPath
-                : basePath.Combine("Scratch").FullPath;
-
-            var journalPath = _documentDatabase.Configuration.Storage.JournalsStoragePath != null
-                ? _documentDatabase.Configuration.Storage.JournalsStoragePath.FullPath
-                : basePath.Combine("Journal").FullPath;
-
-            var options = _documentDatabase.Configuration.Core.RunInMemory
-                ? StorageEnvironmentOptions.CreateMemoryOnly(
-                    _documentDatabase.Configuration.Core.DataDirectory.FullPath,
-                    _documentDatabase.Configuration.Storage.TempPath?.FullPath,
-                    _documentDatabase.IoChanges,
-                    _documentDatabase.CatastrophicFailureNotification)
-                : StorageEnvironmentOptions.ForPath(
-                    _documentDatabase.Configuration.Core.DataDirectory.FullPath,
-                    tempPath,
-                    journalPath,
-                    _documentDatabase.IoChanges,
-                    _documentDatabase.CatastrophicFailureNotification
-                );
+            
+            var options = GetStorageEnvironmentOptionsFromConfiguration(_documentDatabase.Configuration, _documentDatabase.IoChanges, _documentDatabase.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
 
@@ -242,6 +222,34 @@ namespace Raven.Server.Documents
                 options.Dispose();
                 throw;
             }
+        }
+
+        public static StorageEnvironmentOptions GetStorageEnvironmentOptionsFromConfiguration(RavenConfiguration config, IoChangesNotifications ioChanges, CatastrophicFailureNotification catastrophicFailureNotification)
+        {
+            var basePath = config.Core.DataDirectory;
+
+            var tempPath = config.Storage.TempPath != null
+                ? config.Storage.TempPath.FullPath
+                : basePath.Combine("Scratch").FullPath;
+
+            var journalPath = config.Storage.JournalsStoragePath != null
+                ? config.Storage.JournalsStoragePath.FullPath
+                : basePath.Combine("Journal").FullPath;
+
+            if (config.Core.RunInMemory)
+                return StorageEnvironmentOptions.CreateMemoryOnly(
+                    config.Core.DataDirectory.FullPath,
+                    config.Storage.TempPath?.FullPath,
+                    ioChanges,
+                    catastrophicFailureNotification);
+
+            return StorageEnvironmentOptions.ForPath(
+                config.Core.DataDirectory.FullPath,
+                tempPath,
+                journalPath,
+                ioChanges,
+                catastrophicFailureNotification
+            );
         }
 
         public void Initialize(StorageEnvironmentOptions options)

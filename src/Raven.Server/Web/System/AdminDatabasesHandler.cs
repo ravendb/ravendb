@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -1148,6 +1149,45 @@ namespace Raven.Server.Web.System
                     }
                 }
             }
+        }
+
+        [RavenAction("/admin/compact", "POST", AuthorizationStatus.ServerAdmin)]
+        public Task CompactDatabase()
+        {
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var operationId = GetLongQueryString("operationId");
+            
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                if (ServerStore.Cluster.ReadDatabase(context, name) == null)
+                    throw new InvalidOperationException($"Cannot compact database {name}, it doesn't exist");
+            }
+
+            var token = new OperationCancelToken(ServerStore.ServerShutdown);
+            var compactDatabaseTask = new CompactDatabaseTask(
+                ServerStore,
+                name,
+                token.Token);
+
+            ServerStore.Operations.AddOperation(
+                null,
+                "Compacting database: " + name,
+                Documents.Operations.Operations.OperationType.DatabaseCompact,
+                taskFactory: onProgress => Task.Run(async () =>
+                {
+                    using(token)
+                        return await compactDatabaseTask.Execute(onProgress);
+                }, token.Token),
+                id: operationId, token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

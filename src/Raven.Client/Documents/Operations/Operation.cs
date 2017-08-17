@@ -19,6 +19,7 @@ namespace Raven.Client.Documents.Operations
         private readonly Func<IDatabaseChanges> _changes;
         private readonly DocumentConventions _conventions;
         private readonly long _id;
+        private readonly bool _isServerStoreOperation;
         private readonly TaskCompletionSource<IOperationResult> _result = new TaskCompletionSource<IOperationResult>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         public Action<IOperationProgress> OnProgressChanged;
@@ -27,12 +28,13 @@ namespace Raven.Client.Documents.Operations
 
         internal long Id => _id;
 
-        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id)
+        public Operation(RequestExecutor requestExecutor, Func<IDatabaseChanges> changes, DocumentConventions conventions, long id, bool isServerStoreOperation = false)
         {
             _requestExecutor = requestExecutor;
             _changes = changes;
             _conventions = conventions;
             _id = id;
+            _isServerStoreOperation = isServerStoreOperation;
         }
 
         private async Task Initialize()
@@ -60,7 +62,7 @@ namespace Raven.Client.Documents.Operations
         /// </summary>
         private async Task FetchOperationStatus()
         {
-            var command = new GetOperationStateCommand(_conventions, _id);
+            var command = new GetOperationStateCommand(_conventions, _id, _isServerStoreOperation);
 
             await _requestExecutor.ExecuteAsync(command, _context).ConfigureAwait(false);
 
