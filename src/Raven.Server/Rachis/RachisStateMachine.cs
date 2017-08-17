@@ -34,7 +34,7 @@ namespace Raven.Server.Rachis
                 if (cmd == null || flags == RachisEntryFlags.Invalid)
                     throw new InvalidOperationException("Expected to apply entry " + index + " but it isn't stored");
 
-                if(flags != RachisEntryFlags.StateMachineCommand)
+                if(flags.HasFlag(RachisEntryFlags.StateMachineCommand) == false)
                     continue;
 
                 Apply(context, cmd, index, leader, serverStore);

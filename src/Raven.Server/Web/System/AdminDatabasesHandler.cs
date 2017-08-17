@@ -690,12 +690,22 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/databases/wait/deletion", "GET", AuthorizationStatus.ServerAdmin)]
+        public async Task WaitForDatabaseRecordDeletion()
+        {
+            var name = GetStringQueryString("name");
+            var time = GetIntValueQueryString("time", required: false) ?? 30;
+
+            await ServerStore.Cluster.WaitForDatabaseRecordDeletion(name, time);
+        }
+
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
             var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 if (string.IsNullOrEmpty(fromNodes) == false)

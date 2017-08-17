@@ -32,6 +32,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -79,6 +80,8 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
+        public ConcurrentDictionary<string,TaskCompletionSource<object>> DeletionCompletedTask = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
+
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -86,7 +89,6 @@ namespace Raven.Server.ServerWide
                 NotifyLeaderAboutError(index, leader, new CommandExecutionException("Cannot execute command, wrong format"));
                 return;
             }
-
 
             try
             {
@@ -99,7 +101,9 @@ namespace Raven.Server.ServerWide
                     case nameof(RemoveNodeFromDatabaseCommand):
                         RemoveNodeFromDatabase(context, cmd, index, leader);
                         break;
-
+                    case nameof(RemoveNodeFromClusterCommand):
+                        RemoveNodeFromCluster(context, cmd, index, leader);
+                        break;
                     case nameof(DeleteValueCommand):
                     case nameof(DeactivateLicenseCommand):
                         DeleteValue(context, type, cmd, index, leader);
@@ -196,6 +200,42 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private void RemoveNodeFromCluster(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
+        {
+            var removed = JsonDeserializationCluster.RemoveNodeFromClusterCommand(cmd).RemovedNode;
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            foreach (var record in ReadAllDatabases(context))
+            {
+                try
+                {
+                    //record.Topology.RemoveFromTopology(removed);
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName.ToLowerInvariant(), out Slice lowerKey))
+                    using (Slice.From(context.Allocator, "db/" + record.DatabaseName, out Slice key))
+                    {
+                        if (record.DeletionInProgress != null)
+                        {
+                            record.DeletionInProgress?.Remove(removed);
+                            if (record.DeletionInProgress.Any() == false && record.Topology.AllNodes.Any() == false)
+                            {
+                                DeleteDatabaseRecord(context, index, items, lowerKey, record.DatabaseName);
+                                continue;
+                            }
+                        }
+
+                        var updated = EntityToBlittable.ConvertEntityToBlittable(record, DocumentConventions.Default, context);
+
+                        UpdateValue(index, items, lowerKey, key, updated);
+                    }
+                    NotifyDatabaseChanged(context, record.DatabaseName, index, nameof(RemoveNodeFromCluster));
+                }
+                catch (Exception e)
+                {
+                    NotifyLeaderAboutError(index, leader, e);
+                }
+            }
+        }
+
         protected static void NotifyLeaderAboutError(long index, Leader leader, Exception e)
         {
             // ReSharper disable once UseNullPropagation
@@ -282,15 +322,9 @@ namespace Raven.Server.ServerWide
                 }
                 remove.UpdateDatabaseRecord(databaseRecord, index);
 
-                if (databaseRecord.Topology.AllNodes.Any() == false)
+                if (databaseRecord.DeletionInProgress.Any() == false)
                 {
-                    // delete database record
-                    items.DeleteByKey(lowerKey);
-
-                    // delete all values linked to database record - for subscription, etl etc.
-                    CleanupDatabaseRelatedValues(context, items, databaseName);
-
-                    NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+                    DeleteDatabaseRecord(context, index, items, lowerKey, databaseName);
                     return;
                 }
 
@@ -299,6 +333,60 @@ namespace Raven.Server.ServerWide
                 UpdateValue(index, items, lowerKey, key, updated);
 
                 NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+            }
+        }
+
+        private void DeleteDatabaseRecord(TransactionOperationContext context, long index, Table items, Slice lowerKey, string databaseName)
+        {
+            // delete database record
+            items.DeleteByKey(lowerKey);
+
+            // delete all values linked to database record - for subscription, etl etc.
+            CleanupDatabaseRelatedValues(context, items, databaseName);
+
+            NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
+
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            {
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                {
+                    if (DeletionCompletedTask.TryRemove(databaseName, out var task))
+                    {
+                        task.SetResult(null);
+                    }
+                }
+            };
+        }
+
+        public async Task WaitForDatabaseRecordDeletion(string database, int timeoutInSec)
+        {
+            var tcs = DeletionCompletedTask.GetOrAdd(database, db =>
+            {
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    if (ReadDatabase(ctx, db) == null)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(db, "Can't wait for deletion on a database that doesn't exists.");
+                    }
+                }
+                return new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
+            });
+            var timeout = TimeoutManager.WaitFor(TimeSpan.FromSeconds(timeoutInSec));
+            var task = await Task.WhenAny(tcs.Task, timeout);
+            if (task == timeout)
+            {
+                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                {
+                    var record = ReadDatabase(ctx, database);
+                    if (record == null)
+                    {
+                        DatabaseDoesNotExistException.ThrowWithMessage(database, "Can't wait for deletion on a database that doesn't exists.");
+                    }
+                    throw new TimeoutException($"Waiting for the database '{database}' to be deleted has timeouted after {timeoutInSec} seconds." +
+                                               $" Deletion still in progress for nodes : {string.Join(", ", record.DeletionInProgress?.Keys)}");
+                }
             }
         }
 
@@ -542,6 +630,12 @@ namespace Raven.Server.ServerWide
                                 items.DeleteByKey(valueNameToDeleteLowered);
                             }
                         }
+
+                        if (databaseRecord.Topology.AllNodes.Any() == false && databaseRecord.DeletionInProgress.Any() == false)
+                        {
+                            DeleteDatabaseRecord(context, index, items, valueNameLowered, databaseName);
+                            return null;
+                        }
                     }
                     catch (Exception e)
                     {
@@ -662,6 +756,25 @@ namespace Raven.Server.ServerWide
                         yield break;
 
                     yield return GetCurrentItemKey(result.Value).Substring(3);
+                }
+            }
+        }
+
+        private IEnumerable<DatabaseRecord> ReadAllDatabases(TransactionOperationContext context, int start = 0, int take = int.MaxValue)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(ItemsSchema, Items);
+
+            const string dbKey = "db/";
+            using (Slice.From(context.Allocator, dbKey, out Slice loweredPrefix))
+            {
+                foreach (var result in items.SeekByPrimaryKeyPrefix(loweredPrefix, Slices.Empty, 0))
+                {
+                    if (take-- <= 0)
+                        yield break;
+                    var doc = Read(context, GetCurrentItemKey(result.Value));
+                    if(doc == null)
+                        continue;
+                    yield return JsonDeserializationCluster.DatabaseRecord(doc);
                 }
             }
         }
