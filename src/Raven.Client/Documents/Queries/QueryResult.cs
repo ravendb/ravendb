@@ -80,6 +80,7 @@ namespace Raven.Client.Documents.Queries
                 Includes = Includes,
                 IndexName = IndexName,
                 IndexTimestamp = IndexTimestamp,
+                IncludedPaths = IncludedPaths,
                 IsStale = IsStale,
                 SkippedResults = SkippedResults,
                 TotalResults = TotalResults,
