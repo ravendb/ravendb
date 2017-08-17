@@ -89,7 +89,9 @@ class queryCompleter {
         }
     }
 
-    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string, number] {
+    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): [string, string, string, string, string, number] {
+        let keyword: string;
+        let keywordModifier: string;
         let identifier: string;
         let text: string;
         let operator: string;
@@ -108,16 +110,33 @@ class queryCompleter {
 
             switch (token.type) {
                 case "keyword":
-                    let keyword = token.value.toLowerCase();
+                    if (keyword === "by") {
+                        keyword = token.value.toLowerCase() + " by";
+                    }
+                    else {
+                        keyword = token.value.toLowerCase();
+                    }
+
                     if (keyword === "desc" ||
                         keyword === "asc" ||
                         keyword === "and" ||
-                        keyword === "or")
+                        keyword === "or" ||
+                        keyword === "as") {
+                        
+                        if (!identifier || !keywordModifier) {
+                            keywordModifier = keyword;
+                        }
+                        
                         continue;
+                    }
 
-                    return [keyword, operator, identifier, text, paren];
+                    if (keyword === "by") {
+                        continue;
+                    }
+
+                    return [keyword, keywordModifier, operator, identifier, text, paren];
                 case "support.function":
-                    return ["__support.function", operator, identifier, text, paren];
+                    return ["__support.function", keywordModifier, operator, identifier, text, paren];
                 case "keyword.operator":
                     operator = token.value;
                     break;
@@ -135,19 +154,25 @@ class queryCompleter {
                     paren--;
                     break;
                 case "text":
-                    if (!identifier) {
-                        text = token.value;
+                    if (!identifier && text !== ",") {
+                        if (token.value.trim() === ",") {
+                            text = ",";
+                        }
+                        else {
+                            text = token.value;
+                        }
                     }
                     break;
             }
         } while (iterator.stepBackward());
 
-        return [null, null, null, null, null];
+        return [null, null, null, null, null, null];
     }
 
     private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
         this.getIndexFields(session)
             .done((indexFields) => callback(null, indexFields.map(field => {
+                field += " ";
                 return {name: field, value: field, score: this.defaultScore, meta: "field"};
             })));
     }
@@ -164,7 +189,7 @@ class queryCompleter {
              prefix: string,
              callback: (errors: any[], worldlist: autoCompleteWordList[]) => void) {
 
-        const [lastKeyword, operator, identifier, text, paren] = this.getLastKeyword(session, pos);
+        const [lastKeyword, keywordModifier, operator, identifier, text, paren] = this.getLastKeyword(session, pos);
         switch (lastKeyword) {
             case "from": {
                 if (identifier && text) {
@@ -175,12 +200,15 @@ class queryCompleter {
                     }
 
                     const keywords: [string, number][] = [
-                        ["order by", 1],
-                        ["where", 0]
+                        ["order by ", 1],
+                        ["where ", 0]
                     ];
                     const [indexName, isStaticIndex] = this.getIndexName(session);
-                    if(isStaticIndex){
-                        keywords.push(["group by", 2])
+                    if(!isStaticIndex){
+                        keywords.push(["group by ", 2])
+                    }
+                    if(!keywordModifier){
+                        keywords.push(["as ", 3])
                     }
                     this.completeKeywords(keywords, callback);
                     return;
@@ -189,10 +217,11 @@ class queryCompleter {
                 if (!prefix ||
                     prefix.length === 0 ||
                     prefix.startsWith("@")) {
-                    callback(null, [{name: "@all_docs", value: "@all_docs", score: this.defaultScore * 10, meta: "collection"}]);
-                    callback(null, [{name: "@system", value: "@system", score: this.defaultScore - 1, meta: "collection"}]);
+                    callback(null, [{name: "@all_docs", value: "@all_docs ", score: this.defaultScore * 10, meta: "collection"}]);
+                    callback(null, [{name: "@system", value: "@system ", score: this.defaultScore - 1, meta: "collection"}]);
                 }
                 callback(null, this.collectionsTracker.getCollectionNames().map(collection => {
+                    collection += " ";
                     return {
                         name: collection,
                         value: collection,
@@ -209,7 +238,7 @@ class queryCompleter {
 
                 callback(null,
                     this.indexes().map(index => {
-                        const name = `'${index.Name}'`;
+                        const name = `'${index.Name}' `;
                         return {name: name, value: name, score: this.defaultScore, meta: "index"};
                     }));
                 break;
@@ -222,7 +251,26 @@ class queryCompleter {
                 this.completeFields(session, callback);
                 break;
             case "select":
-            case "by": // group by, order by
+                this.completeFields(session, callback);
+                break;
+            case "group by":
+                if (identifier && text) { // field already specified
+                    return;
+                }
+                this.completeFields(session, callback);
+                break;
+            case "order by":
+                if (identifier && text !== ",") { // field already specified but there is not comma separator for next field
+                    if (!keywordModifier){
+                        this.completeKeywords([
+                            ["asc ", 0],
+                            ["desc ", 1]
+                        ], callback);
+                    }
+                    
+                    return;
+                }
+                
                 this.completeFields(session, callback);
                 break;
                 
@@ -262,7 +310,7 @@ class queryCompleter {
                                         if (terms && terms.Terms.length > 0) {
                                             callback(null,
                                                 terms.Terms.map(term => {
-                                                    term = "'" + term + "'";
+                                                    term = "'" + term + "' ";
                                                     return {name: term, value: term, score: this.defaultScore, meta: "value"};
                                                 }));
                                         }
@@ -276,7 +324,7 @@ class queryCompleter {
                                             if (results && results.length > 0) {
                                                 callback(null,
                                                     results.map(curVal => {
-                                                        const id = "'" + curVal["@metadata"]["@id"] + "'";
+                                                        const id = "'" + curVal["@metadata"]["@id"] + "' ";
                                                         return {
                                                             name: id,
                                                             value: id,
@@ -297,11 +345,17 @@ class queryCompleter {
                 this.completeFields(session, callback);
                 break;
             }
+            case "group":
+            case "order":
+                this.completeKeywords([
+                    ["by ", 0]
+                ], callback);
+                break;
             case null:
                 this.completeKeywords([
-                    ["from", 1],
-                    ["from index", 1],
-                    ["select", 0]
+                    ["from ", 1],
+                    ["from index ", 1],
+                    ["select ", 0]
                     ], callback);
                 break;
             default: 

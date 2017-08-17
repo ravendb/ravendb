@@ -345,5 +345,5 @@ interface autoCompleteWordList {
 }
 
 interface autoCompleteCompleter {
-    complete: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void; 
+    complete: (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void; 
 }
