@@ -37,8 +37,6 @@ interface computedAppUrls {
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
-    replicationPerfStats: KnockoutComputed<string>;
-    sqlReplicationPerfStats: KnockoutComputed<string>;
     requestsCount: KnockoutComputed<string>;
     requestsTracing: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
@@ -51,14 +49,8 @@ interface computedAppUrls {
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     quotas: KnockoutComputed<string>;
-    replications: KnockoutComputed<string>;
-    etl: KnockoutComputed<string>;
-    hotSpare: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
     connectionStrings: KnockoutComputed<string>;
-    sqlReplications: KnockoutComputed<string>;
-    sqlReplicationsConnections: KnockoutComputed<string>;
-    editSqlReplication: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
     customFunctionsEditor: KnockoutComputed<string>;
@@ -70,11 +62,9 @@ interface computedAppUrls {
     statusDebugQueries: KnockoutComputed<string>;
     statusDebugTasks: KnockoutComputed<string>;
     statusDebugRoutes: KnockoutComputed<string>;
-    statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
-    statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;

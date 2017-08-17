@@ -7,7 +7,6 @@ type attributeItem = {
 
 class licensingStatus extends dialogViewModelBase {
 
-    isHotSpare = false;
     isDevelopmentOnly = false;
     isNonExpiredCommercial = false;
     isExpired = false;
@@ -27,28 +26,15 @@ class licensingStatus extends dialogViewModelBase {
     attrCpus: string;
     attributes: attributeItem[];
 
-    constructor(private licenseStatus: Raven.Server.Commercial.LicenseStatus, supportCoverage: supportCoverageDto, hotSpare: HotSpareDto) {
+    constructor(private licenseStatus: Raven.Server.Commercial.LicenseStatus, supportCoverage: supportCoverageDto) {
         super();
 
         /* TODO
-        if (licenseStatus.Attributes.hotSpare === "true") {
-            this.isHotSpare = true;
-            
-            if (hotSpare.ActivationMode === "Activated") {
-                this.licenseStatusText = "Hot Spare: Activated";
-                this.licenseExpiresAt = moment(hotSpare.ActivationTime).add("days", 4).format("YYYY-MMM-DD");
-            } else {
-                this.licenseStatusText = "Hot Spare: Not Activated";
-                this.licenseExpiresAt = null;
-            }
-            
-        } else {
-            this.isDevelopmentOnly = !licenseStatus.IsCommercial;
-            this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
-            this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
-            this.licenseStatusText = licenseStatus.Status;
-            this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
-        }
+        this.isDevelopmentOnly = !licenseStatus.IsCommercial;
+        this.isNonExpiredCommercial = licenseStatus.IsCommercial && !licenseStatus.Status.contains("Expired");
+        this.isExpired = licenseStatus.IsCommercial && licenseStatus.Status.contains("Expired");
+        this.licenseStatusText = licenseStatus.Status;
+        this.licenseExpiresAt = licenseStatus.Attributes.updatesExpiration;
 
         this.supportStatus = supportCoverage.Status;
         this.isProfessionalSupport = supportCoverage.Status === 'ProfessionalSupport';
@@ -80,7 +66,6 @@ class licensingStatus extends dialogViewModelBase {
             { displayName: "Revisions", value: licenseStatus.Attributes.revisions },
             { displayName: "Cluster", value: licenseStatus.Attributes.clustering },
             { displayName: "Monitoring", value: licenseStatus.Attributes.monitoring },
-            { displayName: "Hot Spare", value: licenseStatus.Attributes.hotSpare },
             { displayName: "Allow Windows Clustering", value: licenseStatus.Attributes.allowWindowsClustering }
         ];
 

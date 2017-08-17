@@ -56,30 +56,12 @@ function getManageServerMenuItem() {
         })
         /* TODO
         new leafMenuItem({
-            route: 'admin/settings/backup',
-            moduleId: 'viewmodels/manage/backup',
-            title: 'Backup',
-            nav: true,
-            css: 'icon-backup',
-            dynamicHash: appUrl.forBackup,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
             route: 'admin/settings/compact',
             moduleId: 'viewmodels/manage/compact',
             title: 'Compact',
             nav: true,
             css: 'icon-compact',
             dynamicHash: appUrl.forCompact,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/restore',
-            moduleId: 'viewmodels/manage/restore',
-            title: 'Restore',
-            nav: true,
-            css: 'icon-restore',
-            dynamicHash: appUrl.forRestore,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
@@ -146,16 +128,7 @@ function getManageServerMenuItem() {
             css: 'icon-studio-config',
             dynamicHash: appUrl.forStudioConfig,
             enabled: canReadOrWrite
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/hotSpare',
-            moduleId: 'viewmodels/manage/hotSpare',
-            title: 'Hot Spare',
-            nav: true,
-            css: 'icon-hot-spare',
-            dynamicHash: appUrl.forHotSpare,
-            enabled: accessHelper.isGlobalAdmin
-        })*/
+        }),*/
     ];
 
     return new intermediateMenuItem('Manage server', items, 'icon-manage-server');

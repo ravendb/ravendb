@@ -23,49 +23,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
         }),*/
-        /* TODO: move to tasks menu
-        new leafMenuItem({
-            route: 'databases/settings/replication',
-            moduleId: 'viewmodels/database/settings/replications',
-            title: 'Replication',
-            nav: true,
-            css: 'icon-replication',
-            dynamicHash: appUrls.replications
-        }),*/
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/etl',
-            moduleId: 'viewmodels/database/settings/etl',
-            title: 'ETL',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: appUrls.etl
-        }),*/
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/sqlReplication',
-            moduleId: 'viewmodels/database/settings/sqlReplications',
-            title: 'SQL Replication',
-            nav: true,
-            css: 'icon-sql-replication',
-            dynamicHash: appUrls.sqlReplications
-        }),*/
-        new leafMenuItem({
-            route: 'databases/settings/editSqlReplication(/:sqlReplicationName)',
-            moduleId: 'viewmodels/database/settings/editSqlReplication',
-            title: 'Edit SQL Replication',
-            nav: false,
-            css: 'icon-sql-replication',
-            dynamicHash: appUrls.editSqlReplication
-        }),
-        new leafMenuItem({
-            route: 'databases/settings/sqlReplicationConnectionStringsManagement',
-            moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement',
-            title: 'SQL Replication Connection Strings',
-            nav: false,
-            css: 'icon-sql-replication-connection-string',
-            dynamicHash: appUrls.sqlReplicationsConnections
-        }),
+       
         new leafMenuItem({
             route: 'databases/settings/customFunctionsEditor',
             moduleId: 'viewmodels/database/settings/customFunctionsEditor',
@@ -92,14 +50,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.revisions
         }),
         new leafMenuItem({
-            route: 'databases/manageDatabaseGroup',
-            moduleId: 'viewmodels/resources/manageDatabaseGroup',
-            title: 'Manage database group',
-            nav: true,
-            css: 'icon-topology',
-            dynamicHash: appUrls.manageDatabaseGroup
-        }),
-        new leafMenuItem({
             route: 'databases/settings/clientConfiguration',
             moduleId: 'viewmodels/database/settings/clientConfiguration',
             title: 'Client Configuration',
@@ -107,6 +57,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-client-configuration',
             dynamicHash: appUrls.clientConfiguration
         }),
+        new leafMenuItem({
+            route: 'databases/manageDatabaseGroup',
+            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            title: 'Manage database group',
+            nav: true,
+            css: 'icon-topology',
+            dynamicHash: appUrls.manageDatabaseGroup
+        }),
+        
         /*TODO
         new leafMenuItem({
             route: 'databases/settings/databaseStudioConfig',
@@ -286,14 +245,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugRoutes
             }),
             new leafMenuItem({
-                route: 'databases/status/debug/sqlReplication',
-                moduleId: 'viewmodels/database/status/debug/statusDebugSqlReplication',
-                title: 'SQL Replication',
-                tooltip: "Shows information about SQL replication",
-                nav: activeDatabase() && activeDatabase().isBundleActive("SqlReplication"),
-                dynamicHash: appUrls.statusDebugSqlReplication
-            }),
-            new leafMenuItem({
                 route: 'databases/status/debug/indexFields',
                 moduleId: 'viewmodels/database/status/debug/statusDebugIndexFields',
                 title: 'Index fields',
@@ -317,15 +268,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 nav: true,
                 dynamicHash: appUrls.statusDebugWebSocket
             }),
-            new leafMenuItem({
-                route: 'databases/status/debug/explainReplication',
-                moduleId: 'viewmodels/database/status/debug/statusDebugExplainReplication',
-                title: 'Explain replication',
-                tooltip: "Shows information about replication of given document to given replication destination",
-                nav: activeDatabase() && activeDatabase().isBundleActive("Replication"),
-                dynamicHash: appUrls.statusDebugExplainReplication
-            })
-        ], 'icon-plus'),*/
+           */
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/requests',
@@ -377,14 +320,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.replicationStats
         }),
         /* TODO
-        new leafMenuItem({
-            route: 'databases/status/sqlReplicationPerfStats',
-            moduleId: 'viewmodels/database/status/sqlReplicationPerfStats',
-            title: 'SQL Replication Stats',
-            nav: true,
-            dynamicHash: appUrls.sqlReplicationPerfStats
-        }),*/
-        /* TODO:
         new leafMenuItem({
             route: 'databases/status/userInfo',
             moduleId: 'viewmodels/database/status/userInfo',

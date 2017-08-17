@@ -63,7 +63,7 @@ class licenseInformation extends viewModelBase {
     }
 
     private showLicenseDialog() {
-        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
+        var dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
         app.showBootstrapDialog(dialog);
     }
 

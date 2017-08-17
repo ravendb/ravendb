@@ -26,16 +26,6 @@ function getDocumentsMenuItem(appUrls: computedAppUrls) {
         }),
 
         new collectionMenuItem(),
-
-/* TODO:
-        new leafMenuItem({
-            title: "Conflicts",
-            nav: true,
-            route: "database/conflicts",
-            moduleId: "viewmodels/database/conflicts/conflicts",
-            css: 'icon-conflicts',
-            dynamicHash: appUrls.conflicts
-        }),*/
         new leafMenuItem({
             title: "Patch",
             nav: true,

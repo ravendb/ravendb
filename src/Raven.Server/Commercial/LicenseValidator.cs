@@ -14,7 +14,7 @@ namespace Raven.Server.Commercial
         private static readonly string[] Terms =
         {
             "type", "version", "expiration", "updatesExpiration",
-            "RAM", "cores", "ISV", "encryption", "fips", "monitoring", "hotSpare"
+            "RAM", "cores", "ISV", "encryption", "fips", "monitoring"
         };
 
         private enum ValueType : byte
