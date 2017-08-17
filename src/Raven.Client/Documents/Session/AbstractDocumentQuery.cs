@@ -1354,7 +1354,7 @@ If you really want to do in memory filtering on the data returned from the query
                 queryText.Append("include(");
                 if (requiredQuotes)
                 {
-                    queryText.Append(include.Replace("'", "\\'"));
+                    queryText.Append("'").Append(include.Replace("'", "\\'")).Append("'");
                 }
                 else
                 {
