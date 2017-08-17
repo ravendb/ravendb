@@ -534,10 +534,14 @@ namespace Raven.Server.Documents.Indexes
 
                 _cts?.Cancel();
 
-                DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
+                //Does happen for faulty in memory indexes
+                if (DocumentDatabase != null)
+                {
+                    DocumentDatabase.DocumentTombstoneCleaner.Unsubscribe(this);
 
-                DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
-
+                    DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
+                }
+                    
                 _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");

@@ -145,13 +145,13 @@ namespace Raven.Server.ServerWide.Maintenance
                             foreach (var index in indexStorage.GetIndexes())
                             {
                                 var stats = index.GetIndexStats(context);
-
-                                report.LastIndexStats.Add(index.Name, new DatabaseStatusReport.ObservedIndexStatus
+                                //We might have old version of this index with the same name
+                                report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
                                 {
                                     LastIndexedEtag = stats.LastProcessedEtag,
                                     IsSideBySide = false, // TODO: fix this so it get whatever this has side by side or not
                                     IsStale = stats.IsStale
-                                });
+                                };
                             }
                         }
                     }
