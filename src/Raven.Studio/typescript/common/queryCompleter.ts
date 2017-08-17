@@ -226,19 +226,7 @@ class queryCompleter {
                         return;
                     }
 
-                    const keywords = [
-                        {value: "order", score: 1, meta: "keyword"},
-                        {value: "where", score: 0, meta: "keyword"}
-                    ];
-                    const [indexName, isStaticIndex] = this.getIndexName(session);
-                    if(!isStaticIndex){
-                        keywords.push({value: "group", score: 2, meta: "keyword"})
-                    }
-                    if(!lastKeyword.keywordModifier){
-                        keywords.push({value: "as", score: 3, meta: "keyword"})
-                    }
-
-                    this.completeWords(callback, keywords);
+                    this.completeFromAfter(callback, false, lastKeyword);
                     return;
                 }
 
@@ -247,6 +235,7 @@ class queryCompleter {
             }
             case "index": {
                 if (lastKeyword.identifier && lastKeyword.text) { // index name already specified
+                    this.completeFromAfter(callback, true, lastKeyword);
                     return;
                 }
 
@@ -370,6 +359,14 @@ class queryCompleter {
         }
     }
 
+    private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: ({value: string; score: number; meta: string})[]) {
+        callback(null,  keywords.map(keyword  => {
+            const word = <autoCompleteWordList>keyword;
+            word.name = keyword.value;
+            return word;
+        }))
+    }
+
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         const fromWords = this.collectionsTracker.getCollectionNames().map(collection => {
             collection += " ";
@@ -380,22 +377,28 @@ class queryCompleter {
             };
         });
 
-        fromWords.push({value: "index", score: 4, meta: "keyword"});
-       /* if (!prefix ||
-            prefix.startsWith("@")) {*/
-            fromWords.push({value: "@all_docs", score: 3, meta: "collection"});
-            fromWords.push({value: "@system", score: 1, meta: "collection"});
-        // }
+        fromWords.push(
+            {value: "index", score: 4, meta: "keyword"}, 
+            {value: "@all_docs", score: 3, meta: "collection"},
+            {value: "@system", score: 1, meta: "collection"}
+        );
 
         this.completeWords(callback, fromWords);
     }
 
-    private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: ({value: string; score: number; meta: string})[]) {
-        callback(null,  keywords.map(keyword  => {
-            const word = <autoCompleteWordList>keyword;
-            word.name = keyword.value;
-            return word;
-        }))
+    private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: AutoCompleteLastKeyword) {
+        const keywords = [
+            {value: "order", score: 1, meta: "keyword"},
+            {value: "where", score: 0, meta: "keyword"}
+        ];
+        if(!isStaticIndex){
+            keywords.push({value: "group", score: 2, meta: "keyword"})
+        }
+        if(!lastKeyword.keywordModifier){
+            keywords.push({value: "as", score: 3, meta: "keyword"})
+        }
+
+        this.completeWords(callback, keywords);
     }
 }
 
