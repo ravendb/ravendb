@@ -197,22 +197,15 @@ class shell extends viewModelBase {
 
     /*
     static fetchStudioConfig() {
-        var hotSpareTask = new getHotSpareInformation().execute();
-        var configTask = new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true).execute();
+        new getDocumentWithMetadataCommand(shell.studioConfigDocumentId, appUrl.getSystemDatabase(), true)
+            .execute()
+            .done((doc: documentClass) => {
 
-        $.when(hotSpareTask, configTask).done((hotSpareResult, doc: documentClass) => {
-            var hotSpare = <HotSpareDto>hotSpareResult[0];
-
-            if (license.licenseStatus().Attributes.hotSpare === "true") {
-                // override environment colors with hot spare
-                this.activateHotSpareEnvironment(hotSpare);
-            } else {
-                var envColor = doc && doc["EnvironmentColor"];
-                if (envColor != null) {
-                    var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
-                    shell.selectedEnvironmentColorStatic(color);
-                    shell.originalEnvironmentColor(color);
-                }
+            var envColor = doc && doc["EnvironmentColor"];
+            if (envColor != null) {
+                var color = new environmentColor(envColor.Name, envColor.BackgroundColor);
+                shell.selectedEnvironmentColorStatic(color);
+                shell.originalEnvironmentColor(color);
             }
         });
     }*/
@@ -247,11 +240,6 @@ class shell extends viewModelBase {
         const serverConfigsLoadTask: JQueryPromise<void> = this.loadServerConfig();
         const managerTask = this.databasesManager.init();
         return $.when<any>(serverConfigsLoadTask, managerTask);
-    }
-
-    private static activateHotSpareEnvironment(hotSpare: HotSpareDto) {
-        const color = new environmentColor(hotSpare.ActivationMode === "Activated" ? "Active Hot Spare" : "Hot Spare", "#FF8585");
-        license.hotSpare(hotSpare);
     }
 
     private handleRavenConnectionFailure(result: any) {
@@ -293,7 +281,7 @@ class shell extends viewModelBase {
     }
 
     showLicenseStatusDialog() {
-        const dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage(), license.hotSpare());
+        const dialog = new licensingStatus(license.licenseStatus(), license.supportCoverage());
         app.showBootstrapDialog(dialog);
     }
 
