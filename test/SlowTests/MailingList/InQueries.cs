@@ -13,7 +13,7 @@ namespace SlowTests.MailingList
             public string Country { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-6402")]
+        [Fact]
         public void WhenQueryContainsQuestionMark()
         {
             using (var store = GetDocumentStore())
