@@ -54,7 +54,7 @@ namespace FastTests.Blittable
             public TimeSpan timeSpanNanoseconds;
         }
 
-        [Fact(Skip= "RavenDB-7649")]
+        [Fact]
         public void ValidateRanges()
         {
 
