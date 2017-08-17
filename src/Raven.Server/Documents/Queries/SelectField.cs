@@ -8,16 +8,19 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string Alias;
 
+        public readonly string SourceAlias;
+
         public readonly AggregationOperation AggregationOperation;
 
         public readonly bool IsGroupByKey;
 
         public readonly string[] GroupByKeys;
 
-        private SelectField(string name, string alias)
+        private SelectField(string name, string alias, string sourceAlias)
         {
             Name = name;
             Alias = alias;
+            SourceAlias = sourceAlias;
         }
 
         private SelectField(string name, string alias, AggregationOperation aggregationOperation)
@@ -34,9 +37,9 @@ namespace Raven.Server.Documents.Queries
             GroupByKeys = groupByKeys;
         }
 
-        public static SelectField Create(string name, string alias)
+        public static SelectField Create(string name, string alias, string sourceAlias)
         {
-            return new SelectField(name, alias);
+            return new SelectField(name, alias, sourceAlias);
         }
 
         public static SelectField CreateGroupByAggregation(string name, string alias, AggregationOperation aggregation)
