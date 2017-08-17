@@ -51,6 +51,12 @@ namespace Sparrow.Json
         {
             writer.WritePropertyName(name);
 
+            if (items == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+
             writer.WriteStartArray();
             var first = true;
             foreach (var item in items)

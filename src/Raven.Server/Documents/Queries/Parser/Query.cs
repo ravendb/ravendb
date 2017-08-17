@@ -29,10 +29,7 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 WriteSelectOrWith("SELECT", writer, Select, IsDistinct);
             }
-            if (With != null)
-            {
-                WriteSelectOrWith("WITH", writer, With, isDistinct: false);
-            }
+           
             writer.Write(" FROM ");
             if (From.Index)
             {
@@ -59,6 +56,10 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             writer.WriteLine();
+            if (With != null)
+            {
+                WriteSelectOrWith("WITH", writer, With, isDistinct: false);
+            }
             if (GroupBy != null)
             {
                 writer.Write("GROUP BY ");
@@ -137,11 +138,11 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WriteStartObject();
             if (Select != null)
             {
-                WriteSelectOrWith(writer, Select, "Select");
+                WriteSelectOrWith(writer, Select, "Select",QueryText);
             }
             if (With != null)
             {
-                WriteSelectOrWith(writer, With, "With");
+                WriteSelectOrWith(writer, With, "With",QueryText);
             }
             writer.WritePropertyName("From");
             writer.WriteStartObject();
@@ -204,7 +205,7 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WriteEndObject();
         }
 
-        private void WriteSelectOrWith(JsonWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems, string clause)
+        public static void WriteSelectOrWith(JsonWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems, string clause, string queryText)
         {
             writer.WritePropertyName(clause);
             writer.WriteStartArray();
@@ -213,11 +214,11 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Expression");
-                field.Expression.ToJsonAst(QueryText, writer);
+                field.Expression.ToJsonAst(queryText, writer);
                 if (field.Alias != null)
                 {
                     writer.WritePropertyName("Alias");
-                    QueryExpression.WriteValue(QueryText, writer, field.Alias.TokenStart, field.Alias.TokenLength,
+                    QueryExpression.WriteValue(queryText, writer, field.Alias.TokenStart, field.Alias.TokenLength,
                         field.Alias.EscapeChars);
                 }
                 writer.WriteEndObject();
