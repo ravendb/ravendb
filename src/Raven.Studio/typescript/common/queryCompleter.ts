@@ -8,7 +8,7 @@ import getIndexEntriesFieldsCommand = require("commands/database/index/getIndexE
 import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
-interface AutoCompleteLastKeyword {
+interface autoCompleteLastKeyword {
     keyword: string,
     keywordModifier: string,
     operator: string,
@@ -97,7 +97,7 @@ class queryCompleter {
         }
     }
 
-    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): AutoCompleteLastKeyword {
+    private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
         let keyword: string;
         let keywordModifier: string;
         let identifiers: string[] = [];
@@ -307,7 +307,7 @@ class queryCompleter {
 
                             let currentValue: string = "";
 
-                            /*currentValue = currentToken.value.trim();
+                            /* TODO: currentValue = currentToken.value.trim();
                              const rowTokens: any[] = session.getTokens(pos.row);
                              if (!!rowTokens && rowTokens.length > 1) {
                              currentColumnName = rowTokens[rowTokens.length - 2].value.trim();
@@ -395,7 +395,7 @@ class queryCompleter {
         this.completeWords(callback, fromWords);
     }
 
-    private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: AutoCompleteLastKeyword) {
+    private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: autoCompleteLastKeyword) {
         if (lastKeyword.keywordModifier && lastKeyword.identifiers.length < 2) {
             return;
         }

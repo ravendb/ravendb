@@ -219,7 +219,7 @@ class aceEditorBindingHandler {
                     aceEditorBindingHandler.customCompleters.push({editorType: typeName, completer: completer});
                 }
                 langTools.setCompleters([{
-                    moduleId: "aceEditoBindingHandler",
+                    moduleId: "aceEditorBindingHandler",
                     getCompletions: aceEditorBindingHandler.autoCompleteHub,
                     identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
                 }]);
