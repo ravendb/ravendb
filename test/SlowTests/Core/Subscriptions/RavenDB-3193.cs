@@ -53,7 +53,7 @@ namespace SlowTests.Core.Subscriptions
                         }
                     }));
 
-                    SpinWait.SpinUntil(() => ids.Count >= 100, TimeSpan.FromSeconds(60));
+                    Assert.True(SpinWait.SpinUntil(() => ids.Count >= 100, TimeSpan.FromSeconds(60)));
                     Assert.Equal(100, ids.Count);
                     foreach (var i in ids)
                     {
