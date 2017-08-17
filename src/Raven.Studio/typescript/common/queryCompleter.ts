@@ -200,8 +200,8 @@ class queryCompleter {
 
     private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], wordList: autoCompleteWordList[]) => void): void {
         this.getIndexFields(session)
-            .done((indexFields) => callback(null, indexFields.map(field => {
-                return {name: field, value: field, score: 1, meta: "field"};
+            .done((indexFields) => this.completeWords(callback, indexFields.map(field => {
+                return {value: field, score: 1, meta: "field"};
             })));
     }
 
@@ -371,7 +371,7 @@ class queryCompleter {
     private completeWords(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, keywords: ({value: string; score: number; meta: string})[]) {
         callback(null,  keywords.map(keyword  => {
             const word = <autoCompleteWordList>keyword;
-            word.name = keyword.value;
+            word.caption = _.trim(keyword.value, "'");
             return word;
         }))
     }
@@ -399,15 +399,15 @@ class queryCompleter {
         if (lastKeyword.keywordModifier && lastKeyword.identifiers.length < 2) {
             return;
         }
-        
+
         const keywords = [
             {value: "order", score: 1, meta: "keyword"},
             {value: "where", score: 0, meta: "keyword"}
         ];
-        if(!isStaticIndex){
+        if (!isStaticIndex) {
             keywords.push({value: "group", score: 2, meta: "keyword"})
         }
-        if(!lastKeyword.keywordModifier){
+        if (!lastKeyword.keywordModifier) {
             keywords.push({value: "as", score: 3, meta: "keyword"})
         }
 
