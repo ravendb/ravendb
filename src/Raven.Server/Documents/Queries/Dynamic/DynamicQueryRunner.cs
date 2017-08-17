@@ -115,6 +115,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.IsStale = false;
             resultToFill.LastQueryTime = DateTime.MinValue;
             resultToFill.IndexTimestamp = DateTime.MinValue;
+            resultToFill.IncludedPaths = query.Metadata.Includes;
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
 

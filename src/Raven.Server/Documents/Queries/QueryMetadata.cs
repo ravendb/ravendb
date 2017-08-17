@@ -110,6 +110,7 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.With != null)
             {
+                List<string> includes = null;
                 foreach (var with in Query.With)
                 {
                     if (with.Expression.Type != OperatorType.Method)
@@ -121,13 +122,44 @@ namespace Raven.Server.Documents.Queries
                     }
                     else if ("include".Equals(method, StringComparison.OrdinalIgnoreCase))
                     {
+                        string ParseIncludePath(string path)
+                        {
+                            var indexOf = path.IndexOf('.');
+                            if (indexOf == -1)
+                                return path;
+                            if(Query.From.Alias == null)
+                                ThrowInvalidWith(with, "WITH clause is trying to use an alias but the from clause hasn't specified one: ");
+                            Debug.Assert(Query.From.Alias != null);
+                            if(Query.From.Alias.TokenLength != indexOf)
+                                ThrowInvalidWith(with, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                            var compare = string.Compare(
+                                QueryText, Query.From.Alias.TokenStart, 
+                                path, 0, indexOf,StringComparison.OrdinalIgnoreCase);
+                            if(compare != 0)
+                                ThrowInvalidWith(with, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                            return path.Substring(indexOf + 1);
+                        }
 
+                        if(with.Alias != null)
+                            ThrowInvalidWith(with, "WITH clause 'include' call cannot have an alias, but got: ");
+                        if(with.Expression.Arguments.Count != 1)
+                            ThrowInvalidWith(with, "WITH clause 'include' call must have a single parameter, but got: ");
+                        if (includes == null)
+                            includes = new List<string>();
+                        if (with.Expression.Arguments[0] is FieldToken f)
+                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, f)));
+                        else if (with.Expression.Arguments[0] is ValueToken v)
+                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, v)));
+                        else
+                            ThrowInvalidWith(with, "WITH clause 'include' method argument is unknown, expected field or value but got:");
                     }
                     else
                     {
-                        ThrowInvalidWith(with, "WITH clause had an invalid method call, got: ");
+                        ThrowInvalidWith(with, "WITH clause had an invalid method call ('include', 'load' are allowed), got: ");
                     }
                 }
+                if (includes != null)
+                    Includes = includes.ToArray();
             }
 
             if (Query.Select != null)
