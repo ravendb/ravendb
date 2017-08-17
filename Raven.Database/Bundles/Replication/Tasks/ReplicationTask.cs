@@ -933,29 +933,26 @@ namespace Raven.Bundles.Replication.Tasks
                 var response = e.Response as HttpWebResponse;
                 if (response != null)
                 {
-                    using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
+                    try
                     {
-                        var error = streamReader.ReadToEnd();
-                        try
+                        using (var streamReader = new StreamReader(response.GetResponseStreamWithHttpDecompression()))
                         {
+                            var error = streamReader.ReadToEnd();
+
                             var ravenJObject = RavenJObject.Parse(error);
                             log.WarnException("Replication to " + destination + " had failed\r\n" + ravenJObject.Value<string>("Error"), e);
                             errorMessage = error;
-                            return false;
+                            return false; 
                         }
-                        catch (Exception)
-                        {
-                        }
-
-                        log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
-                        errorMessage = error;
+                    }
+                    catch (Exception readResponseEx)
+                    {
+                        log.WarnException("Failed to read replication request error to " + destination + " destination from the response", readResponseEx);
                     }
                 }
-                else
-                {
-                    log.WarnException("Replication to " + destination + " had failed", e);
-                    errorMessage = e.Message;
-                }
+
+                log.WarnException("Replication to " + destination + " had failed", e);
+                errorMessage = e.Message;
                 return false;
             }
             catch (Exception e)
@@ -998,26 +995,32 @@ namespace Raven.Bundles.Replication.Tasks
                 HandleRequestBufferingErrors(e, destination);
 
                 var response = e.Response as HttpWebResponse;
+
                 if (response != null)
                 {
                     var responseStream = response.GetResponseStream();
+
                     if (responseStream != null)
                     {
-                        using (var streamReader = new StreamReader(responseStream))
+                        try
                         {
-                            var error = streamReader.ReadToEnd();
-                            log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+                            using (var streamReader = new StreamReader(responseStream))
+                            {
+                                var error = streamReader.ReadToEnd();
+                                log.WarnException("Replication to " + destination + " had failed\r\n" + error, e);
+                                lastError = error;
+
+                                return false;
+                            }
+                        }
+                        catch (Exception readResponseEx)
+                        {
+                            log.WarnException("Failed to read replication request error to " + destination + " destination from the response", readResponseEx);
                         }
                     }
-                    else
-                    {
-                        log.WarnException("Replication to " + destination + " had failed", e);
-                    }
                 }
-                else
-                {
-                    log.WarnException("Replication to " + destination + " had failed", e);
-                }
+
+                log.WarnException("Replication to " + destination + " had failed", e);
                 lastError = e.Message;
                 return false;
             }
