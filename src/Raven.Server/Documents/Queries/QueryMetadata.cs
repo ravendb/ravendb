@@ -3,12 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using Microsoft.Extensions.Primitives;
-using Org.BouncyCastle.Crypto;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Queries
@@ -18,6 +16,8 @@ namespace Raven.Server.Documents.Queries
         private const string CountFieldName = "Count";
 
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
+
+        public readonly Dictionary<StringSegment, string> RootAliasPaths = new Dictionary<StringSegment, string>();
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey)
         {
@@ -100,6 +100,12 @@ namespace Raven.Server.Documents.Queries
 
         private void Build(BlittableJsonReaderObject parameters)
         {
+            if (Query.From.Alias != null)
+            {
+                var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
+                RootAliasPaths[fromAlias] = string.Empty;
+            }
+
             if (Query.GroupBy != null)
             {
                 GroupBy = new string[Query.GroupBy.Count];
@@ -109,58 +115,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             if (Query.With != null)
-            {
-                List<string> includes = null;
-                foreach (var with in Query.With)
-                {
-                    if (with.Expression.Type != OperatorType.Method)
-                        ThrowInvalidWith(with, "WITH clause support only method calls, but got: ");
-                    var method = QueryExpression.Extract(QueryText, with.Expression.Field);
-                    if ("load".Equals(method, StringComparison.OrdinalIgnoreCase))
-                    {
-                        
-                    }
-                    else if ("include".Equals(method, StringComparison.OrdinalIgnoreCase))
-                    {
-                        string ParseIncludePath(string path)
-                        {
-                            var indexOf = path.IndexOf('.');
-                            if (indexOf == -1)
-                                return path;
-                            if(Query.From.Alias == null)
-                                ThrowInvalidWith(with, "WITH clause is trying to use an alias but the from clause hasn't specified one: ");
-                            Debug.Assert(Query.From.Alias != null);
-                            if(Query.From.Alias.TokenLength != indexOf)
-                                ThrowInvalidWith(with, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
-                            var compare = string.Compare(
-                                QueryText, Query.From.Alias.TokenStart, 
-                                path, 0, indexOf,StringComparison.OrdinalIgnoreCase);
-                            if(compare != 0)
-                                ThrowInvalidWith(with, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
-                            return path.Substring(indexOf + 1);
-                        }
-
-                        if(with.Alias != null)
-                            ThrowInvalidWith(with, "WITH clause 'include' call cannot have an alias, but got: ");
-                        if(with.Expression.Arguments.Count != 1)
-                            ThrowInvalidWith(with, "WITH clause 'include' call must have a single parameter, but got: ");
-                        if (includes == null)
-                            includes = new List<string>();
-                        if (with.Expression.Arguments[0] is FieldToken f)
-                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, f)));
-                        else if (with.Expression.Arguments[0] is ValueToken v)
-                            includes.Add(ParseIncludePath(QueryExpression.Extract(QueryText, v, stripQuotes:true)));
-                        else
-                            ThrowInvalidWith(with, "WITH clause 'include' method argument is unknown, expected field or value but got:");
-                    }
-                    else
-                    {
-                        ThrowInvalidWith(with, "WITH clause had an invalid method call ('include', 'load' are allowed), got: ");
-                    }
-                }
-                if (includes != null)
-                    Includes = includes.ToArray();
-            }
+                HandleWithClause();
 
             if (Query.Select != null)
                 FillSelectFields(parameters);
@@ -193,11 +148,81 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void ThrowInvalidWith((QueryExpression Expression, FieldToken Alias) with, string msg)
+        private void HandleWithClause()
+        {
+            List<string> includes = null;
+            foreach (var with in Query.With)
+            {
+                if (with.Expression.Type != OperatorType.Method)
+                    ThrowInvalidWith(with.Expression, "WITH clause support only method calls, but got: ");
+                var method = QueryExpression.Extract(QueryText, with.Expression.Field);
+                if ("load".Equals(method, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (with.Alias == null)
+                        ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ");
+
+                    var alias = QueryExpression.Extract(QueryText, with.Alias);
+
+                    var path = GetWithClausePropertyPath(with.Expression, "include");
+                    if (RootAliasPaths.TryAdd(alias, path) == false)
+                    {
+                        ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ");
+                    }
+
+                }
+                else if ("include".Equals(method, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (with.Alias != null)
+                        ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ");
+                    if (includes == null)
+                        includes = new List<string>();
+                    includes.Add(GetWithClausePropertyPath(with.Expression, "include"));
+                }
+                else
+                {
+                    ThrowInvalidWith(with.Expression, "WITH clause had an invalid method call ('include', 'load' are allowed), got: ");
+                }
+            }
+            if (includes != null)
+                Includes = includes.ToArray();
+        }
+
+        private string GetWithClausePropertyPath(QueryExpression method, string methodName)
+        {
+            string ParseIncludePath(string path)
+            {
+                var indexOf = path.IndexOf('.');
+                if (indexOf == -1)
+                    return path;
+                if (Query.From.Alias == null)
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias but the from clause hasn't specified one: ");
+                Debug.Assert(Query.From.Alias != null);
+                if (Query.From.Alias.TokenLength != indexOf)
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                var compare = string.Compare(
+                    QueryText, Query.From.Alias.TokenStart,
+                    path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
+                if (compare != 0)
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                return path.Substring(indexOf + 1);
+            }
+
+            if (method.Arguments.Count != 1)
+                ThrowInvalidWith(method, $"WITH clause '{methodName}' call must have a single parameter, but got: ");
+
+            if (method.Arguments[0] is FieldToken f)
+                return ParseIncludePath(QueryExpression.Extract(QueryText, f));
+            if (method.Arguments[0] is ValueToken v)
+                return ParseIncludePath(QueryExpression.Extract(QueryText, v, stripQuotes: true));
+            ThrowInvalidWith(method, "WITH clause 'include' method argument is unknown, expected field or value but got:");
+            return null;// never hit
+        }
+
+        private void ThrowInvalidWith(QueryExpression expr, string msg)
         {
             var writer = new StringWriter();
             writer.Write(msg);
-            with.Expression.ToString(QueryText, writer);
+            expr.ToString(QueryText, writer);
             throw new InvalidQueryException(writer.GetStringBuilder().ToString());
         }
 
@@ -299,7 +324,17 @@ namespace Raven.Server.Documents.Queries
                 {
                     case OperatorType.Field:
                         var name = QueryExpression.Extract(QueryText, expression.Field);
-                        fields.Add(SelectField.Create(name, alias));
+                        var indexOf = name.IndexOf('.');
+                        string sourceAlias = null;
+                        if (indexOf != -1)
+                        {
+                            var key = new StringSegment(name, indexOf);
+                            if (RootAliasPaths.TryGetValue(key, out sourceAlias))
+                            {
+                                name = name.Substring(indexOf + 1);
+                            }
+                        }
+                        fields.Add(SelectField.Create(name, alias, sourceAlias));
                         break;
                     case OperatorType.Method:
                         var methodName = QueryExpression.Extract(QueryText, expression.Field);

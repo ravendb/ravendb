@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Queries.Results
                                     && x.Name != Constants.Documents.Indexing.Fields.ReduceValueFieldName
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
-                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, x.IsStored, isDocumentId: false));
+                        .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
                 }
 
                 if (FieldsToFetch.ExtractAllFromDocument)
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries.Results
                             if (fields.ContainsKey(name))
                                 continue;
 
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, canExtractFromIndex: false, isDocumentId: false);
+                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, null, canExtractFromIndex: false, isDocumentId: false);
                         }
                     }
                 }
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Queries.Results
                     fields[kvp.Key] = kvp.Value;
                 }
             }
-
+            Dictionary<string, Document> _aliasToDocuments = null;
             foreach (var fieldToFetch in fields.Values)
             {
                 if (TryExtractValueFromIndex(fieldToFetch, input, result, state))
