@@ -28,7 +28,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index);
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Etag);
                 }
-
+                
+                NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }
