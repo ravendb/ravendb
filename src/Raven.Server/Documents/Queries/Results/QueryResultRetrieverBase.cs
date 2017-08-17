@@ -4,6 +4,7 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
+using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
@@ -272,6 +273,20 @@ namespace Raven.Server.Documents.Queries.Results
                 toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = val;
                 return;
             }
+            if (fieldToFetch.QueryField.Format != null)
+            {
+                var args = new object[fieldToFetch.FormatArguments.Length];
+                for (int i = 0; i < fieldToFetch.FormatArguments.Length; i++)
+                {
+                    TryGetSingleValue(document, fieldToFetch.FormatArguments[i], out args[i]);
+                }
+                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] =
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        fieldToFetch.QueryField.Format,
+                        args);
+                return;
+            }
             if (fieldToFetch.QueryField.SourceAlias == null)
             {
                 SingleValueExtraction(document);
@@ -302,24 +317,22 @@ namespace Raven.Server.Documents.Queries.Results
                 SingleValueExtraction(document);
             }
 
-            void SingleValueExtraction(Document d)
+            bool TryGetSingleValue(Document d, FieldsToFetch.FieldToFetch field, out object value)
             {
-                object value;
-
-                if (fieldToFetch.IsDocumentId)
+                if (field.IsDocumentId)
                 {
                     value = d.Id;
                 }
-                else if (fieldToFetch.IsCompositeField == false)
+                else if (field.IsCompositeField == false)
                 {
-                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, d, fieldToFetch.Name, out value) == false)
-                        return;
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, d, field.Name, out value) == false)
+                        return false;
                 }
                 else
                 {
                     var component = new DynamicJsonValue();
 
-                    foreach (var componentField in fieldToFetch.Components)
+                    foreach (var componentField in field.Components)
                     {
                         if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, d, componentField, out var componentValue))
                             component[componentField] = componentValue;
@@ -327,8 +340,13 @@ namespace Raven.Server.Documents.Queries.Results
 
                     value = component;
                 }
+                return true;
+            }
 
-                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = value;
+            void SingleValueExtraction(Document d)
+            {
+                if (TryGetSingleValue(d, fieldToFetch, out var value))
+                    toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = value;
             }
         }
 

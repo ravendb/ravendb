@@ -6,4 +6,15 @@
         Count,
         Sum
     }
+
+    public enum WithMethods
+    {
+        Load,
+        Include
+    }
+
+    public enum SelectMethods
+    {
+        Format
+    }
 }
