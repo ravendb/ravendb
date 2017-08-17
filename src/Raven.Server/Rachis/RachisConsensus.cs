@@ -978,10 +978,18 @@ namespace Raven.Server.Rachis
                         tableValueBuilder.Add((int)entry.Flags);
                         table.Insert(tableValueBuilder);
                     }
-                    if (entry.Flags == RachisEntryFlags.Topology)
+                    if (entry.Flags.HasFlag(RachisEntryFlags.Topology))
                     {
                         lastTopology?.Dispose();
-                        lastTopology = nested;
+                        if (entry.Flags.HasFlag(RachisEntryFlags.StateMachineCommand))
+                        {
+                            nested.TryGet(nameof(RemoveNodeFromClusterCommand.Topology), out BlittableJsonReaderObject topology);
+                            lastTopology = context.ReadObject(topology, "read/clsuterTopolgy");
+                        }
+                        else
+                        {
+                            lastTopology = nested;
+                        }
                     }
                     else
                     {
