@@ -25,7 +25,7 @@ namespace Raven.Client.Documents.Queries
             using (var hasher = new QueryHashCalculator(ctx))
             {
                 hasher.Write(Query);
-                hasher.Write (WaitForNonStaleResults);
+                hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
@@ -37,7 +37,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(CutoffEtag);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
-                hasher.Write(Includes);
                 hasher.Write(HighlighterKeyName);
                 hasher.Write(HighlighterPreTags);
                 hasher.Write(HighlighterPostTags);
@@ -110,11 +109,6 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool ShowTimings { get; set; }
 
-        /// <summary>
-        /// An array of relative paths that specify related documents ids which should be included in a query result
-        /// </summary>
-        public string[] Includes { get; set; }
-        
         /// <summary>
         /// Indicates if it's intersect query
         /// </summary>

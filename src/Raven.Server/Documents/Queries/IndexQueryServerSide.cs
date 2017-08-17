@@ -64,7 +64,6 @@ namespace Raven.Server.Documents.Queries
             };
 
             DynamicJsonValue transformerParameters = null;
-            HashSet<string> includes = null;
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -84,12 +83,6 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
-                            break;
-                        case "include":
-                            if (includes == null)
-                                includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                            includes.Add(item.Value[0]);
                             break;
                         case "transformer":
                             result.Transformer = item.Value[0];
@@ -119,9 +112,6 @@ namespace Raven.Server.Documents.Queries
                     throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
                 }
             }
-
-            if (includes != null)
-                result.Includes = includes.ToArray();
 
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");

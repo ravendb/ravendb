@@ -239,6 +239,11 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
+
+            writer.WriteArray(nameof(result.IncludedPaths),
+                result.IncludedPaths);
+            writer.WriteComma();
+
             writer.WriteQueryResult(context, result, metadataOnly, out numberOfResults, partial: true);
 
             writer.WriteEndObject();

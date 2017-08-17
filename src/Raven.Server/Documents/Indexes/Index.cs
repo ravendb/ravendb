@@ -1637,7 +1637,7 @@ namespace Raven.Server.Documents.Indexes
             }
 
             if (resultToFill.SupportsInclude == false
-                && (query.Includes != null && query.Includes.Length > 0 || transformer != null && transformer.HasInclude))
+                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0 || transformer != null && transformer.HasInclude))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
             using (var marker = MarkQueryAsRunning(query, token))
@@ -1693,7 +1693,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
+                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0) &&
                             (transformer == null || transformer.MightRequireTransaction == false))
                             documentsContext.CloseTransaction();
                         // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
@@ -1718,7 +1718,7 @@ namespace Raven.Server.Documents.Indexes
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                DocumentDatabase.DocumentsStorage, documentsContext, query.Includes);
+                                DocumentDatabase.DocumentsStorage, documentsContext, query.Metadata.Includes);
 
                             using (
                                 var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
@@ -1749,6 +1749,7 @@ namespace Raven.Server.Documents.Indexes
                             includeDocumentsCommand.Fill(resultToFill.Includes);
                             resultToFill.TotalResults = totalResults.Value;
                             resultToFill.SkippedResults = skippedResults.Value;
+                            resultToFill.IncludedPaths = query.Metadata.Includes;
                         }
 
                         return;
