@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Text;
+using Microsoft.Extensions.Primitives;
+using Org.BouncyCastle.Crypto;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Parser;
@@ -71,6 +75,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool CanCache;
 
+        public string[] Includes;
+
         private void AddSearchField(string fieldName, ValueTokenType value)
         {
             var indexFieldName = GetIndexFieldName(fieldName);
@@ -102,6 +108,28 @@ namespace Raven.Server.Documents.Queries
                     GroupBy[i] = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
             }
 
+            if (Query.With != null)
+            {
+                foreach (var with in Query.With)
+                {
+                    if (with.Expression.Type != OperatorType.Method)
+                        ThrowInvalidWith(with, "WITH clause support only method calls, but got: ");
+                    var method = QueryExpression.Extract(QueryText, with.Expression.Field);
+                    if ("load".Equals(method, StringComparison.OrdinalIgnoreCase))
+                    {
+                        
+                    }
+                    else if ("include".Equals(method, StringComparison.OrdinalIgnoreCase))
+                    {
+
+                    }
+                    else
+                    {
+                        ThrowInvalidWith(with, "WITH clause had an invalid method call, got: ");
+                    }
+                }
+            }
+
             if (Query.Select != null)
                 FillSelectFields(parameters);
 
@@ -131,6 +159,14 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
             }
+        }
+
+        private void ThrowInvalidWith((QueryExpression Expression, FieldToken Alias) with, string msg)
+        {
+            var writer = new StringWriter();
+            writer.Write(msg);
+            with.Expression.ToString(QueryText, writer);
+            throw new InvalidQueryException(writer.GetStringBuilder().ToString());
         }
 
         private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod(

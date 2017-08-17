@@ -36,16 +36,24 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("SELECT"))
                 q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
 
+            q.From = FromClause();
+
             if (Scanner.TryScan("WITH"))
                 q.With = SelectOrWithClause("WITH", out _);
-
-            q.From = FromClause();
 
             if (Scanner.TryScan("GROUP BY"))
                 q.GroupBy = GroupBy();
 
             if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                 ThrowParseException("Unable to parse WHERE clause");
+
+            if (Scanner.TryScan("SELECT"))
+            {
+                if(q.Select!= null)
+                    ThrowParseException("Only a single SELECT clause is allowed, but got two");
+
+                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();

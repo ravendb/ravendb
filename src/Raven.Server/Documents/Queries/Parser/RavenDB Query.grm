@@ -32,10 +32,10 @@ Id             = {Letter}{Id Chars}*
                | <From Or Group> <Order By>
                | <From Or Group>
                
-<Select> ::=  'SELECT' <Named Identifier List> <With Select>
+<Select> ::=  'SELECT' <Named Identifier List>
           | 'SELECT' <Named Identifier List>
           
-<With Select> ::= 'WITH' <Named Identifier List>
+<With Clause> ::= 'WITH' <Named Identifier List>
 
 <Where> ::= 'WHERE' <Expression> <Order By>
          |'WHERE' <Expression>
@@ -44,8 +44,10 @@ Id             = {Letter}{Id Chars}*
 
 <Group> ::= 'GROUP BY' <Identifiers List>
 
-<From Or Group> ::= <From> <Group>
-                 | <From> 
+<From Or Group> ::= <From> <With Clause> <Group>
+                 | <From> <With Clause>
+                 | <From> <Group>
+                 | <From>
             
 <From> ::= 'FROM''('<Simple Field> ','  <Expression> ')' !filtered
         | 'FROM''('<Simple Field> ','  <Expression> ')' 'AS' <Simple Field>
