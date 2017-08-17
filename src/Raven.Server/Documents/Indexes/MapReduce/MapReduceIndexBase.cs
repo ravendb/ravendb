@@ -73,7 +73,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
-            return new MapReduceQueryResultRetriever(documentsContext, fieldsToFetch);
+            return new MapReduceQueryResultRetriever(DocumentDatabase.DocumentsStorage,documentsContext, fieldsToFetch);
         }
 
         private static Tree GetMapPhaseTree(Transaction tx)
