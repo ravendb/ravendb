@@ -1,3 +1,4 @@
+using System;
 using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Client.Documents.Queries.Spatial
@@ -36,7 +37,8 @@ namespace Raven.Client.Documents.Queries.Spatial
 
         public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, double distErrorPercent=0.025)
         {
-            return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within,distErrorPercent);
+            throw new NotSupportedException("Currently not supported");
+            //return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within,distErrorPercent);
         }
     }
 }

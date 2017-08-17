@@ -58,7 +58,6 @@ namespace FastTests.Client.Indexing
                         HighlighterKeyName = q.HighlighterKeyName,
                         HighlighterPostTags = q.HighlighterPostTags,
                         HighlighterPreTags = q.HighlighterPreTags,
-                        Includes = q.Includes,
                         PageSize = q.PageSize,
                         ShowTimings = q.ShowTimings,
                         SkipDuplicateChecking = q.SkipDuplicateChecking,

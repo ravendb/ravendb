@@ -273,12 +273,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.Includes != null && query.Includes.Length > 0)
-            {
-                writer.WriteArray(nameof(query.Includes), query.Includes);
-                writer.WriteComma();
-            }
-
             if (query.IsIntersect)
             {
                 writer.WritePropertyName(nameof(query.IsIntersect));

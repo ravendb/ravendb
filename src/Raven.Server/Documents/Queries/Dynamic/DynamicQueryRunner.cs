@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.LastQueryTime = DateTime.MinValue;
             resultToFill.IndexTimestamp = DateTime.MinValue;
 
-            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
+            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)

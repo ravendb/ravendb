@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
 {
@@ -13,6 +14,11 @@ namespace Raven.Client.Documents.Queries
         /// Gets or sets the document included in the result.
         /// </summary>
         public T Includes { get; set; }
+
+        /// <summary>
+        /// The paths that the server included in the results
+        /// </summary>
+        public string [] IncludedPaths { get; set; }
 
         /// <summary>
         /// Gets or sets a value indicating whether the index is stale.
