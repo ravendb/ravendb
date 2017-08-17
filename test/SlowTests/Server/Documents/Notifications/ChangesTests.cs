@@ -20,7 +20,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
-using RavenDB_8118;
 using Sparrow.Json;
 using Xunit;
 
@@ -321,8 +320,7 @@ namespace SlowTests.Server.Documents.Notifications
                     _databaseName = databaseRecord?.DatabaseName ?? throw new ArgumentNullException(nameof(databaseRecord));
                     _databaseDocument = EntityToBlittable.ConvertEntityToBlittable(databaseRecord, conventions, context);
                 }
-
-                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/admin/databases?name={_databaseName}";
 
