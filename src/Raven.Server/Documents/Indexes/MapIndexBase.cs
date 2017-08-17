@@ -72,9 +72,9 @@ namespace Raven.Server.Documents.Indexes
             return numberOfOutputs;
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
-            return new MapQueryResultRetriever(DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch);
+            return new MapQueryResultRetriever(query, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

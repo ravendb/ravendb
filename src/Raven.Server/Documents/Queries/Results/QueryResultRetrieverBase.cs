@@ -10,6 +10,7 @@ using Raven.Server.Json;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Utils;
 using Sparrow;
 
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
@@ -26,8 +28,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly FieldsToFetch FieldsToFetch;
 
-        protected QueryResultRetrieverBase(FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
+        protected QueryResultRetrieverBase(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
         {
+            _query = query;
             _context = context;
             _documentsStorage = documentsStorage;
 
@@ -227,7 +230,7 @@ namespace Raven.Server.Documents.Queries.Results
         private object ConvertType(IFieldable field, FieldType fieldType, IState state)
         {
             if (field.IsBinary)
-                throw new NotImplementedException("Support for binary values");
+                ThrowBinaryValuesNotSupported();
 
             var stringValue = field.StringValue(state);
             if (stringValue == Constants.Documents.Indexing.Fields.NullValue || stringValue == null)
@@ -243,9 +246,33 @@ namespace Raven.Server.Documents.Queries.Results
             return _context.ReadForMemory(ms, field.Name);
         }
 
+        private static void ThrowBinaryValuesNotSupported()
+        {
+            throw new NotSupportedException("Cannot convert binary values");
+        }
+
         private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            if (fieldToFetch.SourceAlias == null)
+            if (fieldToFetch.QueryField == null)
+            {
+                SingleValueExtraction(document);
+                return;
+            }
+            if (fieldToFetch.QueryField.ValueTokenType != null)
+            {
+                var val = fieldToFetch.QueryField.Value;
+                if (fieldToFetch.QueryField.ValueTokenType.Value == ValueTokenType.Parameter)
+                {
+                    if (_query == null)
+                    {
+                        return; // only happens for debug endpoints and more like this
+                    }
+                    _query.QueryParameters.TryGet((string)val, out val);
+                }
+                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = val;
+                return;
+            }
+            if (fieldToFetch.QueryField.SourceAlias == null)
             {
                 SingleValueExtraction(document);
                 return;
@@ -253,7 +280,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocumentIds == null)
                 _loadedDocumentIds = new HashSet<string>();
             _loadedDocumentIds.Clear();
-            IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.SourceAlias, _loadedDocumentIds);
+            IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
 
             if (_loadedDocumentIds.Count == 0)
                 return;

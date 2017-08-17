@@ -66,7 +66,12 @@ namespace Raven.Server.Documents.Queries
 
                 var selectFieldKey = selectField.Alias ?? selectField.Name;
                 var selectFieldName = selectField.Name;
-
+                if (selectField.ValueTokenType != null)
+                {
+                    result[selectFieldKey] = new FieldToFetch(string.Empty, selectField, selectField.Alias, 
+                        canExtractFromIndex: false, isDocumentId: false);
+                    continue;
+                }
                 if (string.IsNullOrWhiteSpace(selectFieldName))
                 {
                     if (selectField.IsGroupByKey == false)
@@ -89,7 +94,7 @@ namespace Raven.Server.Documents.Queries
 
                 if (indexDefinition == null)
                 {
-                    result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.SourceAlias, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
+                    result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
                     continue;
                 }
 
@@ -97,7 +102,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                     {
-                        result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.SourceAlias, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
+                        result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
                         anyExtractableFromIndex = true;
                         continue;
                     }
@@ -127,7 +132,7 @@ namespace Raven.Server.Documents.Queries
                 if (extract)
                     anyExtractableFromIndex = true;
 
-                result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField.SourceAlias, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+                result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
             }
 
             if (indexDefinition != null)
@@ -143,10 +148,10 @@ namespace Raven.Server.Documents.Queries
 
         public class FieldToFetch
         {
-            public FieldToFetch(string name, string sourceAlias, string projectedName, bool canExtractFromIndex, bool isDocumentId)
+            public FieldToFetch(string name, SelectField queryField, string projectedName, bool canExtractFromIndex, bool isDocumentId)
             {
                 Name = name;
-                SourceAlias = sourceAlias;
+                QueryField = queryField;
                 ProjectedName = projectedName;
                 IsDocumentId = isDocumentId;
                 CanExtractFromIndex = canExtractFromIndex;
@@ -162,7 +167,7 @@ namespace Raven.Server.Documents.Queries
 
             public readonly StringSegment Name;
 
-            public readonly string SourceAlias;
+            public readonly SelectField QueryField;
 
             public readonly string ProjectedName;
 

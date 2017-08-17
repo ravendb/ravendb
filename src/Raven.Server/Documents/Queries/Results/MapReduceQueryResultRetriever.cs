@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Queries.Results
     {
         private readonly JsonOperationContext _context;
 
-        public MapReduceQueryResultRetriever(DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(fieldsToFetch, documentsStorage, context, true)
+        public MapReduceQueryResultRetriever(IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch)
+            : base(query, fieldsToFetch, documentsStorage, context, true)
         {
             _context = context;
         }
