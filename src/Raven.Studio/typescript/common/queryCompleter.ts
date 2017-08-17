@@ -9,6 +9,7 @@ import collection = require("models/database/documents/collection");
 import document = require("models/database/documents/document");
 
 interface autoCompleteLastKeyword {
+    keywordsBefore: string[],
     keyword: string,
     keywordModifier: string,
     operator: string,
@@ -97,6 +98,20 @@ class queryCompleter {
         }
     }
 
+    private getKeywordsBefore(iterator: AceAjax.TokenIterator): string[] {
+        const keywords = [];
+        
+        while (iterator.stepBackward()){
+            const token = iterator.getCurrentToken();
+            if (token.type ==="keyword"){
+                const keyword = token.value.toLowerCase();
+                keywords.push(keyword);
+            }
+        }
+        
+        return keywords;
+    }
+    
     private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
         let keyword: string;
         let keywordModifier: string;
@@ -150,6 +165,7 @@ class queryCompleter {
                     }
 
                     return {
+                        keywordsBefore: this.getKeywordsBefore(iterator),
                         keyword: keyword,
                         keywordModifier: keywordModifier,
                         operator: operator,
@@ -159,6 +175,7 @@ class queryCompleter {
                     };
                 case "support.function":
                     return {
+                        keywordsBefore: this.getKeywordsBefore(iterator),
                         keyword: "__support.function",
                         keywordModifier: keywordModifier,
                         operator: operator,
@@ -408,7 +425,10 @@ class queryCompleter {
             keywords.push({value: "group", score: 2, meta: "keyword"})
         }
         if (!lastKeyword.keywordModifier) {
-            keywords.push({value: "as", score: 3, meta: "keyword"})
+            keywords.push({value: "as", score: 4, meta: "keyword"})
+        }
+        if (!lastKeyword.keywordsBefore.find(keyword => keyword === "select")) {
+            keywords.push({value: "select", score: 3, meta: "keyword"})
         }
 
         this.completeWords(callback, keywords);
