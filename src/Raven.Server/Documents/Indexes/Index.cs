@@ -800,8 +800,7 @@ namespace Raven.Server.Documents.Indexes
                                         _batchProcessCancellationTokenSource = null;
                                     }
 
-                                    if (batchCompleted)
-                                        _indexingBatchCompleted.SetAndResetAtomically();
+                                    _indexingBatchCompleted.SetAndResetAtomically();
 
                                     if (didWork)
                                         ResetErrors();
@@ -858,8 +857,6 @@ namespace Raven.Server.Documents.Indexes
                                 catch (OperationCanceledException)
                                 {
                                     // We are here only in the case of indexing process cancellation.
-                                    Debug.Assert(!_batchProcessCancellationTokenSource.IsCancellationRequested);
-                                    Debug.Assert(_indexingProcessCancellationTokenSource.IsCancellationRequested);
                                     scope.RecordMapCompletedReason("Operation canceled.");
                                     return;
                                 }
