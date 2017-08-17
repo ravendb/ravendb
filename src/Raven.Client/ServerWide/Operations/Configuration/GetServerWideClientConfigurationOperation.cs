@@ -19,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations.Configuration
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/configuration/client";
+                url = $"{node.Url}/configuration/client";
 
                 var request = new HttpRequestMessage
                 {
