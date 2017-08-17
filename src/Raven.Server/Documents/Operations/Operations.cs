@@ -354,6 +354,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Database import")]
             DatabaseImport,
 
+            [Description("Database compact")]
+            DatabaseCompact,
+
             [Description("Index compact")]
             IndexCompact,
 

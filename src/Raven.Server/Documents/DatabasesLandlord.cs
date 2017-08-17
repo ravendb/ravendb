@@ -580,6 +580,31 @@ namespace Raven.Server.Documents
             });
         }
 
+        public async Task<IDisposable> UnloadAndLockDatabase(string dbName)
+        {
+            var tcs = new TaskCompletionSource<DocumentDatabase>();
+
+            try
+            {
+                var existing = DatabasesCache.Replace(dbName, tcs.Task);
+
+                (await existing)?.Dispose();
+
+                return new DisposableAction(() =>
+                {
+                    DatabasesCache.TryRemove(dbName, out var _);
+                    tcs.TrySetCanceled();
+                });
+            }
+            catch (Exception e)
+            {
+                DatabasesCache.TryRemove(dbName, out var _);
+                tcs.TrySetException(e);
+                throw;
+            }
+
+        }
+
         public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
         {
             if (DatabasesCache.TryGetValue(dbName, out Task<DocumentDatabase> dbTask) == false)
