@@ -725,6 +725,7 @@ namespace Raven.Server.Documents.Replication
             var numberOfSiblings = _destinations.Count;
             if (numberOfSiblings == 0)
             {
+             
                 if (_log.IsInfoEnabled)
                     _log.Info("Was asked to get write assurance on a database without replication, ignoring the request. " +
                               $"InternalDestinations: {_internalDestinations.Count}. " +
@@ -788,7 +789,8 @@ namespace Raven.Server.Documents.Replication
             var count = 0;
             foreach (var destination in _outgoing)
             {
-                if (ChangeVectorUtils.GetConflictStatus(destination.LastAcceptedChangeVector, changeVector) == ConflictStatus.AlreadyMerged)
+                var conflictStatus = ChangeVectorUtils.GetConflictStatus(changeVector, destination.LastAcceptedChangeVector);
+                if (conflictStatus == ConflictStatus.AlreadyMerged)
                     count++;
             }
             return count;
