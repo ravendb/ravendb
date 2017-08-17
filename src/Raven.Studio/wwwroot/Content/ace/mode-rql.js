@@ -1,10 +1,10 @@
-ace.define("ace/mode/sql_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function(require, exports, module) {
+ace.define("ace/mode/rql_highlight_rules",["require","exports","module","ace/lib/oop","ace/mode/text_highlight_rules"], function(require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
-var SqlHighlightRules = function() {
+var RqlHighlightRules = function() {
 
     var keywords = (
         "select|from|where|and|or|group|by|order|as|desc|asc|not|null|index|in"
@@ -69,20 +69,20 @@ var SqlHighlightRules = function() {
     this.normalizeRules();
 };
 
-oop.inherits(SqlHighlightRules, TextHighlightRules);
+oop.inherits(RqlHighlightRules, TextHighlightRules);
 
-exports.SqlHighlightRules = SqlHighlightRules;
+exports.RqlHighlightRules = RqlHighlightRules;
 });
 
-ace.define("ace/mode/sql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/sql_highlight_rules"], function(require, exports, module) {
+ace.define("ace/mode/rql",["require","exports","module","ace/lib/oop","ace/mode/text","ace/mode/rql_highlight_rules"], function(require, exports, module) {
 "use strict";
 
 var oop = require("../lib/oop");
 var TextMode = require("./text").Mode;
-var SqlHighlightRules = require("./sql_highlight_rules").SqlHighlightRules;
+var RqlHighlightRules = require("./rql_highlight_rules").RqlHighlightRules;
 
 var Mode = function() {
-    this.HighlightRules = SqlHighlightRules;
+    this.HighlightRules = RqlHighlightRules;
     this.$behaviour = this.$defaultBehaviour;
 };
 oop.inherits(Mode, TextMode);
@@ -91,7 +91,7 @@ oop.inherits(Mode, TextMode);
 
     this.lineCommentStart = "--";
 
-    this.$id = "ace/mode/sql";
+    this.$id = "ace/mode/rql";
 }).call(Mode.prototype);
 
 exports.Mode = Mode;
