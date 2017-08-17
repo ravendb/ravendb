@@ -1,12 +1,18 @@
-﻿using Raven.Client.Documents.Indexes;
+﻿using System;
+using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Queries.Parser;
 
 namespace Raven.Server.Documents.Queries
 {
     public class SelectField
     {
+        public readonly ValueTokenType? ValueTokenType;
+
         public readonly string Name;
 
         public readonly string Alias;
+
+        public readonly object Value;
 
         public readonly string SourceAlias;
 
@@ -23,6 +29,13 @@ namespace Raven.Server.Documents.Queries
             SourceAlias = sourceAlias;
         }
 
+        public SelectField(object value, string alias, ValueTokenType type)
+        {
+            ValueTokenType = type;
+            Value = value;
+            Alias = alias;
+        }
+
         private SelectField(string name, string alias, AggregationOperation aggregationOperation)
         {
             Name = name;
@@ -35,6 +48,11 @@ namespace Raven.Server.Documents.Queries
             Alias = alias;
             IsGroupByKey = true;
             GroupByKeys = groupByKeys;
+        }
+
+        public static SelectField Create(string name)
+        {
+            return new SelectField(name, null, null);
         }
 
         public static SelectField Create(string name, string alias, string sourceAlias)
@@ -50,6 +68,31 @@ namespace Raven.Server.Documents.Queries
         public static SelectField CreateGroupByKeyField(string alias, params string[] groupByKeys)
         {
             return new SelectField(alias, groupByKeys);
+        }
+
+        public static SelectField CreateValue(string val, string alias, ValueTokenType type)
+        {
+            object finalVal = val;
+            switch (type)
+            {
+                case Parser.ValueTokenType.Long:
+                    finalVal = long.Parse(val);
+                    break;
+                case Parser.ValueTokenType.Double:
+                    finalVal = double.Parse(val);
+                    break;
+                case Parser.ValueTokenType.True:
+                    finalVal = true;
+                    break;
+                case Parser.ValueTokenType.False:
+                    finalVal = false;
+                    break;
+                case Parser.ValueTokenType.Null:
+                    finalVal = null;
+                    break;
+            }
+
+            return new SelectField(finalVal, alias, type);
         }
     }
 }

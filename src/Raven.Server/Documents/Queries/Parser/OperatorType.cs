@@ -16,6 +16,7 @@
         Or,
         OrNot,
         Field,
-        True
+        True,
+        Value
     }
 }

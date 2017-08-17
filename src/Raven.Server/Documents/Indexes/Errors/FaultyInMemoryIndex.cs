@@ -52,7 +52,7 @@ namespace Raven.Server.Documents.Indexes.Errors
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }
 
-        public override IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
+        public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch)
         {
             throw new NotSupportedException($"Index with etag {Etag} is in-memory implementation of a faulty index", _e);
         }

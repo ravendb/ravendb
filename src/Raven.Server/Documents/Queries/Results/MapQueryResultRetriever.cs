@@ -10,8 +10,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly DocumentsOperationContext _context;
 
-        public MapQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(fieldsToFetch, documentsStorage, context, false)
+        public MapQueryResultRetriever(IndexQueryServerSide query, DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
+            : base(query, fieldsToFetch, documentsStorage, context, false)
         {
             _context = context;
         }

@@ -1713,12 +1713,12 @@ namespace Raven.Server.Documents.Indexes
                             if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), documentsContext, token.Token);
+                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(documentsContext, fieldsToFetch), documentsContext, token.Token);
+                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, token.Token);
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
@@ -1950,7 +1950,7 @@ namespace Raven.Server.Documents.Indexes
                         {
                             var documents = reader.MoreLikeThis(query, stopWords,
                                 fieldsToFetch =>
-                                    GetQueryResultRetriever(documentsContext,
+                                    GetQueryResultRetriever(null, documentsContext,
                                         new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, token.Token);
                             var results = scope != null ? scope.Transform(documents) : documents;
 
@@ -2264,7 +2264,7 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
+        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
         protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {

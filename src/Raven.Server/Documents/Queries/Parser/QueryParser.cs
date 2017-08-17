@@ -151,26 +151,47 @@ namespace Raven.Server.Documents.Queries.Parser
 
             do
             {
-                if (Field(out var field) == false)
-                    ThrowParseException("Unable to get field for " + clause);
-
                 QueryExpression expr;
-
-                if (Scanner.TryScan('('))
+                if (Field(out var field))
                 {
-                    if (Method(field, op: out expr) == false)
-                        ThrowParseException("Expected method call in " + clause);
+                    if (Scanner.TryScan('('))
+                    {
+                        if (Method(field, op: out expr) == false)
+                            ThrowParseException("Expected method call in " + clause);
+                    }
+                    else
+                    {
+                        expr = new QueryExpression
+                        {
+                            Field = field,
+                            Type = OperatorType.Field
+                        };
+                    }
                 }
-                else
+                else if (Value(out var v))
                 {
                     expr = new QueryExpression
                     {
-                        Field = field,
-                        Type = OperatorType.Field
+                        Value = v,
+                        Type = OperatorType.Value
                     };
                 }
+                else
+                {
+                    ThrowParseException("Unable to get field for " + clause);
+                    return null;// never callsed
+                }
 
-                Alias(out var alias);
+                if (Alias(out var alias) == false && expr.Type == OperatorType.Value)
+                {
+                    alias = new FieldToken
+                    {
+                        EscapeChars = expr.Value.EscapeChars,
+                        IsQuoted = expr.Value.Type == ValueTokenType.String,
+                        TokenStart = expr.Value.TokenStart,
+                        TokenLength = expr.Value.TokenLength
+                    };
+                }
 
                 select.Add((expr, alias));
 
@@ -263,16 +284,18 @@ namespace Raven.Server.Documents.Queries.Parser
             return (field, alias, filter, index);
         }
 
-        private void Alias(out FieldToken alias)
+        private bool Alias(out FieldToken alias)
         {
             if (Scanner.TryScan("AS") == false)
             {
                 alias = null;
-                return;
+                return false;
             }
 
             if (Field(out alias) == false)
                 ThrowParseException("Expected field alias after AS in SELECT");
+
+            return true;
         }
 
         internal bool Parameter(out int tokenStart, out int tokenLength)

@@ -322,6 +322,10 @@ namespace Raven.Server.Documents.Queries
 
                 switch (expression.Type)
                 {
+                    case OperatorType.Value:
+                        var val = QueryExpression.Extract(QueryText, expression.Value);
+                        fields.Add(SelectField.CreateValue(val, alias, expression.Value.Type));
+                        break;
                     case OperatorType.Field:
                         var name = QueryExpression.Extract(QueryText, expression.Field);
                         var indexOf = name.IndexOf('.');
