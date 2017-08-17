@@ -6,7 +6,6 @@ import getManageServerMenuItem = require("common/shell/menu/items/manageServer")
 import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
-import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
 export = getRouterConfiguration();
@@ -56,7 +55,6 @@ function generateAllMenuItems() {
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
-        ...getTransformersMenuItems(appUrls),
         getSettingsMenuItem(appUrls),
         getDatabasesMenuItem(appUrls),
         getManageServerMenuItem(),
