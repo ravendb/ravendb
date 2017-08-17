@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         [ThreadStatic] private static StringBuilder _tempBuffer;
 
-        internal static string Extract(string q, ValueToken val)
+        internal static string Extract(string q, ValueToken val, bool stripQuotes = false)
         {
             switch (val.Type)
             {
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 case ValueTokenType.True:
                     return "true";
             }
+            if(stripQuotes && val.Type == ValueTokenType.String)
+                return Extract(q, val.TokenStart+1, val.TokenLength-2, val.EscapeChars);
 
             return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
         }
