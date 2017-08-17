@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Indexes
         public IEnumerator<Index> GetEnumerator()
         {
             // This doesn't happen often enough for this lock to hurt
-            return _indexesByEtag.Values.GetEnumerator();
+            return _indexesByName.Values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
