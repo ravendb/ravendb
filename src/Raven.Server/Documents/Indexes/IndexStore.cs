@@ -209,11 +209,23 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
+                    var indexName = name;
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
-
+                    //If we don't have the index in memory this means that it is corrupted when trying to load it
+                    //If we do have the index and it is not faulted this means that this is the replacment index that is faulty
+                    //If we already have a replacment that is faulty don't add a new one
+                    if (_indexes.TryGetByName(indexName, out Index i))
+                    {
+                        if (i is FaultyInMemoryIndex)
+                            return;
+                        indexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+                        if (_indexes.TryGetByName(indexName, out Index j) && j is FaultyInMemoryIndex)
+                            return;
+                    }
+                    
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
-                    var fakeIndex = new FaultyInMemoryIndex(exception, etag, name, configuration);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, etag, indexName, configuration);
                     _indexes.Add(fakeIndex);
                 }
             }
@@ -913,9 +925,18 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
+                var alreadyFaulted = false;
+                if (index != null && _indexes.TryGetByName(index.Name, out Index i))
+                {
+                    if (i is FaultyInMemoryIndex)
+                    {
+                        alreadyFaulted = true;
+                    }                    
+                }
                 index?.Dispose();
                 exceptions?.Add(e);
-
+                if(alreadyFaulted)
+                    return;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                 var fakeIndex = new FaultyInMemoryIndex(e, etag, name, configuration);
 
@@ -929,8 +950,7 @@ namespace Raven.Server.Documents.Indexes
                     AlertType.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,
                     key: fakeIndex.Name,
-                    details: new ExceptionDetails(e)));
-
+                    details: new ExceptionDetails(e)));                
                 _indexes.Add(fakeIndex);
             }
         }
