@@ -155,32 +155,35 @@ namespace Raven.Server.Documents.Queries
             {
                 if (with.Expression.Type != OperatorType.Method)
                     ThrowInvalidWith(with.Expression, "WITH clause support only method calls, but got: ");
-                var method = QueryExpression.Extract(QueryText, with.Expression.Field);
-                if ("load".Equals(method, StringComparison.OrdinalIgnoreCase))
+                var methodName = QueryExpression.Extract(QueryText, with.Expression.Field);
+                if (Enum.TryParse(methodName, true, out WithMethods method) == false)
                 {
-                    if (with.Alias == null)
-                        ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ");
-
-                    var alias = QueryExpression.Extract(QueryText, with.Alias);
-
-                    var path = GetWithClausePropertyPath(with.Expression, "include");
-                    if (RootAliasPaths.TryAdd(alias, path) == false)
-                    {
-                        ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ");
-                    }
-
+                    ThrowInvalidWith(with.Expression, $"WITH clause had an invalid method call ({string.Join(", ", Enum.GetNames(typeof(WithMethods)))} are allowed), got: ");
                 }
-                else if ("include".Equals(method, StringComparison.OrdinalIgnoreCase))
+                switch (method)
                 {
-                    if (with.Alias != null)
-                        ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ");
-                    if (includes == null)
-                        includes = new List<string>();
-                    includes.Add(GetWithClausePropertyPath(with.Expression, "include"));
-                }
-                else
-                {
-                    ThrowInvalidWith(with.Expression, "WITH clause had an invalid method call ('include', 'load' are allowed), got: ");
+                    case WithMethods.Load:
+                        if (with.Alias == null)
+                            ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ");
+
+                        var alias = QueryExpression.Extract(QueryText, with.Alias);
+
+                        var path = GetWithClausePropertyPath(with.Expression, "include");
+                        if (RootAliasPaths.TryAdd(alias, path) == false)
+                        {
+                            ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ");
+                        }
+                        break;
+                    case WithMethods.Include:
+                        if (with.Alias != null)
+                            ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ");
+                        if (includes == null)
+                            includes = new List<string>();
+                        includes.Add(GetWithClausePropertyPath(with.Expression, "include"));
+                        break;
+                    default:
+                        ThrowInvalidWith(with.Expression, "WITH clause used an unfamiliar method: " + method);
+                        break;
                 }
             }
             if (includes != null)
@@ -320,75 +323,8 @@ namespace Raven.Server.Documents.Queries
 
                 var expression = fieldInfo.Expression;
 
-                switch (expression.Type)
-                {
-                    case OperatorType.Value:
-                        var val = QueryExpression.Extract(QueryText, expression.Value);
-                        fields.Add(SelectField.CreateValue(val, alias, expression.Value.Type));
-                        break;
-                    case OperatorType.Field:
-                        var name = QueryExpression.Extract(QueryText, expression.Field);
-                        var indexOf = name.IndexOf('.');
-                        string sourceAlias = null;
-                        if (indexOf != -1)
-                        {
-                            var key = new StringSegment(name, indexOf);
-                            if (RootAliasPaths.TryGetValue(key, out sourceAlias))
-                            {
-                                name = name.Substring(indexOf + 1);
-                            }
-                        }
-                        fields.Add(SelectField.Create(name, alias, sourceAlias));
-                        break;
-                    case OperatorType.Method:
-                        var methodName = QueryExpression.Extract(QueryText, expression.Field);
-
-                        if (IsGroupBy == false)
-                            ThrowMethodsAreNotSupportedInSelect(methodName, QueryText, parameters);
-
-                        if (Enum.TryParse(methodName, true, out AggregationOperation aggregation) == false)
-                        {
-                            switch (methodName)
-                            {
-                                case "key":
-                                    fields.Add(SelectField.CreateGroupByKeyField(alias, GroupBy));
-                                    break;
-                                default:
-                                    ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName, QueryText, parameters);
-                                    break;
-                            }
-                        }
-                        else
-                        {
-                            string fieldName = null;
-
-                            switch (aggregation)
-                            {
-                                case AggregationOperation.Count:
-                                    fieldName = CountFieldName;
-                                    break;
-                                case AggregationOperation.Sum:
-                                    if (expression.Arguments == null)
-                                        ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
-                                    if (expression.Arguments.Count != 1)
-                                        ThrowIncorrectNumberOfArgumentsOfSumMethod(expression.Arguments.Count, QueryText, parameters);
-
-                                    var sumFieldToken = expression.Arguments[0] as FieldToken;
-
-                                    fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
-                                    break;
-                            }
-
-                            Debug.Assert(fieldName != null);
-
-                            fields.Add(SelectField.CreateGroupByAggregation(fieldName, alias, aggregation));
-                        }
-
-                        break;
-                    default:
-                        ThrowUnhandledExpressionTypeInSelect(expression.Type, QueryText, parameters);
-                        break;
-                }
+                var selectField = GetSelectField(parameters, expression, alias);
+                fields.Add(selectField);
             }
 
             SelectFields = new SelectField[fields.Count];
@@ -410,6 +346,129 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
             }
+        }
+
+        private SelectField GetSelectField(BlittableJsonReaderObject parameters, QueryExpression expression, string alias)
+        {
+            switch (expression.Type)
+            {
+                case OperatorType.Value:
+                    return GetSelectValue(alias, expression.Value);
+                case OperatorType.Field:
+                    return GetSelectValue(alias, expression.Field);
+                case OperatorType.Method:
+                    var methodName = QueryExpression.Extract(QueryText, expression.Field);
+                    if (Enum.TryParse(methodName, ignoreCase: true,  result: out SelectMethods selectMethod))
+                    {
+                        switch (selectMethod)
+                        {
+                            case SelectMethods.Format:
+                                if(expression.Arguments.Count < 2)
+                                    ThrowIncorrectNumberOfArgumentsOfFormatMethod(expression.Arguments.Count, QueryText, parameters);
+
+                                var format = expression.Arguments[0] as ValueToken;
+                                if (format == null)
+                                    ThrowInvalidFormatMethodFormatString(expression);
+
+                                var formatStr = QueryExpression.Extract(QueryText, format, stripQuotes: true);
+
+                                var args = new SelectField[expression.Arguments.Count - 1];
+                                for (int i = 1; i < expression.Arguments.Count; i++)
+                                {
+                                    if (expression.Arguments[i] is QueryExpression argExpr)
+                                        args[i - 1] = GetSelectField(parameters, argExpr, null);
+                                    else if (expression.Arguments[i] is ValueToken vt)
+                                        args[i - 1] = GetSelectValue(null, vt);
+                                    else if (expression.Arguments[i] is FieldToken ft)
+                                        args[i - 1] = GetSelectValue(null, ft);
+                                    else
+                                        ThrowInvalidFormatMethodArgument();
+                                }
+
+                                return SelectField.CreateFormat(alias ?? "format", formatStr, args);
+                            default:
+                                ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
+                                return null; // never hit
+
+                        }
+                    }
+
+                    if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
+                    {
+                        if (IsGroupBy == false)
+                            ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
+
+                        switch (methodName)
+                        {
+                            case "key":
+                                return SelectField.CreateGroupByKeyField(alias, GroupBy);
+                            default:
+                                ThrowUnknownAggregationMethodInSelectOfGroupByQuery(methodName, QueryText, parameters);
+                                return null; // never hit
+                        }
+                    }
+                    else
+                    {
+                        string fieldName = null;
+
+                        switch (aggregation)
+                        {
+                            case AggregationOperation.Count:
+                                fieldName = CountFieldName;
+                                break;
+                            case AggregationOperation.Sum:
+                                if (expression.Arguments == null)
+                                    ThrowMissingFieldNameArgumentOfSumMethod(QueryText, parameters);
+                                if (expression.Arguments.Count != 1)
+                                    ThrowIncorrectNumberOfArgumentsOfSumMethod(expression.Arguments.Count, QueryText, parameters);
+
+                                var sumFieldToken = expression.Arguments[0] as FieldToken;
+
+                                fieldName = QueryExpression.Extract(Query.QueryText, sumFieldToken);
+                                break;
+                        }
+
+                        Debug.Assert(fieldName != null);
+
+                        return SelectField.CreateGroupByAggregation(fieldName, alias, aggregation);
+                    }
+
+                default:
+                    ThrowUnhandledExpressionTypeInSelect(expression.Type, QueryText, parameters);
+                    return null;// never hit
+            }
+        }
+
+        private SelectField GetSelectValue(string alias, FieldToken expressionField)
+        {
+            var name = QueryExpression.Extract(QueryText, expressionField);
+            var indexOf = name.IndexOf('.');
+            string sourceAlias = null;
+            if (indexOf != -1)
+            {
+                var key = new StringSegment(name, indexOf);
+                if (RootAliasPaths.TryGetValue(key, out sourceAlias))
+                {
+                    name = name.Substring(indexOf + 1);
+                }
+            }
+            return SelectField.Create(name, alias, sourceAlias);
+        }
+
+        private SelectField GetSelectValue(string alias, ValueToken expressionValue)
+        {
+            var val = QueryExpression.Extract(QueryText, expressionValue);
+            return SelectField.CreateValue(val, alias, expressionValue.Type);
+        }
+
+        private static void ThrowInvalidFormatMethodArgument()
+        {
+            throw new InvalidQueryException("Invalid expression as argument to fromat method");
+        }
+
+        private static void ThrowInvalidFormatMethodFormatString(QueryExpression expression)
+        {
+            throw new InvalidQueryException("The first argument of the format method must be a string, but got " + expression.Arguments[0]);
         }
 
         public string GetIndexFieldName(string fieldNameOrAlias)
@@ -437,6 +496,7 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"Unknown aggregation method in SELECT clause of the group by query: '{methodName}'", queryText, parameters);
         }
 
+
         private static void ThrowMissingFieldNameArgumentOfSumMethod(string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Missing argument of sum() method. You need to specify the name of a field e.g. sum(Age)", queryText, parameters);
@@ -447,9 +507,16 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException($"sum() method expects exactly one argument but got {count}", queryText, parameters);
         }
 
-        private static void ThrowMethodsAreNotSupportedInSelect(string methodName, string queryText, BlittableJsonReaderObject parameters)
+        private static void ThrowIncorrectNumberOfArgumentsOfFormatMethod(int count, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Method calls are not supported in SELECT clause while you tried to use '{methodName}' method", queryText, parameters);
+            throw new InvalidQueryException($"format() method expects two or more arguments but got {count}", queryText, parameters);
+        }
+
+
+
+        private static void ThrowUnknownMethodInSelect(string methodName, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Unknown method call in SELECT clause: '{methodName}' method", queryText, parameters);
         }
 
         private static void ThrowUnhandledExpressionTypeInSelect(OperatorType expressionType, string queryText, BlittableJsonReaderObject parameters)
@@ -568,10 +635,10 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Intersect:
                     case MethodType.Exact:
                         for (var i = 0; i < arguments.Count; i++)
-                    {
+                        {
                             var expressionArgument = arguments[i] as QueryExpression;
-                        Visit(expressionArgument, parameters);
-                    }
+                            Visit(expressionArgument, parameters);
+                        }
                         return;
                     case MethodType.Count:
                         HandleCount(methodName, expression.Field, arguments, parameters);
@@ -586,7 +653,7 @@ namespace Raven.Server.Documents.Queries
             }
 
             private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)
-                    {
+            {
                 if (arguments.Count != 1)
                     throw new InvalidQueryException("Method count() expects no argument", QueryText, parameters);
 
@@ -596,7 +663,7 @@ namespace Raven.Server.Documents.Queries
                     countExpression.Field = methodNameToken;
 
                     Visit(countExpression, parameters);
-                    }
+                }
                 else
                     throw new InvalidQueryException($"Method count() expects expression after its invocation, got {arguments[0]}", QueryText, parameters);
             }
@@ -618,10 +685,10 @@ namespace Raven.Server.Documents.Queries
 
                 sumExpression.Field = fieldToken;
                 Visit(sumExpression, parameters);
-                }
+            }
 
             private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName)
-                {
+            {
                 var fieldArgument = arguments[0] as FieldToken;
 
                 if (fieldArgument == null)

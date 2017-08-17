@@ -16,6 +16,10 @@ namespace Raven.Server.Documents.Queries
 
         public readonly string SourceAlias;
 
+        public readonly string Format;
+
+        public readonly SelectField[] FormatArguments;
+
         public readonly AggregationOperation AggregationOperation;
 
         public readonly bool IsGroupByKey;
@@ -27,6 +31,13 @@ namespace Raven.Server.Documents.Queries
             Name = name;
             Alias = alias;
             SourceAlias = sourceAlias;
+        }
+
+        private SelectField(string alias, string format, SelectField[] args)
+        {
+            Alias = alias;
+            Format = format;
+            FormatArguments = args;
         }
 
         public SelectField(object value, string alias, ValueTokenType type)
@@ -52,7 +63,12 @@ namespace Raven.Server.Documents.Queries
 
         public static SelectField Create(string name)
         {
-            return new SelectField(name, null, null);
+            return new SelectField(name, null, (string)null);
+        }
+
+        public static SelectField CreateFormat(string alias, string format, SelectField[] args)
+        {
+            return new SelectField(alias,format, args);
         }
 
         public static SelectField Create(string name, string alias, string sourceAlias)

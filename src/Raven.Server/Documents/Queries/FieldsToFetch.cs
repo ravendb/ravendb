@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -51,6 +52,105 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private static FieldToFetch GetFieldToFetch(
+            IndexDefinitionBase indexDefinition, 
+            SelectField selectField,
+            Dictionary<string, FieldToFetch> results,
+            out string selectFieldKey,
+            ref bool anyExtractableFromIndex, 
+            ref bool extractAllStoredFields)
+        {
+            selectFieldKey = selectField.Alias ?? selectField.Name;
+
+            var selectFieldName = selectField.Name;
+            if (selectField.ValueTokenType != null)
+            {
+                return new FieldToFetch(string.Empty, selectField, selectField.Alias,
+                    canExtractFromIndex: false, isDocumentId: false);
+            }
+            if (selectField.Format != null)
+            {
+                var fieldToFetch = new FieldToFetch(string.Empty, selectField, selectField.Alias,
+                    canExtractFromIndex: false, isDocumentId: false);
+                fieldToFetch.FormatArguments = new FieldToFetch[selectField.FormatArguments.Length];
+                for (int j = 0; j < selectField.FormatArguments.Length; j++)
+                {
+                    bool ignored = false;
+                    fieldToFetch.FormatArguments[j] = GetFieldToFetch(indexDefinition,
+                        selectField.FormatArguments[j],
+                        null,
+                        out _,
+                        ref ignored,
+                        ref ignored
+                    );
+                }
+                return fieldToFetch;
+            }
+            if (string.IsNullOrWhiteSpace(selectFieldName))
+            {
+                if (selectField.IsGroupByKey == false)
+                    return null;
+
+                if (selectField.GroupByKeys.Length == 1)
+                {
+                    selectFieldName = selectField.GroupByKeys[0];
+
+                    if (selectFieldKey == null)
+                        selectFieldKey = selectFieldName;
+                }
+                else
+                {
+                    selectFieldKey = selectFieldKey ?? "Key";
+                    return new FieldToFetch(selectFieldKey, selectField.GroupByKeys);
+                }
+            }
+            if (indexDefinition == null)
+            {
+                return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
+            }
+            if (selectFieldName[0] == '_')
+            {
+                if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+                {
+                    anyExtractableFromIndex = true;
+                    return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
+                }
+
+                if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
+                {
+                    if (results == null)
+                        ThrowInvalidFetchAllStoredDocuments();
+                    Debug.Assert(results != null);
+                    results.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
+
+                    extractAllStoredFields = true;
+
+                    foreach (var kvp in indexDefinition.MapFields)
+                    {
+                        var stored = kvp.Value.Storage == FieldStorage.Yes;
+                        if (stored == false)
+                            continue;
+
+                        anyExtractableFromIndex = true;
+                        results[kvp.Key] = new FieldToFetch(kvp.Key, null, null, canExtractFromIndex: true, isDocumentId: false);
+                    }
+
+                    return null;
+                }
+            }
+
+            var extract = indexDefinition.TryGetField(selectFieldName, out IndexField value) && value.Storage == FieldStorage.Yes;
+            if (extract)
+                anyExtractableFromIndex = true;
+
+            return new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+        }
+
+        private static void ThrowInvalidFetchAllStoredDocuments()
+        {
+            throw new InvalidOperationException("Cannot fetch all stored path from a nested method");
+        }
+
         private static Dictionary<string, FieldToFetch> GetFieldsToFetch(SelectField[] selectFields, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
         {
             anyExtractableFromIndex = false;
@@ -63,76 +163,14 @@ namespace Raven.Server.Documents.Queries
             for (var i = 0; i < selectFields.Length; i++)
             {
                 var selectField = selectFields[i];
-
-                var selectFieldKey = selectField.Alias ?? selectField.Name;
-                var selectFieldName = selectField.Name;
-                if (selectField.ValueTokenType != null)
-                {
-                    result[selectFieldKey] = new FieldToFetch(string.Empty, selectField, selectField.Alias, 
-                        canExtractFromIndex: false, isDocumentId: false);
+                string key;
+                var val = GetFieldToFetch(indexDefinition, selectField, result, 
+                    out key, ref anyExtractableFromIndex, ref extractAllStoredFields);
+                if (extractAllStoredFields)
+                    return result;
+                if (val == null)
                     continue;
-                }
-                if (string.IsNullOrWhiteSpace(selectFieldName))
-                {
-                    if (selectField.IsGroupByKey == false)
-                        continue;
-
-                    if (selectField.GroupByKeys.Length == 1)
-                    {
-                        selectFieldName = selectField.GroupByKeys[0];
-
-                        if (selectFieldKey == null)
-                            selectFieldKey = selectFieldName;
-                    }
-                    else
-                    {
-                        selectFieldKey = selectFieldKey ?? "Key";
-                        result[selectFieldKey] = new FieldToFetch(selectFieldKey, selectField.GroupByKeys);
-                        continue;
-                    }
-                }
-
-                if (indexDefinition == null)
-                {
-                    result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
-                    continue;
-                }
-
-                if (selectFieldName[0] == '_')
-                {
-                    if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
-                    {
-                        result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
-                        anyExtractableFromIndex = true;
-                        continue;
-                    }
-                    
-                    if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
-                    {
-                        if (result.Count > 0)
-                            result.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
-
-                        extractAllStoredFields = true;
-
-                        foreach (var kvp in indexDefinition.MapFields)
-                        {
-                            var stored = kvp.Value.Storage == FieldStorage.Yes;
-                            if (stored == false)
-                                continue;
-
-                            anyExtractableFromIndex = true;
-                            result[kvp.Key] = new FieldToFetch(kvp.Key, null, null, canExtractFromIndex: true, isDocumentId: false);
-                        }
-
-                        return result;
-                    }
-                }
-
-                var extract = indexDefinition.TryGetField(selectFieldName, out IndexField value) && value.Storage == FieldStorage.Yes;
-                if (extract)
-                    anyExtractableFromIndex = true;
-
-                result[selectFieldKey] = new FieldToFetch(selectFieldName, selectField, selectField.Alias, extract | indexDefinition.HasDynamicFields, isDocumentId: false);
+                result[key] = val;
             }
 
             if (indexDefinition != null)
@@ -178,6 +216,7 @@ namespace Raven.Server.Documents.Queries
             public readonly bool IsDocumentId;
 
             public readonly string[] Components;
+            public FieldToFetch[] FormatArguments;
         }
     }
 }
