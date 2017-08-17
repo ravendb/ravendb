@@ -138,7 +138,7 @@ namespace Raven.Client.Documents.Session
         /// The paths to include when loading the query
         /// </summary>
         protected HashSet<string> Includes = new HashSet<string>();
-  
+
         /// <summary>
         /// Holds the query stats
         /// </summary>
@@ -1341,7 +1341,26 @@ If you really want to do in memory filtering on the data returned from the query
                 if (first == false)
                     queryText.Append(",");
                 first = false;
-                queryText.Append("include('").Append(include.Replace("'","\\'")).Append("')");
+                var requiredQuotes = false;
+                for (int i = 0; i < include.Length; i++)
+                {
+                    var ch = include[i];
+                    if (char.IsLetterOrDigit(ch) == false && ch != '_')
+                    {
+                        requiredQuotes = true;
+                        break;
+                    }
+                }
+                queryText.Append("include(");
+                if (requiredQuotes)
+                {
+                    queryText.Append(include.Replace("'", "\\'"));
+                }
+                else
+                {
+                    queryText.Append(include);
+                }
+                queryText.Append(")");
             }
         }
 
