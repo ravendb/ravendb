@@ -315,7 +315,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        [Fact]
         public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled()
         {
             using (var store = GetDocumentStore())
@@ -331,7 +331,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        [Fact]
         public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled()
         {
             using (var store = GetDocumentStore())
@@ -347,7 +347,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        [Fact]
         public void HiLoKeyGenerator_hangs_when_aggressive_caching_enabled_on_other_documentstore()
         {
             using (var server = GetNewServer())
@@ -365,7 +365,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact(Skip = "RavenDB-6312 AggressivelyCache Not Implemented yet")]
+        [Fact]
         public async Task HiLoKeyGenerator_async_hangs_when_aggressive_caching_enabled_on_other_documentstore()
         {
             using (var server = GetNewServer())

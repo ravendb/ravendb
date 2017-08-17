@@ -30,7 +30,6 @@ namespace FastTests.Client
             }
         }
 
-        //[Fact(Skip = "ClearSortHints not implemented")]
         [Fact]
         public async Task QueryAsync_With_Where_Clause()
         {
