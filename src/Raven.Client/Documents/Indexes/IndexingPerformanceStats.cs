@@ -1,4 +1,5 @@
 using System;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -30,6 +31,7 @@ namespace Raven.Client.Documents.Indexes
 
         public IndexingPerformanceBasicStats(TimeSpan duration)
         {
+            AllocatedBytes = new Size();
             DurationInMs = Math.Round(duration.TotalMilliseconds, 2);
         }
 
@@ -44,5 +46,8 @@ namespace Raven.Client.Documents.Indexes
         public DateTime Started { get; set; }
 
         public double DurationInMs { get; }
+
+        public Size AllocatedBytes { get; set; }
+        
     }
 }

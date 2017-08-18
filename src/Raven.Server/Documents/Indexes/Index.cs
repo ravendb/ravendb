@@ -779,7 +779,12 @@ namespace Raven.Server.Documents.Indexes
                                     try
                                     {
                                         TimeSpentIndexing.Start();
+                                        var _lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+
                                         didWork = DoIndexingWork(scope, _batchProcessCancellationTokenSource.Token);
+
+                                        _lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - _lastAllocatedBytes;
+                                        scope.AddAllocatedBytes(_lastAllocatedBytes);
                                     }
                                     catch (OperationCanceledException)
                                     {
@@ -794,6 +799,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
+                                        
                                         TimeSpentIndexing.Stop();
 
                                         // If we are here, then the previous block did not throw. There's two
