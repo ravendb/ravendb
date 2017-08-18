@@ -42,8 +42,7 @@ class statusDebugIndexFields extends viewModelBase {
         this.focusOnEditor();
                 this.indexStr.subscribe((newValue) => {
             var message = "";
-            var currentEditor = aceEditorBindingHandler.currentEditor;
-            var textarea: any = $(currentEditor.container).find("textarea")[0];
+            var textarea: any = $("TODO").find("textarea")[0];
 
             if (newValue === "") {
                 message = "Please fill out this field.";

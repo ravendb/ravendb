@@ -51,11 +51,6 @@ class customFunctionsEditor extends viewModelBase {
             });
     }
 
-    detached() {
-        super.detached();
-        aceEditorBindingHandler.detached();
-    }
-
     fetchCustomFunctions() {
         return new getCustomFunctionsCommand(this.activeDatabase())
             .execute()

@@ -285,11 +285,6 @@ class query extends viewModelBase {
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
-    detached() {
-        super.detached();
-        aceEditorBindingHandler.detached();
-    }
-
     attached() {
         super.attached();
 
