@@ -444,15 +444,21 @@ namespace Raven.Server.Documents.Queries
             var name = QueryExpression.Extract(QueryText, expressionField);
             var indexOf = name.IndexOf('.');
             string sourceAlias = null;
+            bool array = false;
             if (indexOf != -1)
             {
                 var key = new StringSegment(name, indexOf);
+                if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
+                {
+                    key = key.SubSegment(0, key.Length - 2);
+                    array = true;
+                }
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))
                 {
                     name = name.Substring(indexOf + 1);
                 }
             }
-            return SelectField.Create(name, alias, sourceAlias);
+            return SelectField.Create(name, alias, sourceAlias, array);
         }
 
         private SelectField GetSelectValue(string alias, ValueToken expressionValue)

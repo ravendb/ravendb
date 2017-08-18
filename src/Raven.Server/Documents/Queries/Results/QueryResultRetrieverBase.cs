@@ -4,6 +4,7 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -23,6 +24,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly JsonOperationContext _context;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
+        private List<object> _buffer;
         private HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentsStorage _documentsStorage;
@@ -252,12 +254,21 @@ namespace Raven.Server.Documents.Queries.Results
             throw new NotSupportedException("Cannot convert binary values");
         }
 
-        private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
         {
-            if (fieldToFetch.QueryField == null)
+            if (fieldToFetch.QueryField.Format != null)
             {
-                SingleValueExtraction(document);
-                return;
+                var args = new object[fieldToFetch.FormatArguments.Length];
+                for (int i = 0; i < fieldToFetch.FormatArguments.Length; i++)
+                {
+                    TryGetValue(fieldToFetch.FormatArguments[i], document, out args[i]);
+                }
+                value =
+                    string.Format(
+                        CultureInfo.InvariantCulture,
+                        fieldToFetch.QueryField.Format,
+                        args);
+                return true;
             }
             if (fieldToFetch.QueryField.ValueTokenType != null)
             {
@@ -266,42 +277,35 @@ namespace Raven.Server.Documents.Queries.Results
                 {
                     if (_query == null)
                     {
-                        return; // only happens for debug endpoints and more like this
+                        value = null;
+                        return false; // only happens for debug endpoints and more like this
                     }
                     _query.QueryParameters.TryGet((string)val, out val);
                 }
-                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = val;
-                return;
+                value = val;
+                return true;
             }
-            if (fieldToFetch.QueryField.Format != null)
-            {
-                var args = new object[fieldToFetch.FormatArguments.Length];
-                for (int i = 0; i < fieldToFetch.FormatArguments.Length; i++)
-                {
-                    TryGetSingleValue(document, fieldToFetch.FormatArguments[i], out args[i]);
-                }
-                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] =
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        fieldToFetch.QueryField.Format,
-                        args);
-                return;
-            }
+
             if (fieldToFetch.QueryField.SourceAlias == null)
             {
-                SingleValueExtraction(document);
-                return;
+                return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
             }
             if (_loadedDocumentIds == null)
+            {
                 _loadedDocumentIds = new HashSet<string>();
+                _loadedDocuments = new Dictionary<string, Document>();
+                _buffer = new List<object>();
+            }
             _loadedDocumentIds.Clear();
+            _buffer.Clear();
+            //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
             IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
 
             if (_loadedDocumentIds.Count == 0)
-                return;
-
-            if (_loadedDocuments == null)
-                _loadedDocuments = new Dictionary<string, Document>();
+            {
+                value = null;
+                return false;
+            }
 
             foreach (var docId in _loadedDocumentIds)
             {
@@ -314,40 +318,71 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 if (document == null)
                     continue;
-                SingleValueExtraction(document);
+                if (TryGetFieldValueFromDocument(document, fieldToFetch, out var val))
+                    _buffer.Add(val);
             }
 
-            bool TryGetSingleValue(Document d, FieldsToFetch.FieldToFetch field, out object value)
+            if (fieldToFetch.QueryField.SourceIsArray)
             {
-                if (field.IsDocumentId)
-                {
-                    value = d.Id;
-                }
-                else if (field.IsCompositeField == false)
-                {
-                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, d, field.Name, out value) == false)
-                        return false;
-                }
-                else
-                {
-                    var component = new DynamicJsonValue();
-
-                    foreach (var componentField in field.Components)
-                    {
-                        if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, d, componentField, out var componentValue))
-                            component[componentField] = componentValue;
-                    }
-
-                    value = component;
-                }
+                value = _buffer;
                 return true;
             }
-
-            void SingleValueExtraction(Document d)
+            if (_buffer.Count > 0)
             {
-                if (TryGetSingleValue(d, fieldToFetch, out var value))
-                    toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = value;
+                if (_buffer.Count > 1)
+                {
+                    ThrowOnlyArrayFieldCanHaveMultipleValues(fieldToFetch);
+                }
+                value = _buffer[0];
+                return true;
             }
+            value = null;
+            return false;
+        }
+
+        bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
+        {
+            if (field.IsDocumentId)
+            {
+                value = document.Id;
+            }
+            else if (field.IsCompositeField == false)
+            {
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false)
+                    return false;
+            }
+            else
+            {
+                var component = new DynamicJsonValue();
+
+                foreach (var componentField in field.Components)
+                {
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, componentField, out var componentValue))
+                        component[componentField] = componentValue;
+                }
+
+                value = component;
+            }
+            return true;
+        }
+
+
+        private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
+        {
+            Debug.Assert(fieldToFetch.QueryField != null);
+
+            if (TryGetValue(fieldToFetch, document, out var fieldVal))
+            {
+                if (fieldVal is List<object> list)
+                    fieldVal = new DynamicJsonArray(list);
+                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+            }
+        }
+
+        private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
+        {
+            throw new NotSupportedException(
+                $"Attempted to read multiple values in field {fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value}, but it isn't an array and should have only a single value, did you forget '[]' ?");
         }
 
         private class UniqueFieldNames : IEqualityComparer<IFieldable>

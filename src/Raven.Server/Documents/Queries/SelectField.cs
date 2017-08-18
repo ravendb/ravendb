@@ -6,84 +6,79 @@ namespace Raven.Server.Documents.Queries
 {
     public class SelectField
     {
-        public readonly ValueTokenType? ValueTokenType;
+        public ValueTokenType? ValueTokenType;
 
-        public readonly string Name;
+        public string Name;
 
-        public readonly string Alias;
+        public string Alias;
 
-        public readonly object Value;
+        public object Value;
 
-        public readonly string SourceAlias;
+        public string SourceAlias;
 
-        public readonly string Format;
+        public string Format;
 
-        public readonly SelectField[] FormatArguments;
+        public SelectField[] FormatArguments;
 
-        public readonly AggregationOperation AggregationOperation;
+        public AggregationOperation AggregationOperation;
 
-        public readonly bool IsGroupByKey;
+        public bool IsGroupByKey;
 
-        public readonly string[] GroupByKeys;
+        public string[] GroupByKeys;
+        public bool SourceIsArray;
 
-        private SelectField(string name, string alias, string sourceAlias)
+        private SelectField()
         {
-            Name = name;
-            Alias = alias;
-            SourceAlias = sourceAlias;
-        }
-
-        private SelectField(string alias, string format, SelectField[] args)
-        {
-            Alias = alias;
-            Format = format;
-            FormatArguments = args;
-        }
-
-        public SelectField(object value, string alias, ValueTokenType type)
-        {
-            ValueTokenType = type;
-            Value = value;
-            Alias = alias;
-        }
-
-        private SelectField(string name, string alias, AggregationOperation aggregationOperation)
-        {
-            Name = name;
-            Alias = alias;
-            AggregationOperation = aggregationOperation;
-        }
-
-        private SelectField(string alias, string[] groupByKeys)
-        {
-            Alias = alias;
-            IsGroupByKey = true;
-            GroupByKeys = groupByKeys;
+            
         }
 
         public static SelectField Create(string name)
         {
-            return new SelectField(name, null, (string)null);
+            return new SelectField
+            {
+                Name = name
+            };
         }
 
         public static SelectField CreateFormat(string alias, string format, SelectField[] args)
         {
-            return new SelectField(alias,format, args);
+            return new SelectField
+            {
+                Alias = alias,
+                Format = format,
+                FormatArguments = args
+            };
         }
 
-        public static SelectField Create(string name, string alias, string sourceAlias)
+        public static SelectField Create(string name, string alias, string sourceAlias, bool array)
         {
-            return new SelectField(name, alias, sourceAlias);
+            return new SelectField
+            {
+                Name = name,
+                Alias = alias,
+                SourceAlias = sourceAlias,
+                SourceIsArray = array
+            };
         }
 
         public static SelectField CreateGroupByAggregation(string name, string alias, AggregationOperation aggregation)
         {
-            return new SelectField(name, alias, aggregation);
+            return new SelectField
+            {
+                Name = name,
+                Alias = alias,
+                AggregationOperation = aggregation
+            };
         }
 
         public static SelectField CreateGroupByKeyField(string alias, params string[] groupByKeys)
         {
-            return new SelectField(alias, groupByKeys);
+            return new SelectField
+            {
+                Alias = alias,
+                GroupByKeys = groupByKeys,
+                IsGroupByKey = true
+            };
         }
 
         public static SelectField CreateValue(string val, string alias, ValueTokenType type)
@@ -108,7 +103,12 @@ namespace Raven.Server.Documents.Queries
                     break;
             }
 
-            return new SelectField(finalVal, alias, type);
+            return new SelectField
+            {
+                Value = finalVal,
+                Alias = alias,
+                ValueTokenType = type
+            };
         }
     }
 }
