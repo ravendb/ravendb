@@ -240,5 +240,46 @@ namespace Raven.Server.Documents.Queries.Parser
         {
             _pos= pos;
         }
+
+        public bool FunctionBody()
+        {
+            var original = _pos;
+            if (TryScan('{') == false)
+                return false;
+
+            // now we need to find the matching }, this is 
+            // a bit more complex because we need to ignore
+            // matching } that are in quotes. 
+
+            int nested = 1;
+            var i = _pos;
+            for (; i < _q.Length; i++)
+            {
+                switch (_q[i])
+                {
+                    case '"':
+                    case '\'':
+                        if (String() == false)
+                            goto Failed;
+                        break;
+                    case '{':
+                        nested++;
+                        break;
+                    case '}':
+                        if (--nested == 0)
+                        {
+                            _pos = i + 1;
+                            TokenStart = original;
+                            TokenLength = _pos - original;
+                            return true;
+                        }
+                        break;
+                }
+            }
+            Failed:
+            _pos = original;
+            return false;
+
+        }
     }
 }

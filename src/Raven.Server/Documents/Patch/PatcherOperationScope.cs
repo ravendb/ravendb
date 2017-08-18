@@ -348,6 +348,11 @@ namespace Raven.Server.Documents.Patch
 
         public DynamicJsonValue ToBlittable(ObjectInstance jsObject, string propertyKey = null, bool recursiveCall = false)
         {
+            // to support static / instance calls. This is ugly, but the code will go away with Jurrasic anyway
+            return ToBlittable2(jsObject, propertyKey, recursiveCall);
+        }
+        public static DynamicJsonValue ToBlittable2(ObjectInstance jsObject, string propertyKey = null, bool recursiveCall = false)
+        {
             if (jsObject.Class == "Function")
             {
                 // getting a Function instance here,
@@ -375,7 +380,7 @@ namespace Raven.Server.Documents.Patch
                         if (modification.IsDeleted)
                             continue;
 
-                        obj[prop.Name] = ToBlittableValue(modification.Value, CreatePropertyKey(prop.Name, propertyKey), jsObject == modification.Value, prop.Token, prop.Value);
+                        obj[prop.Name] = ToBlittableValue2(modification.Value, CreatePropertyKey(prop.Name, propertyKey), jsObject == modification.Value, prop.Token, prop.Value);
                     }
                     else
                     {
@@ -389,7 +394,7 @@ namespace Raven.Server.Documents.Patch
                     if (recursiveCall && recursive)
                         obj[modificationKvp.Key] = null;
                     else
-                        obj[modificationKvp.Key] = ToBlittableValue(modificationKvp.Value.value, CreatePropertyKey(modificationKvp.Key, propertyKey), jsObject == modificationKvp.Value.value);
+                        obj[modificationKvp.Key] = ToBlittableValue2(modificationKvp.Value.value, CreatePropertyKey(modificationKvp.Key, propertyKey), jsObject == modificationKvp.Value.value);
                 }
             }
             else
@@ -415,13 +420,13 @@ namespace Raven.Server.Documents.Patch
 
                         if (propertyIndexInBlittable < 0)
                         {
-                            obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive);
+                            obj[property.Key] = ToBlittableValue2(value, CreatePropertyKey(property.Key, propertyKey), recursive);
                         }
                         else
                         {
                             var prop = new BlittableJsonReaderObject.PropertyDetails();
                             blittableObjectInstance.Blittable.GetPropertyByIndex(propertyIndexInBlittable, ref prop, true);
-                            obj[property.Key] = ToBlittableValue(value, CreatePropertyKey(property.Key, propertyKey), recursive, prop.Token, prop.Value);
+                            obj[property.Key] = ToBlittableValue2(value, CreatePropertyKey(property.Key, propertyKey), recursive, prop.Token, prop.Value);
                         }
                     }
                 }
@@ -431,6 +436,11 @@ namespace Raven.Server.Documents.Patch
         }
 
         public object ToBlittableValue(JsValue v, string propertyKey, bool recursiveCall, BlittableJsonToken? token = null, object originalValue = null)
+        {
+            // ugly and temporary
+            return ToBlittableValue2(v, propertyKey, recursiveCall, token, originalValue);
+        }
+        public static object ToBlittableValue2(JsValue v, string propertyKey, bool recursiveCall, BlittableJsonToken? token = null, object originalValue = null)
         {
             if (v.IsBoolean())
                 return v.AsBoolean();
@@ -499,7 +509,7 @@ namespace Raven.Server.Documents.Patch
                     if (jsInstance == null)
                         continue;
 
-                    var ravenJToken = ToBlittableValue(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);
+                    var ravenJToken = ToBlittableValue2(jsInstance, propertyKey + "[" + property.Key + "]", recursiveCall);
 
                     if (ravenJToken == null)
                         continue;
@@ -515,7 +525,7 @@ namespace Raven.Server.Documents.Patch
             }
             if (v.IsObject())
             {
-                return ToBlittable(v.AsObject(), propertyKey, recursiveCall);
+                return ToBlittable2(v.AsObject(), propertyKey, recursiveCall);
             }
             if (v.IsRegExp())
                 return null;

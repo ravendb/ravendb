@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -33,6 +34,16 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryText = Scanner.Input
             };
 
+            while (Scanner.TryScan("DECLARE"))
+            {
+                var (name, func) = DeclaredFunction();
+                if (q.DeclaredFunctions == null)
+                    q.DeclaredFunctions = new Dictionary<StringSegment, ValueToken>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+
+                if (q.DeclaredFunctions.TryAdd(name, func) == false)
+                    ThrowParseException(name + " function was declared multiple times");
+            }
+
             if (Scanner.TryScan("SELECT"))
                 q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
 
@@ -62,6 +73,45 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private (StringSegment Name, ValueToken FunctionText) DeclaredFunction()
+        {
+            // becuase of how we are processing them, we don't actually care for
+            // parsing the function directly. We have implemented a minimal parser
+            // here that find the _boundary_ of the function call, and then we hand
+            // all of that code directly to the js code. 
+
+            var functionStart = Scanner.Position;
+
+            if (Scanner.TryScan("function") == false)
+                ThrowParseException("DECLARE clause found but missing 'function' keyword");
+
+            if (Scanner.Identifier() == false)
+                ThrowParseException("DECLARE functions require a name and cannot be anonymous");
+
+            var name = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+
+            // this reads the signature of the method: (a,b,c), etc.
+            // we are technically allow more complex stuff there that isn't
+            // allowed by JS, but that is fine, since the JS parser will break 
+            // when it try it, so we are good with false positives here
+
+            if (Scanner.TryScan('(') == false)
+                ThrowParseException("Unable to parse function " + name + " signature");
+
+            if (Method(null, out _) == false)
+                ThrowParseException("Unable to parse function " + name + " signature");
+
+            if(Scanner.FunctionBody() == false)
+                ThrowParseException("Unable to get function body for " + name);
+
+            return (name, new ValueToken
+            {
+                Type = ValueTokenType.String,
+                TokenStart = functionStart,
+                TokenLength = Scanner.Position - functionStart
+            });
         }
 
         private List<FieldToken> GroupBy()

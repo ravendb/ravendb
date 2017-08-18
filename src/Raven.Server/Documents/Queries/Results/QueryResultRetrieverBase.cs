@@ -10,8 +10,10 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
+using Jint;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Utils;
 using Sparrow;
@@ -261,6 +263,20 @@ namespace Raven.Server.Documents.Queries.Results
                 return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
             }
 
+            if (fieldToFetch.QueryField.Function != null)
+            {
+                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length];
+                for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
+                {
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
+                }
+                value = InvokeFunction(
+                    fieldToFetch.QueryField.Name,
+                    _query.Metadata.Query,
+                    args);
+                return true;
+            }
+
             if (fieldToFetch.QueryField.ValueTokenType != null)
             {
                 var val = fieldToFetch.QueryField.Value;
@@ -330,6 +346,75 @@ namespace Raven.Server.Documents.Queries.Results
             value = null;
             return false;
         }
+
+        private object InvokeFunction(string methodName, Query query, object[] args)
+        {
+            //TODO: Maxim fixme
+            // This is intentionally written to be as simple as possible, we are going to replace
+            // this Jint impl with Jurrasic, so there is no point in doing anything fancy.
+            // 
+            // We'll need to handle caching of the function, and proper error handling / parsing
+            // of the function code / errors during their execution. For example, we must get the
+            // document id / reduce key of the document that generated the error. 
+            var jintEngine = new Engine(cfg =>
+            {
+                cfg.LimitRecursion(100);
+                cfg.NullPropagation();
+                cfg.MaxStatements(10 * 1000);
+            });
+
+            if (query.DeclaredFunctions != null)
+            {
+                foreach (var funcToken in query.DeclaredFunctions.Values)
+                {
+                    var func = new StringSegment(query.QueryText, funcToken.TokenStart, funcToken.TokenLength);
+                    jintEngine.Execute(func.ToString());
+                }
+            }
+
+
+            object Translate(object o)
+            {
+                if (o is LazyStringValue lsv)
+                    return lsv.ToString();
+                if (o is LazyCompressedStringValue lcsv)
+                    return lcsv.ToString();
+                if (o is LazyNumberValue lnv)
+                    return lnv.ToDouble(CultureInfo.InvariantCulture);
+                if (o is List<object> l)
+                {
+                    for (int i = 0; i < l.Count; i++)
+                    {
+                        l[i] = Translate(l[i]);
+                    }
+                    return l.ToArray();
+                }
+                return o;
+            }
+
+            for (int i = 0; i < args.Length; i++)
+            {
+                args[i] = Translate(args[i]);
+            }
+
+            var result = jintEngine.Invoke(methodName, args);
+            if(result.IsObject())
+                return PatcherOperationScope.ToBlittable2(result.AsObject());
+            if(result.IsArray())
+                return PatcherOperationScope.ToBlittable2(result.AsArray());
+            if (result.IsBoolean())
+                return result.AsBoolean();
+            if (result.IsString())
+                return result.AsString();
+            if (result.IsDate())
+                return result.AsDate();
+            if (result.IsNull() || result.IsUndefined())
+                return null;
+            if (result.IsNumber())
+                return result.AsNumber();
+            throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " + result);
+        }
+
 
         bool TryGetFieldValueFromDocument(Document document, FieldsToFetch.FieldToFetch field, out object value)
         {

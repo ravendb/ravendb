@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -13,6 +14,9 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<(QueryExpression Expression, FieldToken Alias)> With;
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
+
+        public Dictionary<StringSegment, ValueToken> DeclaredFunctions;
+
         public string QueryText;
 
         public string ToJsonAst()
@@ -25,6 +29,14 @@ namespace Raven.Server.Documents.Queries.Parser
         public override string ToString()
         {
             var writer = new StringWriter();
+            if (DeclaredFunctions != null)
+            {
+                foreach (var function in DeclaredFunctions)
+                {
+                    writer.Write("DECLARE ");
+                    writer.WriteLine(function.Value);
+                }
+            }
             if (Select != null)
             {
                 WriteSelectOrWith("SELECT", writer, Select, IsDistinct);
@@ -136,6 +148,17 @@ namespace Raven.Server.Documents.Queries.Parser
         public void ToJsonAst(JsonWriter writer)
         {
             writer.WriteStartObject();
+            if (DeclaredFunctions != null)
+            {
+                writer.WritePropertyName("Declare");
+                writer.WriteStartObject();
+                foreach (var declaredFunction in DeclaredFunctions)
+                {
+                    writer.WritePropertyName(declaredFunction.Key);
+                    writer.WriteValue(declaredFunction.Value);
+                }
+                writer.WriteEndObject();
+            }
             if (Select != null)
             {
                 WriteSelectOrWith(writer, Select, "Select",QueryText);

@@ -360,6 +360,25 @@ namespace Raven.Server.Documents.Queries
                     var methodName = QueryExpression.Extract(QueryText, expression.Field);
                     if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                     {
+                        if (Query.DeclaredFunctions != null &&
+                            Query.DeclaredFunctions.TryGetValue(methodName, out var funcToken))
+                        {
+                            var args = new SelectField[expression.Arguments.Count];
+                            for (int i = 0; i < expression.Arguments.Count; i++)
+                            {
+                                if (expression.Arguments[i] is QueryExpression argExpr)
+                                    args[i] = GetSelectField(parameters, argExpr, null);
+                                else if (expression.Arguments[i] is ValueToken vt)
+                                    args[i] = GetSelectValue(null, vt);
+                                else if (expression.Arguments[i] is FieldToken ft)
+                                    args[i] = GetSelectValue(null, ft);
+                                else
+                                    ThrowInvalidFormatMethodArgument();
+                            }
+
+                            return SelectField.CreateMethodCall(methodName, alias, args);
+                        }
+
                         if (IsGroupBy == false)
                             ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
 
@@ -412,7 +431,7 @@ namespace Raven.Server.Documents.Queries
             bool array = false;
             if (indexOf != -1)
             {
-                var key = new StringSegment(name, indexOf, name.Length - indexOf);
+                var key = new StringSegment(name, 0, indexOf);
                 if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
                 {
                     key = key.Subsegment(0, key.Length - 2);

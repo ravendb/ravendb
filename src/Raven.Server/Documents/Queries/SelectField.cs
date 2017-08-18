@@ -1,6 +1,6 @@
-﻿using System;
-using Raven.Client.Documents.Indexes;
+﻿using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -21,7 +21,12 @@ namespace Raven.Server.Documents.Queries
         public bool IsGroupByKey;
 
         public string[] GroupByKeys;
+
+        public string Function;
+
         public bool SourceIsArray;
+
+        public SelectField[] FunctionArgs;
 
         private SelectField()
         {
@@ -64,6 +69,17 @@ namespace Raven.Server.Documents.Queries
                 Alias = alias,
                 GroupByKeys = groupByKeys,
                 IsGroupByKey = true
+            };
+        }
+
+        public static SelectField CreateMethodCall(string methodName, string alias, SelectField[] args)
+        {
+            return new SelectField
+            {
+                Alias = alias,
+                Name = methodName,
+                Function = methodName,
+                FunctionArgs = args
             };
         }
 
