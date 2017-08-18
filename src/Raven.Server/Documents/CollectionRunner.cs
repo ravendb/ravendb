@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.TransactionCommands;
@@ -40,15 +41,18 @@ namespace Raven.Server.Documents
             const int batchSize = 1024;
             var progress = new DeterminateProgress();
             var cancellationToken = token.Token;
+            var isAllDocs = collectionName == Constants.Documents.Collections.AllDocumentsCollection;
 
             long lastEtag;
             long totalCount;
             using (context.OpenReadTransaction())
             {
-                lastEtag = GetLastEtagForCollection(context, collectionName);
-                totalCount = GetTotalCountForCollection(context, collectionName);
+                lastEtag = GetLastEtagForCollection(context, collectionName, isAllDocs);
+                totalCount = GetTotalCountForCollection(context, collectionName, isAllDocs);
             }
             progress.Total = totalCount;
+
+            
 
             // send initial progress with total count set, and 0 as processed count
             onProgress(progress);
@@ -68,11 +72,14 @@ namespace Raven.Server.Documents
                     {
                         var ids = new Queue<LazyStringValue>(batchSize);
 
-                        foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize))
+                        foreach (var document in GetDocuments(context, collectionName, startEtag, batchSize, isAllDocs))
                         {
                             cancellationToken.ThrowIfCancellationRequested();
 
                             token.Delay();
+
+                            if (isAllDocs && IsSystemDocument(document))
+                                continue;
                             
                             if (document.Etag > lastEtag) // we don't want to go over the documents that we have patched
                             {
@@ -115,19 +122,38 @@ namespace Raven.Server.Documents
             };
         }
 
-        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize)
+        private static unsafe bool IsSystemDocument(Document document)
         {
+            return CollectionName.IsSystemDocument(document.Id.Buffer, document.Id.Length, out var _);
+        }
+
+        protected virtual IEnumerable<Document> GetDocuments(DocumentsOperationContext context, string collectionName, long startEtag, int batchSize, bool isAllDocs)
+        {
+            if (isAllDocs)
+                return Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, batchSize);
+
             return Database.DocumentsStorage.GetDocumentsFrom(context, collectionName, startEtag, 0, batchSize);
         }
 
-        protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName)
+        protected virtual long GetTotalCountForCollection(DocumentsOperationContext context, string collectionName, bool isAllDocs)
         {
+            if (isAllDocs)
+            {
+                var allDocsCount = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, CollectionName.SystemCollection, 0, out long systemDocsCount);
+
+                return allDocsCount - systemDocsCount;
+            }
+
             Database.DocumentsStorage.GetNumberOfDocumentsToProcess(context, collectionName, 0, out long totalCount);
             return totalCount;
         }
 
-        protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection)
+        protected virtual long GetLastEtagForCollection(DocumentsOperationContext context, string collection, bool isAllDocs)
         {
+            if (isAllDocs)
+                return DocumentsStorage.ReadLastDocumentEtag(context.Transaction.InnerTransaction);
+
             return Database.DocumentsStorage.GetLastDocumentEtag(context, collection);
         }
     }
