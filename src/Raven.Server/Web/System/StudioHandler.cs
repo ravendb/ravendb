@@ -125,8 +125,7 @@ namespace Raven.Server.Web.System
         public async Task GetStudioFile()
         {
             var fileName = new StringSegment(
-                RouteMatch.Url,
-                RouteMatch.Url.Length - RouteMatch.MatchLength, RouteMatch.MatchLength);
+                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
 
             var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 

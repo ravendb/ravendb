@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Queries.Sorting
             if (indexOfSeparator == -1)
                 return field;
 
-            return field.SubSegment(indexOfSeparator + 1);
+            return field.Subsegment(indexOfSeparator + 1);
         }
     }
 }

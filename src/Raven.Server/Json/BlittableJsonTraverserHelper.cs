@@ -94,7 +94,7 @@ namespace Raven.Server.Json
                     {
                         indexOfPropertySeparator = leftPath.IndexOfAny(BlittableJsonTraverser.PropertySeparators, 0);
                         if (indexOfPropertySeparator != -1)
-                            leftPath = leftPath.SubSegment(0, indexOfPropertySeparator);
+                            leftPath = leftPath.Subsegment(0, indexOfPropertySeparator);
 
                         var accessor = TypeConverter.GetPropertyAccessor(value);
                         value = accessor.GetValue(leftPath, value);

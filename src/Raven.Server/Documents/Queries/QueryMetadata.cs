@@ -446,7 +446,7 @@ namespace Raven.Server.Documents.Queries
             string sourceAlias = null;
             if (indexOf != -1)
             {
-                var key = new StringSegment(name, indexOf);
+                var key = new StringSegment(name, indexOf, name.Length);
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))
                 {
                     name = name.Substring(indexOf + 1);
