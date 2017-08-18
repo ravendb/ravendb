@@ -30,6 +30,7 @@ class queryCompleter {
     private indexOrCollectionFieldsCache = new Map<string, string[]>();
     
     constructor(private providers: queryCompleterProviders) {
+        _.bindAll(this, "complete");
     }
 
     /**

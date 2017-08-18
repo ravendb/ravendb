@@ -43,6 +43,7 @@ border: 1px solid rgba(221, 240, 255, 0.20)\
 color: rgba(255, 255, 255, 0.25)\
 }\
 .ace-pastel-dark-raven .ace_keyword,\
+.ace-pastel-dark-raven .ace_type,\
 .ace-pastel-dark-raven .ace_meta {\
 color: #757aD8\
 }\
