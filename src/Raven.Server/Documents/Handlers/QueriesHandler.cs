@@ -296,8 +296,21 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "queries/delete");
             var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
 
-            ExecuteQueryOperation(query.Metadata, (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
-                context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+            if (query.Metadata.IsDynamic == false)
+            {
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+            }
+            else
+            {
+                EnsureQueryHasOnlyFromClause(query.Metadata.Query, query.Metadata.CollectionName);
+
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => runner.Collection.ExecuteDelete(query.Metadata.CollectionName, options.Collection, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByCollection);
+            }
+
             return Task.CompletedTask;
 
         }
@@ -339,7 +352,7 @@ namespace Raven.Server.Documents.Handlers
         private void EnsureQueryHasOnlyFromClause(Query query, string collection)
         {
             if (query.Where != null || query.Select != null || query.OrderBy != null || query.GroupBy != null || query.With != null)
-                throw new BadRequestException($"Patching documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM {collection}'. If you need to perform filtering please issue the query to the static index.");
+                throw new BadRequestException($"Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM {collection}'. If you need to perform filtering please issue the query to the static index.");
         }
 
         private void ExecuteQueryOperation(QueryMetadata queryMetadata, Func<(QueryRunner Query, CollectionRunner Collection), (QueryOperationOptions Query, CollectionOperationOptions Collection), Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
