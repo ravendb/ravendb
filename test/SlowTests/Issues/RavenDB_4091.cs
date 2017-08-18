@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }));
 
                 var progresses = new List<IOperationProgress>();
 

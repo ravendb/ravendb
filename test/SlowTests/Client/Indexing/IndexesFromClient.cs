@@ -43,7 +43,7 @@ namespace SlowTests.Client.Indexing
 
                 var operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
 
                 var deleteResult = await operation
                     .WaitForCompletionAsync(TimeSpan.FromSeconds(15)).ConfigureAwait(false) as BulkOperationResult;
@@ -77,7 +77,7 @@ namespace SlowTests.Client.Indexing
 
                 operation = await store
                     .Operations
-                    .SendAsync(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
+                    .SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{indexName}'" }, new QueryOperationOptions { AllowStale = false }));
 
                 var e = Assert.Throws<RavenException>(() =>
                 {

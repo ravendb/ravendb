@@ -48,7 +48,7 @@ namespace SlowTests.Issues
 
                 Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM Orders'. If you need to perform filtering please issue the query to the static index.", ex.Message);
 
-                ex = Assert.Throws<BadRequestException>(() => store.Operations.Send(new DeleteByIndexOperation(
+                ex = Assert.Throws<BadRequestException>(() => store.Operations.Send(new DeleteByQueryOperation(
                     new IndexQuery { Query = "FROM Orders WHERE Company = 'companies/1'" })));
 
                 Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM Orders'. If you need to perform filtering please issue the query to the static index.", ex.Message);
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
                     session.SaveChanges();
                 }
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(
+                var operation = store.Operations.Send(new DeleteByQueryOperation(
                     new IndexQuery { Query = "FROM Orders" }));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(15));

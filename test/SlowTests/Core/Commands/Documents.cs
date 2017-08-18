@@ -124,7 +124,7 @@ namespace SlowTests.Core.Commands
                     Assert.Equal("NewValue", document.NewName.ToString());
                     WaitForIndexing(store);
 
-                    operation = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery() { Query = $"FROM INDEX 'MyIndex'" }));
+                    operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = $"FROM INDEX 'MyIndex'" }));
                     operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     var documents = await commands.GetAsync(0, 25);
