@@ -36,12 +36,12 @@ namespace SlowTests.Server.Documents
 
                 WaitForIndexing(store);
 
-                var deleteOperation = store.Operations.Send(new DeleteCollectionOperation("orders"));
+                var deleteOperation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 await deleteOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
 
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
-                
+
                 var requestExecutor = store.GetRequestExecutor();
                 long compactOperationId;
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents
 
                 var compactOperation = store.Operations.Send(new CompactDatabaseOperation(store.Database, compactOperationId));
                 await compactOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(60));
-                
+
                 var newSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
 
                 Assert.True(oldSize < newSize);
@@ -86,9 +86,9 @@ namespace SlowTests.Server.Documents
                     session.Advanced.DeleteAttachment("users/1", "randomFile.txt");
                     session.SaveChanges();
                 }
-                
+
                 var oldSize = StorageCompactionTestsSlow.GetDirSize(new DirectoryInfo(path));
-                
+
                 var requestExecutor = store.GetRequestExecutor();
                 long compactOperationId;
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
