@@ -324,7 +324,7 @@ namespace SlowTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var operation = store2.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
+                var operation = store2.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }

@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                 WaitForIndexing(store);
 
                 var sw = Stopwatch.StartNew();
-                var op = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
+                var op = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM INDEX 'Users/ByName' WHERE startsWith(Name, 'Users')" },
                     new QueryOperationOptions { AllowStale = false, MaxOpsPerSecond = 2000, StaleTimeout = null }));
 
                 op.WaitForCompletion(TimeSpan.FromSeconds(15));

@@ -15,21 +15,21 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations
 {
-    public class DeleteByIndexOperation<TEntity, TIndexCreator> : DeleteByIndexOperation<TEntity>
+    public class DeleteByQueryOperation<TEntity, TIndexCreator> : DeleteByQueryOperation<TEntity>
         where TIndexCreator : AbstractIndexCreationTask, new()
     {
-        public DeleteByIndexOperation(Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
+        public DeleteByQueryOperation(Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
             : base(new TIndexCreator().IndexName, expression, options)
         {
         }
     }
 
-    public class DeleteByIndexOperation<TEntity> : DeleteByIndexOperation
+    public class DeleteByQueryOperation<TEntity> : DeleteByQueryOperation
     {
         private readonly string _indexName;
         private readonly Expression<Func<TEntity, bool>> _expression;
 
-        public DeleteByIndexOperation(string indexName, Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
+        public DeleteByQueryOperation(string indexName, Expression<Func<TEntity, bool>> expression, QueryOperationOptions options = null)
             : base(DummyQuery, options)
         {
             _indexName = indexName ?? throw new ArgumentNullException(nameof(indexName));
@@ -56,14 +56,14 @@ namespace Raven.Client.Documents.Operations
         }
     }
 
-    public class DeleteByIndexOperation : IOperation<OperationIdResult>
+    public class DeleteByQueryOperation : IOperation<OperationIdResult>
     {
         protected static IndexQuery DummyQuery = new IndexQuery();
 
         protected IndexQuery _queryToDelete;
         private readonly QueryOperationOptions _options;
 
-        public DeleteByIndexOperation(IndexQuery queryToDelete, QueryOperationOptions options = null)
+        public DeleteByQueryOperation(IndexQuery queryToDelete, QueryOperationOptions options = null)
         {
             _queryToDelete = queryToDelete ?? throw new ArgumentNullException(nameof(queryToDelete));
             _options = options;
