@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing.MapReduce;
 using FastTests.Server.Replication;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -58,7 +59,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
                 database.DocumentTombstoneCleaner.Subscribe(this);
                 database2.DocumentTombstoneCleaner.Subscribe(this);
 
-                var operation = await store1.Operations.SendAsync(new DeleteCollectionOperation("Invoices"),CancellationToken.None);
+                var operation = await store1.Operations.SendAsync(new DeleteByQueryOperation(new IndexQuery { Query = "FROM Invoices"}),CancellationToken.None);
                 await operation.WaitForCompletionAsync();
                 using (var session = store1.OpenAsyncSession())
                 {

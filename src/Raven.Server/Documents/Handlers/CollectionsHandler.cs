@@ -66,46 +66,5 @@ namespace Raven.Server.Documents.Handlers
 
             return Task.CompletedTask;
         }
-
-        [RavenAction("/databases/*/collections/docs", "DELETE", AuthorizationStatus.ValidUser)]
-        public Task Delete()
-        {
-            var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
-
-            ExecuteCollectionOperation((runner, collectionName, options, onProgress, token) => Task.Run(async () => await runner.ExecuteDelete(collectionName, options, onProgress, token)),
-                context, returnContextToPool, Operations.Operations.OperationType.DeleteByCollection);
-            return Task.CompletedTask;
-        }
-
-        private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
-        {
-            var collectionName = GetStringQueryString("name");
-
-            var token = CreateTimeLimitedOperationToken();
-
-            var collectionRunner = new CollectionRunner(Database, context);
-
-            var operationId = Database.Operations.GetNextOperationId();
-
-            var options = GetCollectionOperationOptions();
-
-            var task = Database.Operations.AddOperation(Database,collectionName, operationType, onProgress =>
-                    operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
-
-            task.ContinueWith(_ => returnContextToPool.Dispose());
-
-            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-            {
-                writer.WriteOperationId(context, operationId);
-            }
-        }
-
-        private CollectionOperationOptions GetCollectionOperationOptions()
-        {
-            return new CollectionOperationOptions
-            {
-                MaxOpsPerSecond = GetIntValueQueryString("maxOpsPerSec", required: false)
-            };
-        }
     }
 }

@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.Patching
                     x.SaveChanges();
                 }
 
-                var operation = store.Operations.Send(new DeleteCollectionOperation("users"));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM users" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());

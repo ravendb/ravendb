@@ -31,7 +31,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new DeleteCollectionOperation("orders"));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM orders" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(60));
 
                 WaitForIndexing(store);
