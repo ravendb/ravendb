@@ -79,7 +79,7 @@ class query extends viewModelBase {
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
     isDynamicIndex: KnockoutComputed<boolean>;
-    isStaticIndex: KnockoutComputed<boolean>;
+    isAutoIndex: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
 
@@ -195,16 +195,6 @@ class query extends viewModelBase {
             return !!currentIndex && currentIndex.Type === "MapReduce";
         });
 
-        this.isStaticIndex = ko.pureComputed(() => {
-            const indexName = this.queriedIndex();
-            if (!indexName)
-                return false;
-
-            return !indexName.startsWith(queryUtil.DynamicPrefix) &&
-                !indexName.startsWith(queryUtil.AutoPrefix) &&
-                indexName !== queryUtil.AllDocs;
-        });
-
         this.isDynamicIndex = ko.pureComputed(() => {
             const indexName = this.queriedIndex();
             if (!indexName)
@@ -213,6 +203,14 @@ class query extends viewModelBase {
             const indexes = this.indexes() || [];
             const currentIndex = indexes.find(i => i.Name === indexName);
             return !currentIndex;
+        });
+        
+        this.isAutoIndex = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
+            if (!indexName)
+                return false;
+            
+            return indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix);
         });
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {

@@ -25,7 +25,6 @@
                                         <li>
                                             <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                                 <span data-bind="visible: queryText">
-                                                    <span class="text-muted">|</span>
                                                     <span data-bind="text: queryText"></span>
                                                 </span>
                                                 <span data-bind="with: transformerQuery">
@@ -92,7 +91,7 @@
                             
                             <li>
                                 <a href="#" data-bind="attr: { href: editIndexUrl }">
-                                    <strong><i class="icon-edit"></i> <span>Edit index</span></strong>
+                                    <strong><i data-bind="attr: { class: isAutoIndex() ? 'icon-preview' : 'icon-edit' }"></i> <span data-bind="text: isAutoIndex() ? 'View index' : 'Edit index'"></span></strong>
                                 </a>
                             </li>
 
