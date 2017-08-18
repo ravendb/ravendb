@@ -119,7 +119,7 @@ class query extends viewModelBase {
     constructor() {
         super();
 
-        this.queryCompleter = new queryCompleter(this.activeDatabase, this.indexes);
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 

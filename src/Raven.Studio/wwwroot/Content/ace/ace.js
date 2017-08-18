@@ -7009,12 +7009,12 @@ var BackgroundTokenizer = function(tokenizer, editor) {
         this.states.splice(this.currentLine, this.states.length);
 
         this.stop();
-        this.running = setTimeout(this.$worker, 700);
+        this.running = setTimeout(this.$worker, 300);
     };
     
     this.scheduleStart = function() {
         if (!this.running)
-            this.running = setTimeout(this.$worker, 700);
+            this.running = setTimeout(this.$worker, 300);
     }
 
     this.$updateOnChange = function(delta) {

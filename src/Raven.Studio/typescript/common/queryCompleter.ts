@@ -17,17 +17,25 @@ interface autoCompleteLastKeyword {
     paren: number,
 }
 
+interface queryCompleterProviders {
+    terms: (indexName: string, field: string, pageSize: number, callback: (terms: Array<string>) => void) => void;
+    indexFields: (indexName: string, callback: (fields: Array<string>) => void) => void;
+    collectionFields: (collectionName: string, callback: (fields: Array<string>) => void) => void;
+    collections: (callback: (collectionNames: Array<string>) => void) => void;
+    indexNames: (callback: (indexNames: Array<string>) => void) => void;
+}
+
 class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
-    private collectionsTracker: collectionsTracker;
-    private indexFieldsCache = new Map<string, string[]>();
+    private indexOrCollectionFieldsCache = new Map<string, string[]>();
     
-    constructor(private activeDatabase: KnockoutObservable<database>,
-                private indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
-        this.collectionsTracker = collectionsTracker.default;
+    constructor(private providers: queryCompleterProviders) {
     }
-    
-    private getIndexName(session: AceAjax.IEditSession): [string, boolean] {
+
+    /**
+     * Extracts collection or index used in current query 
+     */
+    private static getQuerySubject(session: AceAjax.IEditSession): { type: "index" | "collection", subject: string } {
         let keyword: string;
         
         for (let row = 0; row < session.getLength(); row++) {
@@ -42,59 +50,70 @@ class queryCompleter {
                     }
                     case "string": {
                         const indexName = token.value.substr(1, token.value.length - 2);
-                        if (keyword === "from")
-                            return [indexName, false];
-                        if (keyword === "index")
-                            return [indexName, true];
+                        if (keyword === "from") {
+                            return {
+                                type: "collection",
+                                subject: indexName
+                            }
+                        }
+                        if (keyword === "index") {
+                            return {
+                                type: "index",
+                                subject: indexName
+                            };
+                        }
                         break;
                     }
                     case "identifier": {
                         const indexName = token.value;
-                        if (keyword === "from")
-                            return [token.value, false];
-                        if (keyword === "index")
-                            return [indexName, true];
+                        if (keyword === "from") {
+                            return {
+                                type: "collection",
+                                subject: indexName
+                            }
+                        }
+                        if (keyword === "index") {
+                            return {
+                                type: "index",
+                                subject: indexName
+                            }
+                        }
                         break;
                     }
                 }
             }
         }
-        
-        return [null, null];
+        return null;
     }
 
     private getIndexFields(session: AceAjax.IEditSession): JQueryPromise<string[]> {
+        const querySubject = queryCompleter.getQuerySubject(session);
+        if (!querySubject) {
+            return $.when<string[]>([]); 
+        }
+
+        const cachedFields = this.indexOrCollectionFieldsCache.get(querySubject.subject);
+        if (cachedFields) {
+            return $.when<string[]>(cachedFields);
+        }
+
+        const fieldsTasks = $.Deferred<string[]>();
         
-        const [indexName, isStaticIndex] = this.getIndexName(session);
-        if (!indexName) {
-            return $.when<string[]>([]);
-        }
-
-        const cache = this.indexFieldsCache.get(indexName);
-        if (cache) {
-            return $.when<string[]>(cache);
-        }
-
-        if (isStaticIndex) {
-            return new getIndexEntriesFieldsCommand(indexName, this.activeDatabase())
-                .execute()
-                .then((fields) => {
-                    this.indexFieldsCache.set(indexName, fields.Results);
-                    return $.when(fields.Results);
-                });
+        if (querySubject.type === "index") {
+            this.providers.indexFields(querySubject.subject, fields => {
+                this.indexOrCollectionFieldsCache.set(querySubject.subject, fields);
+                fieldsTasks.resolve(fields);
+            });
         } else {
-            return new collection(indexName, this.activeDatabase())
-                .fetchDocuments(0, 1)
-                .then(result => {
-                    // TODO: Modify the command to return also nested pathes, like Address.City
-                    if (result && result.items.length > 0) {
-                        const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
-                        this.indexFieldsCache.set(indexName, propertyNames);
-                        return $.when(propertyNames);
-                    }
-                    return $.when<string[]>([]);
-                });
+            this.providers.collectionFields(querySubject.subject, fields => {
+                if (fields && fields.length) {
+                    this.indexOrCollectionFieldsCache.set(querySubject.subject, fields);
+                    fieldsTasks.resolve(fields);
+                }
+            });
         }
+        
+        return fieldsTasks.promise();
     }
 
     private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
@@ -245,9 +264,13 @@ class queryCompleter {
                     return;
                 }
 
-                this.completeWords(callback, this.indexes().map(index => {
-                    return {value: `'${index.Name}'`, score: 1, meta: "index"};
-                }));
+                this.providers.indexNames(names => {
+                    this.completeWords(callback, names.map(name => ({
+                        value: `'${name}'`,
+                        score: 1, 
+                        meta: "index"
+                    })));
+                });
                 break;
             }
             case "__support.function":
@@ -316,22 +339,20 @@ class queryCompleter {
 
 
                             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                            const [indexName, isStaticIndex] = this.getIndexName(session);
-                            if (!indexName)
+                            const querySubject = queryCompleter.getQuerySubject(session);
+                            if (!querySubject) {
                                 return; // todo: try to callback with error
-
-                            if (isStaticIndex) {
-                                new getIndexTermsCommand(indexName, currentField, this.activeDatabase(), 20)
-                                    .execute()
-                                    .done(terms => {
-                                        if (terms && terms.Terms.length > 0) {
-                                            this.completeWords(callback,
-                                                terms.Terms.map(term => {
-                                                    return {value: `'${term}'`, score: 1, meta: "value"};
-                                                }));
-                                        }
-                                    });
+                            }
+                            
+                            if (querySubject.type === "index") {
+                                this.providers.terms(querySubject.subject, currentField, 20, terms => {
+                                    if (terms && terms.length) {
+                                        this.completeWords(callback,
+                                            terms.map(term => ({value: `'${term}'`, score: 1, meta: "value"})));
+                                    }
+                                })
                             } else {
+                                /* TODO finish me!
                                 if (currentValue.length > 0) {
                                     // TODO: Not sure what we want to show here?
                                     new getDocumentsMetadataByIDPrefixCommand(currentValue, 1, this.activeDatabase())
@@ -349,7 +370,7 @@ class queryCompleter {
                                         });
                                 } else {
                                     callback([{error: "notext"}], null);
-                                }
+                                }*/
                             }
                         });
                     return;
@@ -377,22 +398,21 @@ class queryCompleter {
     }
 
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
-        const fromWords = this.collectionsTracker.getCollectionNames().map(collection => {
-            collection += " ";
-            return {
-                value: collection,
-                score: 2,
-                meta: "collection"
-            };
+        this.providers.collections(collections => {
+           const wordList = collections.map(name => ({
+               value: name + " ",
+               score: 2,
+               meta: "collection"
+           })); 
+           
+           wordList.push(
+               {value: "index", score: 4, meta: "keyword"},
+               {value: "@all_docs", score: 3, meta: "collection"},
+               {value: "@system", score: 1, meta: "collection"}
+           );
+           
+           this.completeWords(callback,  wordList);
         });
-
-        fromWords.push(
-            {value: "index", score: 4, meta: "keyword"}, 
-            {value: "@all_docs", score: 3, meta: "collection"},
-            {value: "@system", score: 1, meta: "collection"}
-        );
-
-        this.completeWords(callback, fromWords);
     }
 
     private completeFromAfter(callback: (errors: any[], wordList: autoCompleteWordList[]) => void, isStaticIndex: boolean, lastKeyword: autoCompleteLastKeyword) {
@@ -412,6 +432,44 @@ class queryCompleter {
         }
 
         this.completeWords(callback, keywords);
+    }
+    
+    
+    static remoteCompleter(activeDatabase: KnockoutObservable<database>, indexes: KnockoutObservableArray<Raven.Client.Documents.Operations.IndexInformation>) {
+        return new queryCompleter({
+            terms: (indexName, field, pageSize, callback) => {
+                new getIndexTermsCommand(indexName, field, activeDatabase(), pageSize)
+                    .execute()
+                    .done(terms => {
+                        callback(terms.Terms);
+                    });
+            },
+            collections: (callback) => {
+                callback(collectionsTracker.default.getCollectionNames());
+            },
+            indexFields: (indexName, callback) => {
+                new getIndexEntriesFieldsCommand(indexName, activeDatabase())
+                    .execute()
+                    .done(result => {
+                        callback(result.Results);
+                    })
+            },
+            collectionFields: (collectionName, callback) => {
+                const matchedCollection = collectionsTracker.default.collections().find(x => x.name === collectionName);
+                if (matchedCollection) {
+                    matchedCollection.fetchDocuments(0, 1)
+                        .done(result => {
+                            if (result && result.items.length) {
+                                const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
+                                callback(propertyNames);
+                            }
+                        });
+                }
+            },
+            indexNames: callback => {
+                callback(indexes().map(x => x.Name));
+            }
+        });
     }
 }
 
