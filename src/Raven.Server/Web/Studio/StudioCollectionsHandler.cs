@@ -48,24 +48,29 @@ namespace Raven.Server.Web.Studio
 
                 long totalResults;
                 string changeVector;
+                string etag = null;
 
                 if (string.IsNullOrEmpty(collection))
                 {
                     changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                     totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
+                    etag = $"{changeVector}/{totalResults}";
                 }
                 else
                 {
                     changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
                     totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
+
+                    if (changeVector != null)
+                        etag = $"{changeVector}/{totalResults}";
                 }
 
-                if (changeVector != null && GetStringFromHeaders("If-None-Match") == changeVector)
+                if (etag != null && GetStringFromHeaders("If-None-Match") == etag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
-                HttpContext.Response.Headers["ETag"] = "\"" + changeVector + "\"";
+                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
                 if (string.IsNullOrEmpty(collection))
                 {
