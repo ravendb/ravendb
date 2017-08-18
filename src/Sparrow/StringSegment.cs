@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Bits = Sparrow.Binary.Bits;
 
@@ -17,7 +19,7 @@ namespace Sparrow
         {
             if (x.Length != y.Length)
                 return false;
-            var compare = string.Compare(x.String, x.Start, y.String, y.Start, x.Length, StringComparison.OrdinalIgnoreCase);
+            var compare = string.Compare(x.Buffer, x.Offset, y.Buffer, y.Offset, x.Length, StringComparison.OrdinalIgnoreCase);
             return compare == 0;
         }
 
@@ -28,7 +30,7 @@ namespace Sparrow
 
             for (int i = 0; i < str.Length; i++)
             {
-                _buffer[i] = char.ToUpperInvariant(str.String[str.Start + i]);
+                _buffer[i] = char.ToUpperInvariant(str.Buffer[str.Offset + i]);
             }
 
             fixed (char* p = _buffer)
@@ -51,10 +53,10 @@ namespace Sparrow
             if (xSize != ySize)
                 goto ReturnFalse;  // PERF: Because this method is going to be inlined, in case of false we will want to jump at the end.     
 
-            int xStart = x.Start;
-            int yStart = y.Start;
-            string xStr = x.String;
-            string yStr = y.String;
+            int xStart = x.Offset;
+            int yStart = y.Offset;
+            string xStr = x.Buffer;
+            string yStr = y.Buffer;
             for (int i = 0; i < xSize; i++)
             {
                 if (xStr[xStart + i] != yStr[yStart + i])
@@ -69,9 +71,9 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int GetHashCode(StringSegment x)
         {            
-            int xStart = x.Start;
+            int xStart = x.Offset;
             int xSize = x.Length;
-            string xStr = x.String;
+            string xStr = x.Buffer;
 
             uint hash = 0;
             for (int i = 0; i < xSize; i++)
@@ -93,120 +95,86 @@ namespace Sparrow
             if (x.Length != y.Length)
                 return false;
 
-            fixed (char* pX = x.String)
-            fixed (char* pY = y.String)
+            fixed (char* pX = x.Buffer)
+            fixed (char* pY = y.Buffer)
             {
-                return Memory.Compare((byte*)pX + x.Start * sizeof(char), (byte*)pY + y.Start * sizeof(char), x.Length * sizeof(char)) == 0;
+                return Memory.Compare((byte*)pX + x.Offset * sizeof(char), (byte*)pY + y.Offset * sizeof(char), x.Length * sizeof(char)) == 0;
             }
 
         }
 
         public unsafe int GetHashCode(StringSegment str)
         {
-            fixed (char* p = str.String)
+            fixed (char* p = str.Buffer)
             {
                 //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
                 if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Start * sizeof(char)), str.Length * sizeof(char));
-                return (int)Hashing.XXHash64.CalculateInline(((byte*)p + str.Start * sizeof(char)), (ulong)str.Length * sizeof(char));
+                    return (int)Hashing.XXHash32.CalculateInline(((byte*)p + str.Offset * sizeof(char)), str.Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline(((byte*)p + str.Offset * sizeof(char)), (ulong)str.Length * sizeof(char));
             }
         }
     }
 
     public struct StringSegment : IEquatable<StringSegment>
     {
-        public readonly string String;
+        public readonly string Buffer;
         public readonly int Length;
-        public readonly int Start;
+        public readonly int Offset;
 
         private string _valueString;
-        public string Value => _valueString ?? (_valueString = String.Substring(Start, Length));
+        public string Value => _valueString ?? (_valueString = Buffer.Substring(Offset, Length));
 
 
         // PERF: Included this version to exploit the knowledge that we are going to get a full string.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public StringSegment(string s)
+        public StringSegment(string buffer)
         {
-            String = s;
-            Start = 0;
-            Length = s.Length;
-            _valueString = s;
+            Offset = 0;
+            Length = buffer.Length;
+            Buffer = buffer;
+            _valueString = buffer;
         }
 
-        // PERF: Included this version to exploit the knowledge that we are going to get a substring starting at 0.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public StringSegment(string source, int length)
+        public StringSegment(string buffer, int offset, int length)
         {
-            String = source;
-            Start = 0;
+            Debug.Assert(buffer != null);
+            Debug.Assert(offset >= 0);
+            Debug.Assert(length >= 0);
+            Debug.Assert(offset + length <= buffer.Length);
+
+            Offset = offset;
             Length = length;
-
-            int stringLength = source.Length;            
-
-            if (length <= stringLength)
-            {
-                // PERF: Inverted the condition to ensure the layout of the code will be continuous
-                _valueString = length == stringLength ? source : null;
-            }
-            else
-            {
-                ThrowIndexOutOfRangeException();
-                _valueString = null; // will never reach, this exist to fool the compiler.
-            }
-        }
-
-        // PERF: Rearranged the parameters to make the other constructors available.
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public StringSegment(string source, int length, int start)
-        {
-            String = source;
-            Start = start;
-            Length = length;
-
-            int stringLength = source.Length;
-            if (start + length <= stringLength)
-            {
-                // PERF: Inverted the condition to ensure the layout of the code will be continuous
-                _valueString = start == 0 && length == stringLength ? source : null;
-            }
-            else
-            {
-                ThrowIndexOutOfRangeException();
-                _valueString = null; // will never reach, this exist to fool the compiler.
-            }
-        }
-
-        private static void ThrowIndexOutOfRangeException()
-        {
-            throw new IndexOutOfRangeException();
+            Buffer = buffer;
+            _valueString = null;
+            if (Offset == 0 && Length == buffer.Length)
+                _valueString = buffer;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public StringSegment SubSegment(int start, int length = -1)
+        public StringSegment Subsegment(int offset, int length = -1)
         {
+            Debug.Assert(offset >= 0 && offset <= Length);
             if (length == -1)
-                length = Length - start;
-            else if (start + length > String.Length)
-                throw new ArgumentOutOfRangeException(nameof(length));
-
-            return new StringSegment(String, length, Start + start);
+                length = Length - offset;
+            Debug.Assert(length >= 0 && offset + length <= Length);
+            return new StringSegment(Buffer, Offset + offset, length);
         }
 
+        // String's indexing will throw a IndexOutOfRange exception if required
         public char this[int index]
         {
             get
             {
-                if (index < 0 || index >= Length)
-                    throw new IndexOutOfRangeException();
-
-                return String[Start + index];
+                Debug.Assert(index >= 0 && index < Length);
+                return Buffer[Offset + index];
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static implicit operator StringSegment(string str)
+        public static implicit operator StringSegment(string buffer)
         {
-            return new StringSegment(str);
+            return new StringSegment(buffer);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -218,29 +186,23 @@ namespace Sparrow
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfAny(char[] charArray, int startIndex)
         {
-            var remainingSegmentLength = Length - startIndex;
-
-            //out of boundary, nothing to check
-            if (Start + startIndex >= String.Length ||
-                remainingSegmentLength <= 0)
-                return -1;
-
+            Debug.Assert(startIndex >= 0 && startIndex < Length);
             //zero based index since we are in a segment
-            var indexOfAny = String.IndexOfAny(charArray, Start + startIndex, remainingSegmentLength);
+            var indexOfAny = Buffer.IndexOfAny(charArray, Offset + startIndex, Length - startIndex);
             if (indexOfAny == -1)
                 return -1;
 
-            return indexOfAny - Start;
+            return indexOfAny - Offset;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfLast(char[] charArray)
         {
-            var indexOfAny = String.LastIndexOfAny(charArray, Length - 1, Length - Start);
+            var indexOfAny = Buffer.LastIndexOfAny(charArray, Offset + Length - 1, Length);
             if (indexOfAny == -1)
                 return -1;
 
-            return indexOfAny - Start;
+            return indexOfAny - Offset;
         }
 
         public override bool Equals(object obj)
@@ -251,12 +213,12 @@ namespace Sparrow
 
         public override unsafe int GetHashCode()
         {
-            fixed (char* p = String)
+            fixed (char* p = Buffer)
             {
                 //PERF: JIT will remove the corresponding line based on the target architecture using dead code removal.                                 
                 if (IntPtr.Size == 4)
-                    return (int)Hashing.XXHash32.CalculateInline((byte*)p + Start * sizeof(char), Length * sizeof(char));
-                return (int)Hashing.XXHash64.CalculateInline((byte*)p + Start * sizeof(char), (ulong)Length * sizeof(char));
+                    return (int)Hashing.XXHash32.CalculateInline((byte*)p + Offset * sizeof(char), Length * sizeof(char));
+                return (int)Hashing.XXHash64.CalculateInline((byte*)p + Offset * sizeof(char), (ulong)Length * sizeof(char));
             }
         }
 
@@ -265,10 +227,10 @@ namespace Sparrow
             if (Length != other.Length)
                 return false;
 
-            fixed (char* pSelf = String)
+            fixed (char* pSelf = Buffer)
             fixed (char* pOther = other)
             {
-                return Memory.Compare((byte*)pSelf + Start * sizeof(char), (byte*)pOther, Length * sizeof(char)) == 0;
+                return Memory.Compare((byte*)pSelf + Offset * sizeof(char), (byte*)pOther, Length * sizeof(char)) == 0;
             }
         }
 
@@ -277,7 +239,7 @@ namespace Sparrow
         {
             if (Length != other.Length)
                 return false;
-            return string.Compare(String, Start, other, 0, Length, stringComparison) == 0;
+            return string.Compare(Buffer, Offset, other, 0, Length, stringComparison) == 0;
         }
 
         public unsafe bool Equals(StringSegment other)
@@ -285,10 +247,10 @@ namespace Sparrow
             if (Length != other.Length)
                 return false;
 
-            fixed (char* pSelf = String)
-            fixed (char* pOther = other.String)
+            fixed (char* pSelf = Buffer)
+            fixed (char* pOther = other.Buffer)
             {
-                return Memory.Compare((byte*)pSelf + Start * sizeof(char), (byte*)pOther + other.Start * sizeof(char), Length * sizeof(char)) == 0;
+                return Memory.Compare((byte*)pSelf + Offset * sizeof(char), (byte*)pOther + other.Offset * sizeof(char), Length * sizeof(char)) == 0;
             }
         }
 
@@ -296,7 +258,7 @@ namespace Sparrow
         {
             if (Length != other.Length)
                 return false;
-            return string.Compare(String, Start, other.String, other.Start, Length, stringComparison) == 0;
+            return string.Compare(Buffer, Offset, other.Buffer, other.Offset, Length, stringComparison) == 0;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -308,13 +270,11 @@ namespace Sparrow
 
         public bool IsNullOrWhiteSpace()
         {
-            if (String == null)
-                return true;
-            if (Length == 0)
+            if (Buffer == null || Length == 0)
                 return true;
             for (int i = 0; i < Length; i++)
             {
-                if (char.IsWhiteSpace(String[i + Start]) == false)
+                if (char.IsWhiteSpace(Buffer[Offset + i]) == false)
                     return false;
             }
             return true;

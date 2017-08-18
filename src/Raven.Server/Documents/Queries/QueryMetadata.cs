@@ -412,10 +412,10 @@ namespace Raven.Server.Documents.Queries
             bool array = false;
             if (indexOf != -1)
             {
-                var key = new StringSegment(name, indexOf);
+                var key = new StringSegment(name, indexOf, name.Length - indexOf);
                 if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
                 {
-                    key = key.SubSegment(0, key.Length - 2);
+                    key = key.Subsegment(0, key.Length - 2);
                     array = true;
                 }
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))

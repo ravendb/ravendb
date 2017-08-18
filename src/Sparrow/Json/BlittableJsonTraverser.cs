@@ -46,7 +46,7 @@ namespace Sparrow.Json
             object reader;
 
             //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            if (docReader.TryGetMember(path.SubSegment(0, indexOfFirstSeparator), out reader) == false)
+            if (docReader.TryGetMember(path.Subsegment(0, indexOfFirstSeparator), out reader) == false)
             {
                 leftPath = path;
                 result = null;
@@ -64,7 +64,7 @@ namespace Sparrow.Json
             switch (path[indexOfFirstSeparator])
             {
                 case PropertySeparator:
-                    var pathSegment = path.SubSegment(indexOfFirstSeparator + 1);
+                    var pathSegment = path.Subsegment(indexOfFirstSeparator + 1);
 
                     var propertyInnerObject = reader as BlittableJsonReaderObject;
                     if (propertyInnerObject != null)
@@ -82,7 +82,7 @@ namespace Sparrow.Json
                     result = reader;
                     return false;
                 case CollectionSeparatorStart:
-                    leftPath = path.SubSegment(indexOfFirstSeparator + CollectionSeparator.Length);
+                    leftPath = path.Subsegment(indexOfFirstSeparator + CollectionSeparator.Length);
 
                     var collectionInnerArray = reader as BlittableJsonReaderArray;
                     if (collectionInnerArray != null)
@@ -137,10 +137,10 @@ namespace Sparrow.Json
                         switch (pathSegment[indexOfFirstSeparatorInSubIndex])
                         {
                             case PropertySeparator:
-                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 1);
+                                subSegment = pathSegment.Subsegment(indexOfFirstSeparatorInSubIndex + 1);
                                 break;
                             case CollectionSeparatorStart:
-                                subSegment = pathSegment.SubSegment(indexOfFirstSeparatorInSubIndex + 3);
+                                subSegment = pathSegment.Subsegment(indexOfFirstSeparatorInSubIndex + 3);
                                 break;
                             default:
                                 throw new NotSupportedException($"Unhandled separator character: {pathSegment[indexOfFirstSeparatorInSubIndex]}");

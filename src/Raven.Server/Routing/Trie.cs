@@ -23,7 +23,7 @@ namespace Raven.Server.Routing
 
         public StringSegment GetCapture()
         {
-            return new StringSegment(Url, CaptureLength, CaptureStart);
+            return new StringSegment(Url, CaptureStart, CaptureLength);
         }
     }
 
