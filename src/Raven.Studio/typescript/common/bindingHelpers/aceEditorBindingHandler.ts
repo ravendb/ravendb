@@ -23,6 +23,7 @@ class aceEditorBindingHandler {
     static isInFullScreeenMode = ko.observable<boolean>(false);
     static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
+    static completitionCache = new Map<AceAjax.Editor, autoCompleteCompleter>();
 
     // used in tests
     static useWebWorkers = true;
@@ -43,8 +44,7 @@ class aceEditorBindingHandler {
             // is complete and attached to the DOM.
             // See http://durandaljs.com/documentation/Interacting-with-the-DOM/
             composition.addBindingHandler("aceEditor");
-
-
+            
             const Editor = ace.require("ace/editor").Editor;
             ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
@@ -53,6 +53,21 @@ class aceEditorBindingHandler {
                     value: "general"
                 }
             });
+
+            const langTools = ace.require("ace/ext/language_tools");
+
+            langTools.setCompleters([{
+                moduleId: "aceEditorBindingHandler",
+                getCompletions: (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => {
+                    if (aceEditorBindingHandler.completitionCache.has(editor)) {
+                        const completer = aceEditorBindingHandler.completitionCache.get(editor);
+                        completer(editor, session, pos, prefix, callback);
+                    } else {
+                        callback([{ error: "notext" }], null);
+                    }
+                },
+               //TODO: identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
+            }]);
 
             /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
             aceEditorBindingHandler.commands.push({
@@ -63,8 +78,7 @@ class aceEditorBindingHandler {
                     aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
                     editor.resize();
 
-
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.leaveFullScreenText);
                         $(".fullScreenModeLabel").hide();
                         $(editor.container).find(".fullScreenModeLabel").show();
@@ -81,7 +95,7 @@ class aceEditorBindingHandler {
                 name: "Exit FullScreen",
                 bindKey: "Esc",
                 exec: function (editor: any) {
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
                         aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
                         aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
@@ -90,29 +104,6 @@ class aceEditorBindingHandler {
                     editor.resize();
                 }
             });
-        }
-    }
-
-    static detached() {
-        aceEditorBindingHandler.customCompleters = [];
-    }
-
-    static currentEditor: any;
-
-    static customCompleters: { editorType: string; completer: autoCompleteCompleter }[] = [];
-
-    static autoCompleteHub(editor: AceAjax.Editor, 
-                           session: AceAjax.IEditSession, 
-                           pos: AceAjax.Position, 
-                           prefix: string, 
-                           callback: (errors: any[], worldlist: autoCompleteWordList[]) => void): void {
-        const curEditorType = editor.getOption("editorType");
-        const completerThreesome = aceEditorBindingHandler.customCompleters.find(x => x.editorType === curEditorType);
-
-        if (!!completerThreesome) {
-            completerThreesome.completer.complete(editor, session, pos, prefix, callback);
-        } else {
-            callback(null, []);
         }
     }
 
@@ -148,7 +139,6 @@ class aceEditorBindingHandler {
         const lang = bindingValues.lang || this.defaults.lang;
         const readOnly = bindingValues.readOnly || this.defaults.readOnly;
         const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
-        let langTools: any = null;
         const completer = bindingValues.completer;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
@@ -161,10 +151,6 @@ class aceEditorBindingHandler {
 
         if (!ko.isObservable(code)) {
             throw new Error("code should be an observable");
-        }
-
-        if (!!completer) {
-            langTools = ace.require("ace/ext/language_tools");
         }
 
         const aceEditor: AceAjax.Editor = ace.edit(element);
@@ -209,21 +195,9 @@ class aceEditorBindingHandler {
                 exec: () => false // Returning false causes the event to bubble up.
             });
         }
-
-        // setup the autocomplete mechanism, bind recieved function with recieved type, will only work if both were recieved
-        if (!!completer) {
-            const typeName = "query";
-            aceEditor.setOption("editorType", typeName);
-            if (!!langTools) {
-                if (!aceEditorBindingHandler.customCompleters.find(x => x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({editorType: typeName, completer: completer});
-                }
-                langTools.setCompleters([{
-                    moduleId: "aceEditorBindingHandler",
-                    getCompletions: aceEditorBindingHandler.autoCompleteHub,
-                    identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
-                }]);
-            }
+        
+        if (completer) {
+            aceEditorBindingHandler.completitionCache.set(aceEditor, completer);
         }
 
         const aceFocusElement = ".ace_text-input";
@@ -247,8 +221,6 @@ class aceEditorBindingHandler {
             }
         });
 
-        $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
-
         // Initialize ace resizeble text box
         aceEditor.setOption('vScrollBarAlwaysVisible', true);
         aceEditor.setOption('hScrollBarAlwaysVisible', true);
@@ -271,6 +243,8 @@ class aceEditorBindingHandler {
             //TODO: $(element).resizable("destroy");
             aceEditor.getSession().setUseWorker(false);
             aceEditor.destroy();
+            
+            aceEditorBindingHandler.completitionCache.delete(aceEditor);
         });
 
         // Keep track of the editor for this element.
