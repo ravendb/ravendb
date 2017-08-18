@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
-        public List<string> ClusterNodes;
+        public string[] _clusterNodes;
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
@@ -19,10 +20,14 @@ namespace Raven.Server.ServerWide.Commands
             ErrorOnDatabaseDoesNotExists = true;
         }
 
-        public DeleteDatabaseCommand(string databaseName, List<string> clusterNodes) : base(databaseName)
+        public DeleteDatabaseCommand(string databaseName) : base(databaseName)
         {
-            ClusterNodes = clusterNodes;
             ErrorOnDatabaseDoesNotExists = true;
+        }
+
+        public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
+        {
+            _clusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -46,7 +51,7 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         record.Topology.ReplicationFactor--;
                     }
-                    if(ClusterNodes.Contains(node))
+                    if(_clusterNodes.Contains(node))
                         record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
@@ -58,7 +63,7 @@ namespace Raven.Server.ServerWide.Commands
 
                 foreach (var node in allNodes)
                 {
-                    if (ClusterNodes.Contains(node))
+                    if (_clusterNodes.Contains(node))
                         record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
 
@@ -79,10 +84,6 @@ namespace Raven.Server.ServerWide.Commands
             if (FromNodes != null)
             {
               json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
-            }
-            if (ClusterNodes != null)
-            {
-                json[nameof(ClusterNodes)] = new DynamicJsonArray(ClusterNodes);
             }
         }
     }

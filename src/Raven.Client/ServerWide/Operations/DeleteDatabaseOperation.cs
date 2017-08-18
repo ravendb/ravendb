@@ -56,7 +56,7 @@ namespace Raven.Client.ServerWide.Operations
                 }
                 if (_timeInSec > 0)
                 {
-                    url += $"&time={_timeInSec}";
+                    url += $"&confirmationTimeoutInSec={_timeInSec}";
                 }
                 var request = new HttpRequestMessage
                 {

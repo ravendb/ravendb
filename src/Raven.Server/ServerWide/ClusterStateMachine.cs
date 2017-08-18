@@ -80,8 +80,6 @@ namespace Raven.Server.ServerWide
 
         public event EventHandler<(long Index, string Type)> ValueChanged;
 
-        public ConcurrentDictionary<string,TaskCompletionSource<object>> DeletionCompletedTask = new ConcurrentDictionary<string, TaskCompletionSource<object>>();
-
         protected override void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet("Type", out string type) == false)
@@ -119,7 +117,7 @@ namespace Raven.Server.ServerWide
                             return;
                         }
 
-                        var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader);
+                        var updatedDatabaseRecord = UpdateDatabase(context, type, cmd, index, leader,serverStore);
 
                         cmd.TryGet(nameof(IncrementClusterIdentityCommand.Prefix), out string prefix);
                         Debug.Assert(prefix != null, "since we verified that the property exist, it must not be null");
@@ -136,7 +134,7 @@ namespace Raven.Server.ServerWide
                                 new InvalidDataException(errorMessage));
                             return;
                         }
-                        UpdateDatabase(context, type, cmd, index, leader);
+                        UpdateDatabase(context, type, cmd, index, leader,serverStore);
                         break;
                     case nameof(PutIndexCommand):
                     case nameof(PutAutoIndexCommand):
@@ -166,7 +164,7 @@ namespace Raven.Server.ServerWide
                     case nameof(PutSqlConnectionString):
                     case nameof(RemoveRavenConnectionString):
                     case nameof(RemoveSqlConnectionString):
-                        UpdateDatabase(context, type, cmd, index, leader);
+                        UpdateDatabase(context, type, cmd, index, leader, serverStore);
                         break;
                     case nameof(UpdatePeriodicBackupStatusCommand):
                     case nameof(AcknowledgeSubscriptionBatchCommand):
@@ -289,9 +287,9 @@ namespace Raven.Server.ServerWide
 
         private readonly RachisLogIndexNotifications _rachisLogIndexNotifications = new RachisLogIndexNotifications(CancellationToken.None);
 
-        public async Task WaitForIndexNotification(long index)
+        public async Task WaitForIndexNotification(long index, TimeSpan? timeout = null)
         {
-            await _rachisLogIndexNotifications.WaitForIndexNotification(index, _parent.OperationTimeout);
+            await _rachisLogIndexNotifications.WaitForIndexNotification(index, timeout ?? _parent.OperationTimeout);
         }
 
         private unsafe void RemoveNodeFromDatabase(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader)
@@ -343,49 +341,6 @@ namespace Raven.Server.ServerWide
             CleanupDatabaseRelatedValues(context, items, databaseName);
 
             NotifyDatabaseChanged(context, databaseName, index, nameof(RemoveNodeFromDatabaseCommand));
-
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
-            {
-                if (transaction is LowLevelTransaction llt && llt.Committed)
-                {
-                    if (DeletionCompletedTask.TryRemove(databaseName, out var task))
-                    {
-                        task.SetResult(null);
-                    }
-                }
-            };
-        }
-
-        public async Task WaitForDatabaseRecordDeletion(string database, int timeoutInSec)
-        {
-            var tcs = DeletionCompletedTask.GetOrAdd(database, db =>
-            {
-                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    if (ReadDatabase(ctx, db) == null)
-                    {
-                        DatabaseDoesNotExistException.ThrowWithMessage(db, "Can't wait for deletion on a database that doesn't exists.");
-                    }
-                }
-                return new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-            });
-            var timeout = TimeoutManager.WaitFor(TimeSpan.FromSeconds(timeoutInSec));
-            var task = await Task.WhenAny(tcs.Task, timeout);
-            if (task == timeout)
-            {
-                using (ContextPoolForReadOnlyOperations.AllocateOperationContext(out TransactionOperationContext ctx))
-                using (ctx.OpenReadTransaction())
-                {
-                    var record = ReadDatabase(ctx, database);
-                    if (record == null)
-                    {
-                        DatabaseDoesNotExistException.ThrowWithMessage(database, "Can't wait for deletion on a database that doesn't exists.");
-                    }
-                    throw new TimeoutException($"Waiting for the database '{database}' to be deleted has timeouted after {timeoutInSec} seconds." +
-                                               $" Deletion still in progress for nodes : {string.Join(", ", record.DeletionInProgress?.Keys)}");
-                }
-            }
         }
 
         private static void CleanupDatabaseRelatedValues(TransactionOperationContext context, Table items, string dbNameLowered)
@@ -581,7 +536,7 @@ namespace Raven.Server.ServerWide
 
         private static readonly StringSegment DatabaseName = new StringSegment("DatabaseName");
 
-        private DatabaseRecord UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader)
+        private DatabaseRecord UpdateDatabase(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore)
         {
             if (cmd.TryGet(DatabaseName, out string databaseName) == false)
                 throw new ArgumentException("Update database command must contain a DatabaseName property");
@@ -617,7 +572,7 @@ namespace Raven.Server.ServerWide
                                     $"Concurrency violation at executing {type} command, the database {databaseRecord.DatabaseName} has etag {etag} but was expecting {updateCommand.RaftCommandIndex}"));
                             return null;
                         }
-
+                        updateCommand.Initialize(serverStore, context);
                         var relatedRecordIdToDelete = updateCommand.UpdateDatabaseRecord(databaseRecord, index);
                         if (relatedRecordIdToDelete != null)
                         {

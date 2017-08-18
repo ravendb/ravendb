@@ -6,6 +6,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -271,7 +272,7 @@ namespace Raven.Server.Web.System
                 while (true)
                 {
                     var task = await Task.WhenAny(waitingTasks);
-                    if(task == timeoutTask)
+                    if (task == timeoutTask)
                         throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
                     if (task.IsCompletedSuccessfully)
                     {
@@ -484,7 +485,7 @@ namespace Raven.Server.Web.System
                         break;
                     case PeriodicBackupTestConnectionType.FTP:
                         var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
-                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName, 
+                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
                             ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
                         {
                             await ftpClient.TestConnection();
@@ -697,7 +698,7 @@ namespace Raven.Server.Web.System
             var names = GetStringValuesQueryString("name");
             var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
-            var time = GetIntValueQueryString("time", required: false) ?? 30;
+            var confirmationTimeoutInSec = GetIntValueQueryString("confirmationTimeoutInSec", required: false) ?? 15;
 
             var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -711,7 +712,7 @@ namespace Raven.Server.Web.System
                             var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
                             if (record == null)
                                 continue;
-                            
+
                             foreach (var node in fromNodes)
                             {
                                 if (record.Topology.RelevantFor(node) == false)
@@ -735,23 +736,57 @@ namespace Raven.Server.Web.System
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
 
-                if (time > 0)
+                if (confirmationTimeoutInSec > 0)
                 {
-                    foreach (var database in waitOnRecordDeletion)
+                    var sp = Stopwatch.StartNew();
+                    var timeout = TimeSpan.FromSeconds(confirmationTimeoutInSec);
+                    int databaseIndex = 0;
+                    while (waitOnRecordDeletion.Count > index)
                     {
-                        await ServerStore.Cluster.WaitForDatabaseRecordDeletion(database, time);
+                        var databaseName = waitOnRecordDeletion[databaseIndex];
+                        using (context.OpenReadTransaction())
+                        {
+                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
+                            if (record == null)
+                            {
+                                waitOnRecordDeletion.RemoveAt(0);
+                                continue;
+                            }
+                        }
+                        // we'll now wait for the _next_ operation in the cluster
+                        // since deletion involve multiple operations in the cluster
+                        // we'll now wait for the next command to be applied and check
+                        // whatever that removed the db in question
+                        index++;
+                        var remaining = timeout - sp.Elapsed;
+                        try
+                        {
+                            if (remaining < TimeSpan.Zero)
+                            {
+                                databaseIndex++;
+                                continue; // we are done waiting, but still want to locally check the rest of the dbs
+                            }
+
+                            await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                        }
+                        catch (TimeoutException)
+                        {
+                            databaseIndex++;
+                        }
+
                     }
-                }
 
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                     {
-                        ["RaftCommandIndex"] = index
-                    });
-                    writer.Flush();
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            ["RaftCommandIndex"] = index,
+                            ["PendingDeletes"] = new DynamicJsonArray(waitOnRecordDeletion)
+                        });
+                        writer.Flush();
+                    }
                 }
             }
         }
@@ -1001,10 +1036,10 @@ namespace Raven.Server.Web.System
         public async Task RemoveConnectionString()
         {
             var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            
+
             if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
                 return;
-            
+
             if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
                 throw new BadRequestException(errorMessage);
 
@@ -1094,7 +1129,7 @@ namespace Raven.Server.Web.System
 
                 if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
-                
+
                 ConnectionString result;
                 switch (connectionStringType)
                 {
@@ -1176,7 +1211,7 @@ namespace Raven.Server.Web.System
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
             var operationId = GetLongQueryString("operationId");
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
@@ -1196,7 +1231,7 @@ namespace Raven.Server.Web.System
                 Documents.Operations.Operations.OperationType.DatabaseCompact,
                 taskFactory: onProgress => Task.Run(async () =>
                 {
-                    using(token)
+                    using (token)
                         return await compactDatabaseTask.Execute(onProgress);
                 }, token.Token),
                 id: operationId, token: token);
