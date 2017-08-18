@@ -66,7 +66,7 @@ class aceEditorBindingHandler {
                         callback([{ error: "notext" }], null);
                     }
                 },
-               //TODO: identifierRegexps: [/[a-zA-Z_0-9.'"\\\/\$\-\u00A2-\uFFFF]/]
+                identifierRegexps: [/[a-zA-Z_0-9'"\$\-\u00A2-\uFFFF]/]
             }]);
 
             /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
