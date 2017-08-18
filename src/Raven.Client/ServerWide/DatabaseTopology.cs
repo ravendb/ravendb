@@ -153,6 +153,8 @@ namespace Raven.Client.ServerWide
             return (addDestinations, removeDestinations);
         }
 
+        public int Count => Members.Count + Promotables.Count + Rehabs.Count;
+
         public IEnumerable<string> AllNodes
         {
             get

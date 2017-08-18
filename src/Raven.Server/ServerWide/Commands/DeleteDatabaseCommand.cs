@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
@@ -8,6 +9,7 @@ namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
+        public List<string> ClusterNodes;
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
@@ -17,14 +19,15 @@ namespace Raven.Server.ServerWide.Commands
             ErrorOnDatabaseDoesNotExists = true;
         }
 
-        public DeleteDatabaseCommand(string databaseName) : base(databaseName)
+        public DeleteDatabaseCommand(string databaseName, List<string> clusterNodes) : base(databaseName)
         {
+            ClusterNodes = clusterNodes;
             ErrorOnDatabaseDoesNotExists = true;
         }
 
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var deletionInProgressStatus = HardDelete? DeletionInProgressStatus.HardDelete
+            var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
             if (record.DeletionInProgress == null)
             {
@@ -43,7 +46,8 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         record.Topology.ReplicationFactor--;
                     }
-                    record.DeletionInProgress[node] = deletionInProgressStatus;
+                    if(ClusterNodes.Contains(node))
+                        record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
             else
@@ -51,9 +55,12 @@ namespace Raven.Server.ServerWide.Commands
                 var allNodes = record.Topology.Members.Select(m => m)
                     .Concat(record.Topology.Promotables.Select(p => p))
                     .Concat(record.Topology.Rehabs.Select(r => r));
-                  
+
                 foreach (var node in allNodes)
-                    record.DeletionInProgress[node] = deletionInProgressStatus;
+                {
+                    if (ClusterNodes.Contains(node))
+                        record.DeletionInProgress[node] = deletionInProgressStatus;
+                }
 
                 record.Topology.ReplicationFactor = 0;
                 record.Topology = new DatabaseTopology
@@ -72,6 +79,10 @@ namespace Raven.Server.ServerWide.Commands
             if (FromNodes != null)
             {
               json[nameof(FromNodes)] = new DynamicJsonArray(FromNodes);
+            }
+            if (ClusterNodes != null)
+            {
+                json[nameof(ClusterNodes)] = new DynamicJsonArray(ClusterNodes);
             }
         }
     }

@@ -697,6 +697,9 @@ namespace Raven.Server.Web.System
             var names = GetStringValuesQueryString("name");
             var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
+            var time = GetIntValueQueryString("time", required: false) ?? 30;
+
+            var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 if (string.IsNullOrEmpty(fromNodes) == false)
@@ -705,13 +708,21 @@ namespace Raven.Server.Web.System
                     {
                         foreach (var databaseName in names)
                         {
+                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
+                            if (record == null)
+                                continue;
+                            
                             foreach (var node in fromNodes)
                             {
-                                if (ServerStore.Cluster.ReadDatabase(context, databaseName)?.Topology.RelevantFor(node) == false)
+                                if (record.Topology.RelevantFor(node) == false)
                                 {
                                     throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNodes} so it can't be deleted from it");
                                 }
+                                record.Topology.RemoveFromTopology(node);
                             }
+
+                            if (record.Topology.Count == 0)
+                                waitOnRecordDeletion.Add(databaseName);
                         }
                     }
                 }
@@ -723,6 +734,15 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                if (time > 0)
+                {
+                    foreach (var database in waitOnRecordDeletion)
+                    {
+                        await ServerStore.Cluster.WaitForDatabaseRecordDeletion(database, time);
+                    }
+                }
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))

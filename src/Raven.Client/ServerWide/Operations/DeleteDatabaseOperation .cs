@@ -12,17 +12,19 @@ namespace Raven.Client.ServerWide.Operations
         private readonly string _name;
         private readonly bool _hardDelete;
         private readonly string _fromNode;
+        private readonly int _timeInSec;
 
-        public DeleteDatabaseOperation(string name, bool hardDelete,string fromNode = null)
+        public DeleteDatabaseOperation(string name, bool hardDelete,string fromNode = null, int timeInSec = 0)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _hardDelete = hardDelete;
             _fromNode = fromNode;
+            _timeInSec = timeInSec;
         }
 
         public RavenCommand<DeleteDatabaseResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new DeleteDatabaseCommand(_name, _hardDelete, _fromNode);
+            return new DeleteDatabaseCommand(_name, _hardDelete, _fromNode, _timeInSec);
         }
 
         private class DeleteDatabaseCommand : RavenCommand<DeleteDatabaseResult>
@@ -30,11 +32,14 @@ namespace Raven.Client.ServerWide.Operations
             private readonly string _name;
             private readonly bool _hardDelete;
             private readonly string _fromNode;
-            public DeleteDatabaseCommand(string name, bool hardDelete,string fromNode)
+            private readonly int _timeInSec;
+
+            public DeleteDatabaseCommand(string name, bool hardDelete,string fromNode, int timeInSec)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _hardDelete = hardDelete;
                 _fromNode = fromNode;
+                _timeInSec = timeInSec;
                 ResponseType = RavenCommandResponseType.Object;
             }
 
@@ -48,6 +53,10 @@ namespace Raven.Client.ServerWide.Operations
                 if (string.IsNullOrEmpty(_fromNode) == false)
                 {
                     url += $"&from-node={_fromNode}";
+                }
+                if (_timeInSec > 0)
+                {
+                    url += $"&time={_timeInSec}";
                 }
                 var request = new HttpRequestMessage
                 {
