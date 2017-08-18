@@ -14,11 +14,13 @@ import documentObject = require("models/database/documents/document");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class editSubscriptionTask extends viewModelBase {
 
+    completer = defaultAceCompleter.completer();
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 

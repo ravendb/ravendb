@@ -12,12 +12,14 @@ import getNextOperationId = require("commands/database/studio/getNextOperationId
 import EVENTS = require("common/constants/events");
 import generalUtils = require("common/generalUtils");
 import popoverUtils = require("common/popoverUtils");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 class importDatabase extends viewModelBase {
 
     private static readonly filePickerTag = "#importDatabaseFilePicker";
 
     model = new importDatabaseModel();
+    completer = defaultAceCompleter.completer();
 
     static isImporting = ko.observable(false);
     isImporting = importDatabase.isImporting;

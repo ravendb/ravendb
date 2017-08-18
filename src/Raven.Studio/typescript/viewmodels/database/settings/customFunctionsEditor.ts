@@ -6,9 +6,11 @@ import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 class customFunctionsEditor extends viewModelBase {
 
+    completer = defaultAceCompleter.completer();
     documentText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
