@@ -60,7 +60,7 @@
                     <div class="panel padding">
                         <label>Transform Script:&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
-                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript' }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
+                             data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
                         </pre>
                         <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: script">
                             <div class="help-block" data-bind="validationMessage: script"></div>

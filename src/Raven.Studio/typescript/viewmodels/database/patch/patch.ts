@@ -37,6 +37,8 @@ import customFunctions = require("models/database/documents/customFunctions");
 import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
+import defaultAceCompleter = require("common/defaultAceCompleter");
+import queryCompleter = require("common/queryCompleter");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -282,6 +284,9 @@ class patch extends viewModelBase {
         preview: ko.observable<boolean>(false)
     };
 
+    jsCompleter = defaultAceCompleter.completer();
+    queryCompleter: queryCompleter;
+    
     gridController = ko.observable<virtualGridController<document>>();
     private documentsProvider: documentBasedColumnsProvider;
     private columnPreview = new columnPreviewPlugin<document>();
@@ -290,6 +295,7 @@ class patch extends viewModelBase {
     private fetcher = ko.observable<fetcherType>();
 
     private customFunctionsContext: object;
+    private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
@@ -316,6 +322,8 @@ class patch extends viewModelBase {
     constructor() {
         super();
         aceEditorBindingHandler.install();
+
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
 
         this.initValidation();
 
@@ -427,7 +435,7 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchCustomFunctions(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.fetchCustomFunctions(), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -693,6 +701,14 @@ class patch extends viewModelBase {
         }
     }
 
+    private fetchAllIndexes(db: database): JQueryPromise<any> {
+        return new getDatabaseStatsCommand(db)
+            .execute()
+            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
+                this.indexes(results.Indexes);
+            });
+    }
+    
     private fetchCustomFunctions(): JQueryPromise<customFunctions> {
         return new getCustomFunctionsCommand(this.activeDatabase())
             .execute()

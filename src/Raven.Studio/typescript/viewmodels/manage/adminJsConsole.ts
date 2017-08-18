@@ -4,6 +4,7 @@ import adminJsScriptCommand = require("commands/maintenance/adminJsScriptCommand
 import eventsCollector = require("common/eventsCollector");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import databasesManager = require("common/shell/databasesManager");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 type jsConsolePatchOption = "Server" | "Database";
 type consoleJsSampleDto = {
@@ -52,6 +53,8 @@ class adminJsConsole extends viewModelBase {
     model = ko.observable<adminJsModel>();
     executionResult = ko.observable<string>();
     previewItem = ko.observable<consoleJsSampleDto>();
+    
+    completer = defaultAceCompleter.completer();
 
     databaseNames: KnockoutComputed<Array<string>>;
     previewCode: KnockoutComputed<string>;
