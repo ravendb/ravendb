@@ -730,7 +730,7 @@ namespace Raven.Server.Documents
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
 
-                Debug.Assert(index >= RachisLogIndexNotifications.LastModifiedIndex, $"Should never happen");
+                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, $"Should never happen");
 
                 try
                 {
