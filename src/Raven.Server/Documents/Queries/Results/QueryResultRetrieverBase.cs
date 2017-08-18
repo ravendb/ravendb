@@ -256,6 +256,11 @@ namespace Raven.Server.Documents.Queries.Results
 
         bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
         {
+            if (fieldToFetch.QueryField == null)
+            {
+                return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
+            }
+
             if (fieldToFetch.QueryField.ValueTokenType != null)
             {
                 var val = fieldToFetch.QueryField.Value;
@@ -355,7 +360,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
         {
-            Debug.Assert(fieldToFetch.QueryField != null);
+            
 
             if (TryGetValue(fieldToFetch, document, out var fieldVal))
             {
