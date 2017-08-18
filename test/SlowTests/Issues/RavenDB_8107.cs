@@ -38,7 +38,7 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void Patching_by_dynamic_collection_query_with_filtering_should_throw()
+        public void Patch_and_delete_by_dynamic_collection_query_with_filtering_should_throw()
         {
             using (var store = GetDocumentStore())
             {
@@ -46,7 +46,36 @@ namespace SlowTests.Issues
                     new IndexQuery { Query = "FROM Orders WHERE Company = 'companies/1'" },
                     new PatchRequest { Script = @"this.Company = 'HR';" })));
 
-                Assert.Contains("Patching documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM Orders'. If you need to perform filtering please issue the query to the static index.", ex.Message);
+                Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM Orders'. If you need to perform filtering please issue the query to the static index.", ex.Message);
+
+                ex = Assert.Throws<BadRequestException>(() => store.Operations.Send(new DeleteByIndexOperation(
+                    new IndexQuery { Query = "FROM Orders WHERE Company = 'companies/1'" })));
+
+                Assert.Contains("Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM Orders'. If you need to perform filtering please issue the query to the static index.", ex.Message);
+            }
+        }
+
+        [Fact]
+        public void Can_delete_by_dynamic_collection_query()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order(), "orders/1");
+
+                    session.SaveChanges();
+                }
+
+                var operation = store.Operations.Send(new DeleteByIndexOperation(
+                    new IndexQuery { Query = "FROM Orders" }));
+
+                operation.WaitForCompletion(TimeSpan.FromSeconds(15));
+
+                using (var session = store.OpenSession())
+                {
+                    Assert.Null(session.Load<Order>("orders/1"));
+                }
             }
         }
     }
