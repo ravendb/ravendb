@@ -256,20 +256,6 @@ namespace Raven.Server.Documents.Queries.Results
 
         bool TryGetValue(FieldsToFetch.FieldToFetch fieldToFetch, Document document, out object value)
         {
-            if (fieldToFetch.QueryField.Format != null)
-            {
-                var args = new object[fieldToFetch.FormatArguments.Length];
-                for (int i = 0; i < fieldToFetch.FormatArguments.Length; i++)
-                {
-                    TryGetValue(fieldToFetch.FormatArguments[i], document, out args[i]);
-                }
-                value =
-                    string.Format(
-                        CultureInfo.InvariantCulture,
-                        fieldToFetch.QueryField.Format,
-                        args);
-                return true;
-            }
             if (fieldToFetch.QueryField.ValueTokenType != null)
             {
                 var val = fieldToFetch.QueryField.Value;

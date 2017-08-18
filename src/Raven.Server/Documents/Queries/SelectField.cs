@@ -16,10 +16,6 @@ namespace Raven.Server.Documents.Queries
 
         public string SourceAlias;
 
-        public string Format;
-
-        public SelectField[] FormatArguments;
-
         public AggregationOperation AggregationOperation;
 
         public bool IsGroupByKey;
@@ -37,16 +33,6 @@ namespace Raven.Server.Documents.Queries
             return new SelectField
             {
                 Name = name
-            };
-        }
-
-        public static SelectField CreateFormat(string alias, string format, SelectField[] args)
-        {
-            return new SelectField
-            {
-                Alias = alias,
-                Format = format,
-                FormatArguments = args
             };
         }
 

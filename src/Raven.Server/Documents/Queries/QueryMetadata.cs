@@ -358,41 +358,6 @@ namespace Raven.Server.Documents.Queries
                     return GetSelectValue(alias, expression.Field);
                 case OperatorType.Method:
                     var methodName = QueryExpression.Extract(QueryText, expression.Field);
-                    if (Enum.TryParse(methodName, ignoreCase: true,  result: out SelectMethods selectMethod))
-                    {
-                        switch (selectMethod)
-                        {
-                            case SelectMethods.Format:
-                                if(expression.Arguments.Count < 2)
-                                    ThrowIncorrectNumberOfArgumentsOfFormatMethod(expression.Arguments.Count, QueryText, parameters);
-
-                                var format = expression.Arguments[0] as ValueToken;
-                                if (format == null)
-                                    ThrowInvalidFormatMethodFormatString(expression);
-
-                                var formatStr = QueryExpression.Extract(QueryText, format, stripQuotes: true);
-
-                                var args = new SelectField[expression.Arguments.Count - 1];
-                                for (int i = 1; i < expression.Arguments.Count; i++)
-                                {
-                                    if (expression.Arguments[i] is QueryExpression argExpr)
-                                        args[i - 1] = GetSelectField(parameters, argExpr, null);
-                                    else if (expression.Arguments[i] is ValueToken vt)
-                                        args[i - 1] = GetSelectValue(null, vt);
-                                    else if (expression.Arguments[i] is FieldToken ft)
-                                        args[i - 1] = GetSelectValue(null, ft);
-                                    else
-                                        ThrowInvalidFormatMethodArgument();
-                                }
-
-                                return SelectField.CreateFormat(alias ?? "format", formatStr, args);
-                            default:
-                                ThrowUnknownMethodInSelect(methodName, QueryText, parameters);
-                                return null; // never hit
-
-                        }
-                    }
-
                     if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                     {
                         if (IsGroupBy == false)

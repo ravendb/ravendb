@@ -68,24 +68,7 @@ namespace Raven.Server.Documents.Queries
                 return new FieldToFetch(string.Empty, selectField, selectField.Alias,
                     canExtractFromIndex: false, isDocumentId: false);
             }
-            if (selectField.Format != null)
-            {
-                var fieldToFetch = new FieldToFetch(string.Empty, selectField, selectField.Alias,
-                    canExtractFromIndex: false, isDocumentId: false);
-                fieldToFetch.FormatArguments = new FieldToFetch[selectField.FormatArguments.Length];
-                for (int j = 0; j < selectField.FormatArguments.Length; j++)
-                {
-                    bool ignored = false;
-                    fieldToFetch.FormatArguments[j] = GetFieldToFetch(indexDefinition,
-                        selectField.FormatArguments[j],
-                        null,
-                        out _,
-                        ref ignored,
-                        ref ignored
-                    );
-                }
-                return fieldToFetch;
-            }
+            
             if (string.IsNullOrWhiteSpace(selectFieldName))
             {
                 if (selectField.IsGroupByKey == false)

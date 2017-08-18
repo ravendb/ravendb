@@ -12,9 +12,4 @@
         Load,
         Include
     }
-
-    public enum SelectMethods
-    {
-        Format
-    }
 }
