@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using Sparrow;
+using Sparrow.Json;
 
-namespace Sparrow.Json
+namespace Raven.Server.Json
 {
     public class BlittableJsonTraverser
     {
@@ -46,7 +48,8 @@ namespace Sparrow.Json
             object reader;
 
             //if not found -> indexOfFirstSeparator == -1 -> take whole includePath as segment
-            if (docReader.TryGetMember(path.Subsegment(0, indexOfFirstSeparator), out reader) == false)
+            var propertySegment = path.Subsegment(0, indexOfFirstSeparator);
+            if (docReader.TryGetMember(propertySegment, out reader) == false)
             {
                 leftPath = path;
                 result = null;
@@ -55,7 +58,7 @@ namespace Sparrow.Json
 
             if (indexOfFirstSeparator == -1)
             {
-                leftPath = path;
+                leftPath = string.Empty;// we read it all
                 result = reader;
                 return true;
             }
@@ -82,19 +85,69 @@ namespace Sparrow.Json
                     result = reader;
                     return false;
                 case CollectionSeparatorStart:
+                    if (path.Length < indexOfFirstSeparator + CollectionSeparator.Length ||
+                        path[indexOfFirstSeparator + 1] != ']' ||
+                        path[indexOfFirstSeparator + 2] != '.')
+                    {
+                        result = null;
+                        leftPath = path;
+                        return false;
+                    }
                     leftPath = path.Subsegment(indexOfFirstSeparator + CollectionSeparator.Length);
 
-                    var collectionInnerArray = reader as BlittableJsonReaderArray;
-                    if (collectionInnerArray != null)
+                    if (reader is BlittableJsonReaderArray collectionInnerArray)
                     {
                         result = ReadArray(collectionInnerArray, leftPath);
+                        leftPath = string.Empty; // we consume and handle internally the rest of it
                         return true;
+                    }
+
+                    if (reader is BlittableJsonReaderObject nested)
+                    {
+                        return ReadNestedObjects(nested, leftPath, out result, out leftPath);
+
                     }
                     result = reader;
                     return false;
                 default:
                     throw new NotSupportedException($"Unhandled separator character: {path[indexOfFirstSeparator]}");
             }
+        }
+
+        private bool ReadNestedObjects(BlittableJsonReaderObject nested, StringSegment path, out object result, out StringSegment leftPath)
+        {
+            var propCount = nested.Count;
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            List<object> results = null;
+            leftPath = path; // note that we assume identical sturcutre of all values in this document
+            void AddItemToResults(object i)
+            {
+                if (results == null)
+                    results = new List<object>();
+                results.Add(i);
+            }
+            for (int i = 0; i < propCount; i++)
+            {
+                nested.GetPropertyByIndex(i, ref prop);
+                if (prop.Value is BlittableJsonReaderObject nestedVal)
+                {
+                    if (TryRead(nestedVal, path, out var item, out leftPath))
+                    {
+                        AddItemToResults(item);
+                    }
+                    else
+                    {
+                        item = item ?? nested;
+                        if (BlittableJsonTraverserHelper.TryReadComputedProperties(this, leftPath, ref item))
+                        {
+                            leftPath = string.Empty;// consumed entirely
+                            AddItemToResults(item);
+                        }
+                    }
+                }
+            }
+            result = results ?? (object)nested;
+            return results != null;
         }
 
         private IEnumerable<object> ReadArray(BlittableJsonReaderArray array, StringSegment pathSegment)
@@ -107,12 +160,11 @@ namespace Sparrow.Json
                 if (arrayObject != null)
                 {
                     object result;
-                    StringSegment leftPath;
-                    if (TryRead(arrayObject, pathSegment, out result, out leftPath))
+                    if (BlittableJsonTraverserHelper.TryRead(this, arrayObject, pathSegment, out result))
                     {
                         var enumerable = result as IEnumerable;
 
-                        if (enumerable != null)
+                        if (enumerable != null && result is string == false)
                         {
                             foreach (var nestedItem in enumerable)
                             {

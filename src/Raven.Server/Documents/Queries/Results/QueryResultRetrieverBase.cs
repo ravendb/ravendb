@@ -424,7 +424,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
             else if (field.IsCompositeField == false)
             {
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document.Data, field.Name, out value) == false)
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, field.Name, out value) == false)
                     return false;
             }
             else
@@ -433,7 +433,7 @@ namespace Raven.Server.Documents.Queries.Results
 
                 foreach (var componentField in field.Components)
                 {
-                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document.Data, componentField, out var componentValue))
+                    if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, componentField, out var componentValue))
                         component[componentField] = componentValue;
                 }
 
