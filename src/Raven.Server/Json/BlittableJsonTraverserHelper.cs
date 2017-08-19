@@ -8,9 +8,9 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTraverserHelper
     {
-        public static bool TryRead(BlittableJsonTraverser blittableJsonTraverser, Document document, StringSegment path, out object value)
+        public static bool TryRead(BlittableJsonTraverser blittableJsonTraverser, BlittableJsonReaderObject document, StringSegment path, out object value)
         {
-            if (blittableJsonTraverser.TryRead(document.Data, path, out value, out StringSegment leftPath) == false)
+            if (blittableJsonTraverser.TryRead(document, path, out value, out StringSegment leftPath) == false)
             {
                 value = TypeConverter.ConvertForIndexing(value);
 
@@ -53,10 +53,9 @@ namespace Raven.Server.Json
                         return true;
                     }
 
-                    var obj = value as BlittableJsonReaderObject;
-                    if (obj != null)
+                    if (value is BlittableJsonReaderObject o)
                     {
-                        value = obj.Count;
+                        value = o.Count;
                         return true;
                     }
 
@@ -64,13 +63,11 @@ namespace Raven.Server.Json
                     return false;
                 }
 
-                if (value is BlittableJsonReaderObject) // dictionary key e.g. .Where(x => x.Events.Any(y => y.Key.In(dates)))
+                if (value is BlittableJsonReaderObject obj) // dictionary key e.g. .Where(x => x.Events.Any(y => y.Key.In(dates)))
                 {
                     var isKey = leftPath == "Key";
                     if (isKey || leftPath == "Value")
                     {
-                        var obj = (BlittableJsonReaderObject)value;
-
                         var index = 0;
                         var property = new BlittableJsonReaderObject.PropertyDetails();
                         var values = new object[obj.Count];
@@ -85,6 +82,8 @@ namespace Raven.Server.Json
                         value = values;
                         return true;
                     }
+                    if (TryRead(blittableJsonTraverser, obj, leftPath, out value))
+                        return true;
                 }
 
                 if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
