@@ -458,6 +458,18 @@ namespace Raven.Client.Documents.Session
             return CreateDocumentQueryInternal<TResult>();
         }
 
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.RawQuery(string query)
+        {
+            RawQuery(query);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
+        }
+
         IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
         {
             GroupBy(fieldName, fieldNames);
