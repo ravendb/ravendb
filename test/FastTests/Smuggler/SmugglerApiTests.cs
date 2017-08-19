@@ -8,7 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,19 +28,6 @@ namespace FastTests.Smuggler
                                };
 
                 Stores.Add(x => x.Name, FieldStorage.Yes);
-            }
-        }
-
-        private class Users_Address : AbstractTransformerCreationTask<User>
-        {
-            public Users_Address()
-            {
-                TransformResults = results => from r in results
-                                              let address = LoadDocument<Address>(r.AddressId)
-                                              select new
-                                              {
-                                                  address.City
-                                              };
             }
         }
 
@@ -91,7 +77,6 @@ namespace FastTests.Smuggler
                     }
 
                     new Users_ByName().Execute(store1);
-                    new Users_Address().Execute(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -139,7 +124,6 @@ namespace FastTests.Smuggler
                     }
 
                     new Users_ByName().Execute(store1);
-                    new Users_Address().Execute(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {

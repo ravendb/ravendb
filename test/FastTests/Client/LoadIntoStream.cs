@@ -4,7 +4,6 @@ using System.Linq;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace FastTests.Client
@@ -42,83 +41,6 @@ namespace FastTests.Client
         }
 
         [Fact]
-        public void CanLoadByIdsIntoStreamUsingTransformer()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new TestDocumentTransformer().Execute(store);
-                InsertTestDocuments(store);
-
-                using (var stream = new MemoryStream())
-                using (var session = store.OpenSession())
-                {
-                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
-                    session.Advanced.LoadIntoStream<TestDocumentTransformer>(ids, stream);
-
-                    stream.Position = 0;
-                    var json = JObject.Load(new JsonTextReader(new StreamReader(stream)));
-                    var res = json.GetValue("Results");
-
-                    Assert.Equal(2, res.Children().Count());
-                    Assert.Equal(100, res.First["$values"].First["Val"]);
-                    Assert.Equal(200, res.Last["$values"].First["Val"]);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanLoadByIdsIntoStreamUsingTransformerName()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var transformer = new TestDocumentTransformer();
-                transformer.Execute(store);
-                InsertTestDocuments(store);
-
-                using (var stream = new MemoryStream())
-                using (var session = store.OpenSession())
-                {
-                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
-                    session.Advanced.LoadIntoStream(ids, transformer.TransformerName, stream);
-
-                    stream.Position = 0;
-                    var json = JObject.Load(new JsonTextReader(new StreamReader(stream)));
-                    var res = json.GetValue("Results");
-
-                    Assert.Equal(2, res.Children().Count());
-                    Assert.Equal(100, res.First["$values"].First["Val"]);
-                    Assert.Equal(200, res.Last["$values"].First["Val"]);
-                }
-            }
-        }
-
-        [Fact]
-        public void CanLoadByIdsIntoStreamUsingTransformerType()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var transformer = new TestDocumentTransformer();
-                transformer.Execute(store);
-                InsertTestDocuments(store);
-
-                using (var stream = new MemoryStream())
-                using (var session = store.OpenSession())
-                {
-                    var ids = new[] { "TestDocuments/1-A", "TestDocuments/2-A" };
-                    session.Advanced.LoadIntoStream(ids, transformer.GetType(), stream);
-
-                    stream.Position = 0;
-                    var json = JObject.Load(new JsonTextReader(new StreamReader(stream)));
-                    var res = json.GetValue("Results");
-
-                    Assert.Equal(2, res.Children().Count());
-                    Assert.Equal(100, res.First["$values"].First["Val"]);
-                    Assert.Equal(200, res.Last["$values"].First["Val"]);
-                }
-            }
-        }
-
-        [Fact]
         public void CanLoadStartingWithIntoStream()
         {
             using (var store = GetDocumentStore())
@@ -145,30 +67,6 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
-        public void CanLoadStartingWithIntoStreamUsingTransformer()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new TestDocumentTransformer().Execute(store);
-                InsertTestDocuments(store);
-
-                using (var stream = new MemoryStream())
-                using (var session = store.OpenSession())
-                {
-                    session.Advanced.LoadStartingWithIntoStream<TestDocumentTransformer>("TestDocuments/", stream);
-
-                    stream.Position = 0;
-                    var json = JObject.Load(new JsonTextReader(new StreamReader(stream)));
-                    var res = json.GetValue("Results");
-
-                    Assert.Equal(2, res.Children().Count());
-                    Assert.Equal(100, res.First["$values"].First["Val"]);
-                    Assert.Equal(200, res.Last["$values"].First["Val"]);
-                }
-            }
-        }
-
         private static void InsertData(IDocumentStore store)
         {
             using (var session = store.OpenSession())
@@ -184,42 +82,9 @@ namespace FastTests.Client
             }
         }
 
-        private static void InsertTestDocuments(IDocumentStore store)
-        {
-            using (var session = store.OpenSession())
-            {
-                session.Store(new TestDocument { Value = 1 });
-                session.Store(new TestDocument { Value = 2 });
-                session.SaveChanges();
-            }
-        }
-
         private class Employee
         {
             public string FirstName { get; set; }
-        }
-
-        private class TestDocument
-        {
-            public int Value { get; set; }
-        }
-
-        private class TestDocumentTransformer : AbstractTransformerCreationTask<TestDocument>
-        {
-            public class Output
-            {
-                public int Val { get; set; }
-            }
-
-            public TestDocumentTransformer()
-            {
-                TransformResults = results =>
-                    from result in results
-                    select new Output
-                    {
-                        Val = result.Value * 100
-                    };
-            }
         }
     }
 }
