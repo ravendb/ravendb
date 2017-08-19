@@ -111,9 +111,9 @@ namespace Raven.Server.Documents.Queries.Parser
                         Line++;
                         Column = 1;
                         break;
-                    case '-': // -- comment to end of line / input
+                    case '/': // comment to end of line / input
                     {
-                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '-')
+                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '/')
                             return true;
                         _pos += 2;
                         for (; _pos < _q.Length; _pos++)
@@ -252,10 +252,9 @@ namespace Raven.Server.Documents.Queries.Parser
             // matching } that are in quotes. 
 
             int nested = 1;
-            var i = _pos;
-            for (; i < _q.Length; i++)
+            for (; _pos < _q.Length; _pos++)
             {
-                switch (_q[i])
+                switch (_q[_pos])
                 {
                     case '"':
                     case '\'':
@@ -268,7 +267,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     case '}':
                         if (--nested == 0)
                         {
-                            _pos = i + 1;
+                            _pos += 1;
                             TokenStart = original;
                             TokenLength = _pos - original;
                             return true;
