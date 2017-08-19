@@ -80,15 +80,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public void ExtendMappingBasedOn(IndexDefinitionBase definitionOfExistingIndex)
         {
-            Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "We can only support auto-indexes.");
+            Debug.Assert(definitionOfExistingIndex is AutoMapIndexDefinition || definitionOfExistingIndex is AutoMapReduceIndexDefinition, "Dynamic queries are handled only by auto indexes");
 
             var extendedMapFields = new List<DynamicQueryMappingItem>(MapFields);
 
             foreach (var field in definitionOfExistingIndex.MapFields.Values)
             {
-                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.OrdinalIgnoreCase)) == false)
+                if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.Ordinal)) == false)
                 {
-                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation));
+                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing == FieldIndexing.Analyzed));
                 }
             }
 
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 result[i] = DynamicQueryMappingItem.Create(groupByField, AggregationOperation.None, query.Metadata.WhereFields);
 
-                mapFields.Remove(groupByField); // ensure we don't have duplicated group by fields
+                mapFields.Remove(groupByField);  // ensure we don't have duplicated group by fields
             }
 
             return result;

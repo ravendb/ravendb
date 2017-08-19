@@ -145,11 +145,11 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
                 _reduceKeyProcessor.Reset();
 
-                foreach (var groupByFieldName in Definition.GroupByFields.Keys)
+                foreach (var groupByField in Definition.GroupByFields)
                 {
-                    BlittableJsonTraverser.Default.TryRead(document.Data, groupByFieldName, out object result, out StringSegment _);
+                    BlittableJsonTraverser.Default.TryRead(document.Data, groupByField.Key, out object result, out StringSegment _);
                     // explicitly adding this even if the value isn't there, as a null
-                    mappedResult[groupByFieldName] = result;
+                    mappedResult[groupByField.Key] = result;
 
                     _reduceKeyProcessor.Process(indexContext.Allocator, result);
                 }

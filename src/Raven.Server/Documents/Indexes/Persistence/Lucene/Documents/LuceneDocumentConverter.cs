@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 
             foreach (var indexField in _fields.Values)
             {
-                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.Name, out object value) == false)
+                if (BlittableJsonTraverserHelper.TryRead(_blittableTraverser, document, indexField.OriginalName ?? indexField.Name, out object value) == false)
                     continue;
 
                 newFields += GetRegularFields(instance, indexField, value, indexContext);

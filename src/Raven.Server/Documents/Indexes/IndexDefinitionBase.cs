@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -26,7 +28,18 @@ namespace Raven.Server.Documents.Indexes
         {
             Name = name;
             Collections = collections;
-            MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
+
+            MapFields = mapFields.ToDictionary(x => x.Name, x =>
+            {
+                if ((this is AutoMapIndexDefinition || this is AutoMapReduceIndexDefinition) && x.Indexing == FieldIndexing.Analyzed)
+                {
+                    x.OriginalName = x.Name;
+                    x.Name = IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
+                }
+
+                return x;
+            }, StringComparer.Ordinal);
+
             LockMode = lockMode;
             Priority = priority;
         }

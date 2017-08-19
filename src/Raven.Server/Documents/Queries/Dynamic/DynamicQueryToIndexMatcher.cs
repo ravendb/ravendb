@@ -134,13 +134,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
-                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                    }
-
-                    if (field.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
-                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                     }
                 }
                 else
@@ -158,10 +152,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)
             {
-                if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations) == false)
-                {
-                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                }
+                var bestMapReduceMatch = AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations);
+
+                if (bestMapReduceMatch != DynamicQueryMatchType.Complete)
+                    return new DynamicQueryMatchResult(indexName, bestMapReduceMatch);
             }
 
             if (currentBestState == DynamicQueryMatchType.Partial && index.Type.IsStatic()) // we cannot support this because we might extend fields from static index into auto index
@@ -174,7 +168,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             };
         }
 
-        private static bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, List<Explanation> explanations)
+        private static DynamicQueryMatchType AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState,
+            List<Explanation> explanations)
         {
             var indexName = definition.Name;
 
@@ -190,9 +185,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (field.Aggregation != mapField.AggregationOperation)
                 {
-                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
+                    explanations?.Add(new Explanation(indexName,
+                        $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
 
-                    return false;
+                    return DynamicQueryMatchType.Failure;
                 }
             }
 
@@ -205,14 +201,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
                     {
-                        explanations?.Add(new Explanation(indexName, $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
-                        return false;
-                    }
+                        explanations?.Add(new Explanation(indexName,
+                            $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
 
-                    if (groupByField.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following group by field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
-                        return false;
+                        return DynamicQueryMatchType.Partial;
                     }
                 }
                 else
@@ -223,7 +215,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         explanations.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
                     }
 
-                    return false;
+                    return DynamicQueryMatchType.Failure;
                 }
             }
 
@@ -236,10 +228,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     explanations.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 
-                return false;
+                return DynamicQueryMatchType.Failure;
             }
 
-            return true;
+            return DynamicQueryMatchType.Complete;
         }
     }
 }

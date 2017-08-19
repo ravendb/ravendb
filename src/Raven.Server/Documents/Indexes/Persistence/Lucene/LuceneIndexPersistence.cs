@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -53,16 +54,30 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
 
-            var fields = index.Definition.MapFields.Values.ToList();
+            var fields = new List<IndexField>(index.Definition.MapFields.Values);
 
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
+
+                    foreach (var field in index.Definition.MapFields.Values)
+                    {
+                        if (field.Indexing == FieldIndexing.Analyzed)
+                            AddDefaultIndexField(field);
+                    }
+
                     _converter = new LuceneDocumentConverter(fields);
                     break;
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
-                    fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
+
+                    foreach (var field in autoMapReduceIndexDefinition.GroupByFields.Values)
+                    {
+                        fields.Add(field);
+
+                        if (field.Indexing == FieldIndexing.Analyzed)
+                            AddDefaultIndexField(field);
+                    }
 
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
                     break;
@@ -88,8 +103,23 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 string fieldName = field.Key;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
             }
-        }
 
+            void AddDefaultIndexField(IndexField field)
+            {
+                Debug.Assert(field.OriginalName != null);
+
+                fields.Add(new IndexField
+                {
+                    Name = field.OriginalName,
+                    Indexing = FieldIndexing.Default,
+                    Aggregation = field.Aggregation,
+                    HasSuggestions = field.HasSuggestions,
+                    Storage = field.Storage,
+                    TermVector = field.TermVector
+                });
+            }
+        }
+        
         public void Clean()
         {
             _converter?.Clean();
