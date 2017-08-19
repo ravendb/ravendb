@@ -70,7 +70,7 @@ namespace FastTests.Server.Basic
                     {
                         requestExecutor.Execute(
                             new CreateDatabaseOperation(doc).GetCommand(new DocumentConventions(), ctx), ctx);
-                        requestExecutor.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, transformer: null, transformerParameters: null, metadataOnly: false), ctx);
+                        requestExecutor.Execute(new GetDocumentCommand("Raven/HiloPrefix", includes: null, metadataOnly: false), ctx);
                     }
                 });
             }
