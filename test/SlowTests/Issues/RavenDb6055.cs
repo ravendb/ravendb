@@ -22,10 +22,13 @@ namespace SlowTests.Issues
 #pragma warning restore 169,649
         }
 
-        [Fact(Skip = "RavenDB-6571")]
+        [Fact]
         public async Task CreatingNewAutoIndexWillDeleteSmallerOnes()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
+            {
+                rec.Settings["Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec"] = "0";
+            }))
             {
                 IndexDefinition[] indexes;
                 using (var session = store.OpenAsyncSession())
