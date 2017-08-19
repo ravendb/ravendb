@@ -18,7 +18,6 @@ namespace Raven.Client.Documents.Session
     {
         DocumentConventions Conventions { get; }
         Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes);
-        Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null);
         Lazy<Dictionary<string, T>> LazyLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval);
     }
 }

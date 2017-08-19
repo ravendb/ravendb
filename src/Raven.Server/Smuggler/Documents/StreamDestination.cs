@@ -6,7 +6,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -71,11 +70,6 @@ namespace Raven.Server.Smuggler.Documents
             return new StreamIndexActions(_writer, _context);
         }
 
-        public ITransformerActions Transformers()
-        {
-            return new StreamTransformerActions(_writer, _context);
-        }
-
         private class StreamIndexActions : StreamActionsBase, IIndexActions
         {
             private readonly JsonOperationContext _context;
@@ -120,26 +114,6 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteIndexDefinition(_context, indexDefinition);
 
                 Writer.WriteEndObject();
-            }
-        }
-
-        private class StreamTransformerActions : StreamActionsBase, ITransformerActions
-        {
-            private readonly JsonOperationContext _context;
-
-            public StreamTransformerActions(BlittableJsonTextWriter writer, JsonOperationContext context)
-                : base(writer, "Transformers")
-            {
-                _context = context;
-            }
-
-            public void WriteTransformer(TransformerDefinition transformerDefinition)
-            {
-                if (First == false)
-                    Writer.WriteComma();
-                First = false;
-
-                Writer.WriteTransformerDefinition(_context, transformerDefinition);
             }
         }
 

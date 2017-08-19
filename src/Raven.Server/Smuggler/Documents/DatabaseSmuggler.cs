@@ -7,7 +7,6 @@ using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Auto;
@@ -29,7 +28,6 @@ namespace Raven.Server.Smuggler.Documents
         private CancellationToken _token;
 
         public Action<IndexDefinitionAndType> OnIndexAction;
-        public Action<TransformerDefinition> OnTransformerAction;
         public Action<KeyValuePair<string, long>> OnIdentityAction;
 
         public DatabaseSmuggler(
@@ -113,9 +111,6 @@ namespace Raven.Server.Smuggler.Documents
                     break;
                 case DatabaseItemType.Indexes:
                     counts = ProcessIndexes(result);
-                    break;
-                case DatabaseItemType.Transformers:
-                    counts = ProcessTransformers(result);
                     break;
                 case DatabaseItemType.Identities:
                     counts = ProcessIdentities(result);
@@ -211,42 +206,6 @@ namespace Raven.Server.Smuggler.Documents
             }
 
             return result.Identities;
-        }
-
-        private SmugglerProgressBase.Counts ProcessTransformers(SmugglerResult result)
-        {
-            using (var actions = _destination.Transformers())
-            {
-                foreach (var transformer in _source.GetTransformers())
-                {
-                    _token.ThrowIfCancellationRequested();
-                    result.Transformers.ReadCount++;
-
-                    if (transformer == null)
-                    {
-                        result.Transformers.ErroredCount++;
-                        continue;
-                    }
-
-                    if (OnTransformerAction != null)
-                    {
-                        OnTransformerAction(transformer);
-                        continue;
-                    }
-
-                    try
-                    {
-                        actions.WriteTransformer(transformer);
-                    }
-                    catch (Exception e)
-                    {
-                        result.Transformers.ErroredCount++;
-                        result.AddError($"Could not write transformer '{transformer.Name}': {e.Message}");
-                    }
-                }
-            }
-
-            return result.Transformers;
         }
 
         private SmugglerProgressBase.Counts ProcessIndexes(SmugglerResult result)

@@ -44,7 +44,7 @@ namespace Raven.Client.Documents.Session.Operations
             return new QueryStreamCommand(_session.Conventions, query);
         }
 
-        public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
         {
             var sb = new StringBuilder("streams/docs?");
 
@@ -65,27 +65,13 @@ namespace Raven.Client.Documents.Session.Operations
                 sb.Append("startAfter=").Append(Uri.EscapeDataString(startAfter)).Append("&");
             }
 
-            if (string.IsNullOrEmpty(transformer) == false)
-                sb.Append("transformer=").Append(Uri.EscapeDataString(transformer)).Append("&");
-
-            if (transformerParameters != null && transformerParameters.Count > 0)
-            {
-                foreach (var pair in transformerParameters)
-                {
-                    var parameterName = pair.Key;
-                    var parameterValue = pair.Value;
-
-                    sb.AppendFormat("tp-{0}={1}", parameterName, parameterValue).Append("&");
-                }
-            }
-
             if (start != 0)
                 sb.Append("start=").Append(start).Append("&");
 
             if (pageSize != int.MaxValue)
                 sb.Append("pageSize=").Append(pageSize).Append("&");
 
-            return new StreamCommand(sb.ToString(), string.IsNullOrWhiteSpace(transformer) == false);
+            return new StreamCommand(sb.ToString());
         }
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)

@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Transformers;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries
@@ -15,23 +14,20 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool ExtractAllFromIndex;
 
-        public readonly bool ExtractAllFromDocument;
-
         public readonly bool AnyExtractableFromIndex;
 
         public readonly bool IsProjection;
 
         public readonly bool IsDistinct;
 
-        public readonly bool IsTransformation;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition, Transformer transformer)
-            : this(query.Metadata.SelectFields, indexDefinition, transformer)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
+            : this(query.Metadata.SelectFields, indexDefinition)
         {
             IsDistinct = query.Metadata.IsDistinct && IsProjection;
         }
 
-        public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition, Transformer transformer)
+        public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition)
         {
             Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields);
             IsProjection = Fields != null && Fields.Count > 0;
@@ -42,13 +38,6 @@ namespace Raven.Server.Documents.Queries
                 AnyExtractableFromIndex = true;
                 ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored only)
                 IsProjection = true;
-            }
-
-            if (transformer != null)
-            {
-                AnyExtractableFromIndex = true;
-                ExtractAllFromIndex = ExtractAllFromDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
-                IsTransformation = true;
             }
         }
 

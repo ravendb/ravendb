@@ -14,7 +14,6 @@ using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -477,7 +476,7 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer);
+            return CreateDocumentQueryInternal<TResult>();
         }
 
         IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
@@ -700,7 +699,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
+            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -712,12 +711,6 @@ namespace Raven.Client.Documents.Session
         {
             var criteria = clause(SpatialCriteriaFactory.Instance);
             Spatial(fieldName, criteria);
-            return this;
-        }
-
-        public IAsyncDocumentQuery<T> SetTransformerParameters(Parameters parameters)
-        {
-            TransformerParameters = parameters;
             return this;
         }
 
@@ -914,32 +907,11 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        /// <summary>
-        /// Sets a transformer to use after executing a query
-        /// </summary>
-        /// <param name="transformer"></param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetTransformer(string transformer)
-        {
-            SetTransformer(transformer);
-            return this;
-        }
-
         public IAsyncDocumentQuery<T> ExplainScores()
         {
             ShouldExplainScores = true;
             return this;
 
-        }
-
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
-            return this;
-        }
-
-        public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
         }
 
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -1094,7 +1066,7 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null)
         {
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
@@ -1118,7 +1090,6 @@ namespace Raven.Client.Documents.Session
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
@@ -1129,8 +1100,6 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                Transformer = transformer,
-                TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,

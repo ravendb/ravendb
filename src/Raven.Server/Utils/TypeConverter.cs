@@ -9,7 +9,6 @@ using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
-using Raven.Server.Documents.Transformers;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Extensions;
@@ -34,10 +33,6 @@ namespace Raven.Server.Utils
             var dynamicDocument = value as DynamicBlittableJson;
             if (dynamicDocument != null)
                 return dynamicDocument.BlittableJson;
-
-            var transformerParameter = value as TransformerParameter;
-            if (transformerParameter != null)
-                return transformerParameter.OriginalValue;
 
             if (value is string)
                 return value;
