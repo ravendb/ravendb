@@ -441,6 +441,10 @@ namespace Raven.Server.Documents.Queries
                 {
                     name = name.Substring(indexOf + 1);
                 }
+                else if(RootAliasPaths.Count != 0)
+                {
+                    throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+                }
             }
             return SelectField.Create(name, alias, sourceAlias, array);
         }
@@ -465,6 +469,22 @@ namespace Raven.Server.Documents.Queries
         {
             if (_aliasToName.TryGetValue(fieldNameOrAlias, out var indexFieldName))
                 return indexFieldName;
+
+            var indexOf = fieldNameOrAlias.IndexOf('.');
+            if (indexOf == -1)
+                return fieldNameOrAlias;
+
+            var key = new StringSegment(fieldNameOrAlias, 0, indexOf);
+          
+            if (RootAliasPaths.TryGetValue(key, out _))
+            {
+                return fieldNameOrAlias.Substring(indexOf + 1);
+            }
+
+            if (RootAliasPaths.Count != 0)
+            {
+                throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+            }
 
             return fieldNameOrAlias;
         }
