@@ -343,8 +343,10 @@ namespace Raven.Server.Documents.Indexes
 
             if (name.Length < 64)
                 return name;
-
-            return name.Substring(0, 64);
+            // RavenDB-8220 To avoid giving the same path to indexes with the 
+            // same 64 chars prefix, we hash the full name. Note that this is
+            // a persistent value and should NOT be changed. 
+            return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
         protected static string ReadName(BlittableJsonReaderObject reader)
