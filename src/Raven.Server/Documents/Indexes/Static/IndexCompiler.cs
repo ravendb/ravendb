@@ -15,18 +15,16 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
-using Raven.Server.Documents.Transformers;
 
 
 namespace Raven.Server.Documents.Indexes.Static
 {
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-    public static class IndexAndTransformerCompiler
+    public static class IndexCompiler
     {
         internal static readonly bool EnableDebugging = false; // for debugging purposes (mind http://issues.hibernatingrhinos.com/issue/RavenDB-6960)
 
@@ -58,7 +56,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(object).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(ExpressionType).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location),
+            MetadataReference.CreateFromFile(typeof(IndexCompiler).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Lucene.Net.Documents.Document).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
@@ -70,21 +68,7 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
         };
 
-        public static TransformerBase Compile(TransformerDefinition definition)
-        {
-            var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: false);
-
-            var @class = CreateClass(cSharpSafeName, definition);
-
-            var compilationResult = CompileInternal(definition.Name, cSharpSafeName, @class, isIndex: false);
-            var type = compilationResult.Type;
-
-            var transformer = (TransformerBase)Activator.CreateInstance(type);
-            transformer.Source = compilationResult.Code;
-
-            return transformer;
-        }
-
+     
         public static StaticIndexBase Compile(IndexDefinition definition)
         {
             var cSharpSafeName = GetCSharpSafeName(definition.Name, isIndex: true);
@@ -236,7 +220,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         private static string[] GetManagedDlls()
         {
-            var path = Path.GetDirectoryName(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location);
+            var path = Path.GetDirectoryName(typeof(IndexCompiler).GetTypeInfo().Assembly.Location);
             var dlls = new List<string>();
 
             foreach (var dll in Directory.GetFiles(path, "*.dll"))
@@ -270,34 +254,6 @@ namespace Raven.Server.Documents.Indexes.Static
             {
                 return false;
             }
-        }
-
-        private static MemberDeclarationSyntax CreateClass(string name, TransformerDefinition definition)
-        {
-            var statements = new List<StatementSyntax>();
-
-            var methodDetector = new MethodDetectorRewriter();
-            statements.Add(HandleTransformResults(definition.TransformResults, methodDetector));
-
-            var methods = methodDetector.Methods;
-
-            if (methods.HasGroupBy)
-                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasGroupBy)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
-
-            if (methods.HasLoadDocument)
-                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasLoadDocument)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
-
-            if (methods.HasTransformWith)
-                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasTransformWith)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
-
-            if (methods.HasInclude)
-                statements.Add(RoslynHelper.This(nameof(TransformerBase.HasInclude)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
-
-            var ctor = RoslynHelper.PublicCtor(name).AddBodyStatements(statements.ToArray());
-
-            return RoslynHelper.PublicClass(name)
-                .WithBaseClass<TransformerBase>()
-                .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(ctor));
         }
 
         private static MemberDeclarationSyntax CreateClass(string name, IndexDefinition definition)
@@ -340,34 +296,6 @@ namespace Raven.Server.Documents.Indexes.Static
             return RoslynHelper.PublicClass(name)
                 .WithBaseClass<StaticIndexBase>()
                 .WithMembers(members.Add(ctor));
-        }
-
-        private static StatementSyntax HandleTransformResults(string transformResults, MethodDetectorRewriter methodsDetector)
-        {
-            try
-            {
-                transformResults = NormalizeFunction(transformResults);
-                var expression = SyntaxFactory.ParseExpression(transformResults).NormalizeWhitespace();
-                methodsDetector.Visit(expression);
-
-                var queryExpression = expression as QueryExpressionSyntax;
-                if (queryExpression != null)
-                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.QuerySyntax), queryExpression);
-
-                var invocationExpression = expression as InvocationExpressionSyntax;
-                if (invocationExpression != null)
-                    return HandleSyntaxInTransformResults(new TransformFunctionProcessor(SelectManyRewriter.MethodSyntax), invocationExpression);
-
-                throw new InvalidOperationException("Not supported expression type.");
-            }
-            catch (Exception ex)
-            {
-                throw new TransformerCompilationException(ex.Message, ex)
-                {
-                    TransformerDefinitionProperty = nameof(TransformerDefinition.TransformResults),
-                    ProblematicText = transformResults
-                };
-            }
         }
 
         private static List<StatementSyntax> HandleMap(string map, FieldNamesValidator fieldNamesValidator, MethodDetectorRewriter methodsDetector,
@@ -446,17 +374,6 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        private static StatementSyntax HandleSyntaxInTransformResults(TransformFunctionProcessor processor, ExpressionSyntax expression)
-        {
-            var rewrittenExpression = (CSharpSyntaxNode)processor.Visit(expression);
-
-            var indexingFunction = SyntaxFactory.SimpleLambdaExpression(SyntaxFactory.Parameter(SyntaxFactory.Identifier("results")), rewrittenExpression);
-
-            return RoslynHelper
-                .This(nameof(TransformerBase.TransformResults))
-                .Assign(indexingFunction)
-                .AsExpressionStatement();
-        }
 
         private static List<StatementSyntax> HandleSyntaxInMap(FieldNamesValidator fieldValidator, MapFunctionProcessor mapRewriter, ExpressionSyntax expression,
             ref SyntaxList<MemberDeclarationSyntax> members)
@@ -492,7 +409,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 members = members.Add(method);
 
                 results.Add(RoslynHelper.This(nameof(StaticIndexBase.AddMap)).Invoke(collection, RoslynHelper.This(method.Identifier.Text)).AsExpressionStatement()); // this.AddMap("Users", docs => from doc in docs ... )
-
             }
             else
             {

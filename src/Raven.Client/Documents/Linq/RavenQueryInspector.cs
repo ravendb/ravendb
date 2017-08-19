@@ -17,7 +17,6 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Linq
@@ -109,14 +108,6 @@ namespace Raven.Client.Documents.Linq
         {
             _provider.Customize(action);
             return this;
-        }
-
-        public IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var transformer = new TTransformer();
-            _provider.TransformWith(transformer.TransformerName);
-            var res = (IRavenQueryable<TResult>)this.As<TResult>();
-            return res;
         }
 
         public IRavenQueryable<TResult> TransformWith<TResult>(string transformerName)

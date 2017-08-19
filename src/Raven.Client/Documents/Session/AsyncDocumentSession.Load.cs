@@ -7,101 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
-
-        public async Task<TResult> LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null,
-            CancellationToken token = new CancellationToken())
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var result = await LoadAsync<TTransformer, TResult>(new[] { id }.AsEnumerable(), configure, token).ConfigureAwait(false);
-            if (result.Count == 0)
-                return default(TResult);
-
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public async Task<Dictionary<string, TResult>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids,
-            Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = await LoadUsingTransformerInternalAsync(ids.ToArray(), null, operation,
-                new TTransformer().TransformerName, configure, token).ConfigureAwait(false);
-
-            return operation.GetTransformedDocuments<TResult>(command?.Result);
-        }
-
-        public async Task<TResult> LoadAsync<TResult>(string id, string transformer,
-            Action<ILoadConfiguration> configure = null,
-            CancellationToken token = new CancellationToken())
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = await LoadUsingTransformerInternalAsync(new [] {id}, null, operation,
-                transformer, configure, token).ConfigureAwait(false);
-
-            if (command == null)
-                return default(TResult);
-
-            var result = operation.GetTransformedDocuments<TResult>(command.Result);
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public async Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, string transformer,
-            Action<ILoadConfiguration> configure = null,
-            CancellationToken token = new CancellationToken())
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = await LoadUsingTransformerInternalAsync(ids.ToArray(), null, operation,
-                transformer, configure, token).ConfigureAwait(false);
-
-            return operation.GetTransformedDocuments<TResult>(command?.Result);
-        }
-
-        public async Task<TResult> LoadAsync<TResult>(string id, Type transformerType,
-            Action<ILoadConfiguration> configure = null,
-            CancellationToken token = new CancellationToken())
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var operation = new LoadTransformerOperation(this);
-            var command = await LoadUsingTransformerInternalAsync(new[] { id }, null, operation,
-                transformer, configure, token).ConfigureAwait(false);
-
-            if (command == null)
-                return default(TResult);
-
-            var result = operation.GetTransformedDocuments<TResult>(command.Result);
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public async Task<Dictionary<string, TResult>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType,
-            Action<ILoadConfiguration> configure = null,
-            CancellationToken token = new CancellationToken())
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var operation = new LoadTransformerOperation(this);
-            var command = await LoadUsingTransformerInternalAsync(ids.ToArray(), null, operation,
-                transformer, configure, token).ConfigureAwait(false);
-
-            return operation.GetTransformedDocuments<TResult>(command?.Result);
-        }
-
-        /// <summary>
-        /// Begins the async load operation
-        /// </summary>
-        /// <param name="id">The id.</param>
-        /// <param name="token">The cancellation token.</param>
-        /// <returns></returns>
+        /// <inheritdoc />
         public async Task<T> LoadAsync<T>(string id, CancellationToken token = default(CancellationToken))
         {
             var loadOperation = new LoadOperation(this);
@@ -143,54 +54,13 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
-        private async Task<GetDocumentCommand> LoadUsingTransformerInternalAsync(string[] ids, Stream stream, LoadTransformerOperation operation, string transformer,
-            Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
-        {
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            if (transformer == null)
-                throw new ArgumentNullException(nameof(transformer));
-            if (ids.Length == 0)
-                return null;
-
-            operation.ByIds(ids);
-            operation.WithTransformer(transformer, configuration.TransformerParameters);
-
-            var command = operation.CreateRequest();
-            if (command != null)
-            {
-                await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
-                if(stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
-                else
-                    operation.SetResult(command.Result);
-            }
-
-            return command;
-        }
-
-        public async Task<Dictionary<string, TResult>> LoadStartingWithAsync<TTransformer, TResult>(string idPrefix,
-            string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null,
-            Action<ILoadConfiguration> configure = null,
-            string startAfter = null, CancellationToken token = new CancellationToken())
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var operation = new LoadStartingWithOperation(this);
-            var command = await LoadStartingWithInternal(idPrefix, operation, null, matches, start,
-                pageSize, exclude, configure, startAfter, new TTransformer().TransformerName, token).ConfigureAwait(false);
-
-            return operation.GetTransformedDocuments<TResult>(command?.Result);
-        }
-
         public async Task<IEnumerable<T>> LoadStartingWithAsync<T>(string idPrefix, string matches = null, int start = 0,
             int pageSize = 25, string exclude = null,
             string startAfter = null, CancellationToken token = default(CancellationToken))
         {
             var operation = new LoadStartingWithOperation(this);
             await LoadStartingWithInternal(idPrefix, operation, null, matches, start,
-                pageSize, exclude, null, startAfter, null, token).ConfigureAwait(false);
+                pageSize, exclude, startAfter, token).ConfigureAwait(false);
 
             return operation.GetDocuments<T>();
         }
@@ -199,28 +69,15 @@ namespace Raven.Client.Documents.Session
             int pageSize = 25, string exclude = null, string startAfter = null, CancellationToken token = default(CancellationToken))
         {
             await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start,
-                pageSize, exclude, null, startAfter, null, token).ConfigureAwait(false);
+                pageSize, exclude,  startAfter, token).ConfigureAwait(false);
         }
 
-        public async Task LoadStartingWithIntoStreamAsync<TTransformer>(string idPrefix, Stream output, string matches = null,
-            int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
-            string startAfter = null, CancellationToken token = default(CancellationToken)) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            await LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start,
-                pageSize, exclude, configure, startAfter, new TTransformer().TransformerName, token).ConfigureAwait(false);
-        }
 
         private async Task<GetDocumentCommand> LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
-            int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
-            string startAfter = null, string transformer = null, CancellationToken token = default(CancellationToken))
+            int start = 0, int pageSize = 25, string exclude = null, 
+            string startAfter = null, CancellationToken token = default(CancellationToken))
         {
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, configure, startAfter);
-
-            if (transformer != null)
-                operation.WithTransformer(transformer, configuration.TransformerParameters);
+            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, startAfter);
 
             var command = operation.CreateRequest();
             if (command != null)
@@ -257,29 +114,5 @@ namespace Raven.Client.Documents.Session
         {
             await LoadAsyncInternal(ids.ToArray(), output, new LoadOperation(this), token).ConfigureAwait(false);
         }
-
-        public async Task LoadIntoStreamAsync<TTransformer>(IEnumerable<string> ids, Stream output,
-            Action<ILoadConfiguration> configure = null, CancellationToken token = new CancellationToken())
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            await LoadUsingTransformerInternalAsync(ids.ToArray(), output, new LoadTransformerOperation(this),
-                new TTransformer().TransformerName, configure, token).ConfigureAwait(false);
-        }
-
-        public async Task LoadIntoStreamAsync(IEnumerable<string> ids, string transformer, Stream output,
-            Action<ILoadConfiguration> configure = null, CancellationToken token = default(CancellationToken))
-        {
-            await LoadUsingTransformerInternalAsync(ids.ToArray(), output, new LoadTransformerOperation(this),
-                transformer, configure, token).ConfigureAwait(false);
-        }
-
-        public async Task LoadIntoStreamAsync(IEnumerable<string> ids, Type transformerType, Stream output,
-            Action<ILoadConfiguration> configure = null, CancellationToken token = default(CancellationToken))
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            await LoadUsingTransformerInternalAsync(ids.ToArray(), output, new LoadTransformerOperation(this),
-                transformer, configure, token).ConfigureAwait(false);
-        }
-
     }
 }

@@ -308,7 +308,6 @@ namespace Raven.Client.Documents.Session
 
         void Intersect();
         void AddRootType(Type type);
-        void SetTransformer(string transformer);
         void Distinct();
 
         /// <summary>
@@ -320,8 +319,6 @@ namespace Raven.Client.Documents.Session
         /// Performs a query matching ALL of the provided values against the given field (AND)
         /// </summary>
         void ContainsAll(string fieldName, IEnumerable<object> values);
-
-        void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
 
         void GroupBy(string fieldName, params string[] fieldNames);
 

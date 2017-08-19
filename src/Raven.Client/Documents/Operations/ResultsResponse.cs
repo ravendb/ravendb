@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.ServerWide.Operations.Certificates;
 
 namespace Raven.Client.Documents.Operations
@@ -22,10 +21,6 @@ namespace Raven.Client.Documents.Operations
     }
 
     internal class GetIndexesResponse : ResultsResponse<IndexDefinition>
-    {
-    }
-
-    internal class GetTransformersResponse : ResultsResponse<TransformerDefinition>
     {
     }
 

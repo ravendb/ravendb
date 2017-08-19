@@ -382,7 +382,7 @@ namespace Raven.Server.Documents.Indexes
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
-            var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
             await _indexAndTransformerLocker.WaitAsync();
 

@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 }, "query/parameters");
                 var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0", queryParameters);
 
-                var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
+                var fieldsToFetch = new FieldsToFetch(query, index.Definition);
 
                 var retriever = new MapReduceQueryResultRetriever(null, null,context, fieldsToFetch);
                 var result = reader

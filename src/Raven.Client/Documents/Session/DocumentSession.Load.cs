@@ -4,14 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Session.Operations;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -55,65 +52,6 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
-        public TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(new[] { id }, new TTransformer().TransformerName, operation ,null, configure);
-            if (command == null)
-                return default(TResult);
-            var result = operation.GetTransformedDocuments<TResult>(command.Result);
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public Dictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(ids.ToArray(), new TTransformer().TransformerName, operation, null, configure);
-            return operation.GetTransformedDocuments<TResult>(command.Result);
-        }
-
-        public TResult Load<TResult>(string id, string transformer, Action<ILoadConfiguration> configure)
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(new[] { id }, transformer, operation, null, configure);
-            if (command == null)
-                return default(TResult);
-            var result = operation.GetTransformedDocuments<TResult>(command.Result);
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, string transformer, Action<ILoadConfiguration> configure = null)
-        {
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(ids.ToArray(), transformer, operation, null, configure);
-            return operation.GetTransformedDocuments<TResult>(command.Result);
-        }
-
-        public TResult Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure = null)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(new[] { id }, transformer, operation, null, configure);
-            if (command == null)
-                return default(TResult);
-            var result = operation.GetTransformedDocuments<TResult>(command.Result);
-            Debug.Assert(result.Count == 1);
-
-            return result[id];
-        }
-
-        public Dictionary<string, TResult> Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var operation = new LoadTransformerOperation(this);
-            var command = LoadInternal(ids.ToArray(), transformer, operation, null, configure);
-            return operation.GetTransformedDocuments<TResult>(command.Result);
-        }
-
         private void LoadInternal(string[] ids, LoadOperation operation, Stream stream = null)
         {
             operation.ByIds(ids);
@@ -145,98 +83,26 @@ namespace Raven.Client.Documents.Session
             return loadOperation.GetDocuments<T>();
         }
 
-        private GetDocumentCommand LoadInternal(string[] ids, string transformer, LoadTransformerOperation operation, Stream stream = null ,Action<ILoadConfiguration> configure = null)
-        {
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            if (transformer == null)
-                throw new ArgumentNullException(nameof(transformer));
-            if (ids.Length == 0)
-                return null;
-
-            operation.ByIds(ids);
-            operation.WithTransformer(transformer, configuration.TransformerParameters);
-
-            var command = operation.CreateRequest();
-            if (command != null)
-            {
-                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
-
-                if(stream != null)
-                    Context.Write(stream, command.Result.Results.Parent);
-                else            
-                    operation.SetResult(command.Result);
-            }
-
-            return command;
-        }
-
-        public Dictionary<string, T> LoadInternal<T>(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters = null)
-        {
-            if (transformer == null)
-                throw new ArgumentNullException(nameof(transformer));
-            if (ids.Length == 0)
-                return new Dictionary<string, T>();
-
-            var loadTransformerOperation = new LoadTransformerOperation(this);
-            loadTransformerOperation.ByIds(ids);
-            loadTransformerOperation.WithTransformer(transformer, transformerParameters);
-            loadTransformerOperation.WithIncludes(includes);
-
-            var command = loadTransformerOperation.CreateRequest();
-            if (command != null)
-            {
-                RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
-                loadTransformerOperation.SetResult(command.Result);
-            }
-
-            return loadTransformerOperation.GetTransformedDocuments<T>(command?.Result);
-        }
-
         public T[] LoadStartingWith<T>(string idPrefix, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
             string startAfter = null)
         {
             var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            LoadStartingWithInternal(idPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, null, startAfter);
+            LoadStartingWithInternal(idPrefix, loadStartingWithOperation, null, matches, start, pageSize, exclude, startAfter);
             return loadStartingWithOperation.GetDocuments<T>();
         }
 
-        public Dictionary<string, TResult> LoadStartingWith<TTransformer, TResult>(string idPrefix, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
-            string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            var loadStartingWithOperation = new LoadStartingWithOperation(this);
-            var command = LoadStartingWithInternal(idPrefix,loadStartingWithOperation ,null, matches, start, pageSize, exclude,
-                configure, startAfter, new TTransformer().TransformerName);
-
-            return loadStartingWithOperation.GetTransformedDocuments<TResult>(command?.Result);
-        }
 
         public void LoadStartingWithIntoStream(string idPrefix, Stream output, string matches = null, int start = 0, int pageSize = 25, string exclude = null,
             string startAfter = null)
         {
-            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, null, startAfter);
-        }
-
-        public void LoadStartingWithIntoStream<TTransformer>(string idPrefix, Stream output, string matches = null, int start = 0,
-            int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
-            string startAfter = null) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, configure, startAfter, new TTransformer().TransformerName);
+            LoadStartingWithInternal(idPrefix, new LoadStartingWithOperation(this), output, matches, start, pageSize, exclude, startAfter);
         }
 
         private GetDocumentCommand LoadStartingWithInternal(string idPrefix, LoadStartingWithOperation operation, Stream stream = null, string matches = null,
-            int start = 0, int pageSize = 25, string exclude = null, Action<ILoadConfiguration> configure = null,
-            string startAfter = null, string transformer = null)
+            int start = 0, int pageSize = 25, string exclude = null, 
+            string startAfter = null)
         {
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, configure, startAfter);
-
-            if (transformer != null)
-                operation.WithTransformer(transformer, configuration.TransformerParameters);
+            operation.WithStartWith(idPrefix, matches, start, pageSize, exclude, startAfter);
 
             var command = operation.CreateRequest();
             if (command != null)
@@ -255,25 +121,6 @@ namespace Raven.Client.Documents.Session
         public void LoadIntoStream(IEnumerable<string> ids, Stream output)
         {
             LoadInternal(ids.ToArray(), new LoadOperation(this), output);
-        }
-
-        public void LoadIntoStream<TTransformer>(IEnumerable<string> ids, Stream output, Action<ILoadConfiguration> configure = null)
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            LoadInternal(ids.ToArray(), new TTransformer().TransformerName, new LoadTransformerOperation(this), output, configure);
-        }
-
-        public void LoadIntoStream(IEnumerable<string> ids, string transformer, Stream output,
-            Action<ILoadConfiguration> configure = null)
-        {
-            LoadInternal(ids.ToArray(), transformer, new LoadTransformerOperation(this), output, configure);
-        }
-
-        public void LoadIntoStream(IEnumerable<string> ids, Type transformerType, Stream output,
-            Action<ILoadConfiguration> configure = null)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            LoadInternal(ids.ToArray(), transformer, new LoadTransformerOperation(this), output, configure);
         }
     }
 }

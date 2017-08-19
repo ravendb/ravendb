@@ -24,8 +24,6 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
                 hasher.Write(PageSize);
                 hasher.Write(Includes);
                 hasher.Write(StopWordsDocumentId);
-                hasher.Write(Transformer);
-                hasher.Write(TransformerParameters);
                 hasher.Write(Boost);
                 hasher.Write(BoostFactor);
                 hasher.Write(MapGroupFields);
@@ -134,19 +132,9 @@ namespace Raven.Client.Documents.Queries.MoreLikeThis
         public Dictionary<string, string> MapGroupFields { get; set; }
 
         /// <summary>
-        /// Transformer to use on the query results.
-        /// </summary>
-        public string Transformer { get; set; }
-
-        /// <summary>
         /// Array of paths under which document Ids can be found. All found documents will be returned with the query results.
         /// </summary>
         public string[] Includes { get; set; }
-
-        /// <summary>
-        /// Parameters that will be passed to transformer.
-        /// </summary>
-        public T TransformerParameters { get; set; }
 
         /// <summary>
         /// Maximum number of records that will be retrieved.

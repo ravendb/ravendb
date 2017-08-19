@@ -34,7 +34,6 @@ namespace Raven.Client.Documents.Session
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
 
         protected QueryOperator DefaultOperator;
-        protected bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
         protected double DistanceErrorPct;
         private readonly LinqPathProvider _linqPathProvider;
@@ -64,8 +63,6 @@ namespace Raven.Client.Documents.Session
         private int _currentClauseDepth;
 
         protected KeyValuePair<string, object> LastEquality;
-
-        protected Parameters TransformerParameters = new Parameters();
 
         protected Parameters QueryParameters = new Parameters();
 
@@ -148,11 +145,6 @@ namespace Raven.Client.Documents.Session
         /// Holds the query highlights
         /// </summary>
         protected QueryHighlightings Highlightings = new QueryHighlightings();
-
-        /// <summary>
-        /// The name of the results transformer to use after executing this query
-        /// </summary>
-        protected string Transformer;
 
         /// <summary>
         /// Determines if entities should be tracked and kept in memory
@@ -539,7 +531,6 @@ namespace Raven.Client.Documents.Session
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
         }
 
@@ -1271,10 +1262,7 @@ If you really want to do in memory filtering on the data returned from the query
                 HighlighterPreTags = HighlighterPreTags.ToArray(),
                 HighlighterPostTags = HighlighterPostTags.ToArray(),
                 HighlighterKeyName = HighlighterKeyName,
-                Transformer = Transformer,
-                TransformerParameters = TransformerParameters,
                 QueryParameters = QueryParameters,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
                 ExplainScores = ShouldExplainScores,
@@ -1499,16 +1487,6 @@ If you really want to do in memory filtering on the data returned from the query
                 ? _conventions.FindPropertyNameForDynamicIndex(typeof(T), IndexName, "", result.Path)
                 : _conventions.FindPropertyNameForIndex(typeof(T), IndexName, "", result.Path);
             return propertyName;
-        }
-
-        public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            AllowMultipleIndexEntriesForSameDocumentToResultTransformer = val;
-        }
-
-        public void SetTransformer(string transformer)
-        {
-            Transformer = transformer;
         }
 
         public void Distinct()

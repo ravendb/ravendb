@@ -7,7 +7,6 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -21,16 +20,14 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public const string CollectionIndexPrefix = "collection/";
 
         private readonly IndexStore _indexStore;
-        private readonly TransformerStore _transformerStore;
         private readonly DocumentsOperationContext _context;
         private readonly RavenConfiguration _configuration;
         private readonly DocumentsStorage _documents;
         private readonly OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, TransformerStore transformerStore, DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
+        public DynamicQueryRunner(IndexStore indexStore,  DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
         {
             _indexStore = indexStore;
-            _transformerStore = transformerStore;
             _context = context;
             _configuration = configuration;
             _token = token;
@@ -122,26 +119,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
             {
-                transformer = _transformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-            }
-
-            using (var scope = transformer?.OpenTransformationScope(query.TransformerParameters, includeDocumentsCommand, _documents, _transformerStore, _context))
-            {
-                var fieldsToFetch = new FieldsToFetch(query, null, transformer);
+                var fieldsToFetch = new FieldsToFetch(query, null);
                 var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
-
-                var results = scope != null ? scope.Transform(documents) : documents;
+                var cancellationToken = _token.Token;
 
                 try
                 {
-                    foreach (var document in results)
+                    foreach (var document in documents)
                     {
-                        _token.Token.ThrowIfCancellationRequested();
+                        cancellationToken.ThrowIfCancellationRequested();
 
                         resultToFill.AddResult(document);
 

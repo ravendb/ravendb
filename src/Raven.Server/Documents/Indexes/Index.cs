@@ -32,7 +32,6 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestion;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -1635,16 +1634,9 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
-            {
-                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-            }
 
             if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0 || transformer != null && transformer.HasInclude))
+                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
             using (var marker = MarkQueryAsRunning(query, token))
@@ -1700,8 +1692,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0) &&
-                            (transformer == null || transformer.MightRequireTransaction == false))
+                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0))
                             documentsContext.CloseTransaction();
                         // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
@@ -1710,7 +1701,7 @@ namespace Raven.Server.Documents.Indexes
                             var totalResults = new Reference<int>();
                             var skippedResults = new Reference<int>();
 
-                            var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
+                            var fieldsToFetch = new FieldsToFetch(query, Definition);
                             IEnumerable<Document> documents;
 
                             if (query.IsIntersect == false)
@@ -1727,30 +1718,22 @@ namespace Raven.Server.Documents.Indexes
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
                                 DocumentDatabase.DocumentsStorage, documentsContext, query.Metadata.Includes);
 
-                            using (
-                                var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                                    includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                                    DocumentDatabase.TransformerStore, documentsContext))
+                            try
                             {
-                                var results = scope != null ? scope.Transform(documents) : documents;
-
-                                try
+                                foreach (var document in documents)
                                 {
-                                    foreach (var document in results)
-                                    {
-                                        resultToFill.TotalResults = totalResults.Value;
-                                        resultToFill.AddResult(document);
+                                    resultToFill.TotalResults = totalResults.Value;
+                                    resultToFill.AddResult(document);
 
-                                        includeDocumentsCommand.Gather(document);
-                                    }
+                                    includeDocumentsCommand.Gather(document);
                                 }
-                                catch (Exception e)
-                                {
-                                    if (resultToFill.SupportsExceptionHandling == false)
-                                        throw;
+                            }
+                            catch (Exception e)
+                            {
+                                if (resultToFill.SupportsExceptionHandling == false)
+                                    throw;
 
-                                    resultToFill.HandleException(e);
-                                }
+                                resultToFill.HandleException(e);
                             }
 
                             includeDocumentsCommand.Fill(resultToFill.Includes);
@@ -1897,14 +1880,6 @@ namespace Raven.Server.Documents.Indexes
         {
             AssertIndexState();
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
-            {
-                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-            }
-
             HashSet<string> stopWords = null;
             if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
             {
@@ -1936,8 +1911,7 @@ namespace Raven.Server.Documents.Indexes
 
                     FillQueryResult(result, isStale, documentsContext, indexContext);
 
-                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
-                        (transformer == null || transformer.MightRequireTransaction == false))
+                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0))
                         documentsContext.CloseTransaction();
                     // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
@@ -1946,22 +1920,15 @@ namespace Raven.Server.Documents.Indexes
                         var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
                             documentsContext, query.Includes);
 
-                        using (
-                            var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                                includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                                DocumentDatabase.TransformerStore, documentsContext))
-                        {
-                            var documents = reader.MoreLikeThis(query, stopWords,
-                                fieldsToFetch =>
-                                    GetQueryResultRetriever(null, documentsContext,
-                                        new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, token.Token);
-                            var results = scope != null ? scope.Transform(documents) : documents;
+                        var documents = reader.MoreLikeThis(query, stopWords,
+                            fieldsToFetch =>
+                                GetQueryResultRetriever(null, documentsContext,
+                                    new FieldsToFetch(fieldsToFetch, Definition)), documentsContext, token.Token);
 
-                            foreach (var document in results)
-                            {
-                                result.Results.Add(document);
-                                includeDocumentsCommand.Gather(document);
-                            }
+                        foreach (var document in documents)
+                        {
+                            result.Results.Add(document);
+                            includeDocumentsCommand.Gather(document);
                         }
 
                         includeDocumentsCommand.Fill(result.Includes);
