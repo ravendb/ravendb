@@ -938,7 +938,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
+        public async Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
             await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(QueryOperation).WithCancellation(token).ConfigureAwait(false);
@@ -1004,7 +1004,7 @@ namespace Raven.Client.Documents.Session
             return result.TotalResults;
         }
 
-        private static Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
+        private static Task<Tuple<QueryResult, List<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
         {
             var list = currentQueryOperation.Complete<T>();
             return Task.FromResult(Tuple.Create(currentQueryOperation.CurrentQueryResults, list));
