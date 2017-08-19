@@ -659,18 +659,17 @@ namespace Raven.Server.Documents
                 }
 
                 NotifyFeaturesAboutValueChange(record);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
 
             }
-            catch
+            catch(Exception e)
             {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
                 throw;
-            }
-            finally
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
 
@@ -695,9 +694,12 @@ namespace Raven.Server.Documents
                 _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
 
                 NotifyFeaturesAboutStateChange(record, index);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);
 
@@ -705,10 +707,6 @@ namespace Raven.Server.Documents
                     ThrowDatabaseShutdown(e);
 
                 throw;
-            }
-            finally
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
 

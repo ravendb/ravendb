@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Sockets;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
@@ -487,10 +489,11 @@ namespace Raven.Server.ServerWide
                         try
                         {
                             ValueChanged?.Invoke(this, (index, type));
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
                         }
-                        finally
+                        catch (Exception e)
                         {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
                         }
                     }, null);
             };
@@ -506,10 +509,11 @@ namespace Raven.Server.ServerWide
                         try
                         {
                             DatabaseChanged?.Invoke(this, (databaseName, index, type));
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
                         }
-                        finally
+                        catch(Exception e)
                         {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
                         }
                     }, null);
             };
@@ -525,10 +529,11 @@ namespace Raven.Server.ServerWide
                         try
                         {
                             DatabaseValueChanged?.Invoke(this, (databaseName, index, type));
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
                         }
-                        finally
+                        catch(Exception e)
                         {
-                            _rachisLogIndexNotifications.NotifyListenersAbout(index);
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
                         }
                     }, null);
             };
@@ -913,7 +918,7 @@ namespace Raven.Server.ServerWide
                 context.Transaction.Commit();
             }
 
-            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex);
+            _rachisLogIndexNotifications.NotifyListenersAbout(lastIncludedIndex, null);
         }
     }
 
@@ -921,6 +926,15 @@ namespace Raven.Server.ServerWide
     {
         public long LastModifiedIndex;
         private readonly AsyncManualResetEvent _notifiedListeners;
+        private ConcurrentQueue<ErrorHolder> _errors = new ConcurrentQueue<ErrorHolder>();
+        private int _numberOfErrors;
+
+        private class ErrorHolder
+        {
+            public long Index;
+            public ExceptionDispatchInfo Exception;
+        }
+
 
         public RachisLogIndexNotifications(CancellationToken token)
         {
@@ -944,6 +958,15 @@ namespace Raven.Server.ServerWide
                     ThrowTimeoutException(timeout ?? TimeSpan.MaxValue, index, LastModifiedIndex);
                 }
             }
+
+            if (_errors.IsEmpty)
+                return;
+
+            foreach (var error in _errors)
+            {
+                if (error.Index == index)
+                    error.Exception.Throw();// rethrow
+            }
         }
 
         private static void ThrowTimeoutException(TimeSpan value, long index, long lastModifiedIndex)
@@ -952,8 +975,21 @@ namespace Raven.Server.ServerWide
                                        $"Last commit index is: {lastModifiedIndex}.");
         }
 
-        public void NotifyListenersAbout(long index)
+        public void NotifyListenersAbout(long index, Exception e)
         {
+            if (e != null)
+            {
+                _errors.Enqueue(new ErrorHolder
+                {
+                    Index = index,
+                    Exception = ExceptionDispatchInfo.Capture(e)
+                });
+                if (Interlocked.Increment(ref _numberOfErrors) > 25)
+                {
+                    _errors.TryDequeue(out _);
+                    Interlocked.Decrement(ref _numberOfErrors);
+                }
+            }
             var lastModified = LastModifiedIndex;
             while (index > lastModified)
             {

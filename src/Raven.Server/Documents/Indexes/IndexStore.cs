@@ -63,17 +63,17 @@ namespace Raven.Server.Documents.Indexes
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record, long etag)
+        public void HandleDatabaseRecordChange(DatabaseRecord record, long index)
         {
             if (record == null)
                 return;
 
-            HandleDeletes(record);
-            HandleChangesForStaticIndexes(record, etag);
-            HandleChangesForAutoIndexes(record);
+            HandleDeletes(record, index);
+            HandleChangesForStaticIndexes(record, index);
+            HandleChangesForAutoIndexes(record, index);
         }
 
-        private void HandleChangesForAutoIndexes(DatabaseRecord record)
+        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index)
         {
             foreach (var kvp in record.AutoIndexes)
             {
@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not create auto index {name}", e);
                 }
@@ -196,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
             throw new NotSupportedException("Cannot create auto-index from " + definition.Type);
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long etag)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -209,6 +210,8 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
+
                     var indexName = name;
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
@@ -225,7 +228,7 @@ namespace Raven.Server.Documents.Indexes
                     }
                     
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
-                    var fakeIndex = new FaultyInMemoryIndex(exception, etag, indexName, configuration);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, index, indexName, configuration);
                     _indexes.Add(fakeIndex);
                 }
             }
@@ -308,7 +311,7 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private void HandleDeletes(DatabaseRecord record)
+        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
         {
             foreach (var index in _indexes)
             {
@@ -326,6 +329,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not delete index {index.Name}", e);
                 }
@@ -398,8 +402,6 @@ namespace Raven.Server.Documents.Indexes
                     await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
-                    if (index == null)
-                        throw new InvalidOperationException("Failed to create index " + definition.Name);
                     return index.Etag;
                 }
                 catch (CommandExecutionException e)
