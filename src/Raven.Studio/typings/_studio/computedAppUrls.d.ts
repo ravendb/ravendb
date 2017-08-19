@@ -19,9 +19,6 @@ interface computedAppUrls {
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
-    newTransformer: KnockoutComputed<string>;
-    editTransformer: (transformerName?: string) => KnockoutComputed<string>;
-    transformers: KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;

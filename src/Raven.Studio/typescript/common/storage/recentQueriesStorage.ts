@@ -20,19 +20,6 @@ class recentQueriesStorage {
             recentQueriesFromLocalStorage = [];
         }
 
-        // we have restore properties coming from local storage, 
-        // when saving object.prop = undefined in localstorage 
-        // we don't get 'prop' property during read.
-        recentQueriesFromLocalStorage.forEach(entry => {
-            if (entry.transformerQuery) {
-                if (("transformerName" in entry.transformerQuery) === false) {
-                    entry.transformerQuery.transformerName = undefined;
-                };
-            } else {
-                entry.transformerQuery = undefined;
-            }
-        });
-
         return recentQueriesFromLocalStorage;
     }
 

@@ -15,15 +15,12 @@ import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
-import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import document = require("models/database/documents/document");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import transformerType = require("models/database/index/transformer");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import queryCriteria = require("models/database/query/queryCriteria");
-import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
 
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
@@ -56,10 +53,8 @@ class query extends viewModelBase {
     private gridController = ko.observable<virtualGridController<any>>();
 
     recentQueries = ko.observableArray<storedQueryDto>();
-    allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
     indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
-    querySummary = ko.observable<string>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
@@ -67,9 +62,6 @@ class query extends viewModelBase {
     private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
-
-    uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
-    uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
     fetcher = ko.observable<fetcherType>();
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
@@ -126,7 +118,7 @@ class query extends viewModelBase {
         this.initObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("runRecentQuery", "selectTransformer");
+        this.bindToCurrentInstance("runRecentQuery");
     }
 
     private initObservables() {
@@ -263,13 +255,7 @@ class query extends viewModelBase {
 
         this.loadRecentQueries();
 
-        const initTask = $.Deferred<canActivateResultDto>();
-
-        this.fetchAllTransformers(this.activeDatabase())
-            .done(() => initTask.resolve({ can: true }))
-            .fail(() => initTask.resolve({ can: false }));
-
-        return initTask;
+        return true;
     }
 
     activate(indexNameOrRecentQueryHash?: string) {
@@ -347,12 +333,6 @@ class query extends viewModelBase {
             .done(queries => this.recentQueries(queries));
     }
 
-    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Documents.Transformers.TransformerDefinition>> {
-        return new getTransformersCommand(db)
-            .execute()
-            .done(transformers => this.allTransformers(transformers));
-    }
-
     private fetchCustomFunctions(db: database): JQueryPromise<customFunctions> {
         return new getCustomFunctionsCommand(db)
             .execute()
@@ -393,8 +373,6 @@ class query extends viewModelBase {
 
     runQueryOnIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
-        this.uiTransformer(null);
-        this.uiTransformerParameters([]);
 
         this.columnsSelector.reset();
 
@@ -415,20 +393,12 @@ class query extends viewModelBase {
         this.updateUrl(url);
     }
 
-    private generateQuerySummary() {
-        const criteria = this.criteria();
-        const transformer = criteria.transformer();
-        const transformerPart = transformer ? "transformed by " + transformer : "";
-        return transformerPart;
-    }
-
     runQuery() {
         if (!this.isValid(this.criteria().validationGroup)) {
             return;
         }
         
         eventsCollector.default.reportEvent("query", "run");
-        this.querySummary(this.generateQuerySummary());
         const criteria = this.criteria();
 
         if (this.criteria().queryText()) {
@@ -520,82 +490,7 @@ class query extends viewModelBase {
 
         criteria.updateUsing(storedQuery);
 
-        const matchedTransformer = this.allTransformers().find(t => t.Name === criteria.transformer());
-
-        if (matchedTransformer) {
-            this.selectTransformer(matchedTransformer);
-            this.fillTransformerParameters(criteria.transformerParameters());
-        } else {
-            this.selectTransformer(null);
-        }
-
         this.runQuery();
-    }
-
-    private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {
-        transformerParameters.forEach(param => {
-            const matchingField = this.uiTransformerParameters().find(x => x.name === param.name);
-            if (matchingField) {
-                matchingField.value(param.value);
-            }
-        });
-    }
-
-    selectTransformer(transformer: Raven.Client.Documents.Transformers.TransformerDefinition) {
-        if (transformer) {
-            this.uiTransformer(transformer.Name);
-            const inputs = transformerType.extractInputs(transformer.TransformResults);
-            this.uiTransformerParameters(inputs.map(input => new queryTransformerParameter(input)));
-        } else {
-            this.uiTransformer(null);
-            this.uiTransformerParameters([]);
-        }
-    }
-
-    private validateTransformer(): boolean {
-        if (!this.uiTransformer() || this.uiTransformerParameters().length === 0) {
-            return true;
-        }
-
-        let valid = true;
-
-        this.uiTransformerParameters().forEach(param => {
-            if (!this.isValid(param.validationGroup)) {
-                valid = false;
-            }
-        });
-
-        return valid;
-    }
-
-    applyTransformer() {
-        if (this.validateTransformer()) {
-
-            $("transform-results-btn").dropdown("toggle");
-
-            const criteria = this.criteria();
-            const transformerToApply = this.uiTransformer();
-            if (transformerToApply) {
-                criteria.transformer(transformerToApply);
-                criteria.transformerParameters(this.uiTransformerParameters().map(p => p.toDto()));
-                this.runQuery();
-            } else {
-                criteria.transformer(null);
-                criteria.transformerParameters([]);
-                this.runQuery();
-            }
-        }
-    }
-
-    getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
-        if (queryParams.length > 0) {
-            return "(" +
-                queryParams
-                    .map((param: transformerParamDto) => param.name + "=" + param.value)
-                    .join(", ") + ")";
-        }
-
-        return "";
     }
 
     getRecentQuerySortText(sorts: string[]) {
