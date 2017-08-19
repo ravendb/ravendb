@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         public bool IsGroupBy { get; private set; }
 
-        public List<Index> SupercededIndexes;
+        public List<Index> SupersededIndexes;
 
         public IndexDefinitionBase CreateAutoIndexDefinition()
         {

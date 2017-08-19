@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -22,14 +23,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
         private readonly IndexStore _indexStore;
         private readonly TransformerStore _transformerStore;
         private readonly DocumentsOperationContext _context;
+        private readonly RavenConfiguration _configuration;
         private readonly DocumentsStorage _documents;
         private readonly OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore, TransformerStore transformerStore, DocumentsStorage documents, DocumentsOperationContext context, OperationCancelToken token)
+        public DynamicQueryRunner(IndexStore indexStore, TransformerStore transformerStore, DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
         {
             _indexStore = indexStore;
             _transformerStore = transformerStore;
             _context = context;
+            _configuration = configuration;
             _token = token;
             _documents = documents;
         }
@@ -222,7 +225,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
                             }
                         }
                     });
-                GC.KeepAlive(t);// we explicitly don't care about this instance, this line is here to make the compiler happy
+
+                if (query.WaitForNonStaleResults && 
+                    _configuration.Indexing.TimeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan ==
+                    TimeSpan.Zero)
+                    await t; // this is used in testing, mainly
 
                 if (query.WaitForNonStaleResultsTimeout.HasValue == false)
                     query.WaitForNonStaleResultsTimeout = TimeSpan.FromSeconds(15); // allow new auto indexes to have some results
@@ -233,7 +240,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
         private async Task CleanupSupercededAutoIndexes(Index index, DynamicQueryMapping map)
         {
-            if (map.SupercededIndexes == null || map.SupercededIndexes.Count == 0)
+            if (map.SupersededIndexes == null || map.SupersededIndexes.Count == 0)
                 return;
 
             // this is meant to remove superceded indexes immediately when they are of no use
@@ -253,7 +260,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 }
 
                 var maxSupercededEtag = 0L;
-                foreach (var supercededIndex in map.SupercededIndexes)
+                foreach (var supercededIndex in map.SupersededIndexes)
                 {
                     var etag = supercededIndex.GetLastMappedEtagFor(map.ForCollection);
                     maxSupercededEtag = Math.Max(etag, maxSupercededEtag);
@@ -265,10 +272,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     // we'll give it a few seconds to drain any pending queries,
                     // and because it make it easier to demonstrate how we auto
                     // clear the old auto indexes.
+                    var timeout = _configuration.Indexing.TimeBeforeDeletionOfSupersededAutoIndex.AsTimeSpan;
+                    if (timeout != TimeSpan.Zero)
+                    {
+                        await TimeoutManager.WaitFor(
+                            timeout
+                        ).ConfigureAwait(false);
+                    }
 
-                    await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(15000)).ConfigureAwait(false);
-
-                    foreach (var supercededIndex in map.SupercededIndexes)
+                    foreach (var supercededIndex in map.SupersededIndexes)
                     {
                         try
                         {
@@ -317,10 +329,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                     var currentIndex = _indexStore.GetIndex(matchResult.IndexName);
 
-                    if (map.SupercededIndexes == null)
-                        map.SupercededIndexes = new List<Index>();
+                    if (map.SupersededIndexes == null)
+                        map.SupersededIndexes = new List<Index>();
 
-                    map.SupercededIndexes.Add(currentIndex);
+                    map.SupersededIndexes.Add(currentIndex);
 
                     map.ExtendMappingBasedOn(currentIndex.Definition);
 

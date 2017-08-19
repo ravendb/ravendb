@@ -74,12 +74,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.JournalsStoragePath")]
         public virtual PathSetting JournalsStoragePath { get; protected set; }
 
+
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec")]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
+
+        [Description("How long should we keep a superseded auto index?")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec")]
+        public TimeSetting TimeBeforeDeletionOfSupersededAutoIndex { get; protected set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]
