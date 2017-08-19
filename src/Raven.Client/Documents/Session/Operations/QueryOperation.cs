@@ -93,7 +93,7 @@ namespace Raven.Client.Documents.Session.Operations
             return _session.DocumentStore.DisableAggressiveCaching();
         }
 
-        public IList<T> Complete<T>()
+        public List<T> Complete<T>()
         {
             var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)

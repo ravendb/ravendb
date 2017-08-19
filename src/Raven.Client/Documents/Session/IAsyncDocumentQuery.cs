@@ -101,7 +101,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Executed the query and returns the results.
         /// </summary>
-        Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken));
+        Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Returns first element or throws if sequence is empty.
