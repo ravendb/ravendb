@@ -11,7 +11,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -37,12 +36,6 @@ namespace Raven.Client.Documents.Session
         ///     instance that will evaluate the query only when needed.
         /// </summary>
         Lazy<int> CountLazily();
-
-        /// <summary>
-        ///     Set the transformer parameters for this query
-        /// </summary>
-        /// <param name="transformerParameters"></param>
-        IDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters);
 
         /// <summary>
         ///     Create the index query object for this query
@@ -100,12 +93,6 @@ namespace Raven.Client.Documents.Session
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="clause">function with spatial criteria factory</param>
         IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
-        ///     Sets a transformer to use after executing a query
-        /// </summary>
-        IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
-            where TTransformer : AbstractTransformerCreationTask, new();
 
         /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize

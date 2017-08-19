@@ -4,7 +4,6 @@ using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -142,31 +141,6 @@ namespace Raven.Server.Smuggler.Documents
                         Type = type,
                         IndexDefinition = indexDefinition
                     };
-                }
-            }
-        }
-
-        public IEnumerable<TransformerDefinition> GetTransformers()
-        {
-            foreach (var reader in ReadArray())
-            {
-                using (reader)
-                {
-                    TransformerDefinition transformerDefinition;
-
-                    try
-                    {
-                        transformerDefinition = TransformerProcessor.ReadTransformerDefinition(reader, _buildVersionType);
-                    }
-                    catch (Exception e)
-                    {
-                        _result.Transformers.ErroredCount++;
-                        _result.AddWarning($"Could not read transformer definition. Message: {e.Message}");
-
-                        continue;
-                    }
-
-                    yield return transformerDefinition;
                 }
             }
         }

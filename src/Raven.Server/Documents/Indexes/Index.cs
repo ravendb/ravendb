@@ -34,7 +34,6 @@ using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.Documents.Queries.Suggestion;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -564,7 +563,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
-
+                    
                 _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
@@ -814,7 +813,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
-
+                                        
                                         TimeSpentIndexing.Stop();
 
                                         // If we are here, then the previous block did not throw. There's two
@@ -1170,8 +1169,8 @@ namespace Raven.Server.Documents.Indexes
 
                     try
                     {
-                        using (InitializeIndexingWork(indexContext))
-                        {
+                    using (InitializeIndexingWork(indexContext))
+                    {
                             
                             foreach (var work in _indexWorkers)
                             {
@@ -1193,32 +1192,32 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
 
-                            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
-                        }
+                        _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                    }
 
-                        using (stats.For(IndexingOperation.Storage.Commit))
+                    using (stats.For(IndexingOperation.Storage.Commit))
+                    {
+                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
+
+                        tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                         {
-                            tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
-
-                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                            if (writeOperation.IsValueCreated)
                             {
-                                if (writeOperation.IsValueCreated)
+                                using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
                                 {
-                                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
-                                    {
-                                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                                        // also we need this to be called when new read transaction are prevented in order to ensure
-                                        // that queries won't get the searcher having 'old' state but see 'new' changes committed here
-                                        // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                        IndexPersistence.RecreateSearcher(tx.InnerTransaction);
-                                    }
+                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                                    // also we need this to be called when new read transaction are prevented in order to ensure
+                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
+                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
                                 }
-                            };
+                            }
+                        };
 
-                            tx.Commit();
+                        tx.Commit();
 
-                            stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
-                        }
+                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
+                    }
                     }
                     catch
                     {
@@ -1654,16 +1653,9 @@ namespace Raven.Server.Documents.Indexes
 
             AssertQueryDoesNotContainFieldsThatAreNotIndexed(query.Metadata);
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
-            {
-                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-            }
 
             if (resultToFill.SupportsInclude == false
-                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0 || transformer != null && transformer.HasInclude))
+                && (query.Metadata.Includes != null && query.Metadata.Includes.Length > 0))
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
             using (var marker = MarkQueryAsRunning(query, token))
@@ -1718,8 +1710,7 @@ namespace Raven.Server.Documents.Indexes
 
                         FillQueryResult(resultToFill, isStale, documentsContext, indexContext);
 
-                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0) &&
-                            (transformer == null || transformer.MightRequireTransaction == false))
+                        if (Type.IsMapReduce() && (query.Metadata.Includes == null || query.Metadata.Includes.Length == 0))
                             documentsContext.CloseTransaction();
                         // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
@@ -1728,7 +1719,7 @@ namespace Raven.Server.Documents.Indexes
                             var totalResults = new Reference<int>();
                             var skippedResults = new Reference<int>();
 
-                            var fieldsToFetch = new FieldsToFetch(query, Definition, transformer);
+                            var fieldsToFetch = new FieldsToFetch(query, Definition);
                             IEnumerable<Document> documents;
 
                             if (query.IsIntersect == false)
@@ -1745,30 +1736,22 @@ namespace Raven.Server.Documents.Indexes
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
                                 DocumentDatabase.DocumentsStorage, documentsContext, query.Metadata.Includes);
 
-                            using (
-                                var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                                    includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                                    DocumentDatabase.TransformerStore, documentsContext))
+                            try
                             {
-                                var results = scope != null ? scope.Transform(documents) : documents;
-
-                                try
+                                foreach (var document in documents)
                                 {
-                                    foreach (var document in results)
-                                    {
-                                        resultToFill.TotalResults = totalResults.Value;
-                                        resultToFill.AddResult(document);
+                                    resultToFill.TotalResults = totalResults.Value;
+                                    resultToFill.AddResult(document);
 
-                                        includeDocumentsCommand.Gather(document);
-                                    }
+                                    includeDocumentsCommand.Gather(document);
                                 }
-                                catch (Exception e)
-                                {
-                                    if (resultToFill.SupportsExceptionHandling == false)
-                                        throw;
+                            }
+                            catch (Exception e)
+                            {
+                                if (resultToFill.SupportsExceptionHandling == false)
+                                    throw;
 
-                                    resultToFill.HandleException(e);
-                                }
+                                resultToFill.HandleException(e);
                             }
 
                             includeDocumentsCommand.Fill(resultToFill.Includes);
@@ -1915,14 +1898,6 @@ namespace Raven.Server.Documents.Indexes
         {
             AssertIndexState();
 
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(query.Transformer) == false)
-            {
-                transformer = DocumentDatabase.TransformerStore.GetTransformer(query.Transformer);
-                if (transformer == null)
-                    throw new InvalidOperationException($"The transformer '{query.Transformer}' was not found.");
-            }
-
             HashSet<string> stopWords = null;
             if (string.IsNullOrWhiteSpace(query.StopWordsDocumentId) == false)
             {
@@ -1954,8 +1929,7 @@ namespace Raven.Server.Documents.Indexes
 
                     FillQueryResult(result, isStale, documentsContext, indexContext);
 
-                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0) &&
-                        (transformer == null || transformer.MightRequireTransaction == false))
+                    if (Type.IsMapReduce() && (query.Includes == null || query.Includes.Length == 0))
                         documentsContext.CloseTransaction();
                     // map reduce don't need to access mapResults storage unless we have a transformer. Possible optimization: if we will know if transformer needs transaction then we may reset this here or not
 
@@ -1973,11 +1947,11 @@ namespace Raven.Server.Documents.Indexes
                             var results = scope != null ? scope.Transform(documents) : documents;
 
                             foreach (var document in results)
-                            {
-                                result.Results.Add(document);
-                                includeDocumentsCommand.Gather(document);
-                            }
-                        }
+                        
+                        	{
+                            	result.Results.Add(document);
+                            	includeDocumentsCommand.Gather(document);
+	                        }
 
                         includeDocumentsCommand.Fill(result.Includes);
                     }
@@ -2597,5 +2571,3 @@ namespace Raven.Server.Documents.Indexes
                 _index._isStorageBeingMoved = false;
             }
         }
-    }
-}

@@ -18,9 +18,6 @@ namespace Raven.Client.Documents.Commands
         private readonly string[] _ids;
         private readonly string[] _includes;
 
-        private readonly string _transformer;
-        private readonly Dictionary<string, object> _transformerParameters;
-
         private readonly bool _metadataOnly;
 
         private readonly string _startWith;
@@ -36,12 +33,10 @@ namespace Raven.Client.Documents.Commands
             _pageSize = pageSize;
         }
 
-        public GetDocumentCommand(string id, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly)
+        public GetDocumentCommand(string id, string[] includes, bool metadataOnly)
         {
             _id = id;
             _includes = includes;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _metadataOnly = metadataOnly;
         }
 
@@ -52,19 +47,15 @@ namespace Raven.Client.Documents.Commands
 
             _ids = ids;
             _includes = includes;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, string transformer, Dictionary<string, object> transformerParameters, int start, int pageSize)
+        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize)
         {
             _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
             _startAfter = startAfter;
             _matches = matches;
             _exclude = exclude;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _start = start;
             _pageSize = pageSize;
         }
@@ -96,17 +87,6 @@ namespace Raven.Client.Documents.Commands
                 foreach (var include in _includes)
                 {
                     pathBuilder.Append($"&include={include}");
-                }
-            }
-
-            if (string.IsNullOrEmpty(_transformer) == false)
-                pathBuilder.Append($"&transformer={_transformer}");
-
-            if (_transformerParameters != null)
-            {
-                foreach (var tp in _transformerParameters)
-                {
-                    pathBuilder.Append($"&tp-{tp.Key}={tp.Value}");
                 }
             }
 

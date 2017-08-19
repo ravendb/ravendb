@@ -10,7 +10,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
@@ -75,8 +74,6 @@ namespace Raven.Client.Json.Converters
 
         public static readonly Func<BlittableJsonReaderObject, BlittableArrayResult> BlittableArrayResult = GenerateJsonDeserializationRoutine<BlittableArrayResult>();
 
-        public static readonly Func<BlittableJsonReaderObject, PutTransformerResult> PutTransformerResult = GenerateJsonDeserializationRoutine<PutTransformerResult>();
-
         public static readonly Func<BlittableJsonReaderObject, DatabaseStatistics> GetStatisticsResult = GenerateJsonDeserializationRoutine<DatabaseStatistics>();
 
         public static readonly Func<BlittableJsonReaderObject, OperationIdResult> OperationIdResult = GenerateJsonDeserializationRoutine<OperationIdResult>();
@@ -100,8 +97,6 @@ namespace Raven.Client.Json.Converters
         public static readonly Func<BlittableJsonReaderObject, IndexingStatus> IndexingStatus = GenerateJsonDeserializationRoutine<IndexingStatus>();
 
         public static readonly Func<BlittableJsonReaderObject, GetIndexesResponse> GetIndexesResponse = GenerateJsonDeserializationRoutine<GetIndexesResponse>();
-
-        public static readonly Func<BlittableJsonReaderObject, GetTransformersResponse> GetTransformersResponse = GenerateJsonDeserializationRoutine<GetTransformersResponse>();
 
         public static readonly Func<BlittableJsonReaderObject, GetIndexNamesResponse> GetIndexNamesResponse = GenerateJsonDeserializationRoutine<GetIndexNamesResponse>();
 

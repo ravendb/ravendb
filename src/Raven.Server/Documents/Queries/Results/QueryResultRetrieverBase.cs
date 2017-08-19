@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Results
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
-            if (FieldsToFetch.ExtractAllFromIndex || FieldsToFetch.ExtractAllFromDocument)
+            if (FieldsToFetch.ExtractAllFromIndex)
             {
                 if (FieldsToFetch.ExtractAllFromIndex)
                 {
@@ -83,26 +83,6 @@ namespace Raven.Server.Documents.Queries.Results
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
-                }
-
-                if (FieldsToFetch.ExtractAllFromDocument)
-                {
-                    if (fields == null)
-                        fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
-
-                    doc = DirectGet(input, id, state);
-                    documentLoaded = true;
-
-                    if (doc != null)
-                    {
-                        foreach (var name in doc.Data.GetPropertyNames())
-                        {
-                            if (fields.ContainsKey(name))
-                                continue;
-
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, null, canExtractFromIndex: false, isDocumentId: false);
-                        }
-                    }
                 }
             }
 

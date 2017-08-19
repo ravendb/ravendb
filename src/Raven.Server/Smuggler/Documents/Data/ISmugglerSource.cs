@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -13,7 +12,6 @@ namespace Raven.Server.Smuggler.Documents.Data
         IEnumerable<DocumentItem> GetDocuments(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<DocumentItem> GetRevisionDocuments(List<string> collectionsToExport, INewDocumentActions actions);
         IEnumerable<IndexDefinitionAndType> GetIndexes();
-        IEnumerable<TransformerDefinition> GetTransformers();
         IEnumerable<KeyValuePair<string, long>> GetIdentities();
         long SkipType(DatabaseItemType type);
     }

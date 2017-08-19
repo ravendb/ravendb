@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
-            var index = IndexAndTransformerCompiler.Compile(indexDefinition);
+            var index = IndexCompiler.Compile(indexDefinition);
 
             var map = index.Maps.Values.First().First();
 
@@ -98,7 +98,7 @@ namespace SlowTests.Tests.Indexes
             }.ToIndexDefinition(new DocumentConventions { PrettifyGeneratedLinqExpressions = false });
 
             indexDefinition.Name = "Index1";
-            IndexAndTransformerCompiler.Compile(indexDefinition);
+            IndexCompiler.Compile(indexDefinition);
         }
 
         private class Person

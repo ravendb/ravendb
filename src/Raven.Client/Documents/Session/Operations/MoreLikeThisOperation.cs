@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -48,24 +47,15 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
 
-            var usedTransformer = string.IsNullOrEmpty(_query.Transformer) == false;
-            List<T> list;
-            if (usedTransformer)
+            var list = new List<T>();
+            foreach (BlittableJsonReaderObject document in _result.Results)
             {
-                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, _result).ToList();
-            }
-            else
-            {
-                list = new List<T>();
-                foreach (BlittableJsonReaderObject document in _result.Results)
-                {
-                    var metadata = document.GetMetadata();
+                var metadata = document.GetMetadata();
 
-                    string id;
-                    metadata.TryGetId(out id);
+                string id;
+                metadata.TryGetId(out id);
 
-                    list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
-                }
+                list.Add(QueryOperation.Deserialize<T>(id, document, metadata, projectionFields: null, disableEntitiesTracking: false, session: _session));
             }
 
             _session.RegisterMissingIncludes(_result.Results, _query.Includes);

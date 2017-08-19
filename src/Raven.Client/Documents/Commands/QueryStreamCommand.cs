@@ -14,13 +14,11 @@ namespace Raven.Client.Documents.Commands
     {
         private readonly DocumentConventions _conventions;
         private readonly IndexQuery _indexQuery;
-        public readonly bool UsedTransformer;
 
         public QueryStreamCommand(DocumentConventions conventions, IndexQuery query)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
             _indexQuery = query ?? throw new ArgumentNullException(nameof(query));
-            UsedTransformer = string.IsNullOrWhiteSpace(query.Transformer) == false;
             ResponseType = RavenCommandResponseType.Empty;
         }
 

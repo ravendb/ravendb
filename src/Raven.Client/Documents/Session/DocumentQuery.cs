@@ -11,7 +11,6 @@ using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -49,24 +48,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetTransformer(string transformer)
-        {
-            SetTransformer(transformer);
-            return this;
-        }
-
-        public virtual IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
-            where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
-        }
-
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
-            return this;
-        }
-
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByScore()
         {
             OrderByScore();
@@ -85,12 +66,6 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        public IDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters)
-        {
-            TransformerParameters = transformerParameters;
-            return this;
-        }
-
         /// <summary>
         /// Selects the specified fields directly from the index
         /// </summary>
@@ -106,7 +81,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public virtual IDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
+            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         /// <summary>
@@ -732,7 +707,7 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer);
+            return CreateDocumentQueryInternal<TResult>();
         }
 
         /// <summary>
@@ -1109,7 +1084,7 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
+        private DocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null)
         {
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
@@ -1133,7 +1108,6 @@ namespace Raven.Client.Documents.Session
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
@@ -1144,8 +1118,6 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                Transformer = transformer,
-                TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,

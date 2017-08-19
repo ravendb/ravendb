@@ -22,7 +22,6 @@ namespace Raven.Server.Documents.Handlers
             using (context.OpenReadTransaction())
             {
                 var indexes = Database.IndexStore.GetIndexes().ToList();
-                var transformersCount = Database.TransformerStore.GetTransformersCount();
 
                 var stats = new DatabaseStatistics
                 {
@@ -35,7 +34,6 @@ namespace Raven.Server.Documents.Handlers
                 stats.CountOfAttachments = attachments.AttachmentCount;
                 stats.CountOfUniqueAttachments = attachments.StreamsCount;
                 stats.CountOfIndexes = indexes.Count;
-                stats.CountOfTransformers = transformersCount;
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;

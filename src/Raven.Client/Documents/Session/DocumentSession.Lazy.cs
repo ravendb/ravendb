@@ -12,7 +12,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -91,62 +90,6 @@ namespace Raven.Client.Documents.Session
                 OnEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
 
             return lazyValue;
-        }
- 
-        Lazy<TResult> ILazySessionOperations.Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure,
-            Action<TResult> onEval)
-        {
-            var transformer = new TTransformer().TransformerName;
-            var ids = new[] { id };
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
-                ids,
-                transformer,
-                configuration.TransformerParameters,
-                new LoadTransformerOperation(this));
-
-            return AddLazyOperation(lazyLoadOperation, onEval);
-        }
-
-        Lazy<TResult> ILazySessionOperations.Load<TResult>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var ids = new[] { id };
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
-                ids,
-                transformer,
-                configuration.TransformerParameters,
-                new LoadTransformerOperation(this));
-
-            return AddLazyOperation(lazyLoadOperation, onEval);
-        }
-
-        Lazy<Dictionary<string, TResult>> ILazySessionOperations.Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure, Action<TResult> onEval)
-        {
-            return Lazily.Load(ids, typeof(TTransformer), configure, onEval);
-        }
-
-        Lazy<Dictionary<string, TResult>> ILazySessionOperations.Load<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure, Action<TResult> onEval)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var idsArray = ids.ToArray();
-
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
-                idsArray,
-                transformer,
-                configuration.TransformerParameters,
-                new LoadTransformerOperation(this));
-
-            return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
         }
 
         Lazy<Dictionary<string, TResult>> ILazySessionOperations.LoadStartingWith<TResult>(string idPrefix, string matches, int start, int pageSize, string exclude, string startAfter)
