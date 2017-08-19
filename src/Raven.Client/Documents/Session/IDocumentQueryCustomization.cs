@@ -10,6 +10,7 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Operations;
 
 namespace Raven.Client.Documents.Session
 {
@@ -18,6 +19,11 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IDocumentQueryCustomization
     {
+        /// <summary>
+        /// Get the raw query operation that will be sent to the server
+        /// </summary>
+        QueryOperation QueryOperation { get; }
+
         /// <summary>
         ///     Allow you to modify the index query before it is executed
         /// </summary>

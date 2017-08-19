@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Linq
             public bool Active { get; set; }
         }
 
-        [Fact(Skip = "RavenDB-8199")]
+        [Fact]
         public void WhereThenFirstHasAND()
         {
             var queries = new List<string>();
@@ -28,17 +28,17 @@ namespace SlowTests.Tests.Linq
                     store.OnBeforeQueryExecuted -= RecordQueries;
                 }
 
-                var documentSession = store.OpenSession();
                 store.OnBeforeQueryExecuted += RecordQueries;
+                var documentSession = store.OpenSession();
 
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").FirstOrDefault(x => x.Active);
 
                 Assert.Equal(1, queries.Count);
-                Assert.Equal("Name:ayende AND Active:true", queries[0]);
+                Assert.Equal("FROM Users WHERE Name = :p0 AND Active = :p1", queries[0]);
             }
         }
 
-        [Fact(Skip = "RavenDB-8199")]
+        [Fact]
         public void WhereThenSingleHasAND()
         {
             var queries = new List<string>();
@@ -51,13 +51,13 @@ namespace SlowTests.Tests.Linq
                     store.OnBeforeQueryExecuted -= RecordQueries;
                 }
 
-                var documentSession = store.OpenSession();
                 store.OnBeforeQueryExecuted += RecordQueries;
+                var documentSession = store.OpenSession();
 
                 var _ = documentSession.Query<User>().Where(x => x.Name == "ayende").SingleOrDefault(x => x.Active);
 
                 Assert.Equal(1, queries.Count);
-                Assert.Equal("Name:ayende AND Active:true", queries[0]);
+                Assert.Equal("FROM Users WHERE Name = :p0 AND Active = :p1", queries[0]);
             }
         }
     }

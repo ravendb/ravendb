@@ -102,7 +102,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected int? PageSize;
 
-        protected QueryOperation QueryOperation;
+        public QueryOperation QueryOperation { get; protected set; }
 
         protected LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
 
