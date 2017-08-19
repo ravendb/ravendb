@@ -721,14 +721,13 @@ namespace Raven.Server.Documents
                 if (LastDatabaseRecordIndex > index)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skipping record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName} because it was already precessed.");
+                        _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName} because it was already precessed.");
                     return;
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
+                    _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
 
-                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, $"Should never happen");
 
                 try
                 {
