@@ -58,6 +58,9 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                 ThrowParseException("Unable to parse WHERE clause");
 
+            if (Scanner.TryScan("ORDER BY"))
+                q.OrderBy = OrderBy();
+
             if (Scanner.TryScan("SELECT"))
             {
                 if(q.Select!= null)
@@ -65,9 +68,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
                 q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
             }
-
-            if (Scanner.TryScan("ORDER BY"))
-                q.OrderBy = OrderBy();
 
             if (Scanner.NextToken())
                 ThrowParseException("Expected end of query");
