@@ -297,6 +297,30 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
+        [Fact]
+        public void Partial_match_if_analyzer_is_required_on_group_by_field()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"select Name, count()
+from Users
+group by Name
+where Name = 'arek'"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"select Name, count()
+from Users
+group by Name
+where search(Name, 'arek')"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
 
         protected void add_index(IndexDefinitionBase definition)
         {

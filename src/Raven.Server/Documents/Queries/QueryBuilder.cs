@@ -8,6 +8,7 @@ using Lucene.Net.Analysis;
 using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -338,6 +339,9 @@ namespace Raven.Server.Documents.Queries
 
             var valueAsString = (string)value;
             var values = valueAsString.Split(' ');
+
+            if (metadata.IsDynamic)
+                fieldName = IndexField.GetAnalyzedAutoIndexFieldName(fieldName);
 
             if (values.Length == 1)
             {

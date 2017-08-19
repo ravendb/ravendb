@@ -31,6 +31,11 @@ namespace Raven.Server.Documents.Queries.Dynamic
             return new DynamicQueryMappingItem(name, aggregation, false, false);
         }
 
+        public static DynamicQueryMappingItem Create(string name, AggregationOperation aggregation, bool isFullTextSearch)
+        {
+            return new DynamicQueryMappingItem(name, aggregation, false, isFullTextSearch);
+        }
+
         public static DynamicQueryMappingItem Create(string name, AggregationOperation aggregation, Dictionary<string, WhereField> whereFields)
         {
             if (whereFields.TryGetValue(name, out var whereField))

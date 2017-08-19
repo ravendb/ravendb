@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var field in fields)
             {
-                var fieldName = field.Key;
+                var fieldName = field.Value.Name;
 
                 switch (field.Value.Indexing)
                 {

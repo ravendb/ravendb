@@ -305,6 +305,27 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
+        [Fact]
+        public void Partial_match_if_analyzer_is_required()
+        {
+            using (var db = CreateDocumentDatabase())
+            {
+                var mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where Name = 'arek'"));
+
+                db.IndexStore.CreateIndex(mapping.CreateAutoIndexDefinition()).Wait();
+
+                mapping = DynamicQueryMapping.Create(new IndexQueryServerSide(@"from Users
+where search(Name, 'arek')"));
+
+                var matcher = new DynamicQueryToIndexMatcher(db.IndexStore);
+
+                var result = matcher.Match(mapping);
+
+                Assert.Equal(DynamicQueryMatchType.Partial, result.MatchType);
+            }
+        }
+
         private void add_index(AutoMapIndexDefinition definition)
         {
             AsyncHelpers.RunSync(() => _documentDatabase.IndexStore.CreateIndex(definition));

@@ -8,7 +8,7 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexNameFinder
+    public class AutoIndexNameFinder
     {
         public static string FindMapIndexName(string collection, IReadOnlyCollection<IndexField> fields)
         {
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes
             var reducedByFields = string.Join("And", groupBy.Select(x =>
             {
                 if (x.Indexing == FieldIndexing.Analyzed)
-                    return $"Analyzed({x.Name})";
+                    return IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
 
                 return x.Name;
             }).OrderBy(x => x));
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes
             var combinedFields = string.Join("And", fields.Select(x =>
             {
                 if (x.Indexing == FieldIndexing.Analyzed)
-                    return $"Analyzed({x.Name})";
+                    return IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
 
                 return x.Name;
             }).OrderBy(x => x));

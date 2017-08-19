@@ -51,11 +51,11 @@ namespace FastTests.Server.Documents.Indexing
                         .CountAsync();
 
                     Assert.Equal(0, count);
-                    Assert.Equal("Auto/Users/ByName", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByAnalyzed(Name)", stats.IndexName);
                 }
             }
         }
-        
+
         [Fact]
         public async Task CanUseFullTextSearchInAutoMapReduceIndex()
         {
@@ -117,7 +117,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     Assert.Equal(0, results.Count);
 
-                    Assert.Equal("Auto/Users/ByCountReducedByName", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByCountReducedByAnalyzed(Name)", stats.IndexName);
                 }
             }
         }

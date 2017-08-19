@@ -283,7 +283,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.NotNull(definition);
 
                 Assert.Equal(1, definition.GroupByFields.Count);
-                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal("Analyzed(Location)", definition.GroupByFields["Location"].Name);
                 Assert.Equal(FieldIndexing.Analyzed, definition.GroupByFields["Location"].Indexing);
 
                 Assert.Equal(IndexLockMode.Unlock, indexes[0].Definition.LockMode);
@@ -305,7 +305,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.NotNull(definition);
 
                 Assert.Equal(1, definition.GroupByFields.Count);
-                Assert.Equal("Location", definition.GroupByFields["Location"].Name);
+                Assert.Equal("Analyzed(Location)", definition.GroupByFields["Location"].Name);
                 Assert.Equal(FieldIndexing.Analyzed, definition.GroupByFields["Location"].Indexing);
 
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);

@@ -7,6 +7,8 @@ namespace Raven.Server.Documents.Indexes
     {
         public string Name { get; set; }
 
+        internal string OriginalName { get; set; }
+
         public string Analyzer { get; set; }
 
         public AggregationOperation Aggregation { get; set; }
@@ -107,6 +109,11 @@ namespace Raven.Server.Documents.Indexes
                 Storage = Storage,
                 TermVector = TermVector
             };
+        }
+
+        public static string GetAnalyzedAutoIndexFieldName(string name)
+        {
+            return $"Analyzed({name})";
         }
     }
 }

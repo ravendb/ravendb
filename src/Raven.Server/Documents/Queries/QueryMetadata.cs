@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow;
 using Sparrow.Json;

@@ -145,7 +145,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                 Assert.Equal(1, indexes[1].Definition.Collections.Count);
                 Assert.Equal("Users", indexes[1].Definition.Collections.Single());
                 Assert.Equal(1, indexes[1].Definition.MapFields.Count);
-                Assert.Equal("Name2", indexes[1].Definition.MapFields["Name2"].Name);
+                Assert.Equal("Analyzed(Name2)", indexes[1].Definition.MapFields["Name2"].Name);
                 Assert.Equal(FieldIndexing.Analyzed, indexes[1].Definition.MapFields["Name2"].Indexing);
                 Assert.Equal(IndexLockMode.LockedError, indexes[1].Definition.LockMode);
                 Assert.Equal(IndexPriority.Low, indexes[1].Definition.Priority);
