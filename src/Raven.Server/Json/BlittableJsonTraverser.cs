@@ -85,10 +85,20 @@ namespace Raven.Server.Json
                     result = reader;
                     return false;
                 case CollectionSeparatorStart:
-                    if (path.Length < indexOfFirstSeparator + CollectionSeparator.Length ||
+                    if (path.Length <= indexOfFirstSeparator + 2 ||
                         path[indexOfFirstSeparator + 1] != ']' ||
                         path[indexOfFirstSeparator + 2] != '.')
                     {
+                        if (indexOfFirstSeparator + 1 < path.Length &&
+                            path[indexOfFirstSeparator + 1] == ']')
+                        {
+                            if (reader is BlittableJsonReaderArray innerArray)
+                            {
+                                leftPath = string.Empty; // we are done with this path
+                                result = ReadArray(innerArray, leftPath);
+                                return true;
+                            }
+                        }
                         result = null;
                         leftPath = path;
                         return false;
