@@ -135,5 +135,16 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
+
+        /// <summary>
+        /// Set the full text of the RQL query that will be sent to the server.
+        /// Must be the only call that is made on this query object
+        /// </summary>
+        IAsyncDocumentQuery<T> RawQuery(string query);
+
+        /// <summary>
+        /// Add a named parameter to the query
+        /// </summary>
+        IAsyncDocumentQuery<T> AddParameter(string name, object value);
     }
 }

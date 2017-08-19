@@ -61,6 +61,8 @@ namespace Raven.Client.Documents.Session
 
         private int _currentClauseDepth;
 
+        protected string QueryRaw;
+
         protected KeyValuePair<string, object> LastEquality;
 
         protected Parameters QueryParameters = new Parameters();
@@ -341,6 +343,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.Random);
         }
 
@@ -350,6 +353,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
+            AssertNoRawQuery();
             if (string.IsNullOrWhiteSpace(seed))
             {
                 RandomOrdering();
@@ -364,7 +368,7 @@ namespace Raven.Client.Documents.Session
             {
                 OrderByDescending(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
                 return;
-            }
+        }
 
             OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
         }
@@ -409,11 +413,35 @@ namespace Raven.Client.Documents.Session
             _aliasToGroupByFieldName[projectedName] = fieldName;
         }
 
+        private void AssertNoRawQuery()
+        {
+            if (QueryRaw != null)
+                throw new InvalidOperationException(
+                    "RawQuery was called, cannot modify this query by calling on operations that would modify the query (such as Where, Select, OrderBy, GroupBy, etc)");
+        }
+
+        public void RawQuery(string query)
+        {
+            if (SelectTokens.Count != 0 ||
+                WhereTokens.Count != 0 ||
+                OrderByTokens.Count != 0 ||
+                GroupByTokens.Count != 0)
+                throw new InvalidOperationException("You can only use RawQuery on a new query, without applying any operations (such as Where, Select, OrderBy, GroupBy, etc)");
+            QueryRaw = query;
+        }
+
+        public void AddParameter(string name, object value)
+        {
+            if (QueryParameters.ContainsKey(name))
+                throw new InvalidOperationException("The parameter " + name + " was already added");
+            QueryParameters[name] = value;
+        }
+
         public void GroupBy(string fieldName, params string[] fieldNames)
         {
             if (FromToken.IsDynamic == false)
                 throw new InvalidOperationException("GroupBy only works with dynamic queries.");
-
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
@@ -433,6 +461,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             if (projectedName != null && _aliasToGroupByFieldName.TryGetValue(projectedName, out var aliasedFieldName))
@@ -446,6 +475,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupBySum(string fieldName, string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
@@ -455,6 +485,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByCount(string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             SelectTokens.AddLast(GroupByCountToken.Create(projectedName));
@@ -503,6 +534,8 @@ namespace Raven.Client.Documents.Session
             SetHighlighterTags(new[] { preTag }, new[] { postTag });
         }
 
+            AssertNoRawQuery();
+        	fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             throw new NotImplementedException("This feature is not yet implemented");
@@ -941,6 +974,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderBy(string field, OrderingType ordering = OrderingType.String)
         {
+            AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateAscending(f, ordering));
         }
@@ -953,24 +987,24 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderByDescending(string field, OrderingType ordering = OrderingType.String)
         {
+            AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateDescending(f, ordering));
         }
 
         public void OrderByScore()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.ScoreAscending);
         }
 
         public void OrderByScoreDescending()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.ScoreDescending);
         }
 
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public void WaitForNonStaleResultsAsOfNow()
         {
             TheWaitForNonStaleResults = true;
@@ -1152,14 +1186,13 @@ If you really want to do in memory filtering on the data returned from the query
             WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
 
-        /// <summary>
-        ///   Returns a <see cref = "System.String" /> that represents the query for this instance.
-        /// </summary>
-        /// <returns>
-        ///   A <see cref = "System.String" /> that represents the query for this instance.
-        /// </returns>
+
+        /// <inheritdoc />
         public override string ToString()
         {
+            if (QueryRaw != null)
+                return QueryRaw;
+
             if (_currentClauseDepth != 0)
                 throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", _currentClauseDepth));
 
@@ -1484,6 +1517,8 @@ If you really want to do in memory filtering on the data returned from the query
 
         private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens)
         {
+            AssertNoRawQuery();
+
             if (tokens.Count == 0)
                 return;
 
@@ -1756,7 +1791,7 @@ If you really want to do in memory filtering on the data returned from the query
             NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
-        }
+    }
 
         protected void Spatial(string fieldName, string shapeWKT, SpatialRelation relation, double distErrorPercent)
         {
@@ -1783,7 +1818,7 @@ If you really want to do in memory filtering on the data returned from the query
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
-            }
+}
 
             WhereTokens.AddLast(relationToken);
         }

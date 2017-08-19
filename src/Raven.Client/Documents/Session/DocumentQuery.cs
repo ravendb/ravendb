@@ -705,6 +705,18 @@ namespace Raven.Client.Documents.Session
             return new GroupByDocumentQuery<T>(this);
         }
 
+        IDocumentQuery<T> IDocumentQuery<T>.RawQuery(string query)
+        {
+            RawQuery(query);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQuery<T>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
+        }
+
         public IDocumentQuery<TResult> OfType<TResult>()
         {
             return CreateDocumentQueryInternal<TResult>();
@@ -1095,6 +1107,7 @@ namespace Raven.Client.Documents.Session
                 CollectionName,
                 IsGroupBy)
             {
+                QueryRaw = QueryRaw,
                 PageSize = PageSize,
                 SelectTokens = SelectTokens,
                 FieldsToFetchToken = FieldsToFetchToken,
