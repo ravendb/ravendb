@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Queries
 
         private readonly Dictionary<string, string> _aliasToName = new Dictionary<string, string>();
 
-        public readonly Dictionary<StringSegment, string> RootAliasPaths = new Dictionary<StringSegment, string>();
+        public readonly Dictionary<StringSegment, (string PropertyPath, bool Array)> RootAliasPaths = new Dictionary<StringSegment, (string PropertyPath, bool Array)>();
 
         public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey)
         {
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Queries
             if (Query.From.Alias != null)
             {
                 var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
-                RootAliasPaths[fromAlias] = null;
+                RootAliasPaths[fromAlias] = (null, false);
             }
 
             if (Query.GroupBy != null)
@@ -155,8 +155,8 @@ namespace Raven.Server.Documents.Queries
                 if (index != 0)
                     sb.Append(", ");
                 sb.Append(alias.Key);
-                args[index++] = SelectField.Create(string.Empty, null, alias.Value,
-                    alias.Key.EndssWith("[]"), true);
+                args[index++] = SelectField.Create(string.Empty, null, alias.Value.PropertyPath,
+                    alias.Value.Array, true);
             }
             sb.AppendLine(") { ");
             sb.Append("    return ");
@@ -227,7 +227,13 @@ namespace Raven.Server.Documents.Queries
                         var alias = QueryExpression.Extract(QueryText, with.Alias);
 
                         var path = GetWithClausePropertyPath(with.Expression, "include");
-                        if (RootAliasPaths.TryAdd(alias, path) == false)
+                        var array = false;
+                        if (alias.EndsWith("[]"))
+                        {
+                            array = true;
+                            alias = alias.Substring(0, alias.Length - 2);
+                        }
+                        if (RootAliasPaths.TryAdd(alias, (path, array)) == false)
                         {
                             ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ");
                         }
@@ -490,17 +496,11 @@ namespace Raven.Server.Documents.Queries
         {
             var name = QueryExpression.Extract(QueryText, expressionField);
             var indexOf = name.IndexOf('.');
-            string sourceAlias;
+            (string Path, bool Array) sourceAlias;
             bool hasSourceAlias = false;
-            bool array = false;
             if (indexOf != -1)
             {
                 var key = new StringSegment(name, 0, indexOf);
-                if (key.EndssWith("[]"))
-                {
-                    key = key.Subsegment(0, key.Length - 2);
-                    array = true;
-                }
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))
                 {
                     name = name.Substring(indexOf + 1);
@@ -516,10 +516,9 @@ namespace Raven.Server.Documents.Queries
                 hasSourceAlias = true;
                 if (string.IsNullOrEmpty(alias))
                     alias = name;
-                array = name.EndsWith("[]");
                 name = string.Empty;
             }
-            return SelectField.Create(name, alias, sourceAlias, array, hasSourceAlias);
+            return SelectField.Create(name, alias, sourceAlias.Path, sourceAlias.Array, hasSourceAlias);
         }
 
         private SelectField GetSelectValue(string alias, ValueToken expressionValue)
