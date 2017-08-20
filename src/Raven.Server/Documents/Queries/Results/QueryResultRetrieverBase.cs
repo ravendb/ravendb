@@ -371,10 +371,9 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (query.DeclaredFunctions != null)
             {
-                foreach (var funcToken in query.DeclaredFunctions.Values)
+                foreach (var func in query.DeclaredFunctions.Values)
                 {
-                    var func = new StringSegment(query.QueryText, funcToken.TokenStart, funcToken.TokenLength);
-                    jintEngine.Execute(func.ToString());
+                    jintEngine.Execute(func);
                 }
             }
             object Translate(object o)

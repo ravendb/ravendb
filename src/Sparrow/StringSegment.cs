@@ -193,6 +193,14 @@ namespace Sparrow
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool EndssWith(string postfix)
+        {
+            if (postfix.Length > Length)
+                return false;
+            return string.CompareOrdinal(Buffer, Offset + Length - postfix.Length, postfix, 0, postfix.Length) == 0;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int IndexOfAny(char[] charArray, int startIndex)
         {
             Debug.Assert(startIndex >= 0 && startIndex < Length);
