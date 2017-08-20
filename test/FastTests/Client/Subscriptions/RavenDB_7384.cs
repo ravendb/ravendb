@@ -60,7 +60,7 @@ namespace FastTests.Client.Subscriptions
                 var operationIndex = await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
                     Criteria = new SubscriptionCriteria("Users")
 
 
@@ -123,7 +123,7 @@ namespace FastTests.Client.Subscriptions
                 await currentDatabase.SubscriptionStorage.PutSubscription(new SubscriptionCreationOptions()
                 {
                     Name = "Subs1",
-                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange.ToString(),
+                    ChangeVector = Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange.ToString(),
                     Criteria = new SubscriptionCriteria("Users")
                     {
                         Script = "return {Name:'Jorgen'}"
@@ -171,7 +171,7 @@ namespace FastTests.Client.Subscriptions
             using (context.OpenReadTransaction())
             {
                 var subscriptionData = currentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(context, "Subs1");
-                return subscriptionData.ChangeVector;
+                return subscriptionData.ChangeVectorForNextBatchStartingPoint;
             }
         }
     }

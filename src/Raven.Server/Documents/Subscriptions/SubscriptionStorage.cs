@@ -89,7 +89,22 @@ namespace Raven.Server.Documents.Subscriptions
                 SubscriptionId = id,
                 SubscriptionName = name,
                 LastDocumentEtagAckedInNode = lastEtag,
-                DbId = _db.DbId
+                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow
+            };
+
+            var (etag, _) = await _serverStore.SendToLeaderAsync(command);
+            await _db.RachisLogIndexNotifications.WaitForIndexNotification(etag);
+        }
+
+
+        public async Task UpdateClientConnectionTime(long id, string name)
+        {
+            var command = new UpdateSubscriptionClientConnectionTime(_db.Name)
+            {
+                NodeTag = _serverStore.NodeTag,
+                SubscriptionId = id,
+                SubscriptionName = name,
+                LastClientConnectionTime = DateTime.UtcNow
             };
 
             var (etag, _) = await _serverStore.SendToLeaderAsync(command);
@@ -271,6 +286,21 @@ namespace Raven.Server.Documents.Subscriptions
             GetRunningSubscriptionInternal(history, subscription, subscriptionConnectionState);
             return subscription;
         }
+
+        public SubscriptionConnectionState GetSubscriptionConnection(TransactionOperationContext context, string subscriptionName)
+        {
+            var subscriptionBlittable = _serverStore.Cluster.Read(context, SubscriptionState.GenerateSubscriptionItemKeyName(_db.Name, subscriptionName));
+            if (subscriptionBlittable == null)
+                return null;
+
+                var subscriptionState = JsonDeserializationClient.SubscriptionState(subscriptionBlittable);
+
+            if (_subscriptionConnectionStates.TryGetValue(subscriptionState.SubscriptionId, out SubscriptionConnectionState subscriptionConnection) == false)
+                return null;
+            
+            return subscriptionConnection;
+        }
+
         public class SubscriptionGeneralDataAndStats : SubscriptionState
         {
             public SubscriptionConnection Connection;
@@ -282,12 +312,13 @@ namespace Raven.Server.Documents.Subscriptions
             public SubscriptionGeneralDataAndStats(SubscriptionState @base)
             {
                 Criteria = @base.Criteria;
-                ChangeVector = @base.ChangeVector;
+                ChangeVectorForNextBatchStartingPoint = @base.ChangeVectorForNextBatchStartingPoint;
                 SubscriptionId = @base.SubscriptionId;
-                TimeOfLastClientActivity = @base.TimeOfLastClientActivity;
+                LastTimeServerMadeProgressWithDocuments = @base.LastTimeServerMadeProgressWithDocuments;
                 SubscriptionName = @base.SubscriptionName;
             }
         }
+
         public SubscriptionGeneralDataAndStats GetRunningSubscriptionConnectionHistory(TransactionOperationContext context, long subscriptionId)
         {
             if (!_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState))

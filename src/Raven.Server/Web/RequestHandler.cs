@@ -452,5 +452,15 @@ namespace Raven.Server.Web
             throw new ArgumentOutOfRangeException("Unknown authentication status: " + status);
         }
 
+        protected void SetupCORSHeaders()
+        {
+            // TODO: handle this properly when using https
+            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
+            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
+            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+        }
+
     }
 }

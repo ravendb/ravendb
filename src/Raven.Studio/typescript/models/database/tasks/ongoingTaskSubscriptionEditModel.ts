@@ -8,22 +8,26 @@ import collectionsTracker = require("common/helpers/database/collectionsTracker"
 class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     collections = collectionsTracker.default.collections;
+    liveConnection = ko.observable<boolean>();
 
-    script = ko.observable<string>();
-    fromChangeVector = ko.observable<string>(null); 
     includeRevisions = ko.observable<boolean>(false);
     areRevisionsDefinedForCollection = ko.observable<boolean>(true);
 
+    script = ko.observable<string>();
+
     startingPointType = ko.observable<subscriptionStartType>();
+    startingChangeVector = ko.observable<string>();
     startingPointChangeVector: KnockoutComputed<boolean>;
     startingPointLatestDocument: KnockoutComputed<boolean>; 
+    setStartingPoint = ko.observable<boolean>(true);
+    
+    changeVectorForNextBatchStartingPoint = ko.observable<string>(null); 
 
     validationGroup: KnockoutValidationGroup; 
 
     activeDatabase = activeDatabaseTracker.default.database;
    
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionState, isEdit: boolean) {
-        super(dto);
+    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails, isEdit: boolean) {        super(dto);
 
         this.isEdit = isEdit;
         dto.Criteria.Script = dto.Criteria.Script || ""; 
@@ -38,7 +42,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.startingPointType("Beginning of Time");
 
         this.startingPointChangeVector = ko.pureComputed(() => {
-            return this.startingPointType() === "Change Vector";
+            return this.startingPointType() === "Change-Vector";
         });
 
         this.startingPointLatestDocument = ko.pureComputed(() => {
@@ -49,23 +53,45 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.includeRevisions.throttle(250).subscribe(include => { if (include && this.collection()) { this.getCollectionRevisionsSettings(); } });
     }
 
-    editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
+    editViewUpdate(dto: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) {
         this.script(dto.Criteria.Script);
-        this.fromChangeVector(dto.ChangeVector);
         this.includeRevisions(dto.Criteria.IncludeRevisions);
+        this.changeVectorForNextBatchStartingPoint(dto.ChangeVectorForNextBatchStartingPoint);
+        this.setStartingPoint(false);
     }
 
     dataFromUI(): subscriptionDataFromUI {
         const script = _.trim(this.script()) || null;
+        
+        let changeVector: Raven.Client.Constants.Documents.SubscriptionChangeVectorSpecialStates | string = "DoNotChange";
+
+        if (this.setStartingPoint()) {
+            switch (this.startingPointType()) {
+            case "Beginning of Time":
+                {
+                    changeVector = "BeginningOfTime";
+                };
+                break;
+            case "Latest Document":
+                {
+                    changeVector = "LastDocument";
+                };
+                break;
+            case "Change-Vector":
+                {
+                    changeVector = this.startingChangeVector();
+                };
+                break;
+            }
+        }
 
         return {
             TaskName: this.taskName(),
-            ChangeVectorEntry: null,
-            // TODO:  Note: null means that we define with 'Beginning of Time'. This is temporary, until the other 2 options are implemented 
-            Collection: this.collection(), 
+            Collection: this.collection(),
             Script: script,
-            IncludeRevisions: this.includeRevisions()
-        }
+            IncludeRevisions: this.includeRevisions(),
+            ChangeVector: changeVector
+    }
     }
 
     editViewInitValidation() {
@@ -90,10 +116,24 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                 }]
         });
 
+        this.startingChangeVector.extend({
+            validation: [
+                {
+                    validator: () => {
+                        const goodState1 = this.setStartingPoint() && this.startingPointType() === 'Change-Vector' && this.startingChangeVector();
+                        const goodState2 = this.setStartingPoint() && this.startingPointType() !== 'Change-Vector';
+                        const goodState3 = !this.setStartingPoint();
+                        return goodState1 || goodState2 || goodState3;
+                    },
+                    message: "Please enter change-vector"
+                }]
+        });
+
         this.validationGroup = ko.validatedObservable({
             collection: this.collection,
             includeRevisions: this.includeRevisions,
-            script: this.script
+            script: this.script,
+            startingChangeVector: this.startingChangeVector
         });
     }
 
@@ -150,10 +190,12 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                      Script: "",
                      IncludeRevisions: false
                 },
-                ChangeVector: null,
+                ChangeVectorForNextBatchStartingPoint: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,
-                TimeOfLastClientActivity: null
+                ResponsibleNode: null,
+                LastClientConnectionTime: null,
+                LastTimeServerMadeProgressWithDocuments: null
             }, true);
     }
 }

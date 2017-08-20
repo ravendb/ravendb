@@ -214,15 +214,15 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        private void SetupCORSHeaders()
-        {
-            // TODO: handle this properly when using https
-            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
-            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
-        }
+        //private void SetupCORSHeaders()
+        //{
+        //    // TODO: handle this properly when using https
+        //    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
+        //    HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
+        //    HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "PUT, POST, GET, OPTIONS, DELETE");
+        //    HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
+        //    HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
+        //}
 
         [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
         [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.ServerAdmin)]

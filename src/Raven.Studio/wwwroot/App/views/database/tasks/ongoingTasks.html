@@ -87,16 +87,16 @@
                                         <div class="flex-horizontal">
                                             <div class="panel-name flex-grow">
                                                 <h3>
-                                                    <a href="#" data-bind="click: editTask" title="External Replication task name - Click to edit">
+                                                    <a href="#" data-bind="click: editTask" title="External Replication task name">
                                                         <span data-bind="text: taskName"></span>
                                                     </a>
                                                 </h3>
                                                 <div class="specs">
                                                     <!-- TODO: Change 'location' class name to 'destination db' ; change 'dest name' to 'dest url' ..... -->
-                                                    <span title="Destination database" class="location" data-bind="text: destinationDB() + '@'"></span><a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }"><span data-bind="text: destinationURL"></span></a>
+                                                    <span title="Destination database" class="location" data-bind="text: destinationDB() + '@'"></span>
+                                                    <a target="_blank" title="Destination Url" data-bind="attr: { href: destinationURL }"><span data-bind="text: destinationURL"></span></a>
                                                 </div>
                                             </div>
-
                                         </div>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
@@ -236,7 +236,7 @@
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
                                     <div class="status" data-bind="template: { name: 'status-template' }"></div>
                                     <div class="actions">
-                                        <button class="btn btn-default" data-bind="click: showSubscriptionDetails.toggle.bind(showSubscriptionDetails)" title="Click for details"><i class="icon-info"></i></button>
+                                        <button class="btn btn-default" data-bind="click: toggleShowSubscriptionDetails" title="Click for details"><i class="icon-info"></i></button>
                                         <button class="btn btn-default" data-bind="click: editTask" title="Edit task"><i class="icon-edit"></i></button>
                                         <button class="btn btn-danger" data-bind="click: $root.confirmRemoveOngoingTask" title="Delete task"><i class="icon-trash"></i></button>
                                     </div>
@@ -247,17 +247,26 @@
                                     <div class="flex-grow">
                                         <ul class="properties">
                                             <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
+                                            <!-- ko if: !clientDetailsIssue() -->
+                                            <li><span>Client IP:</span><strong data-bind="text: clientIP"></strong></li>
+                                            <li><span>Connection Strategy:</span><strong data-bind="text: connectionStrategy"></strong></li>
+                                            <!-- /ko -->
+                                            <li><span>Last Server Activity Time:</span><strong data-bind="text: lastTimeServerMadeProgressWithDocumnets"></strong></li>
                                             <li>
-                                                <span>Last Client Activity:</span><strong data-bind="text: timeOfLastClientActivity"></strong>
-                                                <!-- TODO
-                                                <button class="btn btn-xs" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
-                                                    <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                </button>-->
+                                                <span>Last Client Connection Time:</span><strong data-bind="text: lastClientConnectionTime"></strong>
+                                                <span data-bind="if: clientIP()">
+                                                    <button class="btn btn-xs" data-bind="click: disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                        <i class="icon-disconnected"></i><span>Disconnect</span>
+                                                    </button>
+                                                </span>
                                             </li>
+                                            <!-- ko if: clientDetailsIssue -->
+                                            <li><span>Status:</span><strong data-bind="text: clientDetailsIssue"></strong></li>
+                                            <!-- /ko -->
                                         </ul>
                                     </div>
                                     <div>
-                                        <button class="btn btn-default" data-bind="click: $root.refreshOngoingTaskInfo" title="Refresh info"><i class="icon-refresh"></i></button>
+                                        <button class="btn btn-default" data-bind="click: refreshSubscriptionInfo" title="Refresh info"><i class="icon-refresh"></i></button>
                                     </div>
                                 </div>
                             </div>

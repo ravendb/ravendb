@@ -47,7 +47,7 @@ class saveSubscriptionTaskCommand extends commandBase {
         const saveTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
         const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
-            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,  // TODO: send 'null | DoNotChange' | spcific ch. vector - See issues: 7551 + 7384
+            ChangeVector: this.subscriptionSettings.ChangeVector,
             Name: this.subscriptionSettings.TaskName,
             Criteria: {
                 Collection: this.subscriptionSettings.Collection,

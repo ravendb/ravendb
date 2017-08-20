@@ -28,7 +28,6 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
 
-
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
         private readonly MemoryStream _buffer = new MemoryStream();
@@ -96,8 +95,6 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-        
-
         public async Task InitAsync()
         {
             await ParseSubscriptionOptionsAsync();
@@ -107,7 +104,6 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
-
             
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
@@ -128,6 +124,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     });
 
                     Stats.ConnectedAt = DateTime.UtcNow;
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                        SubscriptionState.SubscriptionName);
                     return;
                 }
                 catch (TimeoutException)
@@ -166,8 +164,6 @@ namespace Raven.Server.Documents.TcpHandlers
             TcpConnection.RegisterBytesSent(bytes.Count);
             _buffer.SetLength(0);
         }
-
-        
 
         public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
         {
@@ -331,7 +327,6 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                     }
                 }
-                    
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
@@ -417,9 +412,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             foreach (var result in fetcher.GetDataToSend(docsContext, SubscriptionState, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVector)
+                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                                     ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVector);
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -557,7 +552,6 @@ namespace Raven.Server.Documents.TcpHandlers
                             throw new ArgumentException("Unknown message type from client " +
                                                         clientReply.Type);
                     }
-                    
                 }
             }
         }
@@ -568,10 +562,10 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (string.IsNullOrEmpty(subscription.ChangeVector))
+                if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
                     return startEtag;
 
-                var changeVector = subscription.ChangeVector.ToChangeVector();
+                var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
                 
                 var matchingCV = changeVector.FirstOrDefault(
                     x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
@@ -586,7 +580,13 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private async Task SendHeartBeat()
         {
-            await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            // Todo: this is temporary, we should try using TcpConnection's receive and send timeout properties
+            var writeAsync = TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            if (writeAsync != await Task.WhenAny(writeAsync, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false))
+            {
+                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})");
+            }
+            
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
@@ -658,6 +658,21 @@ namespace Raven.Server.Documents.TcpHandlers
                 // ignored
             }
             CancellationTokenSource.Dispose();
+        }
+    }
+
+    public class SubscriptionConnectionDetails
+    {
+        public string ClientUri { get; set; }
+        public SubscriptionOpeningStrategy? Strategy { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ClientUri)] = ClientUri,
+                [nameof(Strategy)] = Strategy
+            };
         }
     }
 }

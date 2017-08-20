@@ -15,6 +15,7 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
 import defaultAceCompleter = require("common/defaultAceCompleter");
+import subscriptionConnectionDetailsCommand = require("commands/database/tasks/getSubscriptionConnectionDetailsCommand");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
@@ -32,6 +33,7 @@ class editSubscriptionTask extends viewModelBase {
     columnsSelector = new columnsSelector<documentObject>();
     fetcher = ko.observable<fetcherType>();
     private columnPreview = new columnPreviewPlugin<documentObject>();
+
     dirtyResult = ko.observable<boolean>(false);
     isFirstRun = true;
 
@@ -54,9 +56,10 @@ class editSubscriptionTask extends viewModelBase {
             // 1. Editing an existing task
             this.isAddingNewSubscriptionTask(false);
 
+            // 1.1 Get general info
             new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
                 .execute()
-                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
+                .done((result: Raven.Client.Documents.Subscriptions.SubscriptionStateWithNodeDetails) => {
                     this.editedSubscription(new ongoingTaskSubscriptionEdit(result, true));
 
                     if (this.editedSubscription().collection()) {
@@ -65,6 +68,14 @@ class editSubscriptionTask extends viewModelBase {
                     } else {
                         deferred.resolve();
                     }
+
+                    // 1.2 Check if connection is live
+                    this.editedSubscription().liveConnection(false);
+                    new subscriptionConnectionDetailsCommand(this.activeDatabase(), args.taskId, args.taskName, this.editedSubscription().responsibleNode().NodeUrl)
+                        .execute()
+                        .done((result: Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails) => {
+                            this.editedSubscription().liveConnection(!!result.ClientUri);
+                        });
                 })
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
         }
