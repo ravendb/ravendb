@@ -7,7 +7,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -86,11 +85,6 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TProjection> SelectFields<TProjection>();
 
         /// <summary>
-        ///     Transformer parameters that will be passed to transformer if one is specified.
-        /// </summary>
-        IAsyncDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters);
-
-        /// <summary>
         ///     Ability to use one factory to determine spatial shape that will be used in query.
         /// </summary>
         /// <param name="path">Spatial field name.</param>
@@ -107,15 +101,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Executed the query and returns the results.
         /// </summary>
-        Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken));
-
-
-        /// <summary>
-        ///     Sets a transformer to use after executing a query
-        /// </summary>
-        IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
-            where TTransformer : AbstractTransformerCreationTask, new();
-
+        Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken));
 
         /// <summary>
         ///     Returns first element or throws if sequence is empty.
@@ -149,5 +135,16 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<TResult> OfType<TResult>();
 
         IAsyncGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
+
+        /// <summary>
+        /// Set the full text of the RQL query that will be sent to the server.
+        /// Must be the only call that is made on this query object
+        /// </summary>
+        IAsyncDocumentQuery<T> RawQuery(string query);
+
+        /// <summary>
+        /// Add a named parameter to the query
+        /// </summary>
+        IAsyncDocumentQuery<T> AddParameter(string name, object value);
     }
 }

@@ -12,7 +12,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -30,44 +29,12 @@ namespace Raven.Client.Documents.Session
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery { Query = CreateQuery(index.IndexName), DocumentId = documentId });
         }
 
-        public Task<List<T>> MoreLikeThisAsync<TTransformer, T, TIndexCreator>(string documentId, Parameters transformerParameters = null) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            if (documentId == null)
-                throw new ArgumentNullException(nameof(documentId));
-
-            var index = new TIndexCreator();
-            var transformer = new TTransformer();
-
-            return MoreLikeThisAsync<T>(new MoreLikeThisQuery
-            {
-                Query = CreateQuery(index.IndexName),
-                Transformer = transformer.TransformerName,
-                TransformerParameters = transformerParameters
-            });
-        }
-
-        public Task<List<T>> MoreLikeThisAsync<TTransformer, T, TIndexCreator>(MoreLikeThisQuery query) where TTransformer : AbstractTransformerCreationTask, new() where TIndexCreator : AbstractIndexCreationTask, new()
-        {
-            if (query == null)
-                throw new ArgumentNullException(nameof(query));
-
-            var index = new TIndexCreator();
-            var transformer = new TTransformer();
-
-            query.Query = CreateQuery(index.IndexName);
-            query.Transformer = transformer.TransformerName;
-
-            return MoreLikeThisAsync<T>(query);
-        }
-
-        public Task<List<T>> MoreLikeThisAsync<T>(string index, string documentId, string transformer = null, Parameters transformerParameters = null)
+        public Task<List<T>> MoreLikeThisAsync<T>(string index, string documentId)
         {
             return MoreLikeThisAsync<T>(new MoreLikeThisQuery
             {
                 Query = CreateQuery(index),
                 DocumentId = documentId,
-                Transformer = transformer,
-                TransformerParameters = transformerParameters
             });
         }
 

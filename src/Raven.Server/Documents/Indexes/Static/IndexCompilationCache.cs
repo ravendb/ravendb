@@ -3,8 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
-using Raven.Server.Documents.Transformers;
 using Sparrow;
 
 namespace Raven.Server.Documents.Indexes.Static
@@ -16,11 +14,9 @@ namespace Raven.Server.Documents.Indexes.Static
     /// will build up and tear down a server frequently, so we can still reduce the cost of compiling 
     /// the indexes.
     /// </summary>
-    public static class IndexAndTransformerCompilationCache
+    public static class IndexCompilationCache
     {
         private static readonly ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>> IndexCache = new ConcurrentDictionary<CacheKey, Lazy<StaticIndexBase>>();
-
-        private static readonly ConcurrentDictionary<CacheKey, Lazy<TransformerBase>> TransformerCache = new ConcurrentDictionary<CacheKey, Lazy<TransformerBase>>();
 
         public static StaticIndexBase GetIndexInstance(IndexDefinition definition)
         {
@@ -37,19 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 }
             }
             var key = new CacheKey(list);
-            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => IndexAndTransformerCompiler.Compile(definition)));
-            return result.Value;
-        }
-
-        public static TransformerBase GetTransformerInstance(TransformerDefinition definition)
-        {
-            var list = new List<string>
-            {
-                definition.TransformResults
-            };
-
-            var key = new CacheKey(list);
-            var result = TransformerCache.GetOrAdd(key, _ => new Lazy<TransformerBase>(() => IndexAndTransformerCompiler.Compile(definition)));
+            var result = IndexCache.GetOrAdd(key, _ => new Lazy<StaticIndexBase>(() => IndexCompiler.Compile(definition)));
             return result.Value;
         }
 

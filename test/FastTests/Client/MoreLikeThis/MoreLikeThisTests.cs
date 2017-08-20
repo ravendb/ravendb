@@ -9,7 +9,6 @@ using Lucene.Net.Analysis.Standard;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Transformers;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -17,43 +16,6 @@ namespace FastTests.Client.MoreLikeThis
 {
     public class MoreLikeThisTests : RavenTestBase
     {
-        private class Transformer1 : AbstractTransformerCreationTask<Data>
-        {
-            public class Result
-            {
-                public string TransformedBody { get; set; }
-            }
-
-            public Transformer1()
-            {
-                TransformResults = results => from result in results
-                                              select new
-                                              {
-                                                  TransformedBody = result.Body + "123"
-                                              };
-            }
-        }
-
-        private class Transformer2 : AbstractTransformerCreationTask<Data>
-        {
-            public class Result
-            {
-                public string TransformedBody { get; set; }
-
-                public string Name { get; set; }
-            }
-
-            public Transformer2()
-            {
-                TransformResults = results => from result in results
-                                              let _ = Include<Person>(result.PersonId)
-                                              select new
-                                              {
-                                                  TransformedBody = result.Body + "321",
-                                                  Name = LoadDocument<Person>(result.PersonId).Name
-                                              };
-            }
-        }
 
         private static string GetLorem(int numWords)
         {
@@ -84,143 +46,6 @@ namespace FastTests.Client.MoreLikeThis
                 };
 
             return list;
-        }
-
-        public void TransformersShouldWorkWithMoreLikeThis1()
-        {
-            using (var store = GetDocumentStore())
-            {
-                string id;
-
-                new Transformer1().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    new DataIndex(true, false).Execute(store);
-
-                    var list = GetDataList();
-                    list.ForEach(session.Store);
-                    session.SaveChanges();
-
-                    id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var list = session.Advanced.MoreLikeThis<Transformer1, Transformer1.Result, DataIndex>(new MoreLikeThisQuery()
-                    {
-                        DocumentId = id,
-                        Fields = new[] { "Body" }
-                    });
-
-                    Assert.NotEmpty(list);
-                    foreach (var result in list)
-                    {
-                        Assert.NotEmpty(result.TransformedBody);
-                        Assert.True(result.TransformedBody.EndsWith("123"));
-                    }
-                }
-            }
-        }
-
-        public void TransformersShouldWorkWithMoreLikeThis2()
-        {
-            using (var store = GetDocumentStore())
-            {
-                string id, personId;
-
-                new Transformer2().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    new DataIndex(true, false).Execute(store);
-
-                    var person = new Person { Name = "Name1" };
-                    session.Store(person);
-                    personId = person.Id;
-
-                    var list = GetDataList();
-                    list.ForEach(x =>
-                    {
-                        x.PersonId = personId;
-                        session.Store(x);
-                    });
-
-                    session.SaveChanges();
-
-                    id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var list = session.Advanced.MoreLikeThis<Transformer2, Transformer2.Result, DataIndex>(new MoreLikeThisQuery()
-                    {
-                        DocumentId = id,
-                        Fields = new[] { "Body" }
-                    });
-
-                    Assert.NotEmpty(list);
-                    foreach (var result in list)
-                    {
-                        Assert.NotEmpty(result.TransformedBody);
-                        Assert.True(result.TransformedBody.EndsWith("321"));
-                        Assert.Equal("Name1", result.Name);
-                    }
-
-                    var numberOfRequests = session.Advanced.NumberOfRequests;
-                    var person = session.Load<Person>("people/1-A");
-                    Assert.NotNull(person);
-                    Assert.Equal("Name1", person.Name);
-                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
-                }
-            }
-        }
-
-        public void IncludesShouldWorkWithMoreLikeThis()
-        {
-            using (var store = GetDocumentStore())
-            {
-                string id;
-
-                new Transformer2().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    new DataIndex(true, false).Execute(store);
-
-                    session.Store(new { Name = "Name1" }, "test");
-
-                    var list = GetDataList();
-                    list.ForEach(session.Store);
-                    session.SaveChanges();
-
-                    id = session.Advanced.GetDocumentId(list.First());
-                    WaitForIndexing(store);
-                }
-
-                using (var session = store.OpenSession())
-                {
-                    var indexName = new DataIndex().IndexName;
-
-                    var list = session.Advanced.MoreLikeThis<Data>(new MoreLikeThisQuery()
-                    {
-                        Query = $"FROM INDEX '{indexName}'",
-                        DocumentId = id,
-                        Fields = new[] { "Body" },
-                        Includes = new[] { "Body" }
-                    });
-
-                    Assert.NotEmpty(list);
-
-                    var numberOfRequests = session.Advanced.NumberOfRequests;
-                    var person = session.Load<dynamic>("test");
-                    Assert.NotNull(person);
-                    Assert.Equal("Name1", person.Name);
-                    Assert.Equal(numberOfRequests, session.Advanced.NumberOfRequests);
-                }
-            }
         }
 
         [Fact]

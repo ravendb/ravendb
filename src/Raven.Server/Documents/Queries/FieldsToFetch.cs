@@ -4,7 +4,6 @@ using System.Diagnostics;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
-using Raven.Server.Documents.Transformers;
 using Sparrow;
 
 namespace Raven.Server.Documents.Queries
@@ -15,25 +14,24 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool ExtractAllFromIndex;
 
-        public readonly bool ExtractAllFromDocument;
-
         public readonly bool AnyExtractableFromIndex;
+
+        public readonly bool SingleFieldNoAlias;
 
         public readonly bool IsProjection;
 
         public readonly bool IsDistinct;
 
-        public readonly bool IsTransformation;
 
-        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition, Transformer transformer)
-            : this(query.Metadata.SelectFields, indexDefinition, transformer)
+        public FieldsToFetch(IndexQueryServerSide query, IndexDefinitionBase indexDefinition)
+            : this(query.Metadata.SelectFields, indexDefinition)
         {
             IsDistinct = query.Metadata.IsDistinct && IsProjection;
         }
 
-        public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition, Transformer transformer)
+        public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition)
         {
-            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields);
+            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleFieldNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = false;
 
@@ -42,13 +40,6 @@ namespace Raven.Server.Documents.Queries
                 AnyExtractableFromIndex = true;
                 ExtractAllFromIndex = true; // we want to add dynamic fields also to the result (stored only)
                 IsProjection = true;
-            }
-
-            if (transformer != null)
-            {
-                AnyExtractableFromIndex = true;
-                ExtractAllFromIndex = ExtractAllFromDocument = Fields == null || Fields.Count == 0; // extracting all from index only if fields are not specified
-                IsTransformation = true;
             }
         }
 
@@ -87,7 +78,7 @@ namespace Raven.Server.Documents.Queries
                 return fieldToFetch;
             }
 
-            if (string.IsNullOrWhiteSpace(selectFieldName))
+            if (selectFieldName == null)
             {
                 if (selectField.IsGroupByKey == false)
                     return null;
@@ -152,15 +143,22 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidOperationException("Cannot fetch all stored path from a nested method");
         }
 
-        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(SelectField[] selectFields, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
+        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
+            SelectField[] selectFields, 
+            IndexDefinitionBase indexDefinition, 
+            out bool anyExtractableFromIndex, 
+            out bool extractAllStoredFields,
+            out bool singleFieldNoAlias)
         {
             anyExtractableFromIndex = false;
             extractAllStoredFields = false;
+            singleFieldNoAlias = false;
 
             if (selectFields == null || selectFields.Length == 0)
                 return null;
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.OrdinalIgnoreCase);
+            singleFieldNoAlias = selectFields.Length == 1 && selectFields[0].Alias == null;
             for (var i = 0; i < selectFields.Length; i++)
             {
                 var selectField = selectFields[i];

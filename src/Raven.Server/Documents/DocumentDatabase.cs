@@ -21,7 +21,6 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -53,7 +52,6 @@ namespace Raven.Server.Documents
         /// </summary>
         private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
-        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
@@ -116,7 +114,6 @@ namespace Raven.Server.Documents
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this);
                 IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
-                TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
                 EtlLoader = new EtlLoader(this, serverStore);
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
@@ -190,8 +187,6 @@ namespace Raven.Server.Documents
 
         public IndexStore IndexStore { get; private set; }
 
-        public TransformerStore TransformerStore { get; }
-
         public ConfigurationStorage ConfigurationStorage { get; }
 
         public ReplicationLoader ReplicationLoader { get; private set; }
@@ -237,7 +232,6 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _indexStoreTask = IndexStore.InitializeAsync(record);
-                _transformerStoreTask = TransformerStore.InitializeAsync(record);
                 ReplicationLoader?.Initialize(record);
                 EtlLoader.Initialize(record);
                 Patcher.Initialize(record);
@@ -251,15 +245,6 @@ namespace Raven.Server.Documents
                 finally
                 {
                     _indexStoreTask = null;
-                }
-
-                try
-                {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
-                }
-                finally
-                {
-                    _transformerStoreTask = null;
                 }
 
                 SubscriptionStorage.Initialize();
@@ -370,26 +355,12 @@ namespace Raven.Server.Documents
                     TxMerger?.Dispose();
                 });
 
-                exceptionAggregator.Execute(() =>
-                {
-                    TransformerStore.Dispose();
-                });
-
                 if (_indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
-                    });
-                }
-
-                if (_transformerStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _transformerStoreTask.Wait(DatabaseShutdown);
-                        _transformerStoreTask = null;
                     });
                 }
 
@@ -735,7 +706,6 @@ namespace Raven.Server.Documents
                     LastDatabaseRecordIndex = index;
 
                     IndexStore.HandleDatabaseRecordChange(record, index);
-                    TransformerStore.HandleDatabaseRecordChange(record);
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);

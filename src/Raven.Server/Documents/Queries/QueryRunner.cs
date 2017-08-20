@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries
             var sw = Stopwatch.StartNew();
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore,_database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 result = await runner.Execute(query, existingResultEtag);
                 result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 await runner.ExecuteStream(response, writer, query).ConfigureAwait(false);
 
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
                 return await runner.ExecuteIndexEntries(query, existingResultEtag);
             }
 
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            var runner = new DynamicQueryRunner(_database.IndexStore, _database.TransformerStore, _database.DocumentsStorage, _documentsContext, OperationCancelToken.None);
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, OperationCancelToken.None);
 
             return runner.ExplainIndexSelection(query);
         }
@@ -350,8 +350,6 @@ namespace Raven.Server.Documents.Queries
                 HighlighterPostTags = query.HighlighterPostTags,
                 HighlightedFields = query.HighlightedFields,
                 HighlighterKeyName = query.HighlighterKeyName,
-                TransformerParameters = query.TransformerParameters,
-                Transformer = query.Transformer,
                 QueryParameters = query.QueryParameters
             };
         }

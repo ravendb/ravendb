@@ -14,7 +14,6 @@ using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 
@@ -456,7 +455,19 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<TResult> OfType<TResult>()
         {
-            return CreateDocumentQueryInternal<TResult>(Transformer);
+            return CreateDocumentQueryInternal<TResult>();
+        }
+
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.RawQuery(string query)
+        {
+            RawQuery(query);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IAsyncDocumentQuery<T>.AddParameter(string name, object value)
+        {
+            AddParameter(name, value);
+            return this;
         }
 
         IAsyncGroupByDocumentQuery<T> IAsyncDocumentQuery<T>.GroupBy(string fieldName, params string[] fieldNames)
@@ -679,7 +690,7 @@ namespace Raven.Client.Documents.Session
         /// <typeparam name="TProjection">The type of the projection.</typeparam>
         public IAsyncDocumentQuery<TProjection> SelectFields<TProjection>(string[] fields, string[] projections)
         {
-            return CreateDocumentQueryInternal<TProjection>(Transformer, fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
+            return CreateDocumentQueryInternal<TProjection>(fields.Length > 0 ? FieldsToFetchToken.Create(fields, projections) : null);
         }
 
         public IAsyncDocumentQuery<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
@@ -691,12 +702,6 @@ namespace Raven.Client.Documents.Session
         {
             var criteria = clause(new SpatialCriteriaFactory());
             return GenerateSpatialQueryData(fieldName, criteria);
-        }
-
-        public IAsyncDocumentQuery<T> SetTransformerParameters(Parameters parameters)
-        {
-            TransformerParameters = parameters;
-            return this;
         }
 
         /// <summary>
@@ -883,32 +888,11 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        /// <summary>
-        /// Sets a transformer to use after executing a query
-        /// </summary>
-        /// <param name="transformer"></param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetTransformer(string transformer)
-        {
-            SetTransformer(transformer);
-            return this;
-        }
-
         public IAsyncDocumentQuery<T> ExplainScores()
         {
             ShouldExplainScores = true;
             return this;
 
-        }
-
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
-            return this;
-        }
-
-        public IAsyncDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>() where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            return CreateDocumentQueryInternal<TTransformerResult>(new TTransformer().TransformerName);
         }
 
         public async Task<FacetedQueryResult> GetFacetsAsync(string facetSetupDoc, int facetStart, int? facetPageSize, CancellationToken token = default(CancellationToken))
@@ -954,7 +938,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public async Task<IList<T>> ToListAsync(CancellationToken token = default(CancellationToken))
+        public async Task<List<T>> ToListAsync(CancellationToken token = default(CancellationToken))
         {
             await InitAsync(token).ConfigureAwait(false);
             var tuple = await ProcessEnumerator(QueryOperation).WithCancellation(token).ConfigureAwait(false);
@@ -1020,7 +1004,7 @@ namespace Raven.Client.Documents.Session
             return result.TotalResults;
         }
 
-        private static Task<Tuple<QueryResult, IList<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
+        private static Task<Tuple<QueryResult, List<T>>> ProcessEnumerator(QueryOperation currentQueryOperation)
         {
             var list = currentQueryOperation.Complete<T>();
             return Task.FromResult(Tuple.Create(currentQueryOperation.CurrentQueryResults, list));
@@ -1063,7 +1047,7 @@ namespace Raven.Client.Documents.Session
             InvokeAfterQueryExecuted(QueryOperation.CurrentQueryResults);
         }
 
-        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(string transformer, FieldsToFetchToken newFieldsToFetch = null)
+        private AsyncDocumentQuery<TResult> CreateDocumentQueryInternal<TResult>(FieldsToFetchToken newFieldsToFetch = null)
         {
             if (newFieldsToFetch != null)
                 UpdateFieldsToFetchToken(newFieldsToFetch);
@@ -1087,7 +1071,6 @@ namespace Raven.Client.Documents.Session
                 QueryStats = QueryStats,
                 TheWaitForNonStaleResults = TheWaitForNonStaleResults,
                 TheWaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
@@ -1099,8 +1082,6 @@ namespace Raven.Client.Documents.Session
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
-                Transformer = transformer,
-                TransformerParameters = TransformerParameters,
                 DisableEntitiesTracking = DisableEntitiesTracking,
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,

@@ -23,7 +23,6 @@ namespace Raven.Client.Documents.Smuggler
             RevisionDocuments = new CountsWithLastEtag();
             Identities = new Counts();
             Indexes = new Counts();
-            Transformers = new Counts();
         }
 
         public string Message { get; private set; }
@@ -89,7 +88,6 @@ namespace Raven.Client.Documents.Smuggler
             public override CountsWithLastEtag RevisionDocuments => _result.RevisionDocuments;
             public override Counts Identities => _result.Identities;
             public override Counts Indexes => _result.Indexes;
-            public override Counts Transformers => _result.Transformers;
 
             public override DynamicJsonValue ToJson()
             {
@@ -122,8 +120,6 @@ namespace Raven.Client.Documents.Smuggler
 
         public virtual Counts Indexes { get; set; }
 
-        public virtual Counts Transformers { get; set; }
-
         public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue(GetType())
@@ -132,7 +128,6 @@ namespace Raven.Client.Documents.Smuggler
                 [nameof(RevisionDocuments)] = RevisionDocuments.ToJson(),
                 [nameof(Identities)] = Identities.ToJson(),
                 [nameof(Indexes)] = Indexes.ToJson(),
-                [nameof(Transformers)] = Transformers.ToJson()
             };
         }
 

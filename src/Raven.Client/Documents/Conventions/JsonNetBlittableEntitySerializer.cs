@@ -1,5 +1,7 @@
 ﻿using System;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Raven.Client.Documents.Identity;
 using Raven.Client.Json;
 using Sparrow.Json;
 
@@ -15,10 +17,12 @@ namespace Raven.Client.Documents.Conventions
         private static JsonSerializer _serializer;
 
         private Action<JsonSerializer> _customize;
+        private GenerateEntityIdOnTheClient _generateEntityIdOnTheClient;
 
         public JsonNetBlittableEntitySerializer(DocumentConventions conventions)
         {
             _conventions = conventions;
+            _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(conventions, null);
         }
 
         public object EntityFromJsonStream(Type type, BlittableJsonReaderObject jsonObject)
@@ -35,8 +39,18 @@ namespace Raven.Client.Documents.Conventions
             }
 
             _reader.Init(jsonObject);
+            using (DefaultRavenContractResolver.Register((o, key, value) =>
+            {
+                if (key == Constants.Documents.Metadata.Key && value is JObject json)
+                {
+                    var id = json.Value<string>(Constants.Documents.Metadata.Id);
+                    _generateEntityIdOnTheClient.TrySetIdentity(o, id);
+                }
+            }))
+            {
+                return _serializer.Deserialize(_reader, type);
+            }
 
-            return _serializer.Deserialize(_reader, type);
         }
     }
 }

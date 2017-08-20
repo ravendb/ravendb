@@ -10,7 +10,6 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Config;
@@ -296,7 +295,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             // we do have at least one smuggler backup
             databaseRecord.AutoIndexes = new Dictionary<string, AutoIndexDefinition>();
             databaseRecord.Indexes = new Dictionary<string, IndexDefinition>();
-            databaseRecord.Transformers = new Dictionary<string, TransformerDefinition>();
             databaseRecord.Identities = new Dictionary<string, long>();
 
             // restore the smuggler backup
@@ -307,7 +305,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
                                      ~(DatabaseItemType.Indexes |
-                                       DatabaseItemType.Transformers |
                                        DatabaseItemType.Identities);
 
             var destination = new DatabaseDestination(database);
@@ -345,7 +342,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                                 throw new ArgumentOutOfRangeException();
                         }
                     },
-                    onTransformerAction: transformer => databaseRecord.Transformers[transformer.Name] = transformer,
                     onIdentityAction: keyValuePair => databaseRecord.Identities[keyValuePair.Key] = keyValuePair.Value);
             }
         }
@@ -355,7 +351,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             string filePath, DocumentsOperationContext context,
             DatabaseDestination destination, DatabaseSmugglerOptions options,
             Action<IndexDefinitionAndType> onIndexAction = null,
-            Action<TransformerDefinition> onTransformerAction = null,
             Action<KeyValuePair<string, long>> onIdentityAction = null)
         {
             using (var fileStream = File.Open(filePath, FileMode.Open))
@@ -366,7 +361,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _cancellationToken)
                 {
                     OnIndexAction = onIndexAction,
-                    OnTransformerAction = onTransformerAction,
                     OnIdentityAction = onIdentityAction
                 };
 

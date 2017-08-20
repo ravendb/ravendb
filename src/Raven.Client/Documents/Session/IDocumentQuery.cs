@@ -11,7 +11,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Queries.Spatial;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session
 {
@@ -37,12 +36,6 @@ namespace Raven.Client.Documents.Session
         ///     instance that will evaluate the query only when needed.
         /// </summary>
         Lazy<int> CountLazily();
-
-        /// <summary>
-        ///     Set the transformer parameters for this query
-        /// </summary>
-        /// <param name="transformerParameters"></param>
-        IDocumentQuery<T> SetTransformerParameters(Parameters transformerParameters);
 
         /// <summary>
         ///     Create the index query object for this query
@@ -102,12 +95,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
 
         /// <summary>
-        ///     Sets a transformer to use after executing a query
-        /// </summary>
-        IDocumentQuery<TTransformerResult> SetTransformer<TTransformer, TTransformerResult>()
-            where TTransformer : AbstractTransformerCreationTask, new();
-
-        /// <summary>
         /// Get the facets as per the specified facet document with the given start and pageSize
         /// </summary>
         FacetedQueryResult GetFacets(string facetSetupDoc, int start, int? pageSize);
@@ -160,5 +147,17 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<TResult> OfType<TResult>();
 
         IGroupByDocumentQuery<T> GroupBy(string fieldName, params string[] fieldNames);
+
+
+        /// <summary>
+        /// Set the full text of the RQL query that will be sent to the server.
+        /// Must be the only call that is made on this query object
+        /// </summary>
+        IDocumentQuery<T> RawQuery(string query);
+
+        /// <summary>
+        /// Add a named parameter to the query
+        /// </summary>
+        IDocumentQuery<T> AddParameter(string name, object value);
     }
 }

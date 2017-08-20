@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (TryGetKey(input, state, out string id) == false)
                 throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
-            if (FieldsToFetch.IsProjection || FieldsToFetch.IsTransformation)
+            if (FieldsToFetch.IsProjection)
                 return GetProjection(input, score, id, state);
 
             var doc = DirectGet(null, id, state);

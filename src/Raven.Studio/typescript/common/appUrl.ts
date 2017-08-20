@@ -37,15 +37,12 @@ class appUrl {
         indexes: ko.pureComputed(() => appUrl.forIndexes(appUrl.currentDatabase())),
         megeSuggestions: ko.pureComputed(() => appUrl.forMegeSuggestions(appUrl.currentDatabase())),
         upgrade: ko.pureComputed(() => appUrl.forUpgrade(appUrl.currentDatabase())),
-        transformers: ko.pureComputed(() => appUrl.forTransformers(appUrl.currentDatabase())),
         newIndex: ko.pureComputed(() => appUrl.forNewIndex(appUrl.currentDatabase())),
         editIndex: (indexName?: string) => ko.pureComputed(() => appUrl.forEditIndex(indexName, appUrl.currentDatabase())),
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
         editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId, taskName)),
-        newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
-        editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
         reporting: ko.pureComputed(() => appUrl.forReporting(appUrl.currentDatabase())),
@@ -429,21 +426,6 @@ class appUrl {
         return "#databases/indexes/edit/" + encodeURIComponent(indexName) + "?" + databasePart;
     }
 
-    static forNewTransformer(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers/edit?" + databasePart;
-    }
-
-    static forEditTransformer(transformerName: string, db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers/edit/" + encodeURIComponent(transformerName) + "?" + databasePart;
-    }
-
-    static forTransformers(db: database | databaseInfo): string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/transformers?" + databasePart;
-    }
-
     static forQuery(db: database | databaseInfo, indexNameOrHashToQuery?: string | number): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         let indexToQueryComponent = indexNameOrHashToQuery as string;
@@ -573,10 +555,6 @@ class appUrl {
 
     static forReportingRawData(db: database | databaseInfo, indexName: string) {
         return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/facets/" + indexName;
-    }
-
-    static forTransformersRawData(db: database | databaseInfo): string {
-        return window.location.protocol + "//" + window.location.host + "/databases/" + db.name + "/transformers";
     }
 
     static forDatabasesRawData(): string {

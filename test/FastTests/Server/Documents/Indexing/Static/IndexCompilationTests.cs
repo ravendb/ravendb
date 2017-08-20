@@ -9,7 +9,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         [Fact]
         public void Sum_of_elements()
         {
-            IndexAndTransformerCompiler.Compile(new IndexDefinition
+            IndexCompiler.Compile(new IndexDefinition
             {
                 Name = "test",
                 Maps =

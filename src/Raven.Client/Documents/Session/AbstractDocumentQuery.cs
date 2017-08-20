@@ -34,7 +34,6 @@ namespace Raven.Client.Documents.Session
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
 
         protected QueryOperator DefaultOperator;
-        protected bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
         protected double DistanceErrorPct;
         private readonly LinqPathProvider _linqPathProvider;
@@ -63,9 +62,9 @@ namespace Raven.Client.Documents.Session
 
         private int _currentClauseDepth;
 
-        protected KeyValuePair<string, object> LastEquality;
+        protected string QueryRaw;
 
-        protected Parameters TransformerParameters = new Parameters();
+        protected KeyValuePair<string, object> LastEquality;
 
         protected Parameters QueryParameters = new Parameters();
 
@@ -148,11 +147,6 @@ namespace Raven.Client.Documents.Session
         /// Holds the query highlights
         /// </summary>
         protected QueryHighlightings Highlightings = new QueryHighlightings();
-
-        /// <summary>
-        /// The name of the results transformer to use after executing this query
-        /// </summary>
-        protected string Transformer;
 
         /// <summary>
         /// Determines if entities should be tracked and kept in memory
@@ -485,6 +479,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.Random);
         }
 
@@ -494,6 +489,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         public void RandomOrdering(string seed)
         {
+            AssertNoRawQuery();
             if (string.IsNullOrWhiteSpace(seed))
             {
                 RandomOrdering();
@@ -539,7 +535,6 @@ namespace Raven.Client.Documents.Session
 
         IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
         {
-            SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(val);
             return this;
         }
 
@@ -548,11 +543,35 @@ namespace Raven.Client.Documents.Session
             _aliasToGroupByFieldName[projectedName] = fieldName;
         }
 
+        private void AssertNoRawQuery()
+        {
+            if (QueryRaw != null)
+                throw new InvalidOperationException(
+                    "RawQuery was called, cannot modify this query by calling on operations that would modify the query (such as Where, Select, OrderBy, GroupBy, etc)");
+        }
+
+        public void RawQuery(string query)
+        {
+            if (SelectTokens.Count != 0 ||
+                WhereTokens.Count != 0 ||
+                OrderByTokens.Count != 0 ||
+                GroupByTokens.Count != 0)
+                throw new InvalidOperationException("You can only use RawQuery on a new query, without applying any operations (such as Where, Select, OrderBy, GroupBy, etc)");
+            QueryRaw = query;
+        }
+
+        public void AddParameter(string name, object value)
+        {
+            if (QueryParameters.ContainsKey(name))
+                throw new InvalidOperationException("The parameter " + name + " was already added");
+            QueryParameters[name] = value;
+        }
+
         public void GroupBy(string fieldName, params string[] fieldNames)
         {
             if (FromToken.IsDynamic == false)
                 throw new InvalidOperationException("GroupBy only works with dynamic queries.");
-
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
@@ -572,6 +591,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByKey(string fieldName = null, string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             if (projectedName != null && _aliasToGroupByFieldName.TryGetValue(projectedName, out var aliasedFieldName))
@@ -585,6 +605,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupBySum(string fieldName, string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
@@ -594,6 +615,7 @@ namespace Raven.Client.Documents.Session
 
         public void GroupByCount(string projectedName = null)
         {
+            AssertNoRawQuery();
             IsGroupBy = true;
 
             SelectTokens.AddLast(GroupByCountToken.Create(projectedName));
@@ -650,6 +672,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "ordering">ordering type.</param>
         public void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String)
         {
+            AssertNoRawQuery();
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
             OrderByTokens.AddLast(descending ? OrderByToken.CreateDescending(fieldName, ordering) : OrderByToken.CreateAscending(fieldName, ordering));
         }
@@ -1092,6 +1115,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderBy(string field, OrderingType ordering = OrderingType.String)
         {
+            AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateAscending(f, ordering));
         }
@@ -1104,24 +1128,24 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name = "fields">The fields.</param>
         public void OrderByDescending(string field, OrderingType ordering = OrderingType.String)
         {
+            AssertNoRawQuery();
             var f = EnsureValidFieldName(field, isNestedPath: false);
             OrderByTokens.AddLast(OrderByToken.CreateDescending(f, ordering));
         }
 
         public void OrderByScore()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.ScoreAscending);
         }
 
         public void OrderByScoreDescending()
         {
+            AssertNoRawQuery();
             OrderByTokens.AddLast(OrderByToken.ScoreDescending);
         }
 
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        /// <returns></returns>
+        /// <inheritdoc />
         public void WaitForNonStaleResultsAsOfNow()
         {
             TheWaitForNonStaleResults = true;
@@ -1271,10 +1295,7 @@ If you really want to do in memory filtering on the data returned from the query
                 HighlighterPreTags = HighlighterPreTags.ToArray(),
                 HighlighterPostTags = HighlighterPostTags.ToArray(),
                 HighlighterKeyName = HighlighterKeyName,
-                Transformer = Transformer,
-                TransformerParameters = TransformerParameters,
                 QueryParameters = QueryParameters,
-                AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
                 ExplainScores = ShouldExplainScores,
@@ -1306,14 +1327,13 @@ If you really want to do in memory filtering on the data returned from the query
             WhereTokens.AddLast(WhereToken.Search(fieldName, AddQueryParameter(searchTerms), @operator));
         }
 
-        /// <summary>
-        ///   Returns a <see cref = "System.String" /> that represents the query for this instance.
-        /// </summary>
-        /// <returns>
-        ///   A <see cref = "System.String" /> that represents the query for this instance.
-        /// </returns>
+
+        /// <inheritdoc />
         public override string ToString()
         {
+            if (QueryRaw != null)
+                return QueryRaw;
+
             if (_currentClauseDepth != 0)
                 throw new InvalidOperationException(string.Format("A clause was not closed correctly within this query, current clause depth = {0}", _currentClauseDepth));
 
@@ -1501,16 +1521,6 @@ If you really want to do in memory filtering on the data returned from the query
             return propertyName;
         }
 
-        public void SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            AllowMultipleIndexEntriesForSameDocumentToResultTransformer = val;
-        }
-
-        public void SetTransformer(string transformer)
-        {
-            Transformer = transformer;
-        }
-
         public void Distinct()
         {
             if (IsDistinct)
@@ -1639,6 +1649,8 @@ If you really want to do in memory filtering on the data returned from the query
 
         private void AppendOperatorIfNeeded(LinkedList<QueryToken> tokens)
         {
+            AssertNoRawQuery();
+
             if (tokens.Count == 0)
                 return;
 

@@ -1780,8 +1780,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
             var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
-            documentQuery.SetTransformer(_resultsTransformer);
-            documentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
             try
@@ -1811,8 +1809,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
-            asyncDocumentQuery.SetTransformer(_resultsTransformer);
-            asyncDocumentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             try
             {
@@ -1877,8 +1873,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
-                finalQuery.SetTransformer(_resultsTransformer);
-            finalQuery.SetTransformerParameters(_transformerParameters);
+            {
+            }
 
             var executeQuery = GetQueryResult(finalQuery);
 

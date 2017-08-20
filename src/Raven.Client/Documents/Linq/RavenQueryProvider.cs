@@ -311,8 +311,6 @@ namespace Raven.Client.Documents.Linq
             var processor = GetQueryProviderProcessor<T>();
             var result = (IDocumentQuery<TResult>)processor.GetDocumentQueryFor(expression);
 
-            result.SetTransformer(ResultTransformer);
-
             return result;
         }
     }

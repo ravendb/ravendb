@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -416,10 +415,6 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
-            writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.CutoffEtag));
             if (query.CutoffEtag.HasValue)
                 writer.WriteInteger(query.CutoffEtag.Value);
@@ -449,13 +444,6 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(query.Query));
             if (query.Query != null)
                 writer.WriteString(query.Query);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.Transformer));
-            if (query.Transformer != null)
-                writer.WriteString(query.Transformer);
             else
                 writer.WriteNull();
             writer.WriteComma();
@@ -557,13 +545,6 @@ namespace Raven.Server.Json
                 }
             }
             writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.TransformerParameters));
-            writer.WriteStartObject();
-            if (query.TransformerParameters != null)
-                writer.WriteObject(query.TransformerParameters);
-            writer.WriteEndObject();
 
             writer.WriteEndObject();
         }
@@ -593,10 +574,6 @@ namespace Raven.Server.Json
 
             writer.WritePropertyName(nameof(statistics.CountOfUniqueAttachments));
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(statistics.CountOfTransformers));
-            writer.WriteInteger(statistics.CountOfTransformers);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
@@ -682,24 +659,6 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteTransformerDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, TransformerDefinition transformerDefinition)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(transformerDefinition.Name));
-            writer.WriteString(transformerDefinition.Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(transformerDefinition.TransformResults));
-            writer.WriteString(transformerDefinition.TransformResults);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(transformerDefinition.LockMode));
-            writer.WriteString(transformerDefinition.LockMode.ToString());
 
             writer.WriteEndObject();
         }

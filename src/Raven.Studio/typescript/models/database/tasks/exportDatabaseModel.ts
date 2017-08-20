@@ -4,7 +4,6 @@ class exportDatabaseModel {
 
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
-    includeTransformers = ko.observable(true);
     includeIdentities = ko.observable(true);
     includeRevisionDocuments = ko.observable(true);
     
@@ -31,9 +30,6 @@ class exportDatabaseModel {
         }
         if (this.includeIndexes()) {
             operateOnTypes.push("Indexes");
-        }
-        if (this.includeTransformers()) {
-            operateOnTypes.push("Transformers");
         }
         if (this.includeIdentities()) {
             operateOnTypes.push("Identities");

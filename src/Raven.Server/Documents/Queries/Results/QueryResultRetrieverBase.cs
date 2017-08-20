@@ -26,7 +26,6 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly JsonOperationContext _context;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, Document> _loadedDocuments;
-        private List<object> _buffer;
         private HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentsStorage _documentsStorage;
@@ -72,7 +71,7 @@ namespace Raven.Server.Documents.Queries.Results
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
-            if (FieldsToFetch.ExtractAllFromIndex || FieldsToFetch.ExtractAllFromDocument)
+            if (FieldsToFetch.ExtractAllFromIndex)
             {
                 if (FieldsToFetch.ExtractAllFromIndex)
                 {
@@ -83,26 +82,6 @@ namespace Raven.Server.Documents.Queries.Results
                                     && FieldUtil.GetRangeTypeFromFieldName(x.Name) == RangeType.None)
                         .Distinct(UniqueFieldNames.Instance)
                         .ToDictionary(x => x.Name, x => new FieldsToFetch.FieldToFetch(x.Name, null, null, x.IsStored, isDocumentId: false));
-                }
-
-                if (FieldsToFetch.ExtractAllFromDocument)
-                {
-                    if (fields == null)
-                        fields = new Dictionary<string, FieldsToFetch.FieldToFetch>();
-
-                    doc = DirectGet(input, id, state);
-                    documentLoaded = true;
-
-                    if (doc != null)
-                    {
-                        foreach (var name in doc.Data.GetPropertyNames())
-                        {
-                            if (fields.ContainsKey(name))
-                                continue;
-
-                            fields[name] = new FieldsToFetch.FieldToFetch(name, null, null, canExtractFromIndex: false, isDocumentId: false);
-                        }
-                    }
                 }
             }
 
@@ -133,7 +112,12 @@ namespace Raven.Server.Documents.Queries.Results
                 if (doc == null)
                     continue;
 
-                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
+                if (TryGetValue(fieldToFetch, doc, out var fieldVal))
+                {
+                    if (fieldVal is List<object> list)
+                        fieldVal = new DynamicJsonArray(list);
+                    result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+                }
             }
 
             if (doc == null)
@@ -151,11 +135,23 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var result = new DynamicJsonValue();
 
+            foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
+            {
+                if (TryGetValue(fieldToFetch, doc, out var fieldVal))
+                {
+                    if (fieldsToFetch.SingleFieldNoAlias && fieldVal is DynamicJsonValue nested)
+                    {
+                        result = nested;
+                        break;
+                    }
+                    if (fieldVal is List<object> list)
+                        fieldVal = new DynamicJsonArray(list);
+                    result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+                }
+            }
+
             if (fieldsToFetch.IsDistinct == false && doc.Id != null)
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Id;
-
-            foreach (var fieldToFetch in fieldsToFetch.Fields.Values)
-                MaybeExtractValueFromDocument(fieldToFetch, doc, result);
 
             return ReturnProjection(result, doc, score, context);
         }
@@ -293,7 +289,7 @@ namespace Raven.Server.Documents.Queries.Results
                 return true;
             }
 
-            if (fieldToFetch.QueryField.SourceAlias == null)
+            if (fieldToFetch.QueryField.HasSourceAlias == false)
             {
                 return TryGetFieldValueFromDocument(document, fieldToFetch, out value);
             }
@@ -301,18 +297,23 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 _loadedDocumentIds = new HashSet<string>();
                 _loadedDocuments = new Dictionary<string, Document>();
-                _buffer = new List<object>();
             }
             _loadedDocumentIds.Clear();
-            _buffer.Clear();
+
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
-            IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+            _loadedDocuments[document.Id] = document;
+            if (fieldToFetch.QueryField.SourceAlias != null)
+                IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
+            else
+                _loadedDocumentIds.Add(document.Id); // null source alias is the root doc
 
             if (_loadedDocumentIds.Count == 0)
             {
                 value = null;
                 return false;
             }
+
+            var buffer = new List<object>();
 
             foreach (var docId in _loadedDocumentIds)
             {
@@ -325,22 +326,27 @@ namespace Raven.Server.Documents.Queries.Results
                 }
                 if (document == null)
                     continue;
+                if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
+                {
+                    buffer.Add(document);
+                    continue;
+                }
                 if (TryGetFieldValueFromDocument(document, fieldToFetch, out var val))
-                    _buffer.Add(val);
+                    buffer.Add(val);
             }
 
             if (fieldToFetch.QueryField.SourceIsArray)
             {
-                value = _buffer;
+                value = buffer;
                 return true;
             }
-            if (_buffer.Count > 0)
+            if (buffer.Count > 0)
             {
-                if (_buffer.Count > 1)
+                if (buffer.Count > 1)
                 {
                     ThrowOnlyArrayFieldCanHaveMultipleValues(fieldToFetch);
                 }
-                value = _buffer[0];
+                value = buffer[0];
                 return true;
             }
             value = null;
@@ -365,16 +371,20 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (query.DeclaredFunctions != null)
             {
-                foreach (var funcToken in query.DeclaredFunctions.Values)
+                foreach (var func in query.DeclaredFunctions.Values)
                 {
-                    var func = new StringSegment(query.QueryText, funcToken.TokenStart, funcToken.TokenLength);
-                    jintEngine.Execute(func.ToString());
+                    jintEngine.Execute(func);
                 }
             }
-
-
             object Translate(object o)
             {
+                if (o is Document doc)
+                {
+                    doc.EnsureMetadata();
+                    return new BlittableObjectInstance(jintEngine, _context.ReadObject(doc.Data, doc.Id));
+                }
+                if (o is BlittableJsonReaderObject obj)
+                    return new BlittableObjectInstance(jintEngine, obj);
                 if (o is LazyStringValue lsv)
                     return lsv.ToString();
                 if (o is LazyCompressedStringValue lcsv)
@@ -442,18 +452,6 @@ namespace Raven.Server.Documents.Queries.Results
             return true;
         }
 
-
-        private void MaybeExtractValueFromDocument(FieldsToFetch.FieldToFetch fieldToFetch, Document document, DynamicJsonValue toFill)
-        {
-            
-
-            if (TryGetValue(fieldToFetch, document, out var fieldVal))
-            {
-                if (fieldVal is List<object> list)
-                    fieldVal = new DynamicJsonArray(list);
-                toFill[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
-            }
-        }
 
         private static void ThrowOnlyArrayFieldCanHaveMultipleValues(FieldsToFetch.FieldToFetch fieldToFetch)
         {

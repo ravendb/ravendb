@@ -16,7 +16,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -141,13 +140,6 @@ namespace Raven.Client.Documents
         Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken));
 
         Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        /// Executes the transformer creation
-        /// </summary>
-        void ExecuteTransformer(AbstractTransformerCreationTask task);
-
-        Task ExecuteTransformerAsync(AbstractTransformerCreationTask task, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Gets the conventions.

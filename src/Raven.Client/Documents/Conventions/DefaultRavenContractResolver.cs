@@ -18,6 +18,35 @@ namespace Raven.Client.Documents.Conventions
     /// </summary>
     internal class DefaultRavenContractResolver : DefaultContractResolver
     {
+        [ThreadStatic]
+        private static ExtensionDataSetter _currentExtensionData;
+
+        public struct ClearExtensionData : IDisposable
+        {
+            public void Dispose()
+            {
+                _currentExtensionData = null;
+            }
+        }
+
+        public static ClearExtensionData Register(ExtensionDataSetter setter)
+        {
+            _currentExtensionData = setter;
+            return new ClearExtensionData();
+        }
+
+        protected override JsonObjectContract CreateObjectContract(Type objectType)
+        {
+            var jsonObjectContract = base.CreateObjectContract(objectType);
+            jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
+            {
+                if (jsonObjectContract.Properties.Contains(key))
+                    return;
+                _currentExtensionData?.Invoke(o, key, value);
+            };
+            return jsonObjectContract;
+        }
+
         /// <summary>
         /// Gets the serializable members for the type.
         /// </summary>

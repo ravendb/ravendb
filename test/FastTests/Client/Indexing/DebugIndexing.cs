@@ -48,9 +48,7 @@ namespace FastTests.Client.Indexing
                         ["p0"] = q.QueryParameters["p0"]
                     }, "query/parameters"))
                     {
-                        Transformer = q.Transformer,
                         Start = q.Start,
-                        AllowMultipleIndexEntriesForSameDocumentToResultTransformer = q.AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
                         CutoffEtag = q.CutoffEtag,
                         DisableCaching = q.DisableCaching,
                         ExplainScores = q.ExplainScores,

@@ -1,13 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Queries
 {
@@ -63,7 +59,6 @@ namespace Raven.Server.Documents.Queries
                 PageSize = pageSize
             };
 
-            DynamicJsonValue transformerParameters = null;
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -84,23 +79,8 @@ namespace Raven.Server.Documents.Queries
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
                             break;
-                        case "transformer":
-                            result.Transformer = item.Value[0];
-                            break;
                         case "skipDuplicateChecking":
                             result.SkipDuplicateChecking = bool.Parse(item.Value[0]);
-                            break;
-                        case "allowMultipleIndexEntriesForSameDocumentToResultTransformer":
-                            result.AllowMultipleIndexEntriesForSameDocumentToResultTransformer = bool.Parse(item.Value[0]);
-                            break;
-                        default:
-                            if (item.Key.StartsWith(TransformerParameter.Prefix, StringComparison.OrdinalIgnoreCase))
-                            {
-                                if (transformerParameters == null)
-                                    transformerParameters = new DynamicJsonValue();
-
-                                transformerParameters[item.Key.Substring(TransformerParameter.Prefix.Length)] = item.Value[0];
-                            }
                             break;
                             // TODO: HighlightedFields, HighlighterPreTags, HighlighterPostTags, HighlighterKeyName, ExplainScores
                             // TODO: ShowTimings and spatial stuff
@@ -112,9 +92,6 @@ namespace Raven.Server.Documents.Queries
                     throw new ArgumentException($"Could not handle query string parameter '{item.Key}' (value: {item.Value})", e);
                 }
             }
-
-            if (transformerParameters != null)
-                result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
             result.Metadata = new QueryMetadata(result.Query, null, 0);
             return result;

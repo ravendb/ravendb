@@ -55,12 +55,6 @@
                                 </div>
                                 <div class="col-sm-6 col-lg-4">
                                     <div class="toggle">
-                                        <input id="toggle4" type="checkbox">
-                                        <label for="toggle4">
-                                            Include Transformers
-                                        </label>
-                                    </div>
-                                    <div class="toggle">
                                         <input id="toggle5" type="checkbox">
                                         <label for="toggle5">
                                             Remove Analyzers
@@ -131,7 +125,7 @@
                                     <span class="input-group-btn">
                                         <button class="btn btn-default btn-sm"><span class="icon-copy"></span> <span>Copy to clipboard</span></button>
                                     </span>
-                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes,Transformers --database="Media" --batch-size=1024 --excludeexpired'>
+                                    <input onClick="this.select();" class="form-control input-sm" readonly value='Raven.Smuggler out http://live-test.ravendb.net raven.dump --operate-on-types=Documents,Indexes --database="Media" --batch-size=1024 --excludeexpired'>
                                 </div>
                             </div>
                         </form>

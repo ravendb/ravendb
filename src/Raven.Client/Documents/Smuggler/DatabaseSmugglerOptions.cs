@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Smuggler
 {
     public class DatabaseSmugglerOptions
     {
-        private const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes | DatabaseItemType.Transformers | DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
+        private const DatabaseItemType DefaultOperateOnTypes = DatabaseItemType.Indexes |  DatabaseItemType.Documents | DatabaseItemType.RevisionDocuments | DatabaseItemType.Identities;
 
         private const int DefaultMaxStepsForTransformScript = 10 * 1000;
 

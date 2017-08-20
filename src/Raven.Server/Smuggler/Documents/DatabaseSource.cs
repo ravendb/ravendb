@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide;
@@ -31,7 +30,6 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Indexes,
-            DatabaseItemType.Transformers,
             DatabaseItemType.Identities,
             DatabaseItemType.None
         };
@@ -123,14 +121,6 @@ namespace Raven.Server.Smuggler.Documents
                     IndexDefinition = index.Definition,
                     Type = index.Type
                 };
-            }
-        }
-
-        public IEnumerable<TransformerDefinition> GetTransformers()
-        {
-            foreach (var transformer in _database.TransformerStore.GetTransformers())
-            {
-                yield return transformer.Definition;
             }
         }
 

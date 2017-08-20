@@ -8,7 +8,6 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
@@ -61,30 +60,6 @@ namespace Raven.Server.Smuggler.Documents
         public IIndexActions Indexes()
         {
             return new DatabaseIndexActions(_database);
-        }
-
-        public ITransformerActions Transformers()
-        {
-            return new DatabaseTransformerActions(_database);
-        }
-
-        private class DatabaseTransformerActions : ITransformerActions
-        {
-            private readonly DocumentDatabase _database;
-
-            public DatabaseTransformerActions(DocumentDatabase database)
-            {
-                _database = database;
-            }
-
-            public void WriteTransformer(TransformerDefinition transformerDefinition)
-            {
-                AsyncHelpers.RunSync(() => _database.TransformerStore.CreateTransformer(transformerDefinition));
-            }
-
-            public void Dispose()
-            {
-            }
         }
 
         private class DatabaseIndexActions : IIndexActions

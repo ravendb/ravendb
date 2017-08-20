@@ -19,7 +19,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TransactionCommands;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Routing;
@@ -63,23 +62,14 @@ namespace Raven.Server.Documents.Handlers
         {
             var ids = GetStringValuesQueryString("id", required: false);
             var metadataOnly = GetBoolValueQueryString("metadata-only", required: false) ?? false;
-            var transformerName = GetStringQueryString("transformer", required: false);
-
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(transformerName) == false)
-            {
-                transformer = Database.TransformerStore.GetTransformer(transformerName);
-                if (transformer == null)
-                    TransformerDoesNotExistException.ThrowFor(transformerName);
-            }
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
             {
                 if (ids.Count > 0)
-                    GetDocumentsById(context, ids, transformer, metadataOnly);
+                    GetDocumentsById(context, ids, metadataOnly);
                 else
-                    GetDocuments(context, transformer, metadataOnly);
+                    GetDocuments(context, metadataOnly);
 
                 return Task.CompletedTask;
             }
@@ -103,11 +93,11 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                GetDocumentsById(context, new StringValues(ids), null, metadataOnly);
+                GetDocumentsById(context, new StringValues(ids),  metadataOnly);
             }
         }
 
-        private void GetDocuments(DocumentsOperationContext context, Transformer transformer, bool metadataOnly)
+        private void GetDocuments(DocumentsOperationContext context, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 
@@ -153,19 +143,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
 
-                if (transformer != null)
-                {
-                    using (var transformerParameters = GetTransformerParameters(context))
-                    using (var scope = transformer.OpenTransformationScope(transformerParameters, null, Database.DocumentsStorage,
-                        Database.TransformerStore, context))
-                    {
-                        writer.WriteDocuments(context, scope.Transform(documents).ToList(), metadataOnly, out numberOfResults);
-                    }
-                }
-                else
-                {
-                    writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
-                }
+                writer.WriteDocuments(context, documents, metadataOnly, out numberOfResults);
 
                 writer.WriteEndObject();
             }
@@ -173,7 +151,7 @@ namespace Raven.Server.Documents.Handlers
             AddPagingPerformanceHint(PagingOperationType.Documents, isStartsWith ? nameof(DocumentsStorage.GetDocumentsStartingWith) : nameof(GetDocuments), HttpContext, numberOfResults, pageSize, sw.Elapsed);
         }
 
-        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, Transformer transformer, bool metadataOnly)
+        private void GetDocumentsById(DocumentsOperationContext context, StringValues ids, bool metadataOnly)
         {
             var sw = Stopwatch.StartNew();
 
@@ -195,27 +173,8 @@ namespace Raven.Server.Documents.Handlers
                 includeDocs.Gather(document);
             }
 
-            IEnumerable<Document> documentsToWrite;
-            if (transformer != null)
-            {
-                var transformerParameters = GetTransformerParameters(context);
-
-                using (var scope = transformer.OpenTransformationScope(transformerParameters, includeDocs, Database.DocumentsStorage, Database.TransformerStore, context))
-                {
-                    documentsToWrite = scope.Transform(documents).ToList();
-                    changeVectors = scope.LoadedDocumentChangeVectors;
-                }
-            }
-            else
-                documentsToWrite = documents;
-
             includeDocs.Fill(includes);
-            if (transformer != null)
-            {
-                if (changeVectors == null)
-                    changeVectors = new List<string>();
-                changeVectors.Add(transformer.Definition.TransformResults);
-            }
+           
             var actualEtag = ComputeEtagFor(documents, includes, changeVectors);
 
             var etag = GetStringFromHeaders("If-None-Match");
@@ -231,11 +190,11 @@ namespace Raven.Server.Documents.Handlers
             var blittable = GetBoolValueQueryString("blittable", required: false) ?? false;
             if (blittable)
             {
-                WriteDocumentsBlittable(context, documentsToWrite, includes, out numberOfResults);
+                WriteDocumentsBlittable(context, documents, includes, out numberOfResults);
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includes, out numberOfResults);
+                WriteDocumentsJson(context, metadataOnly, documents, includes, out numberOfResults);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);

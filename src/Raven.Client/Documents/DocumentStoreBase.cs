@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -73,22 +72,6 @@ namespace Raven.Client.Documents
         /// Executes index creation.
         /// </summary>
         public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken))
-        {
-            return task.ExecuteAsync(this, Conventions, token);
-        }
-
-        /// <summary>
-        /// Executes transformer creation
-        /// </summary>
-        public virtual void ExecuteTransformer(AbstractTransformerCreationTask task)
-        {
-            AsyncHelpers.RunSync(() => ExecuteTransformerAsync(task));
-        }
-
-        /// <summary>
-        /// Executes transformer creation
-        /// </summary>
-        public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask task, CancellationToken token = default(CancellationToken))
         {
             return task.ExecuteAsync(this, Conventions, token);
         }

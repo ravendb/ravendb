@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Parser;
@@ -117,33 +118,92 @@ namespace Raven.Server.Documents.Queries
             if (Query.With != null)
                 HandleWithClause();
 
-            if (Query.Select != null)
-                FillSelectFields(parameters);
-
             if (Query.Where != null)
                 new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
 
             if (Query.OrderBy != null)
             {
-                OrderBy = new(string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
+                HandleOrderByClause(parameters);
+            }
 
-                for (var i = 0; i < Query.OrderBy.Count; i++)
+            if (Query.SelectFunctionBody != null)
+                HandleSelectFunctionBody();
+            else if (Query.Select != null)
+                FillSelectFields(parameters);
+
+        }
+
+        private void HandleSelectFunctionBody()
+        {
+            if (Query.Select != null && Query.Select.Count > 0)
+                ThrowInvalidFunctionSelectWithMoreFields();
+
+            if (RootAliasPaths.Count == 0)
+                ThrowMissingAliasOnSelectFunctionBody();
+
+            var name = "__selectOutput";
+            if (Query.DeclaredFunctions != null &&
+                Query.DeclaredFunctions.ContainsKey(name))
+                ThrowUseOfReserveFunctionBodyMethodName();
+
+            var sb = new StringBuilder();
+
+            sb.Append("function ").Append(name).Append("(");
+            int index = 0;
+            var args = new SelectField[RootAliasPaths.Count];
+
+            foreach (var alias in RootAliasPaths)
+            {
+                if (index != 0)
+                    sb.Append(", ");
+                sb.Append(alias.Key);
+                args[index++] = SelectField.Create(string.Empty, null, alias.Value,
+                    alias.Key.EndssWith("[]"), true);
+            }
+            sb.AppendLine(") { ");
+            sb.Append("    return ");
+
+            sb.Append(QueryExpression.Extract(Query.QueryText, Query.SelectFunctionBody));
+
+            sb.AppendLine(";").AppendLine("}");
+
+            if (Query.TryAddFunction(name, sb.ToString()) == false)
+                ThrowUseOfReserveFunctionBodyMethodName();
+
+
+            SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
+        }
+
+        private static void ThrowUseOfReserveFunctionBodyMethodName()
+        {
+            throw new InvalidQueryException("When using select function body, the '__selectOutput' function is reserved");
+        }
+
+        private static void ThrowMissingAliasOnSelectFunctionBody()
+        {
+            throw new InvalidQueryException("Use of select function body requires that aliases will be defined, but none had");
+        }
+
+        private void HandleOrderByClause(BlittableJsonReaderObject parameters)
+        {
+            OrderBy = new(string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
+
+            for (var i = 0; i < Query.OrderBy.Count; i++)
+            {
+                var order = Query.OrderBy[i];
+                var indexFieldName = GetIndexFieldName(QueryExpression.Extract(QueryText, order.Expression.Field));
+
+                switch (order.Expression.Type)
                 {
-                    var order = Query.OrderBy[i];
-                    var indexFieldName = GetIndexFieldName(QueryExpression.Extract(QueryText, order.Expression.Field));
-
-                    switch (order.Expression.Type)
-                    {
-                        case OperatorType.Method:
-                            OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName, parameters);
-                            break;
-                        case OperatorType.Field:
-                            OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
-                            break;
-                        default:
-                            ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type, QueryText, parameters);
-                            break;
-                    }
+                    case OperatorType.Method:
+                        OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName, parameters);
+                        break;
+                    case OperatorType.Field:
+                        OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
+                        break;
+                    default:
+                        ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type, QueryText, parameters);
+                        break;
                 }
             }
         }
@@ -373,7 +433,7 @@ namespace Raven.Server.Documents.Queries
                                 else if (expression.Arguments[i] is FieldToken ft)
                                     args[i] = GetSelectValue(null, ft);
                                 else
-                                    ThrowInvalidFormatMethodArgument();
+                                    ThrowInvalidMethodArgument();
                             }
 
                             return SelectField.CreateMethodCall(methodName, alias, args);
@@ -423,16 +483,22 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
+        private void ThrowInvalidMethodArgument()
+        {
+            throw new InvalidQueryException("Invalid method parameter, don't know how to handle it");
+        }
+
         private SelectField GetSelectValue(string alias, FieldToken expressionField)
         {
             var name = QueryExpression.Extract(QueryText, expressionField);
             var indexOf = name.IndexOf('.');
-            string sourceAlias = null;
+            string sourceAlias;
+            bool hasSourceAlias = false;
             bool array = false;
             if (indexOf != -1)
             {
                 var key = new StringSegment(name, 0, indexOf);
-                if (key.Length > 2 && key[key.Length - 1] == ']' && key[key.Length - 2] == '[')
+                if (key.EndssWith("[]"))
                 {
                     key = key.Subsegment(0, key.Length - 2);
                     array = true;
@@ -440,9 +506,22 @@ namespace Raven.Server.Documents.Queries
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))
                 {
                     name = name.Substring(indexOf + 1);
+                    hasSourceAlias = true;
+                }
+                else if (RootAliasPaths.Count != 0)
+                {
+                    throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
             }
-            return SelectField.Create(name, alias, sourceAlias, array);
+            else if (RootAliasPaths.TryGetValue(name, out sourceAlias))
+            {
+                hasSourceAlias = true;
+                if (string.IsNullOrEmpty(alias))
+                    alias = name;
+                array = name.EndsWith("[]");
+                name = string.Empty;
+            }
+            return SelectField.Create(name, alias, sourceAlias, array, hasSourceAlias);
         }
 
         private SelectField GetSelectValue(string alias, ValueToken expressionValue)
@@ -451,20 +530,32 @@ namespace Raven.Server.Documents.Queries
             return SelectField.CreateValue(val, alias, expressionValue.Type);
         }
 
-        private static void ThrowInvalidFormatMethodArgument()
+        private static void ThrowInvalidFunctionSelectWithMoreFields()
         {
-            throw new InvalidQueryException("Invalid expression as argument to fromat method");
+            throw new InvalidQueryException("A query can contain a single select function body without extra fields");
         }
 
-        private static void ThrowInvalidFormatMethodFormatString(QueryExpression expression)
-        {
-            throw new InvalidQueryException("The first argument of the format method must be a string, but got " + expression.Arguments[0]);
-        }
 
         public string GetIndexFieldName(string fieldNameOrAlias)
         {
             if (_aliasToName.TryGetValue(fieldNameOrAlias, out var indexFieldName))
                 return indexFieldName;
+
+            var indexOf = fieldNameOrAlias.IndexOf('.');
+            if (indexOf == -1)
+                return fieldNameOrAlias;
+
+            var key = new StringSegment(fieldNameOrAlias, 0, indexOf);
+
+            if (RootAliasPaths.TryGetValue(key, out _))
+            {
+                return fieldNameOrAlias.Substring(indexOf + 1);
+            }
+
+            if (RootAliasPaths.Count != 0)
+            {
+                throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
+            }
 
             return fieldNameOrAlias;
         }

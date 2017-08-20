@@ -74,7 +74,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSubjectDN(subjectDN);
 
             // Valid For
-            DateTime notBefore = DateTime.UtcNow.Date;
+            DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
             DateTime notAfter = notBefore.AddYears(yearsUntilExpiration);
             certificateGenerator.SetNotBefore(notBefore);
             certificateGenerator.SetNotAfter(notAfter);
@@ -124,7 +124,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetSubjectDN(subjectDN);
 
             // Valid For
-            DateTime notBefore = DateTime.UtcNow.Date;
+            DateTime notBefore = DateTime.UtcNow.Date.AddDays(-7);
             DateTime notAfter = notBefore.AddYears(2);
 
             certificateGenerator.SetNotBefore(notBefore);
