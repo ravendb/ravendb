@@ -1357,6 +1357,20 @@ namespace Raven.Server.Rachis
                 await task;
 
             await task;
+          
+        }
+
+        public Task<(long Etag, object Result)> EnsureNodeRemovalOnDeletion(string nodeTag)
+        {
+            var remove = new RemoveNodeFromClusterCommand
+            {
+                RemovedNode = nodeTag
+            };
+            var leader = _currentLeader;
+            if (leader == null)
+                throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
+
+            return leader.PutAsync(remove);
         }
 
         private volatile string _leaderTag;
