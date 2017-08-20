@@ -96,10 +96,10 @@ namespace Raven.Client.Documents.Smuggler
             if (files.Length == 0)
                 return;
 
-            // When we do incremental import, we import the indexes and transformers from the last file only, 
+            // When we do incremental import, we import the indexes from the last file only, 
             // as the previous files can hold indexes and transformers which were deleted and shouldn't be imported.
             var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = options.OperateOnTypes & ~(DatabaseItemType.Indexes | DatabaseItemType.Transformers);
+            options.OperateOnTypes = options.OperateOnTypes & ~DatabaseItemType.Indexes;
             for (var i = 0; i < files.Length - 1; i++)
             {
                 var filePath = Path.Combine(fromDirectory, files[i]);
