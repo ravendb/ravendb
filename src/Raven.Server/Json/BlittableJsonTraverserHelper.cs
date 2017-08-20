@@ -80,6 +80,12 @@ namespace Raven.Server.Json
                     return true;
                 }
 
+                if (value is BlittableJsonReaderObject json)
+                {
+                    value = json.Count;
+                    return true;
+                }
+
                 if (value is Array a)
                 {
                     value = a.Length;
