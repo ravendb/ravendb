@@ -7,12 +7,10 @@ using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -92,7 +90,10 @@ namespace Raven.Server.Web.System
 
                     if (dbBlit == null)
                     {
+                        // here we return 503 so clients will try to failover to another server
+                        // if this is a newly created db that we haven't been notified about it yet
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer,
@@ -288,6 +289,7 @@ namespace Raven.Server.Web.System
                         {
                             HttpContext.Response.Headers.Remove("Content-Type");
                             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            HttpContext.Response.Headers["Database-Missing"] = dbName;
                             return Task.CompletedTask;
                         }
                         WriteDatabaseInfo(dbName, dbRecord, context, writer);
