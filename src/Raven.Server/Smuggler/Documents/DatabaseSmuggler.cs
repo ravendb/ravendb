@@ -148,9 +148,6 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Indexes:
                     counts = result.Indexes;
                     break;
-                case DatabaseItemType.Transformers:
-                    counts = result.Transformers;
-                    break;
                 case DatabaseItemType.Identities:
                     counts = result.Identities;
                     break;

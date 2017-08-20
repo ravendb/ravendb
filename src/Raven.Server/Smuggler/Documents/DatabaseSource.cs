@@ -30,7 +30,6 @@ namespace Raven.Server.Smuggler.Documents
             DatabaseItemType.Documents,
             DatabaseItemType.RevisionDocuments,
             DatabaseItemType.Indexes,
-            DatabaseItemType.Transformers,
             DatabaseItemType.Identities,
             DatabaseItemType.None
         };
