@@ -13,7 +13,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
-using SlowTests.Core.Utils.Transformers;
 
 using Xunit;
 
@@ -26,65 +25,6 @@ namespace SlowTests.Core.Indexing
 {
     public class ReferencedDocuments : RavenTestBase
     {
-        [Fact]
-        public void CanUseLoadDocumentToIndexReferencedDocs()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var postsByContent = new Posts_ByContent();
-                postsByContent.Execute(store);
-
-                var companiesWithEmployees = new Companies_WithReferencedEmployees();
-                companiesWithEmployees.Execute(store);
-
-                var companiesWithEmployeesTransformer = new CompanyEmployeesTransformer();
-                companiesWithEmployeesTransformer.Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    for (int i = 0; i < 10; i++)
-                    {
-                        session.Store(new Post
-                        {
-                            Id = "posts/" + i
-                        });
-
-                        session.Store(new PostContent
-                        {
-                            Id = "posts/" + i + "/content",
-                            Text = i % 2 == 0 ? "HTML 5" : "Javascript"
-                        });
-
-                        session.Store(new Employee
-                        {
-                            Id = "employees/" + i,
-                            LastName = "Last Name " + i
-                        });
-                    }
-
-                    session.Store(new Company { EmployeesIds = new List<string>() { "employees/1", "employees/2", "employees/3" } });
-                    session.SaveChanges();
-                    WaitForIndexing(store);
-
-                    var html5PostsQuery = session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "HTML 5");
-                    var javascriptPostsQuery = session.Advanced.DocumentQuery<Post>(postsByContent.IndexName).WhereEquals("Text", "Javascript");
-
-                    Assert.Equal(5, html5PostsQuery.ToList().Count);
-                    Assert.Equal(5, javascriptPostsQuery.ToList().Count);
-
-
-                    var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
-                        .SetTransformer(companiesWithEmployeesTransformer.TransformerName)
-                        .ToArray();
-
-                    Assert.Equal(1, companies.Length);
-                    Assert.Equal("Last Name 1", companies[0].Employees[0]);
-                    Assert.Equal("Last Name 2", companies[0].Employees[1]);
-                    Assert.Equal("Last Name 3", companies[0].Employees[2]);
-                }
-            }
-        }
-
         [Fact]
         public void BasicLoadDocumentsWithEnumerable()
         {
