@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void EnsureMetadata(DocumentsOperationContext context = null)
+        public void EnsureMetadata()
         {
             if (_metadataEnsured)
                 return;

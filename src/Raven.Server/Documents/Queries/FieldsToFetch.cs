@@ -16,6 +16,8 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool AnyExtractableFromIndex;
 
+        public readonly bool SingleFieldNoAlias;
+
         public readonly bool IsProjection;
 
         public readonly bool IsDistinct;
@@ -29,7 +31,7 @@ namespace Raven.Server.Documents.Queries
 
         public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition)
         {
-            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields);
+            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleFieldNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = false;
 
@@ -76,7 +78,7 @@ namespace Raven.Server.Documents.Queries
                 return fieldToFetch;
             }
 
-            if (string.IsNullOrWhiteSpace(selectFieldName))
+            if (selectFieldName == null)
             {
                 if (selectField.IsGroupByKey == false)
                     return null;
@@ -141,15 +143,22 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidOperationException("Cannot fetch all stored path from a nested method");
         }
 
-        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(SelectField[] selectFields, IndexDefinitionBase indexDefinition, out bool anyExtractableFromIndex, out bool extractAllStoredFields)
+        private static Dictionary<string, FieldToFetch> GetFieldsToFetch(
+            SelectField[] selectFields, 
+            IndexDefinitionBase indexDefinition, 
+            out bool anyExtractableFromIndex, 
+            out bool extractAllStoredFields,
+            out bool singleFieldNoAlias)
         {
             anyExtractableFromIndex = false;
             extractAllStoredFields = false;
+            singleFieldNoAlias = false;
 
             if (selectFields == null || selectFields.Length == 0)
                 return null;
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.OrdinalIgnoreCase);
+            singleFieldNoAlias = selectFields.Length == 1 && selectFields[0].Alias == null;
             for (var i = 0; i < selectFields.Length; i++)
             {
                 var selectField = selectFields[i];

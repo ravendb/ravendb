@@ -66,6 +66,11 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance ToJsObject(Engine engine, Document document)
         {
+            return ToJsObject2(engine, document);
+        }
+
+        public static ObjectInstance ToJsObject2(Engine engine, Document document)
+        {
             var instance = ToJsObject(engine, document.Data);
             return ApplyMetadataIfNecessary(instance, document.Id, document.ChangeVector, document.LastModified, document.Flags, document.IndexScore);
         }
