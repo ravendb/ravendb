@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Patching
         //splice(2, 1) will remove 1 elements from position 2 onwards (zero-based)
         private const string SampleScript = @"
     this.Comments.splice(2, 1);
-    this.Id = 'Something new'; 
+    this.Owner = 'Something new'; 
     this.Value++; 
     this.newValue = ""err!!"";
     this.Comments = this.Comments.map(function(comment) {   
@@ -66,7 +66,7 @@ namespace FastTests.Server.Documents.Patching
                     var resultDoc = await commands.GetAsync("someId");
                     var result = commands.Deserialize<CustomType>(resultDoc.BlittableJson);
 
-                    Assert.Equal("Something new", result.Id);
+                    Assert.Equal("Something new", result.Owner);
                     Assert.Equal(2, result.Comments.Count);
                     Assert.Equal("one test", result.Comments[0]);
                     Assert.Equal("two", result.Comments[1]);

@@ -305,7 +305,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             var oldOperateOnTypes = options.OperateOnTypes;
             options.OperateOnTypes = options.OperateOnTypes &
                                      ~(DatabaseItemType.Indexes |
-                                       DatabaseItemType.Transformers |
                                        DatabaseItemType.Identities);
 
             var destination = new DatabaseDestination(database);

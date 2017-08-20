@@ -23,11 +23,6 @@ namespace Raven.Client.Documents.Operations
         public int CountOfIndexes { get; set; }
 
         /// <summary>
-        /// Total number of transformers in database.
-        /// </summary>
-        public int CountOfTransformers { get; set; }
-
-        /// <summary>
         /// Total number of documents in database.
         /// </summary>
         public long CountOfDocuments { get; set; }

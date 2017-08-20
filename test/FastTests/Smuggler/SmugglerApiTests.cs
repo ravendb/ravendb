@@ -92,7 +92,6 @@ namespace FastTests.Smuggler
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
-                    Assert.Equal(1, stats.CountOfTransformers);
                 }
             }
             finally
@@ -140,7 +139,6 @@ namespace FastTests.Smuggler
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
-                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
 
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
                     var importResult = (SmugglerResult)importOperation.WaitForCompletion();
@@ -150,7 +148,6 @@ namespace FastTests.Smuggler
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
-                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
                 }
             }
             finally

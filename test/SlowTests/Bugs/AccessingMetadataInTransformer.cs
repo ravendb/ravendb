@@ -8,7 +8,6 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.Bugs

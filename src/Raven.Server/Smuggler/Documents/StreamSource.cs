@@ -97,7 +97,6 @@ namespace Raven.Server.Smuggler.Documents
                 case DatabaseItemType.Documents:
                 case DatabaseItemType.RevisionDocuments:
                 case DatabaseItemType.Indexes:
-                case DatabaseItemType.Transformers:
                 case DatabaseItemType.Identities:
                     return SkipArray();
                 default:
@@ -397,9 +396,6 @@ namespace Raven.Server.Smuggler.Documents
 
             if (type.Equals("Indexes", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Indexes;
-
-            if (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
-                return DatabaseItemType.Transformers;
 
             if (type.Equals("Identities", StringComparison.OrdinalIgnoreCase))
                 return DatabaseItemType.Identities;
