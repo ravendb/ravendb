@@ -1215,8 +1215,11 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                if (ServerStore.Cluster.ReadDatabase(context, name) == null)
-                    throw new InvalidOperationException($"Cannot compact database {name}, it doesn't exist");
+                var record = ServerStore.Cluster.ReadDatabase(context, name);
+                if (record == null)
+                    throw new InvalidOperationException($"Cannot compact database {name}, it doesn't exist.");
+                if (record.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                    throw new InvalidOperationException($"Cannot compact database {name} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
             }
 
             var token = new OperationCancelToken(ServerStore.ServerShutdown);
