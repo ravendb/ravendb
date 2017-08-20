@@ -57,7 +57,7 @@ namespace Raven.Server.Documents
                             _token.ThrowIfCancellationRequested();
                             StorageCompaction.Execute(src, (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)dst, progressReport =>
                             {
-                                progress.ObjectType = Enum.GetName(typeof(RootObjectType), progressReport.ObjectType);
+                                progress.ObjectType = progressReport.ObjectType.ToString();
                                 progress.GlobalProgress = progressReport.GlobalProgress;
                                 progress.GlobalTotal = progressReport.GlobalTotal;
                                 progress.ObjectName = progressReport.ObjectName;
