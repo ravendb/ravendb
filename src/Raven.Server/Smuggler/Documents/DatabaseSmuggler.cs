@@ -73,7 +73,6 @@ namespace Raven.Server.Smuggler.Documents
                 EnsureStepProcessed(result.RevisionDocuments);
                 EnsureStepProcessed(result.RevisionDocuments.Attachments);
                 EnsureStepProcessed(result.Indexes);
-                EnsureStepProcessed(result.Transformers);
                 EnsureStepProcessed(result.Identities);
 
                 return result;

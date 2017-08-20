@@ -222,9 +222,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 finalResult.Identities.ReadCount += importResult.Identities.ReadCount;
                 finalResult.Identities.ErroredCount += importResult.Identities.ErroredCount;
 
-                finalResult.Transformers.ReadCount += importResult.Transformers.ReadCount;
-                finalResult.Transformers.ErroredCount += importResult.Transformers.ErroredCount;
-
                 finalResult.Indexes.ReadCount += importResult.Indexes.ReadCount;
                 finalResult.Indexes.ErroredCount += importResult.Indexes.ErroredCount;
 
