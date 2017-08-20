@@ -55,29 +55,28 @@ namespace Raven.Client.ServerWide.Operations
 
     public class OngoingTaskSubscription : OngoingTask
     {
-        public class ClientConnectionIfo
-        {
-            public string ClientUri { get; set; }
-            public SubscriptionOpeningStrategy Strategy { get; set; }
-            public DateTime ClientConnectionTime { get; set; }
-        }
-
         public OngoingTaskSubscription()
         {
             TaskType = OngoingTaskType.Subscription;
         }
 
         public string Collection { get; set; }
-        public DateTime TimeOfLastClientActivity { get; set; }
-        public string LastChangeVector { get; set; }
 
-        public ClientConnectionIfo ClientConnection { get; set; }
+        //public DateTime TimeOfLastClientActivity { get; set; }
+        //public string LastChangeVector { get; set; }
+
+        //public class ClientConnectionIfo
+        //{
+        //    public string ClientUri { get; set; }
+        //    public SubscriptionOpeningStrategy Strategy { get; set; }
+        //    public DateTime ClientConnectionTime { get; set; }
+        //}
+        //public ClientConnectionIfo ClientConnection { get; set; }
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Collection)] = Collection;
-            json[nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity;
             return json;
         }
     }

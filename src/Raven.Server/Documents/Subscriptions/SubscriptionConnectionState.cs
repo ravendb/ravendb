@@ -96,8 +96,8 @@ namespace Raven.Server.Documents.Subscriptions
                     _recentConnections.TryDequeue(out SubscriptionConnection _);
                 }
                 _recentConnections.Enqueue(incomingConnection);
-                ConnectionInUse.Set();
                 Interlocked.CompareExchange(ref _currentConnection, null, incomingConnection);
+                ConnectionInUse.Set();
             });
         }
 

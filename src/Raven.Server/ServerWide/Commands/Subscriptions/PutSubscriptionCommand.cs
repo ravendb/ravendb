@@ -32,11 +32,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             var receivedSubscriptionState = context.ReadObject(new SubscriptionState {
                                 Criteria = Criteria,
-                                ChangeVector = InitialChangeVector,
+                                ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
                                 SubscriptionId = subscriptionId,
                                 SubscriptionName = SubscriptionName,
-                                TimeOfLastClientActivity = DateTime.UtcNow,
-                                Disabled = Disabled
+                                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                                Disabled = Disabled,
+                                LastClientConnectionTime = DateTime.Now 
             }.ToJson(), SubscriptionName);
             BlittableJsonReaderObject modifiedSubscriptionState = null;
             try
@@ -57,13 +58,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(InitialChangeVector , 
-                            out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange)
+                        if (Constants.Documents.SubscriptionChangeVectorSpecialStates.TryParse(InitialChangeVector , 
+                            out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
                         {
                             if (receivedSubscriptionState.Modifications == null)
                                 receivedSubscriptionState.Modifications = new DynamicJsonValue();
 
-                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
+                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
                             modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
                         }
                     }

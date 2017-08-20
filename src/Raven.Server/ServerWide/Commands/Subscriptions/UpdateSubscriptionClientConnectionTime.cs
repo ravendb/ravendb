@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -7,19 +8,16 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class AcknowledgeSubscriptionBatchCommand : UpdateValueForDatabaseCommand, IDatabaseTask
+    public class UpdateSubscriptionClientConnectionTime:UpdateValueForDatabaseCommand, IDatabaseTask
     {
-        public string ChangeVector;
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
-        public long LastDocumentEtagAckedInNode;
-        public DateTime LastTimeServerMadeProgressWithDocuments;
+        public DateTime LastClientConnectionTime;
 
-        // for serializtion
-        private AcknowledgeSubscriptionBatchCommand() : base(null) { }
+        private UpdateSubscriptionClientConnectionTime():base(null){}
 
-        public AcknowledgeSubscriptionBatchCommand(string databaseName) : base(databaseName)
+        public UpdateSubscriptionClientConnectionTime(string databaseName) : base(databaseName)
         {
         }
 
@@ -27,7 +25,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         protected override BlittableJsonReaderObject GetUpdatedValue(long index, DatabaseRecord record, JsonOperationContext context, BlittableJsonReaderObject existingValue, bool isPassive)
         {
-
             var itemId = GetItemId();
             if (existingValue == null)
                 throw new InvalidOperationException($"Subscription with id {itemId} does not exist");
@@ -36,20 +33,18 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                 throw new InvalidOperationException($"Can't update subscription with name {itemId} by node {NodeTag}, because it's not it's task to update this subscription");
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
-            
-            subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
-            subscription.LastTimeServerMadeProgressWithDocuments = LastTimeServerMadeProgressWithDocuments;
+
+            subscription.LastClientConnectionTime = LastClientConnectionTime;
 
             return context.ReadObject(subscription.ToJson(), itemId);
         }
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(ChangeVector)] = ChangeVector;
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
-            json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
+            json[nameof(LastClientConnectionTime)] = LastClientConnectionTime;
         }
 
         public ulong GetTaskKey()

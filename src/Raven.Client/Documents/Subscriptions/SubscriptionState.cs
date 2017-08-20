@@ -5,8 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -14,10 +14,11 @@ namespace Raven.Client.Documents.Subscriptions
     public class SubscriptionState : IDatabaseTask
     {
         public SubscriptionCriteria Criteria { get; set; }
-        public string ChangeVector { get; set; }
+        public string ChangeVectorForNextBatchStartingPoint { get; set; }
         public long SubscriptionId { get; set; }
         public string SubscriptionName { get; set; }
-        public DateTime TimeOfLastClientActivity { get; set; }
+        public DateTime LastTimeServerMadeProgressWithDocuments { get; set; }  // Last time server made some progress with the subscriptions docs  
+        public DateTime LastClientConnectionTime { get; set; } // Last time any client has connected to server (connection dead or alive)
         public bool Disabled { get; set; }
 
         public ulong GetTaskKey()
@@ -25,8 +26,7 @@ namespace Raven.Client.Documents.Subscriptions
             return (ulong)SubscriptionId;
         }
 
-
-        public DynamicJsonValue ToJson()
+        public virtual DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
@@ -36,10 +36,11 @@ namespace Raven.Client.Documents.Subscriptions
                     [nameof(SubscriptionCriteria.Script)] = Criteria.Script,
                     [nameof(SubscriptionCriteria.IncludeRevisions)] = Criteria.IncludeRevisions
                 },
-                [nameof(ChangeVector)] = ChangeVector,
+                [nameof(ChangeVectorForNextBatchStartingPoint)] = ChangeVectorForNextBatchStartingPoint,
                 [nameof(SubscriptionId)] = SubscriptionId,
                 [nameof(SubscriptionName)] = SubscriptionName,
-                [nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity,
+                [nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments,
+                [nameof(LastClientConnectionTime)] = LastClientConnectionTime,
                 [nameof(Disabled)] = Disabled
             };
         }
@@ -52,6 +53,18 @@ namespace Raven.Client.Documents.Subscriptions
         public static string SubscriptionPrefix(string databaseName)
         {
             return $"{Helpers.ClusterStateMachineValuesPrefix(databaseName)}subscriptions/";
+        }
+    }
+
+    public class SubscriptionStateWithNodeDetails : SubscriptionState
+    {
+        public NodeId ResponsibleNode { get; set; }
+
+        public override DynamicJsonValue ToJson()
+        {
+            var json = base.ToJson();
+            json[nameof(ResponsibleNode)] = ResponsibleNode;
+            return json;
         }
     }
 }

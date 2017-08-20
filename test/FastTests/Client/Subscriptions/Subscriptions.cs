@@ -29,7 +29,7 @@ namespace FastTests.Client.Subscriptions
                 Assert.Equal(1, subscriptionsConfig.Count);
                 Assert.Equal(subscriptionCreationParams.Criteria.Collection, subscriptionsConfig[0].Criteria.Collection);
                 Assert.Equal(subscriptionCreationParams.Criteria.Script, subscriptionsConfig[0].Criteria.Script);
-                Assert.Null(subscriptionsConfig[0].ChangeVector);
+                Assert.Null(subscriptionsConfig[0].ChangeVectorForNextBatchStartingPoint);
                 Assert.Equal(subsName, subscriptionsConfig[0].SubscriptionName);
                 Assert.Equal(subscripitonState.SubscriptionId, subscriptionsConfig[0].SubscriptionId);
             }

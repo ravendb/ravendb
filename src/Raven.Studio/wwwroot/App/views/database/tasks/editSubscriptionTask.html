@@ -25,6 +25,11 @@
                 </div>
                 <div class="scroll" data-bind="with: editedSubscription">
                     <div class="panel padding flex-form">
+                        <div data-bind="if: liveConnection() && !$root.isAddingNewSubscriptionTask()">
+                            <div class="bg-warning inline-block padding padding-xs small" title="Note: Client connection will be disconnected upon Save !">
+                                <i class="icon-warning"></i>&nbsp;&nbsp;Warning: You are editing a live subscription connection . . .
+                            </div>
+                        </div>
                         <h3 data-bind="visible: $root.isAddingNewSubscriptionTask()">New Subscription</h3>
                         <h3 data-bind="visible: !$root.isAddingNewSubscriptionTask()">Edit Subscription</h3>
                         <div class="form-group margin-top">
@@ -37,7 +42,7 @@
                             <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: collection">
                                 <div class="dropdown btn-block">
                                     <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown" 
-                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"  
+                                           data-bind="textInput: collection, attr: { disabled: !$root.isAddingNewSubscriptionTask(), id: 'collectionNameInput' }"
                                            placeholder="Select a collection">
                                     <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height" data-bind="foreach: createCollectionNameAutocompleter($data), autoComplete: '#' + 'collectionNameInput'">
@@ -58,7 +63,7 @@
                         <div class="help-block" data-bind="validationMessage: includeRevisions"></div>
                     </div>
                     <div class="panel padding">
-                        <label>Transform Script:&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
+                        <label>Transform Script :&nbsp;&nbsp;<i class="icon-info text-info" id="scriptInfo"></i></label>
                         <pre class="form-control margin-top" placeholder="Enter transform script" 
                              data-bind="aceEditor: { code: script, lang:'ace/mode/javascript', completer: $root.completer }, validationOptions: { errorsAsTitle: false }, validationElement: script" style="height: 160px;">
                         </pre>
@@ -67,14 +72,16 @@
                         </div>
                     </div>
                     <div class="panel padding flex-form">
+                        <div class="toggle">
+                            <input id="use-starting-point" type="checkbox" data-bind="checked: setStartingPoint">
+                            <label for="use-starting-point">Use defined starting point</label>
+                        </div>
                         <div class="form-group">
-                            <label class="control-label">Send Documents From</label>
+                            <label class="control-label">Send Documents From :</label>
                             <div class="flex-grow">
-                                <div class="dropdown btn-block" title="Set the starting point for the subscription task">
-                                    <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" disabled="disabled">
-                                        <span data-bind="text: startingPointType"></span>
-                                        <span class="caret"></span>
-                                    </button>
+                                <div class="dropdown btn-block" title="Set the starting point for the subscription task"> 
+                                    <input type="text" class="form-control dropdown-toggle text-left" data-toggle="dropdown" data-bind="textInput: startingPointType, attr: { 'disabled': !setStartingPoint() }"> 
+                                    <span class="caret dropdown-toggle" data-toggle="dropdown"></span>
                                     <ul class="dropdown-menu max-height">
                                         <li title="Documents will be sent from the very first document in the collection">
                                             <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Beginning of Time')">Begining of Time</a>
@@ -83,21 +90,25 @@
                                             <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Latest Document')">Latest Document</a>
                                         </li>
                                         <li title="Documents will be sent from the specified change vector related document">
-                                            <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change Vector')">Change Vector</a>
+                                            <a href="#" data-bind="click: _.partial($root.setStartingPointType, 'Change-Vector')">Change-Vector</a>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
                         </div>
-                        <div class="margin-top">
-                            <div class="row flex-row" data-bind="visible: startingPointChangeVector ">
-                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
-                                    <textarea rows="3" class="form-control" placeholder="Set change vector"></textarea>
-                                </div>
-                                <div class="col-xs-12 col-sm-6 col-sm-offset-6 col-lg-offset-4 col-lg-12">
-                                    <button class="btn btn-default btn-block"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>
-                                </div>
+                        <div class="form-group" data-bind="visible: startingPointChangeVector() && setStartingPoint()">
+                            <label class="control-label">Change-Vector :</label>
+                            <div class="flex-grow" data-bind="validationOptions: { insertMessages: false }, validationElement: startingChangeVector">
+                                <textarea rows="3" class="form-control" placeholder="Enter change-vector to start sending documents from" data-bind="textInput: startingChangeVector, attr: { 'disabled': !setStartingPoint() }"></textarea>
+                                <!--<button class="btn btn-default btn-block btn-upcoming"><i class="icon-preview"></i><span>&nbsp;Show related document</span></button>--> <!-- todo: we need end point for this.. -->
+                                <span class="help-block" data-bind="validationMessage: startingChangeVector"></span>
                             </div>
+                        </div><br /><br />
+                    </div>
+                    <div data-bind="if: changeVectorForNextBatchStartingPoint() && !setStartingPoint()">
+                        <div class="panel padding" title="This change-vector is the starting point for next batch"> 
+                            <label for="latest-change-vector">Next batch starting point is :</label>
+                            <textarea id="latest-change-vector" rows="2" class="form-control" disabled="disabled" data-bind="textInput: changeVectorForNextBatchStartingPoint"></textarea>
                         </div>
                     </div>
                 </div>

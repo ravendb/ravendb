@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -32,6 +33,7 @@ using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Studio;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Replication;
+using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Web.System;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -246,10 +248,13 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OngoingTaskSubscription));
             scripter.AddType(typeof(SubscriptionTryout));
             scripter.AddType(typeof(DocumentWithException));
-            scripter.AddType(typeof(SubscriptionState));
+            scripter.AddType(typeof(SubscriptionStateWithNodeDetails));
+            scripter.AddType(typeof(SubscriptionConnectionDetails));
             scripter.AddType(typeof(SubscriptionCriteria));
             scripter.AddType(typeof(ChangeVectorEntry));
             scripter.AddType(typeof(SubscriptionCreationOptions));
+            scripter.AddType(typeof(Constants.Documents.SubscriptionChangeVectorSpecialStates)); 
+            scripter.AddType(typeof(SubscriptionOpeningStrategy)); 
 
             // ongoing tasks - ravenDB ETL
             scripter.AddType(typeof(OngoingTaskRavenEtl));
