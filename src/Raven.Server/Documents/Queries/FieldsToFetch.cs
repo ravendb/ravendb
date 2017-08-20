@@ -100,7 +100,8 @@ namespace Raven.Server.Documents.Queries
             {
                 return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
             }
-            if (selectFieldName[0] == '_')
+            if (selectFieldName.Length > 0 && 
+                selectFieldName[0] == '_')
             {
                 if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
