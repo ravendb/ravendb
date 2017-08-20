@@ -500,7 +500,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 if (_logger.IsInfoEnabled)
                 {
-                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are {status}.\n" +
+                    _logger.Info($"The database {dbName} on {promotable} not ready to be promoted, because the change vectors are in status: '{status}'.\n" +
                                  $"mentor's change vector : {mentorPrevDbStats.LastChangeVector}, node's change vector : {promotableDbStats.LastChangeVector}");
                 }
 
@@ -508,11 +508,11 @@ namespace Raven.Server.ServerWide.Maintenance
                 if (topology.PromotablesStatus.TryGetValue(promotable, out var currentStatus) == false
                     || currentStatus != DatabasePromotionStatus.ChangeVectorNotMerged)
                 {
-                    topology.DemotionReasons[promotable] = $"node is not ready to be promoted, because the change vectors are {status}.\n" +
+                    topology.DemotionReasons[promotable] = $"Node is not ready to be promoted, because the change vectors are in status: '{status}'.\n" +
                                                            $"mentor's change vector : {mentorPrevDbStats.LastChangeVector},\n" +
                                                            $"node's change vector : {promotableDbStats.LastChangeVector}";
                     topology.PromotablesStatus[promotable] = DatabasePromotionStatus.ChangeVectorNotMerged;
-                    return (false, $"Node {promotable} not ready to be a member, because the change vector is in status {status} (should be AlreadyMerged)");
+                    return (false, $"Node {promotable} not ready to be a member, because the change vector is in status: '{status}' (should be AlreadyMerged)");
                 }
             }
             return (false, null);
