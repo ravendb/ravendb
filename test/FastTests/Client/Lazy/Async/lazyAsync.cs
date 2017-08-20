@@ -161,7 +161,6 @@ namespace FastTests.Client.Lazy.Async
                 session.Advanced.GetMetadataFor(contact)["Val"] = "hello";
                 session.SaveChanges();
             }
-            WaitForUserToContinueTheTest(store);
             using (var session = store.OpenAsyncSession())
             {
                 var contactViewModel =
@@ -169,15 +168,15 @@ namespace FastTests.Client.Lazy.Async
                         .RawQuery(@"
 declare function transform(contact, details) {
 	return {
-		ContactId: contact.Id,
+		ContactId: contact['@metadata']['@id'],
 		ContactName: contact.Name,
 		ContactDetails: details	
 	};
 }
 from Contacts as contact
-with load(contact.DetailIds) as details
+with load(contact.DetailIds) as details[]
 where contact.__document_id = :id
-select transform(contact, details)
+select transform(contact, details[])
 ")
                         .AddParameter("id", "contacts/1")
                         .LazilyAsync();
@@ -210,6 +209,10 @@ select transform(contact, details)
 
         public class Detail
         {
+            public Detail()
+            {
+                
+            }
             public string Id { get; set; }
             public string Name { get; set; }
         }
@@ -245,12 +248,13 @@ select transform(contact, details)
                         .RawQuery(@"
 declare function triple(pos) { return pos *3; }
 from Items
-where Id in (:ids)
-order by Id
+where __document_id in (:ids)
 select triple(Position) as Position
 ")
                         .AddParameter("ids", new[] {"items/1", "items/2"})
                         .ToListAsync();
+
+
                     Assert.Equal(1 * 3, items[0].Position);
                     Assert.Equal(2 * 3, items[1].Position);
                 }

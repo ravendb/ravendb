@@ -144,7 +144,7 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteComma();
                     First = false;
 
-                    document.EnsureMetadata(_context);
+                    document.EnsureMetadata();
                     _context.Write(Writer, document.Data);
                 }
             }

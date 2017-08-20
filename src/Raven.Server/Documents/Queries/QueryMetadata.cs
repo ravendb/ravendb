@@ -427,7 +427,8 @@ namespace Raven.Server.Documents.Queries
         {
             var name = QueryExpression.Extract(QueryText, expressionField);
             var indexOf = name.IndexOf('.');
-            string sourceAlias = null;
+            string sourceAlias;
+            bool hasSourceAlias = false;
             bool array = false;
             if (indexOf != -1)
             {
@@ -440,13 +441,22 @@ namespace Raven.Server.Documents.Queries
                 if (RootAliasPaths.TryGetValue(key, out sourceAlias))
                 {
                     name = name.Substring(indexOf + 1);
+                    hasSourceAlias = true;
                 }
                 else if(RootAliasPaths.Count != 0)
                 {
                     throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
             }
-            return SelectField.Create(name, alias, sourceAlias, array);
+            else if (RootAliasPaths.TryGetValue(name, out sourceAlias))
+            {
+                hasSourceAlias = true;
+                if (string.IsNullOrEmpty(alias))
+                    alias = name;
+                array = name.EndsWith("[]");
+                name = string.Empty;
+            }
+            return SelectField.Create(name, alias, sourceAlias, array, hasSourceAlias);
         }
 
         private SelectField GetSelectValue(string alias, ValueToken expressionValue)
