@@ -28,7 +28,7 @@ namespace SlowTests.Bugs
         {
             using (var store = GetDocumentStore())
             {
-                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new AllDocs1(), new AllDocs2() }, null, store);
+                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new AllDocs1(), new AllDocs2() }, store);
             }
         }
     }

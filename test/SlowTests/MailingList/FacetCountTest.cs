@@ -7,7 +7,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -81,25 +80,6 @@ namespace SlowTests.MailingList
             }
         }
 
-        private class Wod_SearchTransformer : AbstractTransformerCreationTask<WodBase>
-        {
-
-            public Wod_SearchTransformer()
-            {
-                TransformResults = wods =>
-                                   from wod in wods
-                                   select new
-                                   {
-                                       wod.Name,
-                                       wod.Id,
-                                       wod.WodType,
-                                       wod.BenchmarkType,
-                                       wod.ExerciseList,
-                                       Score = MetadataFor(wod).Value<double?>("Temp-Index-Score")
-                                   };
-            }
-        }
-
         [Fact]
         public void TestFacetsCount()
         {
@@ -109,8 +89,6 @@ namespace SlowTests.MailingList
 
                 // Create index
                 new Wod_Search().Execute(store);
-                var wodSearchTransformer = new Wod_SearchTransformer();
-                wodSearchTransformer.Execute(store);
                 WaitForIndexing(store);
                 WaitForIndexing(store);
 
@@ -120,7 +98,6 @@ namespace SlowTests.MailingList
                     {
                         QueryStatistics stats;
                         var query = session.Advanced.DocumentQuery<WodsProjection, Wod_Search>()
-                            .SetTransformer(wodSearchTransformer.TransformerName)
                             .WaitForNonStaleResults()
                             .Statistics(out stats)
                             .SelectFields<WodsProjection>();

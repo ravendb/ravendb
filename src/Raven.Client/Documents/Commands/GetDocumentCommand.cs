@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Commands
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly)
+        public GetDocumentCommand(string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));

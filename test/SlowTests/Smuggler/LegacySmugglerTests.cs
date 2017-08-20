@@ -27,7 +27,6 @@ namespace SlowTests.Smuggler
 
                     Assert.Equal(1059, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes); // there are 4 in ravendbdump, but Raven/DocumentsByEntityName is skipped
-                    Assert.Equal(1, stats.CountOfTransformers);
 
                     var collectionStats = await store.Admin.SendAsync(new GetCollectionStatisticsOperation());
                     Assert.Equal(1059, collectionStats.CountOfDocuments);
@@ -84,8 +83,6 @@ namespace SlowTests.Smuggler
                     // LoadDocument(key)
                     // Query
                     // QueryOrDefault
-                    Assert.True(stats.CountOfTransformers >= 71);
-                    Assert.True(stats.CountOfTransformers <= 121);
                 }
             }
         }

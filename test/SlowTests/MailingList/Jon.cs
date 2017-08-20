@@ -9,7 +9,6 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -41,12 +40,11 @@ namespace SlowTests.MailingList
                 }
 
                 new PermissionsByUser().Execute(store);
-                new PermissionsByUserTransformer().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
                     var userWithPermissionses = session.Query<UserWithPermissions, PermissionsByUser>().Customize(x =>
-                        x.WaitForNonStaleResults()).TransformWith<PermissionsByUserTransformer, UserWithPermissions>().ToList();
+                        x.WaitForNonStaleResults()).ToList();
                     Assert.NotEmpty(userWithPermissionses);
                 }
             }
@@ -66,23 +64,6 @@ namespace SlowTests.MailingList
                 Map = users => from user in users
                                from role in user.Roles
                                select new { role.Id };
-            }
-        }
-
-        private class PermissionsByUserTransformer : AbstractTransformerCreationTask<User>
-        {
-            public PermissionsByUserTransformer()
-            {
-                TransformResults = users => from user in users
-                                            let roles = LoadDocument<Role>(user.Roles.Select(x => x.Id))
-                                            select new
-                                            {
-                                                Id = user.Id,
-                                                Username = user.Username,
-                                                Password = user.Password,
-                                                Roles = user.Roles,
-                                                Permissions = roles.SelectMany(x => x.Permissions)//.Distinct()
-                                            };
             }
         }
 

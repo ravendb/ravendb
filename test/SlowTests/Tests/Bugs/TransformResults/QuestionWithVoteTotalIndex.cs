@@ -1,6 +1,5 @@
 using System.Linq;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 
 namespace SlowTests.Tests.Bugs.TransformResults
 {
@@ -21,28 +20,6 @@ namespace SlowTests.Tests.Bugs.TransformResults
                                    QuestionId = g.Key,
                                    VoteTotal = g.Sum(x => x.VoteTotal)
                                };
-
-        }
-    }
-
-    public class QuestionWithVoteTotalTransformer : AbstractTransformerCreationTask<QuestionView>
-    {
-        public QuestionWithVoteTotalTransformer()
-        {
-            TransformResults = results =>
-                                from result in results
-                                let question = LoadDocument<Question>(result.QuestionId)
-                                let user = LoadDocument<User>(question.UserId)
-                                select new
-                                {
-                                    QuestionId = result.QuestionId,
-                                    UserDisplayName = user.DisplayName,
-                                    QuestionTitle = question.Title,
-                                    QuestionContent = question.Content,
-                                    VoteTotal = result.VoteTotal,
-                                    User = user,
-                                    Question = question
-                                };
 
         }
     }
