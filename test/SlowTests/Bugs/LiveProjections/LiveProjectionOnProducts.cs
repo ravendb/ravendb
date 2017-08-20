@@ -62,7 +62,7 @@ from index 'ProductDetailsReport/ByProductId' as p
 with load(p.Variants) as v[]
 select {
     Name: p.Name,
-    Variants: 
+    Variants: v.map(function(n){ return {Name: n.Name.toUpperCase()}; }
 }
 ")
                         .ToList();
@@ -71,7 +71,7 @@ select {
 
                     Assert.Equal(first.Name, "product 1");
                     Assert.Equal(first.Id, "products/1-A");
-                    Assert.Equal(first.Variants[0].Name, "variant 1");
+                    Assert.Equal(first.Variants[0].Name, "VARIANT 1");
                 }
             }
         }
