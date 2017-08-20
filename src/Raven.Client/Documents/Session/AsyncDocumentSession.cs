@@ -54,7 +54,7 @@ namespace Raven.Client.Documents.Session
                 throw new InvalidOperationException("Cannot refresh a transient instance");
             IncrementRequestCount();
 
-            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, transformer: null, transformerParameters: null, metadataOnly: false);
+            var command = new GetDocumentCommand(new[] { documentInfo.Id }, includes: null, metadataOnly: false);
             await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
 
             RefreshInternal(entity, command, documentInfo);

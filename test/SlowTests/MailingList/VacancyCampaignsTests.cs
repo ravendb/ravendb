@@ -10,7 +10,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -67,29 +66,10 @@ namespace SlowTests.MailingList
             }
         }
 
-        public class VacancyCampaignsTransformer : AbstractTransformerCreationTask<VacancyCampaignsIndex.ReduceResult>
-        {
-            public VacancyCampaignsTransformer()
-            {
-
-                TransformResults = results => from result in results
-                                              let vacancy = LoadDocument<Vacancy>(result.Id)
-                                              let campaign = vacancy.Campaigns.FirstOrDefault(c => c.Id.ToString() == result.CampaignId.ToString())
-                                              select new
-                                              {
-                                                  Id = result.Id,
-                                                  Category = vacancy.Category,
-                                                  CampaignId = result.CampaignId,
-                                                  Title = campaign.Title,
-                                                  Active = campaign.Active
-                                              };
-            }
-        }
 
         private static void CreateData(IDocumentStore store)
         {
             new VacancyCampaignsIndex().Execute(store);
-            new VacancyCampaignsTransformer().Execute(store);
 
             using (var session = store.OpenSession())
             {

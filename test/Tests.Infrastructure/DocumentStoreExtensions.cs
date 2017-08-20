@@ -214,7 +214,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentCommand(ids, includes: null, transformer: null, transformerParameters: null, metadataOnly: false);
+                var command = new GetDocumentCommand(ids, includes: null, metadataOnly: false);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 

@@ -4,7 +4,6 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Transformers;
 using SlowTests.Utils;
 using Xunit;
 
@@ -118,23 +117,6 @@ namespace SlowTests.MailingList.spokeypokey
             }
         }
 
-        private class IdentityProjectionIndex1Transformer : AbstractTransformerCreationTask<Provider1>
-        {
-            public IdentityProjectionIndex1Transformer()
-            {
-
-                TransformResults =
-                    providers => from provider in providers
-                                 let TaxonomyCode = LoadDocument<TaxonomyCode>(provider.TaxonomyCodeRef.InternalId)
-                                 select new
-                                 {
-                                     provider.InternalId,
-                                     provider.Name,
-                                     TaxonomyCode,
-                                 };
-            }
-        }
-
         [Fact]
         public void Can_project_InternalId_from_transformResults2()
         {
@@ -168,13 +150,11 @@ namespace SlowTests.MailingList.spokeypokey
                 }
 
                 new IdentityProjectionIndex1().Execute(store);
-                new IdentityProjectionIndex1Transformer().Execute(store);
 
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<Provider1, IdentityProjectionIndex1>()
                         .Customize(x => x.WaitForNonStaleResults())
-                        .TransformWith<IdentityProjectionIndex1Transformer, Provider1>()
                         .Select(p => p)
                         .First();
 
