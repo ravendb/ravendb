@@ -14,12 +14,12 @@ namespace RachisTests
     {
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
             }
-            return res.Members.Count;
+            return res.Topology.Members.Count;
         }
 
         [Fact]
@@ -49,9 +49,9 @@ namespace RachisTests
                 {
                     var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), replicationFactor);
                     Assert.Equal(replicationFactor, val);
-                    var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+                    var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
 
-                    var serverTagToBeDeleted = res.Members[0];
+                    var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
                     deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
                     //The +1 is for NotifyLeaderAboutRemoval

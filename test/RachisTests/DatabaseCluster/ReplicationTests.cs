@@ -9,6 +9,8 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -437,7 +439,7 @@ namespace RachisTests.DatabaseCluster
                     [databaseName] = DatabaseAccess.Admin
                 }, defaultServer: leader);
             }
-
+            DatabaseTopology topology;
             var doc = new DatabaseRecord(databaseName);
             using (var store = new DocumentStore()
             {
@@ -451,7 +453,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                var topology = databaseResult.Topology;
+                topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -495,7 +497,11 @@ namespace RachisTests.DatabaseCluster
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/2");
-                    Assert.Equal(2, session.Advanced.GetChangeVectorFor(user).Length);
+                    var cv =
+                        $"A:1-{ChangeVectorEntry.GuidToTruncatedBase64(Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbId)}, " +
+                        $"C:1-{ChangeVectorEntry.GuidToTruncatedBase64(Servers[2].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbId)}, " +
+                        $"B:2-{ChangeVectorEntry.GuidToTruncatedBase64(Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbId)}";
+                    Assert.Equal(cv, session.Advanced.GetChangeVectorFor(user));
                 }
             }
         }

@@ -6,30 +6,30 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetDatabaseTopologyOperation : IServerOperation<DatabaseTopology>
+    public class GetDatabaseRecordOperation : IServerOperation<DatabaseRecord>
     {
         private readonly string _database;
 
-        public GetDatabaseTopologyOperation(string database)
+        public GetDatabaseRecordOperation(string database)
         {
             _database = database;
         }
 
-        public RavenCommand<DatabaseTopology> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
+        public RavenCommand<DatabaseRecord> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
-            return new GetDatabaseTopologyCommand(_database);
+            return new GetDatabaseRecordCommand(_database);
         }
     }
 
 
-    public class GetDatabaseTopologyCommand : RavenCommand<DatabaseTopology>
+    public class GetDatabaseRecordCommand : RavenCommand<DatabaseRecord>
     {
         private readonly string _database;
         private readonly DocumentConventions _conventions = new DocumentConventions();
 
         public override bool IsReadRequest => false;
 
-        public GetDatabaseTopologyCommand(string database)
+        public GetDatabaseRecordCommand(string database)
         {
             _database = database;
         }
@@ -51,8 +51,7 @@ namespace Raven.Client.ServerWide.Operations
                 return;
             }
 
-            var rec = (DatabaseRecord)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecord), "database-record", response, _conventions);
-            Result = rec.Topology;
+            Result = (DatabaseRecord)EntityToBlittable.ConvertToEntity(typeof(DatabaseRecord), "database-record", response, _conventions);
         }
     }
 }
