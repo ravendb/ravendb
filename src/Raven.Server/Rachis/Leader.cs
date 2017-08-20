@@ -789,8 +789,9 @@ namespace Raven.Server.Rachis
                 );
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
-                
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
+                context.Transaction.Commit();
+
                 var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
@@ -801,12 +802,6 @@ namespace Raven.Server.Rachis
                 {
                     Interlocked.Exchange(ref _topologyModification, null);
                 });
-
-                if (modification == TopologyModification.Remove)
-                {
-                    EnsureNodeRemovalOnDeletion(nodeTag, context);
-                }
-                context.Transaction.Commit();
             }
             Interlocked.Exchange(ref _hasNewTopology, 1);
             _voterResponded.Set();
@@ -815,21 +810,7 @@ namespace Raven.Server.Rachis
             return true;
         }
 
-        private void EnsureNodeRemovalOnDeletion(string nodeTag, TransactionOperationContext context)
-        {
-            var remove = new RemoveNodeFromClusterCommand
-            {
-                RemovedNode = nodeTag
-            };
-            var blittableCmd = context.ReadObject(remove.ToJson(context), "read/remove-node-command");
-            var removeIndex = _engine.InsertToLeaderLog(context, blittableCmd, RachisEntryFlags.StateMachineCommand);
-            var removeTcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
-            _entries[removeIndex] = new CommandState
-            {
-                TaskCompletionSource = removeTcs,
-                CommandIndex = removeIndex
-            };
-        }
+       
 
         private static string GenerateNodeTag(ClusterTopology clusterTopology)
         {

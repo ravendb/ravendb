@@ -759,7 +759,7 @@ namespace Raven.Server.Web.System
                     var sp = Stopwatch.StartNew();
                     var timeout = TimeSpan.FromSeconds(confirmationTimeoutInSec);
                     int databaseIndex = 0;
-                    while (waitOnRecordDeletion.Count > index)
+                    while (waitOnRecordDeletion.Count > databaseIndex)
                     {
                         var databaseName = waitOnRecordDeletion[databaseIndex];
                         using (context.OpenReadTransaction())
@@ -767,7 +767,7 @@ namespace Raven.Server.Web.System
                             var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
                             if (record == null)
                             {
-                                waitOnRecordDeletion.RemoveAt(0);
+                                waitOnRecordDeletion.RemoveAt(databaseIndex);
                                 continue;
                             }
                         }
@@ -791,7 +791,6 @@ namespace Raven.Server.Web.System
                         {
                             databaseIndex++;
                         }
-
                     }
 
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
