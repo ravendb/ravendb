@@ -15,7 +15,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
@@ -38,8 +37,6 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
-using Raven.Server.ServerWide.Commands;
-using Raven.Server.ServerWide.Commands.ConnectionStrings;
 using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
@@ -61,6 +58,7 @@ namespace Raven.Server.Web.System
                     if (dbDoc == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer,
