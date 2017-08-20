@@ -118,18 +118,16 @@ namespace Raven.Server.Documents.Queries
             if (Query.With != null)
                 HandleWithClause();
 
-            if (Query.Where != null)
-                new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
-
-            if (Query.OrderBy != null)
-            {
-                HandleOrderByClause(parameters);
-            }
-
             if (Query.SelectFunctionBody != null)
                 HandleSelectFunctionBody();
             else if (Query.Select != null)
                 FillSelectFields(parameters);
+
+            if (Query.OrderBy != null)
+                HandleOrderByClause(parameters);
+
+            if (Query.Where != null)
+                new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
 
         }
 
