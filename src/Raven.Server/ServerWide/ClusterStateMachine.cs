@@ -842,7 +842,7 @@ namespace Raven.Server.ServerWide
             if (_parent.IsEncrypted && url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                 throw new InvalidOperationException($"Failed to connect to node {url}. Connections from encrypted store must use HTTPS.");
 
-            var info = await ReplicationUtils.GetTcpInfoAsync(url, "Rachis.Server", "Cluster", certificate);
+            var info = await ReplicationUtils.GetTcpInfoAsync(url, null, "Cluster", certificate);
 
             var tcpInfo = new Uri(info.Url);
             var tcpClient = new TcpClient();

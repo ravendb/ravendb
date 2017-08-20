@@ -63,19 +63,19 @@ namespace SlowTests.Issues
         {
             await WaitForValueAsync(async () => await GetMembersCount(storeB, _database), 1);
 
-            var topology = await storeB.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(_database));
+            var record = await storeB.Admin.Server.SendAsync(new GetDatabaseRecordOperation(_database));
 
-            Assert.Equal(node, topology.Members[0]);
+            Assert.Equal(node, record.Topology.Members[0]);
         }
 
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
             }
-            return res.Members.Count;
+            return res.Topology.Members.Count;
         }
 
         private RavenServer GetNodeServer(string nodeTag)

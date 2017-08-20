@@ -441,10 +441,10 @@ namespace RachisTests
                 MaxDocsPerBatch = batchSize
             });
             var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(store.Database, subscriptionName);
-            var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
-            var topology = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+            var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
+            var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
             
-            foreach (var server in Servers.Where(s => topology.RelevantFor(s.ServerStore.NodeTag)))
+            foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
             }
