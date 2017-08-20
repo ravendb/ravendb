@@ -166,17 +166,14 @@ namespace FastTests.Client.Lazy.Async
                 var contactViewModel =
                     session.Advanced.AsyncDocumentQuery<ContactDto>()
                         .RawQuery(@"
-declare function transform(contact, details) {
-	return {
-		ContactId: contact['@metadata']['@id'],
-		ContactName: contact.Name,
-		ContactDetails: details	
-	};
-}
 from Contacts as contact
 with load(contact.DetailIds) as details[]
 where contact.__document_id = :id
-select transform(contact, details[])
+select {
+    ContactId: contact['@metadata']['@id'],
+    ContactName: contact.Name,
+    ContactDetails: details	
+}
 ")
                         .AddParameter("id", "contacts/1")
                         .LazilyAsync();
