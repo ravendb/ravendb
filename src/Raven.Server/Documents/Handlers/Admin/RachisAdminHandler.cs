@@ -263,9 +263,9 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     await requestExecutor.ExecuteAsync(infoCmd, ctx);
                 }
-                catch (Exception)
+                catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}. Tried to send GetNodeInfo command to {nodeUrl} and failed");
+                    throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}", e);
                 }
 
                 nodeInfo = infoCmd.Result;
