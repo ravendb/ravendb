@@ -21,6 +21,8 @@ namespace Raven.Server.Documents.Patch
 
         public override bool Delete(object key, bool throwOnError)
         {
+            if(Deletes == null)
+                Deletes = new HashSet<string>();
             Deletes.Add(key.ToString());
             return base.Delete(key, throwOnError);
         }
@@ -28,7 +30,7 @@ namespace Raven.Server.Documents.Patch
         protected override object GetMissingPropertyValue(object key)
         {
             var keyAsString = key.ToString();
-            Deletes.Remove(keyAsString);
+            Deletes?.Remove(keyAsString);
 
             int propertyIndex = Blittable.GetPropertyIndex(keyAsString);
             if (propertyIndex == -1)

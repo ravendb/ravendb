@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             _transformation = transformation;
             _config = config;
-            _patchRequest = new PatchRequest { Script = transformation.Script };
+            _patchRequest = new PatchRequest(transformation.Script);
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
 
             var tables = new string[config.SqlTables.Count];
@@ -44,14 +44,14 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            base.CustomizeEngine(engine, scope);
+        //protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
+        //{
+        //    base.CustomizeEngine(engine, scope);
 
-            engine.SetGlobalValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
-            engine.SetGlobalValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
-            engine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
-        }
+        //    engine.SetGlobalValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
+        //    engine.SetGlobalValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
+        //    engine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
+        //}
 
         protected override void LoadToFunction(string tableName, object cols, PatcherOperationScope scope)
         {
@@ -78,16 +78,17 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 if (_transformation.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    Stream attachmentStream;
+                    Stream attachmentStream = Stream.Null;
                     using (Slice.From(Context.Allocator, Current.Document.ChangeVector, out var cv))
                     {
-                        attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
-                                                         Context,
-                                                         Current.DocumentId,
-                                                         attachmentName,
-                                                         AttachmentType.Document,
-                                                         cv)
-                                                     ?.Stream ?? Stream.Null;
+                        attachmentName.IndexOf(' ', -2);
+                        //attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                        //                                 Context,
+                        //                                 Current.DocumentId,
+                        //                                 attachmentName,
+                        //                                 AttachmentType.Document,
+                        //                                 cv)
+                        //                             ?.Stream ?? Stream.Null;
                     }
 
                     sqlColumn.Type = 0;
@@ -172,7 +173,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                Apply(Context, Current.Document, _patchRequest);
+                //Apply(Context, Current.Document, _patchRequest);
+                throw new NotImplementedException();
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach

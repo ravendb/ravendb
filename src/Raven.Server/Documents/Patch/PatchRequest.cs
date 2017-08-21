@@ -7,28 +7,45 @@ namespace Raven.Server.Documents.Patch
     /// <summary>
     /// An advanced patch request for a specified document (using JavaScript)
     /// </summary>
-    public class PatchRequest
+    public class PatchRequest : ScriptRunnerCache.Key
     {
-        private static readonly Regex PutDocumentMethodRegex = new Regex($@"{DocumentPatcher.PutDocument}(\s)*\(", RegexOptions.Compiled);
-
-        private bool? _hasPutDocumentMethod;
-
         /// <summary>
         /// JavaScript function to use to patch a document
         /// </summary>
         /// <value>The type.</value>
-        public string Script;
+        public readonly string Script;
 
         /// <summary>
         /// Additional arguments passed to JavaScript function from Script.
         /// </summary>
         public BlittableJsonReaderObject Values;
 
+        public PatchRequest(string script)
+        {
+            Script = script;
+        }
+
         protected bool Equals(PatchRequest other)
         {
             if (other == null)
                 return false;
             return string.Equals(Script, other.Script);
+        }
+
+        public override string GenerateScript()
+        {
+            return $@"
+function execute(doc){{ 
+    var actual = function() {{ 
+
+
+{Script}
+
+
+    }};
+    actual.call(doc);
+    return doc;
+}}";
         }
 
         public override bool Equals(object obj)
@@ -40,32 +57,21 @@ namespace Raven.Server.Documents.Patch
 
         public override int GetHashCode()
         {
-            return Script.GetHashCode();
+            // to make sure that different keys has different hashes for the same script
+            return Script.GetHashCode() ^ 42;
         }
 
         public static PatchRequest Parse(BlittableJsonReaderObject input)
         {
-            var patch = new PatchRequest();
-            if (input.TryGet("Script", out patch.Script) == false)
+            if (input.TryGet("Script", out string script) == false || script == null)
                 throw new InvalidDataException("Missing 'Script' property on 'Patch'");
+
+            var patch = new PatchRequest(script);
 
             if (input.TryGet("Values", out BlittableJsonReaderObject values))
                 patch.Values = values;
 
             return patch;
-        }
-
-        public bool IsPuttingDocuments
-        {
-            get
-            {
-                // we don't care about DeleteDocument since we don't support it at the moment
-
-                if (_hasPutDocumentMethod == null)
-                    _hasPutDocumentMethod = PutDocumentMethodRegex.Matches(Script).Count > 0;
-
-                return _hasPutDocumentMethod.Value;
-            }
         }
     }
 }

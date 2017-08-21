@@ -109,11 +109,14 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        throw new NotImplementedException();
-
-                        //commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector, commandData.Patch,
-                        //    commandData.PatchIfMissing,
-                        //    skipPatchIfChangeVectorMismatch: false, debugMode: false);
+                        commandData.PatchCommand =
+                            new PatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector,
+                                false,
+                                commandData.Patch,
+                                commandData.PatchIfMissing,
+                                database,
+                                false
+                            );
                     }
 
                     if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')

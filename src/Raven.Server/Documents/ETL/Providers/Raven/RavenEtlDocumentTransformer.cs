@@ -91,7 +91,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         ApplyDeleteCommands(item, OperationType.Put);
                     }
 
-                    Apply(Context, Current.Document, _script.Transformation);
+                    //Apply(Context, Current.Document, _script.Transformation);
+                    throw new NotImplementedException();
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));
@@ -145,7 +146,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (string.IsNullOrEmpty(transformation.Script))
                     return;
 
-                Transformation = new PatchRequest { Script = transformation.Script };
+                Transformation = new PatchRequest(transformation.Script);
 
                 LoadToCollections = transformation.GetCollectionsFromScript();
 

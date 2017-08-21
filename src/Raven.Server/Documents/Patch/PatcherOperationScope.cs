@@ -492,22 +492,6 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        public virtual object LoadDocument(string documentId, ScriptEngine engine)
-        {
-            if (_context == null)
-                ThrowDocumentsOperationContextIsNotSet();
-
-            var document = _database.DocumentsStorage.Get(_context, documentId);
-
-            if (DebugMode)
-                DebugActions.LoadDocument.Add(documentId);
-
-            if (document == null)
-                return Null.Value;
-
-            return ToJsObject(engine, document.Data);
-        }
-
         private static void ThrowDocumentsOperationContextIsNotSet()
         {
             throw new InvalidOperationException("Documents operation context is not set");
