@@ -1,11 +1,7 @@
 ﻿using System;
-using Jurassic.Library;
-using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Patch
@@ -25,7 +21,8 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunner.SingleRun _runIfMissing;
         private ScriptRunner.ReturnRun _returnRun;
         private ScriptRunner.ReturnRun _returnRunIfMissing;
-        private BlittableJsonReaderObject _patchIfMissingArgs, _patchArgs;
+        private readonly BlittableJsonReaderObject _patchIfMissingArgs;
+        private readonly BlittableJsonReaderObject _patchArgs;
 
         public PatchDocumentCommand(
             JsonOperationContext context, 
