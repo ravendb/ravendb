@@ -166,7 +166,6 @@ namespace SlowTests.Server.Replication
 
                 var sw = Stopwatch.StartNew();
                 var destIndexNames = new string[0];
-                var destTransformerNames = new string[0];
                 var timeout = Debugger.IsAttached ? 60 * 1000000 : 3000;
                 while (sw.ElapsedMilliseconds < timeout && destIndexNames.Length != 2)
                     destIndexNames = destination.Admin.Send(new GetIndexNamesOperation(0, 1024));
@@ -177,9 +176,6 @@ namespace SlowTests.Server.Replication
                 Assert.Equal(2, destIndexNames.Length);
                 Assert.True(destIndexNames.Contains(userByAge.IndexName));
                 Assert.True(destIndexNames.Contains(userByName.IndexName));
-
-                Assert.NotNull(destTransformerNames); //precaution
-                Assert.Equal(2, destTransformerNames.Length);
             }
         }
     }
