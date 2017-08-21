@@ -6,9 +6,7 @@
 
 using System.Threading.Tasks;
 using FastTests;
-using Jint;
-using Jint.Native;
-using Jint.Runtime;
+using Jurassic;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Xunit;
@@ -26,9 +24,9 @@ namespace SlowTests.Issues
                 using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
                 using (var scope = new PatcherOperationScope(database).Initialize(context))
                 {
-                    var engine = new Engine();
-                    var jsObject = engine.Object.Construct(Arguments.Empty);
-                    jsObject.Put("Test", new JsValue((string)null), true);
+                    var engine = new ScriptEngine();
+                    var jsObject = engine.Object.Construct();
+                    jsObject.SetPropertyValue("Test", (string)null, true);
 
                     var result = scope.ToBlittable(jsObject);
                     var json = context.ReadObject(result, "test");

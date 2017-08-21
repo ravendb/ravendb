@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
-using Jint.Runtime;
-using Jint.Runtime.Descriptors;
+using Jurassic;
+using Jurassic.Library;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -43,7 +41,7 @@ namespace Raven.Server.Documents.Patch
                 try
                 {
                     run.Prepare(_docsSize);
-                    SetupInputs(scope, run.JintEngine);
+                    SetupInputs(scope, run.JSEngine);
                     run.Execute();
 
                     return TryParse(context, scope, out resolved);
@@ -56,35 +54,34 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected void SetupInputs(PatcherOperationScope scope, Engine jintEngine)
+        protected void SetupInputs(PatcherOperationScope scope, ScriptEngine jintEngine)
         {
-            var docsArr = jintEngine.Array.Construct(Arguments.Empty);
-            int index = 0;
-            foreach (var doc in _docs)
+            var docsArr = jintEngine.Array.Construct();
+            
+            for (var i = 0; i < _docs.Count; i++)
             {
-                //TODO : add unit test that has a conflict here to make sure that it is ok
-                var jsVal = scope.ToJsObject(jintEngine, doc, "doc" + index);
-                docsArr.FastAddProperty(index.ToString(), jsVal, true, true, true);
-                index++;
+                var doc = _docs[i];
+//TODO : add unit test that has a conflict here to make sure that it is ok
+                var jsVal = scope.ToJsObject(jintEngine, doc, "doc" + i);
+                docsArr.Push((object)jsVal);
+            
             }
-            docsArr.FastSetProperty("length", new PropertyDescriptor
-            {
-                Value = new JsValue(index),
-                Configurable = true,
-                Enumerable = true,
-                Writable = true
-            });
+            // todo: don't think we need this
+            //docsArr.DefineProperty("length",  new PropertyDescriptor
+            //{
+            //    Value = _docs.Count,
+            //});
 
             scope.PatchObject = docsArr;
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
-            engine.SetValue("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
-            engine.SetValue("HasTombstone", _hasTombstone);
+            engine.SetGlobalFunction("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
+            engine.SetGlobalValue("HasTombstone", _hasTombstone);
         }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
             engine.Global.Delete("ResolveToTombstone", false);
             engine.Global.Delete(TombstoneResolverValue, false);
@@ -93,7 +90,7 @@ namespace Raven.Server.Documents.Patch
 
         private bool TryParse(JsonOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)
         {
-            if (scope.ActualPatchResult == JsValue.Undefined || scope.ActualPatchResult == JsValue.Undefined)
+            if (scope.ActualPatchResult == Undefined.Value || scope.ActualPatchResult == Null.Value)
             {
                 val = null;
                 if (Logger.IsInfoEnabled)
@@ -108,15 +105,15 @@ namespace Raven.Server.Documents.Patch
                 val = null;
                 return true;
             }
-            var obj = scope.ActualPatchResult.AsObject();
+            var obj = scope.ActualPatchResult as ObjectInstance;
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
                 writer.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
                 writer.StartWriteObjectDocument();
                 writer.StartWriteObject();
-                var resolvedMetadata = obj.Get(Constants.Documents.Metadata.Key);
+                var resolvedMetadata = obj.GetPropertyValue(Constants.Documents.Metadata.Key);
                 if (resolvedMetadata == null ||
-                    resolvedMetadata == JsValue.Undefined)
+                    resolvedMetadata == Undefined.Value)
                 {
                     // if user didn't specify it, we'll take it from the first doc
                     foreach (var doc in _docs)

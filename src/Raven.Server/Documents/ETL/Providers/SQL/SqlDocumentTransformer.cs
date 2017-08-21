@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using Jint;
-using Jint.Native;
+using Jurassic;
+using Jurassic.Library;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
             base.RemoveEngineCustomizations(engine, scope);
 
@@ -53,23 +53,23 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             engine.Global.Delete(Transformation.LoadAttachment, true);
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);
 
-            engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
-            engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
-            engine.SetValue(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
+            engine.SetGlobalValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
+            engine.SetGlobalValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
+            engine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
         }
 
-        protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, object cols, PatcherOperationScope scope)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
+            var dynamicJsonValue = scope.ToBlittable(cols as ObjectInstance);
             var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();

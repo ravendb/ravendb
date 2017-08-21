@@ -1,8 +1,8 @@
 using System;
 using System.Diagnostics;
 using System.Dynamic;
-using Jint;
-using Jint.Native;
+using Jurassic;
+using Jurassic.Library;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
@@ -34,11 +34,11 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
         }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
         }
 
@@ -48,14 +48,14 @@ namespace Raven.Server.Documents.Patch
         public object ApplyScript(AdminJsScript script)
         {
             _sw = Stopwatch.StartNew();
-            Engine jintEngine;
+            ScriptEngine scriptEngint;
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations($"Script : \"{script.Script}\"");
             }
             try
             {
-                jintEngine = GetEngine(script, ExecutionStr);
+                scriptEngint = GetEngine(script, ExecutionStr);
             }
             catch (Exception e)
             {
@@ -65,10 +65,10 @@ namespace Raven.Server.Documents.Patch
                 }
                 throw;
             }
-            JsValue jsVal;
+            object jsVal;
             try
             {
-                jsVal = jintEngine.Invoke("ExecuteAdminScript", Database);
+                jsVal = scriptEngint.CallGlobalFunction("ExecuteAdminScript", Database);
 
             }
             catch (Exception e)
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Patch
         public object ApplyServerScript(AdminJsScript script)
         {
             _sw = Stopwatch.StartNew();
-            Engine jintEngine;
+            ScriptEngine jintEngine;
             if (Log.IsOperationsEnabled)
             {
                 Log.Operations($"Script : \"{script.Script}\"");
@@ -108,10 +108,10 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            JsValue jsVal;
+            object jsVal;
             try
             {
-                jsVal = jintEngine.Invoke("ExecuteAdminScript", _server);
+                jsVal = jintEngine.CallGlobalFunction("ExecuteAdminScript", _server);
             }
             catch (Exception e)
             {
@@ -130,14 +130,14 @@ namespace Raven.Server.Documents.Patch
             return ConvertResults(jsVal, Database);
         }
 
-        private object ConvertResults(JsValue jsVal, DocumentDatabase database = null)
+        private object ConvertResults(object jsVal, DocumentDatabase database = null)
         {
-            if (jsVal.IsUndefined() || jsVal.IsNull())
+            if (jsVal == Undefined.Value || jsVal == Null.Value)
                 return null;
 
-            if (jsVal.IsObject())
+            if (jsVal is ObjectInstance && (jsVal is ArrayInstance) == false)
             {
-                var obj = jsVal.ToObject();
+                var obj = jsVal as ObjectInstance;
                 if (obj is ExpandoObject == false)
                 {
                     if (Log.IsOperationsEnabled)
@@ -164,9 +164,9 @@ namespace Raven.Server.Documents.Patch
             return result;
         }
 
-        public Engine GetEngine(AdminJsScript script, string executionString)
+        public ScriptEngine GetEngine(AdminJsScript script, string executionString)
         {
-            Engine jintEngine;
+            ScriptEngine jintEngine;
             try
             {
                 jintEngine = CreateEngine(script.Script, executionString);
@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Patch
             {
                 throw new JavaScriptParseException("Could not parse script", e);
             }
-            catch (Jint.Runtime.JavaScriptException e)
+            catch (Jurassic.JavaScriptException e)
             {
                 throw new JavaScriptParseException("Could not parse script", e);
             }

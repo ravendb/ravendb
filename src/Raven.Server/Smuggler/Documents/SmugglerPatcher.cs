@@ -1,6 +1,6 @@
 ﻿using System;
-using Jint;
-using Jint.Native;
+using Jurassic;
+using Jurassic.Library;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -10,19 +10,21 @@ namespace Raven.Server.Smuggler.Documents
 {
     public class SmugglerPatcher
     {
-        private readonly Engine _engine;
+        private readonly ScriptEngine _engine;
 
         public SmugglerPatcher(DatabaseSmugglerOptions options)
         {
             if (string.IsNullOrWhiteSpace(options.TransformScript))
                 throw new InvalidOperationException("Cannot create a patcher with empty transform script.");
+           
+            _engine = new ScriptEngine();
 
-            _engine = new Engine(cfg =>
-            {
-                cfg.AllowDebuggerStatement(false);
-                cfg.MaxStatements(options.MaxStepsForTransformScript);
-                cfg.NullPropagation();
-            });
+#if DEBUG
+            _engine.EnableDebugging = true;
+#endif
+
+            _engine.RecursionDepthLimit = DocumentPatcherBase.MaxRecursionDepth;
+            _engine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(options.MaxStepsForTransformScript).OnLoopIteration;
 
             _engine.Execute(string.Format(@"
                     function Transform(docInner){{
@@ -32,20 +34,22 @@ namespace Raven.Server.Smuggler.Documents
 
         public Document Transform(Document document, JsonOperationContext context)
         {
-            _engine.ResetStatementsCount();
+            var keeper = _engine.OnLoopIterationCallTarget as DocumentPatcherBase.EngineLoopIterationKeeper;
+            if (keeper != null)
+                keeper.LoopIterations = 0;
 
             using (var scope = new OperationScope())
             {
                 var jsObject = scope.ToJsObject(_engine, document);
-                var jsObjectTransformed = _engine.Invoke("Transform", jsObject);
+                var jsObjectTransformed = _engine.CallGlobalFunction("Transform", jsObject);
 
-                if (jsObjectTransformed.IsObject() == false)
+                if (jsObjectTransformed is ObjectInstance == false)
                 {
                     document.Data.Dispose();
                     return null;
                 }
 
-                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed.AsObject()), document.Id);
+                var newDocument = context.ReadObject(scope.ToBlittable(jsObjectTransformed as ObjectInstance), document.Id);
                 if (newDocument.Equals(document.Data))
                 {
                     newDocument.Dispose();
@@ -71,12 +75,12 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public override JsValue LoadDocument(string documentId, Engine engine, ref int totalStatements)
+            public override object LoadDocument(string documentId, ScriptEngine engine)
             {
                 throw new NotSupportedException("LoadDocument is not supported.");
             }
 
-            public override string PutDocument(string id, JsValue document, JsValue metadata, string changeVector, Engine engine)
+            public override string PutDocument(string id, object document, object metadata, string changeVector, ScriptEngine engine)
             {
                 throw new NotSupportedException("PutDocument is not supported.");
             }

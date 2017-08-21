@@ -1,4 +1,5 @@
 ﻿using System;
+using Jurassic.Library;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
@@ -103,9 +104,19 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                _database.Patcher.SetMaxStatements(_scope, _run.JintEngine, document.Data.Size);
+                var keeper = _run.JSEngine.OnLoopIterationCallTarget as DocumentPatcherBase.EngineLoopIterationKeeper;
+                if (keeper == null)
+                {
+                    _run.JSEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(document.Data.Size).OnLoopIteration;
+                }
+                else
+                {
+                    keeper.MaxLoopIterations = document.Data.Size;
+                }
 
-                _scope.PatchObject = _scope.ToJsObject(_run.JintEngine, document);
+                
+
+                _scope.PatchObject = _scope.ToJsObject(_run.JSEngine, document);
 
                 _run.Execute();
             }
@@ -115,7 +126,7 @@ namespace Raven.Server.Documents.Patch
                 throw;
             }
 
-            var modifiedDocument = _externalContext.ReadObject(_scope.ToBlittable(_scope.PatchObject.AsObject()), document.Id,
+            var modifiedDocument = _externalContext.ReadObject(_scope.ToBlittable(_scope.PatchObject as ObjectInstance), document.Id,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(_externalContext));
 
             var result = new PatchResult
