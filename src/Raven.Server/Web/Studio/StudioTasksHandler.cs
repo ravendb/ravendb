@@ -77,6 +77,7 @@ namespace Raven.Server.Web.Studio
                 try
                 {
                     var functionsBlittable = context.Read(HttpContext.Request.Body, "ValidateCustomFunctions");
+                    functionsBlittable?.BlittableValidation();
                     ValidateCustomFunctions(functionsBlittable);
                 }
                 catch (Exception)

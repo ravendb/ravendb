@@ -30,6 +30,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "multi_get");
+                input.BlittableValidation();
+
                 if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
                     ThrowRequiredPropertyNameInRequest("Requests");
 

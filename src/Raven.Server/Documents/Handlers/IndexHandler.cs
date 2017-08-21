@@ -33,6 +33,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 var createdIndexes = new List<KeyValuePair<string, long>>();
                 var input = await context.ReadForMemoryAsync(RequestBodyStream(), "Indexes");
+                input.BlittableValidation();
+
                 if (input.TryGet("Indexes", out BlittableJsonReaderArray indexes) == false)
                     ThrowRequiredPropertyNameInRequest("Indexes");
 

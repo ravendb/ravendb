@@ -65,6 +65,8 @@ namespace Regression.Benchmark
 
                         foreach (var obj in objects)
                         {
+                            obj.BlittableValidation();
+
                             // We write the whole thing.
                             context.Write(memoryStream, obj);
                         }
