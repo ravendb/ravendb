@@ -84,6 +84,12 @@ namespace Raven.Server.Smuggler.Documents
                 SkipArray();
                 type = ReadType();
             }
+            if (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
+            {
+                SkipArray();
+                type = ReadType();
+            }
+
 
             return GetType(type);
         }
