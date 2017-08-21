@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 
 namespace Raven.Client.Documents.Conventions
@@ -38,6 +39,7 @@ namespace Raven.Client.Documents.Conventions
         protected override JsonObjectContract CreateObjectContract(Type objectType)
         {
             var jsonObjectContract = base.CreateObjectContract(objectType);
+            jsonObjectContract.ExtensionDataValueType = typeof(JToken);
             jsonObjectContract.ExtensionDataSetter += (o, key, value) =>
             {
                 if (jsonObjectContract.Properties.Contains(key))
