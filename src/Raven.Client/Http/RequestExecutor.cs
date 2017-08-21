@@ -19,6 +19,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
@@ -28,7 +29,6 @@ using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using AuthenticationException = Raven.Client.Exceptions.Security.AuthenticationException;
 
 namespace Raven.Client.Http
 {
@@ -630,7 +630,14 @@ namespace Raven.Client.Http
                     if (response.IsSuccessStatusCode == false)
                     {
                         if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionId, shouldRetry).ConfigureAwait(false) == false)
-                        {
+                        {   
+                            if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
+                            {
+                                var name = databaseMissing.FirstOrDefault();
+                                if (name != null)
+                                    throw new DatabaseDoesNotExistException(name);
+                            }                               
+
                             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                                 throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
