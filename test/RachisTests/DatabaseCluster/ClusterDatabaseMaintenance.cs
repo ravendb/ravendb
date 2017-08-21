@@ -67,7 +67,6 @@ namespace RachisTests.DatabaseCluster
                 await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.RaftCommandIndex);
 
                 await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-
                 using (var dbStore = new DocumentStore
                 {
                     Urls = dbServer.WebUrls,
@@ -80,6 +79,8 @@ namespace RachisTests.DatabaseCluster
                         await session.SaveChangesAsync();
                     }
                 }
+                WaitForUserToContinueTheTest((DocumentStore)store);
+
                 var res = await store.Admin.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
@@ -156,7 +157,7 @@ namespace RachisTests.DatabaseCluster
                 Assert.Equal(clusterSize - 1, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
                 Assert.Equal(3, val);
                 val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0, 30_000);
@@ -189,7 +190,6 @@ namespace RachisTests.DatabaseCluster
                 }
                 var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
                 var urls = Servers[1].WebUrls;
-                var tcp = Servers[1].ServerStore.NodeTcpServerUrl;
                 var nodeTag = Servers[1].ServerStore.NodeTag;
                 // kill the process and remove the node from topology
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
@@ -334,14 +334,15 @@ namespace RachisTests.DatabaseCluster
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
                 await leaderStore.Admin.Server.SendAsync(new DeleteDatabaseOperation(databaseName, true));
 
-                var record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
-
                 await WaitForValueAsync(async () =>
                 {
                     var records = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
                     return records.DeletionInProgress.Count;
                 }, 1);
-                Assert.True(record.DeletionInProgress.ContainsKey("B"));
+
+                DatabaseRecord record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                Assert.Single(record.DeletionInProgress);
+                Assert.Equal(node, record.DeletionInProgress.First().Key);
                 await leader.ServerStore.RemoveFromClusterAsync(node);
 
                 record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));

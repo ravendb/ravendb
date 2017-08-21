@@ -123,12 +123,12 @@ namespace Raven.Server.Documents.Replication
         {
             _server = server;
             Database = database;
-            var reconnectTime = TimeSpan.FromSeconds(30);
+            var config = Database.Configuration.Replication;
+            var reconnectTime = config.RetryReplicateAfter.AsTimeSpan;
             _log = LoggingSource.Instance.GetLogger<ReplicationLoader>(Database.Name);
             _reconnectAttemptTimer = new Timer(state => ForceTryReconnectAll(),
                 null, reconnectTime, reconnectTime);
-            MinimalHeartbeatInterval =
-               (int)Database.Configuration.Replication.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
+            MinimalHeartbeatInterval = (int)config.ReplicationMinimalHeartbeat.AsTimeSpan.TotalMilliseconds;
 
         }
 

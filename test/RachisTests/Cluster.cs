@@ -53,9 +53,9 @@ namespace RachisTests
 
                     var serverTagToBeDeleted = res.Topology.Members[0];
                     replicationFactor--;
-                    deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted));
-                    //The +1 is for NotifyLeaderAboutRemoval
-                    await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex + 1, databaseName, numberOfInstances, replicationFactor);
+                    deleteResult = store.Admin.Server.Send(new DeleteDatabaseOperation(databaseName, hardDelete: true, fromNode: serverTagToBeDeleted,timeInSec:30));
+                    Assert.Empty(deleteResult.PendingDeletes);
+                    await AssertNumberOfNodesContainingDatabase(deleteResult.RaftCommandIndex, databaseName, numberOfInstances, replicationFactor);
                 }
                 TransactionOperationContext context;
                 using (leader.ServerStore.ContextPool.AllocateOperationContext(out context))

@@ -251,7 +251,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
-            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(5000));
+            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
             var waitingTasks = new List<Task>
             {
                 timeoutTask
@@ -799,8 +799,8 @@ namespace Raven.Server.Web.System
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["RaftCommandIndex"] = index,
-                            ["PendingDeletes"] = new DynamicJsonArray(waitOnRecordDeletion)
+                            [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
+                            [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(waitOnRecordDeletion)
                         });
                         writer.Flush();
                     }
