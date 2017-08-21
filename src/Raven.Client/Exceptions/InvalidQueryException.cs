@@ -6,7 +6,7 @@ namespace Raven.Client.Exceptions
 {
     public class InvalidQueryException : RavenException
     {
-        public InvalidQueryException()
+        private InvalidQueryException()
         {
         }
 
@@ -15,7 +15,7 @@ namespace Raven.Client.Exceptions
         {
         }
 
-        public InvalidQueryException(string message, Exception inner)
+        private InvalidQueryException(string message, Exception inner)
             : base(message, inner)
         {
         }
