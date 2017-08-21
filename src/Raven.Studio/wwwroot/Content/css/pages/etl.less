@@ -326,5 +326,23 @@
                 background-color: @gray-dark;
             }
         }
+
+        .btn-group {
+            align-self: center;
+        }
+
+        .checkbox input [type="checkbox"], .radio input[type="checkbox"], .checkbox input[type="radio"], .radio input[type="radio"] {
+            top: 3px;
+        }
+
+        .checkbox label {
+            &::before {
+                top: 0px;
+            }
+
+            &::after {
+                top: -3px;
+            }
+        }
     }
 }
