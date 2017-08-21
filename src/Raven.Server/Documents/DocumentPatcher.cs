@@ -1,6 +1,5 @@
 ﻿using System;
-using Jint;
-using Jint.Native;
+using Jurassic;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Patch;
@@ -34,13 +33,14 @@ namespace Raven.Server.Documents
             Database.DatabaseRecordChanged -= LoadCustomFunctions;
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
-            engine.SetValue(PutDocument, (Func<string, JsValue, JsValue, string, string>)((id, data, metadata, changeVector) => scope.PutDocument(id, data, metadata, changeVector, engine)));
-            engine.SetValue(DeleteDocument, (Action<string>)scope.DeleteDocument);
+            engine.SetGlobalFunction(PutDocument, (Func<string, object, object, string, string>)((id, data, metadata, changeVector) => scope.PutDocument(id, data, metadata, changeVector, engine)));
+
+            engine.SetGlobalFunction(DeleteDocument, (Action<string>)scope.DeleteDocument);
         }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
             engine.Global.Delete(PutDocument, false);
             engine.Global.Delete(DeleteDocument, false);
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents
             {
                 command.PrepareScriptRunIfDocumentMissing = () =>
                 {
-                    CleanupEngine(patch, run.JintEngine, scope);
+                    CleanupEngine(patch, run.JSEngine, scope);
                     return CreateScriptRun(patchIfMissing, scope, id);
                 };
             }
