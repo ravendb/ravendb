@@ -161,7 +161,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public void Remote_change_vector_smaller_than_local_and_all_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
-            var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
+            var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22), new string('4', 22) };
 
             var local = new[]
             {
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Replication
         [Fact]
         public void Remote_change_vector_smaller_than_local_and_some_remote_etags_higher_than_local_should_return_Conflict_at_conflict_status()
         {
-            var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
+            var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22), new string('4', 22) };
 
             var local = new[]
             {
