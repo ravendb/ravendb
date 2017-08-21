@@ -742,15 +742,6 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(deleteCommand);
         }
 
-        public Task<(long Etag, object Result)> ModifyCustomFunctions(string dbName, string customFunctions)
-        {
-            var customFunctionsCommand = new Commands.ModifyCustomFunctionsCommand(dbName)
-            {
-                CustomFunctions = customFunctions
-            };
-            return SendToLeaderAsync(customFunctionsCommand);
-        }
-
         public Task<(long Etag, object Result)> UpdateExternalReplication(string dbName, ExternalReplication watcher)
         {
             var addWatcherCommand = new UpdateExternalReplicationCommand(dbName)

@@ -254,16 +254,18 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation<BulkOperationCommand<PatchDocumentCommand>>(query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
+                throw new NotImplementedException();
 
-                return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
-                {
-                    Id = key,
-                    ChangeVector = x.PatchResult.ChangeVector,
-                    Status = x.PatchResult.Status
-                });
+                //var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
+
+                //return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
+                //{
+                //    Id = key,
+                //    ChangeVector = x.PatchResult.ChangeVector,
+                //    Status = x.PatchResult.Status
+                //});
             }, token);
         }
 

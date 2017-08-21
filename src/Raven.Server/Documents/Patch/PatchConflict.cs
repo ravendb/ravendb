@@ -28,43 +28,43 @@ namespace Raven.Server.Documents.Patch
                 {
                     _hasTombstone = true;
                 }
-
             }
-            ExecutionString = @"function ExecutePatchScript(docs){{ {0} }}";
+            //ExecutionString = @"function ExecutePatchScript(docs){{ {0} }}";
         }
 
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
-            {
-                var run = new SingleScriptRun(this, patch, scope);
-                try
-                {
-                    run.Prepare(_docsSize);
-                    SetupInputs(scope, run.JSEngine);
-                    run.Execute();
+            throw new NotImplementedException();
 
-                    return TryParse(context, scope, out resolved);
-                }
-                catch (Exception errorEx)
-                {
-                    run.HandleError(errorEx);
-                    throw;
-                }
-            }
+            //using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
+            //{
+            //    var run = new SingleScriptRun(this, patch, scope);
+            //    try
+            //    {
+            //        run.Prepare(_docsSize);
+            //        SetupInputs(scope, run.JSEngine);
+            //        run.Execute();
+
+            //        return TryParse(context, scope, out resolved);
+            //    }
+            //    catch (Exception errorEx)
+            //    {
+            //        run.HandleError(errorEx);
+            //        throw;
+            //    }
+            //}
         }
 
         protected void SetupInputs(PatcherOperationScope scope, ScriptEngine jintEngine)
         {
             var docsArr = jintEngine.Array.Construct();
-            
+
             for (var i = 0; i < _docs.Count; i++)
             {
                 var doc = _docs[i];
 //TODO : add unit test that has a conflict here to make sure that it is ok
                 var jsVal = scope.ToJsObject(jintEngine, doc, "doc" + i);
                 docsArr.Push((object)jsVal);
-            
             }
             // todo: don't think we need this
             //docsArr.DefineProperty("length",  new PropertyDescriptor
@@ -79,13 +79,6 @@ namespace Raven.Server.Documents.Patch
         {
             engine.SetGlobalFunction("ResolveToTombstone", new Func<string>(() => TombstoneResolverValue));
             engine.SetGlobalValue("HasTombstone", _hasTombstone);
-        }
-
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            engine.Global.Delete("ResolveToTombstone", false);
-            engine.Global.Delete(TombstoneResolverValue, false);
-            engine.Global.Delete("HasTombstone", false);
         }
 
         private bool TryParse(JsonOperationContext context, PatcherOperationScope scope, out BlittableJsonReaderObject val)
@@ -175,4 +168,3 @@ namespace Raven.Server.Documents.Patch
         }
     }
 }
-
