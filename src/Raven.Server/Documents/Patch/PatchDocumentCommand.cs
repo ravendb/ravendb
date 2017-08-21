@@ -110,7 +110,7 @@ namespace Raven.Server.Documents.Patch
             }
             var scriptResult = _run.Run(context, "execute", new[] {documentInstance, args});
 
-            var modifiedDocument = scriptResult.TranslateFromJurrasic<BlittableJsonReaderObject>(_externalContext, 
+            var modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext, 
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var result = new PatchResult

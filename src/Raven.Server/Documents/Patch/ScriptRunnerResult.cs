@@ -13,9 +13,25 @@ namespace Raven.Server.Documents.Patch
             _instance = instance;
         }
 
+        public object this[string name]
+        {
+            set => ((BlittableObjectInstance)_instance)[name] = value;
+        }
+
+        public ObjectInstance Get(string name)
+        {
+            var parent = (BlittableObjectInstance)_instance;
+            var o = parent[name] as ObjectInstance;
+            if (o == null)
+            {
+                parent[name] = o = parent.Engine.Object.Construct();
+            }
+            return o;
+        }
+
         public object Value => _instance;
 
-        public T TranslateFromJurrasic<T>(JsonOperationContext context, 
+        public T Translate<T>(JsonOperationContext context,
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (_instance == null)
@@ -32,7 +48,7 @@ namespace Raven.Server.Documents.Patch
             return (T)_instance;
         }
 
-        private void ThrowInvalidObject() => 
+        private void ThrowInvalidObject() =>
             throw new InvalidOperationException("Cannot translate instance to object because it is: " + _instance);
 
         private static void ThrowInvalidArrayResult() =>

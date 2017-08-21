@@ -148,78 +148,81 @@ namespace Raven.Server.Documents.ETL
 
         public unsafe IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, EtlStatsScope stats, EtlProcessState state)
         {
-            var transformer = GetTransformer(context);
-
-            foreach (var item in items)
+            using (var transformer = GetTransformer(context))
             {
-                if (AlreadyLoadedByDifferentNode(item, state))
-                {
-                    stats.RecordChangeVector(item.ChangeVector);
-                    stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
+                transformer.Initalize();
 
-                    continue;
-                }
-
-                if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentId.Buffer, item.DocumentId.Size, out var isHilo))
+                foreach (var item in items)
                 {
-                    if (ShouldFilterOutSystemDocument(isHilo))
+                    if (AlreadyLoadedByDifferentNode(item, state))
                     {
                         stats.RecordChangeVector(item.ChangeVector);
                         stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
 
                         continue;
                     }
-                }
 
-                using (stats.For(EtlOperations.Transform))
-                {
-                    CancellationToken.ThrowIfCancellationRequested();
-
-                    try
+                    if (Transformation.ApplyToAllDocuments && CollectionName.IsSystemDocument(item.DocumentId.Buffer, item.DocumentId.Size, out var isHilo))
                     {
-                        transformer.Transform(item);
+                        if (ShouldFilterOutSystemDocument(isHilo))
+                        {
+                            stats.RecordChangeVector(item.ChangeVector);
+                            stats.RecordLastFilteredOutEtag(stats.LastTransformedEtag);
 
-                        Statistics.TransformationSuccess();
+                            continue;
+                        }
+                    }
 
-                        stats.RecordTransformedItem();
-                        stats.RecordLastTransformedEtag(item.Etag);
-                        stats.RecordChangeVector(item.ChangeVector);
+                    using (stats.For(EtlOperations.Transform))
+                    {
+                        CancellationToken.ThrowIfCancellationRequested();
 
-                        if (CanContinueBatch(stats) == false)
+                        try
+                        {
+                            transformer.Transform(item);
+
+                            Statistics.TransformationSuccess();
+
+                            stats.RecordTransformedItem();
+                            stats.RecordLastTransformedEtag(item.Etag);
+                            stats.RecordChangeVector(item.ChangeVector);
+
+                            if (CanContinueBatch(stats) == false)
+                                break;
+                        }
+                        catch (JavaScriptParseException e)
+                        {
+                            var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+
+                            if (Logger.IsOperationsEnabled)
+                                Logger.Operations(message, e);
+
+                            var alert = AlertRaised.Create(
+                                Tag,
+                                message,
+                                AlertType.Etl_TransformationError,
+                                NotificationSeverity.Error,
+                                key: Name,
+                                details: new ExceptionDetails(e));
+
+                            Database.NotificationCenter.Add(alert);
+
+                            Stop();
+
                             break;
-                    }
-                    catch (JavaScriptParseException e)
-                    {
-                        var message = $"[{Name}] Could not parse transformation script. Stopping ETL process.";
+                        }
+                        catch (Exception e)
+                        {
+                            Statistics.RecordTransformationError(e);
 
-                        if (Logger.IsOperationsEnabled)
-                            Logger.Operations(message, e);
-
-                        var alert = AlertRaised.Create(
-                            Tag,
-                            message,
-                            AlertType.Etl_TransformationError,
-                            NotificationSeverity.Error,
-                            key: Name,
-                            details: new ExceptionDetails(e));
-
-                        Database.NotificationCenter.Add(alert);
-
-                        Stop();
-
-                        break;
-                    }
-                    catch (Exception e)
-                    {
-                        Statistics.RecordTransformationError(e);
-
-                        if (Logger.IsInfoEnabled)
-                            Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+                            if (Logger.IsInfoEnabled)
+                                Logger.Info($"Could not process SQL ETL script for '{Name}', skipping document: {item.DocumentId}", e);
+                        }
                     }
                 }
-            }
 
-            return transformer.GetTransformedResults();
+                return transformer.GetTransformedResults();
+            }
         }
 
         public void Load(IEnumerable<TTransformed> items, JsonOperationContext context, EtlStatsScope stats)

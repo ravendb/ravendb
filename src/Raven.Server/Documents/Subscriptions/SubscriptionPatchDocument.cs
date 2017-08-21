@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Subscriptions
             var result = run.Run(context, "execute", new object[] { document });
             if (result.Value is bool b)
                 return b;
-            transformResult = result.TranslateFromJurrasic<BlittableJsonReaderObject>(context);
+            transformResult = result.Translate<BlittableJsonReaderObject>(context);
             return transformResult != null;
         }
     }

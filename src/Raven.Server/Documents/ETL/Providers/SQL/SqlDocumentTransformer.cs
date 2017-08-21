@@ -21,15 +21,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
-        private readonly PatchRequest _patchRequest;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database, context)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
         {
             _transformation = transformation;
             _config = config;
-            _patchRequest = new PatchRequest(transformation.Script, PatchRequestType.SqlEtl);
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
 
             var tables = new string[config.SqlTables.Count];
@@ -44,24 +42,23 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        //protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
-        //{
-        //    base.CustomizeEngine(engine, scope);
+        public override void Initalize()
+        {
+            base.Initalize();
+            SingleRun.ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
+            SingleRun.ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToNVarchar);
+            SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
+        }
 
-        //    engine.SetGlobalValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
-        //    engine.SetGlobalValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
-        //    engine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
-        //}
-
-        protected override void LoadToFunction(string tableName, object cols, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, object cols)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var dynamicJsonValue = scope.ToBlittable(cols as ObjectInstance);
-            var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
+            var result = new ScriptRunnerResult(cols);
+            var blittableJsonReaderObject = result.Translate<BlittableJsonReaderObject>(Context);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -76,19 +73,20 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
+
+                if (_transformation.HasLoadAttachment && 
+                    prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
-                    Stream attachmentStream = Stream.Null;
+                    Stream attachmentStream;
                     using (Slice.From(Context.Allocator, Current.Document.ChangeVector, out var cv))
                     {
-                        attachmentName.IndexOf(' ', -2);
-                        //attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
-                        //                                 Context,
-                        //                                 Current.DocumentId,
-                        //                                 attachmentName,
-                        //                                 AttachmentType.Document,
-                        //                                 cv)
-                        //                             ?.Stream ?? Stream.Null;
+                        attachmentStream = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                                                         Context,
+                                                         Current.DocumentId,
+                                                         attachmentName,
+                                                         AttachmentType.Document,
+                                                         cv)
+                                                     ?.Stream ?? Stream.Null;
                     }
 
                     sqlColumn.Type = 0;
@@ -142,24 +140,25 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
-        private static ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)
+        private ObjectInstance ToVarchar(string value, int size)
         {
-            return new ValueTypeLengthTriple
+            return SingleRun.ScriptEngine.Object.Construct(new
             {
                 Type = DbType.AnsiString,
                 Value = value,
-                Size = sizeAsDouble.HasValue ? (int)sizeAsDouble.Value : DefaultSize
-            };
+                Size = size == 0 ? size : DefaultSize
+            });
+
         }
 
-        private static ValueTypeLengthTriple ToNVarchar(string value, double? sizeAsDouble)
+        private ObjectInstance ToNVarchar(string value, int size)
         {
-            return new ValueTypeLengthTriple
+            return SingleRun.ScriptEngine.Object.Construct(new
             {
                 Type = DbType.String,
                 Value = value,
-                Size = sizeAsDouble.HasValue ? (int)sizeAsDouble.Value : DefaultSize
-            };
+                Size = size == 0 ? size: DefaultSize
+            });
         }
 
         public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
@@ -173,8 +172,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                //Apply(Context, Current.Document, _patchRequest);
-                throw new NotImplementedException();
+                SingleRun.Run(Context, "execute", new object[] { Current.Document });
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -189,13 +187,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 GetOrAdd(sqlTable.TableName).Deletes.Add(item);
             }
-        }
-
-        public class ValueTypeLengthTriple
-        {
-            public DbType Type { get; set; }
-            public object Value { get; set; }
-            public int Size { get; set; }
         }
     }
 }
