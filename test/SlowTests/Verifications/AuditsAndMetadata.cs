@@ -45,7 +45,7 @@ namespace SlowTests.Verifications
                         .RawQuery(@"
 from Customers as customer
 select {
-    Id: customer.__document_id,
+    Id: id(customer),
     InternalId: customer.InternalId,
     Name: customer.Name,
     Type: customer.CustomerType,

@@ -131,7 +131,7 @@ else if (this.Age % 2 == 0)
 loadToUsers(
     {
         Name: this.Name + ' ' + this.LastName, 
-        Address: LoadDocument(this.AddressId)
+        Address: load(this.AddressId)
     });
 ");
                 const int count = 30;
@@ -218,7 +218,7 @@ loadToUsers(
                 AddEtl(src, dest, "users", @"
 loadToUsers(this);
 loadToPeople({Name: this.Name + ' ' + this.LastName });
-loadToAddresses(LoadDocument(this.AddressId));
+loadToAddresses(load(this.AddressId));
 ");
                 const int count = 5;
 
@@ -429,7 +429,7 @@ loadToOrders(orderData);
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", "this.Name = __document_id; loadToUsers(this);");
+                AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 
@@ -512,7 +512,7 @@ loadToOrders(orderData);
 
             Assert.Equal(1, errors.Count);
 
-            Assert.Equal("No `loadTo[CollectionName]` method call found in the scripts", errors[0]);
+            Assert.Equal("No `loadTo[CollectionName]` method call found in the script", errors[0]);
         }
 
         private class UserWithAddress : User

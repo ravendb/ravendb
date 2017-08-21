@@ -20,14 +20,21 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance Get(string name)
         {
-            var parent = (BlittableObjectInstance)_instance;
-            var o = parent[name] as ObjectInstance;
-            if (o == null)
+            if (_instance is ObjectInstance parent)
             {
-                parent[name] = o = parent.Engine.Object.Construct();
+                var o = parent[name] as ObjectInstance;
+                if (o == null)
+                {
+                    parent[name] = o = parent.Engine.Object.Construct();
+                }
+                return o;
             }
-            return o;
+            ThrowInvalidObject(name);
+            return null; // never hit
         }
+
+        private void ThrowInvalidObject(string name) => 
+            throw new InvalidOperationException("Unable to get property '" + name + "' because the result is not an object but: " + _instance);
 
         public object Value => _instance;
 
