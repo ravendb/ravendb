@@ -466,6 +466,8 @@ namespace Raven.Server.Documents.Handlers
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var request = context.Read(RequestBodyStream(), "ScriptedPatchRequest");
+                request.BlittableValidation();
+
                 if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 

@@ -321,6 +321,8 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             var reader = context.Read(RequestBodyStream(), "queries/patch");
+            reader.BlittableValidation();
+
             if (reader == null)
                 throw new BadRequestException("Missing JSON content.");
             if (reader.TryGet("Patch", out BlittableJsonReaderObject patchJson) == false || patchJson == null)

@@ -98,7 +98,10 @@ namespace Raven.Traffic
                     }
                     builder.FinalizeDocument();
 
-                    return builder.CreateReader();
+                    var received = builder.CreateReader();
+                    received.BlittableValidation();
+
+                    return received;
                 }
             }
             catch (WebSocketException ex)

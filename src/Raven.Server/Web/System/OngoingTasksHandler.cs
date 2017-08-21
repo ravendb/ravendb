@@ -501,6 +501,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-update-replication");
+                updateJson.BlittableValidation();
+
                 if (updateJson.TryGet(nameof(UpdateExternalReplicationCommand.Watcher), out BlittableJsonReaderObject watcherBlittable) == false)
                 {
                     throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");

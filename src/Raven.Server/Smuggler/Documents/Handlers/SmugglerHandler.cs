@@ -351,6 +351,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                                             blittableJson = await context.ReadForMemoryAsync(section.Body, "importOptions");
                                         }
 
+                                        blittableJson.BlittableValidation();
+
                                         options = JsonDeserializationServer.DatabaseSmugglerOptions(blittableJson);
                                         continue;
                                     }

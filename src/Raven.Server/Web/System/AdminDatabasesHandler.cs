@@ -560,6 +560,8 @@ namespace Raven.Server.Web.System
             try
             {
                 var restoreConfiguration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
+                restoreConfiguration.BlittableValidation();
+
                 var restoreConfigurationJson = JsonDeserializationCluster.RestoreBackupConfiguration(restoreConfiguration);
 
                 var databaseName = restoreConfigurationJson.DatabaseName;
@@ -644,6 +646,8 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var configurationJson = await context.ReadForMemoryAsync(RequestBodyStream(), debug);
+                configurationJson.BlittableValidation();
+
                 beforeSetupConfiguration?.Invoke(configurationJson);
 
                 var (index, _) = await setupConfigurationFunc(context, name, configurationJson);

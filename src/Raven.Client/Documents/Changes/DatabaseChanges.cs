@@ -450,6 +450,7 @@ namespace Raven.Client.Documents.Changes
                             await UnmanagedJsonParserHelper.ReadObjectAsync(builder, stream, parser, buffer).ConfigureAwait(false);
 
                             var json = builder.CreateReader();
+                            json.BlittableValidation();
 
                             try
                             {
