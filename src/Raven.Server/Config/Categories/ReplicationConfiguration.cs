@@ -18,7 +18,13 @@ namespace Raven.Server.Config.Categories
         [TimeUnit(TimeUnit.Seconds)]
         [ConfigurationEntry("Replication.ReplicationMinimalHeartbeatInSec")]
         public TimeSetting ReplicationMinimalHeartbeat { get; set; }
-        
+
+        [Description("If the replication failed, we try to replicate again after the specified time elapsed.")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [ConfigurationEntry("Replication.RetryReplicateAfterInSec")]
+        public TimeSetting RetryReplicateAfter { get; set; }
+
         [Description("Maximum number of items replication will send in single batch, null means we will not cut the batch by number of items")]
         [DefaultValue(16*1024)]
         [ConfigurationEntry("Replication.MaxItemsCount")]
