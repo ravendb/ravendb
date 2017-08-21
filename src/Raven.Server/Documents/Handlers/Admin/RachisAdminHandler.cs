@@ -248,7 +248,16 @@ namespace Raven.Server.Documents.Handlers.Admin
             using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
             {
                 var infoCmd = new GetNodeInfoCommand();
-                await requestExecutor.ExecuteAsync(infoCmd, ctx);
+
+                try
+                {
+                    await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                }
+                catch (Exception)
+                {
+                    throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}. Tried to send GetNodeInfo command to {nodeUrl} and failed");
+                }
+
                 nodeInfo = infoCmd.Result;
 
                 if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
