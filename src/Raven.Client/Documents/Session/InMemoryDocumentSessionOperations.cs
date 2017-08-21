@@ -800,9 +800,12 @@ more responsive application.
                 var onOnBeforeStore = OnBeforeStore;
                 if (onOnBeforeStore != null)
                 {
-                    onOnBeforeStore(this, new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key));
-                    UpdateMetadataModifications(entity.Value);
-                    if (EntityChanged(document, entity.Value, null))
+                    var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
+                    onOnBeforeStore(this, beforeStoreEventArgs);
+                    if(beforeStoreEventArgs.MetadataAccessed)
+                        UpdateMetadataModifications(entity.Value);
+                    if (beforeStoreEventArgs.MetadataAccessed || 
+                        EntityChanged(document, entity.Value, null))
                         document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
                 }
 

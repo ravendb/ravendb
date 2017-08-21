@@ -18,6 +18,8 @@ namespace Raven.Client.Documents.Session
         public string DocumentId { get; }
         public object Entity { get; }
 
+        internal bool MetadataAccessed => _documentMetadata != null;
+
         public IMetadataDictionary DocumentMetadata => _documentMetadata ?? (_documentMetadata = Session.GetMetadataFor(Entity));
     }
 
