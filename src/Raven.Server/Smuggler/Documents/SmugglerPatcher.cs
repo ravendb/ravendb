@@ -74,11 +74,7 @@ namespace Raven.Server.Smuggler.Documents
             {
             }
 
-            public override object LoadDocument(string documentId, ScriptEngine engine)
-            {
-                throw new NotSupportedException("LoadDocument is not supported.");
-            }
-
+          
             public override string PutDocument(string id, object document, object metadata, string changeVector, ScriptEngine engine)
             {
                 throw new NotSupportedException("PutDocument is not supported.");

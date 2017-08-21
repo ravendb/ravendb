@@ -8,27 +8,18 @@ using System.Threading;
 using Jurassic;
 using Jurassic.Compiler;
 using Jurassic.Library;
+using Org.BouncyCastle.Crypto.Digests;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerObject
-    {
-        private readonly ObjectInstance _instance;
-
-        public ScriptRunnerObject(ObjectInstance instance)
-        {
-            _instance = instance;
-        }
-    }
-
     public class ScriptRunnerCache
     {
         private readonly DocumentDatabase _database;
 
-        private readonly ConcurrentDictionary<string, Lazy<ScriptRunner>> _cache =
-            new ConcurrentDictionary<string, Lazy<ScriptRunner>>();
+        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache =
+            new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
         private int _numberOfCachedScripts;
         private SpinLock _cleaning = new SpinLock();
 
@@ -37,7 +28,30 @@ namespace Raven.Server.Documents.Patch
             _database = database;
         }
 
-        public ScriptRunner GetScriptRunner(string script)
+        public abstract class Key
+        {
+            public string ScriptKey;
+
+            public abstract string GenerateScript();
+
+            public abstract override bool Equals(object obj);
+
+            public abstract override int GetHashCode();
+        }
+
+
+        public ScriptRunner.ReturnRun GetScriptRunner(Key key, out ScriptRunner.SingleRun patchRun)
+        {
+            if (key == null)
+            {
+                patchRun = null;
+                return new ScriptRunner.ReturnRun();
+            }
+            return GetScriptRunner(key).GetRunner(out patchRun);
+        }
+
+
+        public ScriptRunner GetScriptRunner(Key script)
         {
             Lazy<ScriptRunner> lazy;
             if (_cache.TryGetValue(script, out lazy))
@@ -46,12 +60,12 @@ namespace Raven.Server.Documents.Patch
             return GetScriptRunnerUnlikely(script);
         }
 
-        private ScriptRunner GetScriptRunnerUnlikely(string script)
+        private ScriptRunner GetScriptRunnerUnlikely(Key script)
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
                 var runner = new ScriptRunner(_database);
-                runner.AddScript(script);
+                runner.AddScript(script.GenerateScript());
                 return runner;
             });
             var lazy = _cache.GetOrAdd(script, value);
@@ -75,10 +89,10 @@ namespace Raven.Server.Documents.Patch
                 }
                 finally
                 {
-                    if(taken)
+                    if (taken)
                         _cleaning.Exit();
                 }
-                    
+
             }
             return lazy.Value;
         }
@@ -108,15 +122,17 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly DocumentDatabase _db;
         private readonly List<CompiledScript> _scripts = new List<CompiledScript>();
+        public readonly List<string> ScriptsSource = new List<string>();
 
         public void AddScript(string script)
         {
             var compiledScript = CompiledScript.Compile(new StringScriptSource(script),
                 new CompilerOptions
                 {
-                    EmitOnLoopIteration = new SingleRun(null).OnStateLoopIteration
+                    EmitOnLoopIteration = new SingleRun(null, null).OnStateLoopIteration
                 });
 
+            ScriptsSource.Add(script);
             _scripts.Add(compiledScript);
         }
 
@@ -127,9 +143,15 @@ namespace Raven.Server.Documents.Patch
 
         public class SingleRun
         {
-            public SingleRun(DocumentDatabase database)
+            public override string ToString()
+            {
+                return string.Join(Environment.NewLine, _runner.ScriptsSource);
+            }
+
+            public SingleRun(DocumentDatabase database, ScriptRunner runner)
             {
                 _database = database;
+                _runner = runner;
                 ScriptEngine = new ScriptEngine
                 {
                     RecursionDepthLimit = 64,
@@ -137,6 +159,23 @@ namespace Raven.Server.Documents.Patch
                 };
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
+                ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+            }
+
+            public string PutDocument(string id, object document, string changeVector)
+            {
+                var objectInstance = document as ObjectInstance;
+                if (document == null)
+                {
+                    throw new InvalidOperationException(
+                        $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
+                }
+
+                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance, BlittableJsonDocumentBuilder.UsageMode.None))
+                {
+                    var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
+                    return put.Id;
+                }
             }
 
             private string GetDocumentId(object arg)
@@ -155,12 +194,8 @@ namespace Raven.Server.Documents.Patch
             }
 
             private readonly DocumentDatabase _database;
+            private readonly ScriptRunner _runner;
             private DocumentsOperationContext _context;
-
-            public void Initialize(DocumentsOperationContext context)
-            {
-                _context = context;
-            }
 
             public int MaxSteps;
             public int CurrentSteps;
@@ -178,8 +213,9 @@ namespace Raven.Server.Documents.Patch
                 ThrowTooManyLoopIterations();
             }
 
-            public object Run(string method, object[] args)
+            public ScriptRunnerResult Run(DocumentsOperationContext ctx ,string method, object[] args)
             {
+                _context = ctx;
                 CurrentSteps = 0;
                 MaxSteps = 1000;
                 for (int i = 0; i < args.Length; i++)
@@ -187,20 +223,8 @@ namespace Raven.Server.Documents.Patch
                     args[i] = TranslateToJurrasic(ScriptEngine, args[i]);
                 }
                 var result = ScriptEngine.CallGlobalFunction(method, args);
-                return TranslateFromJurrasic(result);
+                return new ScriptRunnerResult(result);
             }
-
-            private object TranslateFromJurrasic(object result)
-            {
-                if (result is ArrayInstance)
-                    ThrowInvalidArrayResult();
-                if (result is ObjectInstance obj)
-                    return new ScriptRunnerObject(obj);
-                return result;
-            }
-
-            private static void ThrowInvalidArrayResult() =>
-                throw new InvalidOperationException("Script cannot return an array.");
 
 
 #if DEBUG
@@ -229,6 +253,11 @@ namespace Raven.Server.Documents.Patch
 #endif
                 return o;
             }
+
+            public object CreateEmptyObject()
+            {
+                return ScriptEngine.Object.Construct();
+            }
         }
 
         public ScriptRunner(DocumentDatabase db)
@@ -240,13 +269,16 @@ namespace Raven.Server.Documents.Patch
 
         public long Runs;
 
-        public ReturnRun GetRunner(DocumentsOperationContext context, out SingleRun run)
+        public ReturnRun GetRunner(out SingleRun run)
         {
             if (_cache.TryDequeue(out run) == false)
             {
-                run = new SingleRun(_db);
+                run = new SingleRun(_db, this);
+                foreach (var compiledScript in _scripts)
+                {
+                    compiledScript.Execute(run.ScriptEngine);
+                }
             }
-            run.Initialize(context);
             Interlocked.Increment(ref Runs);
             return new ReturnRun(this, run);
         }
@@ -264,12 +296,8 @@ namespace Raven.Server.Documents.Patch
 
             public void Dispose()
             {
-                _parent._cache.Enqueue(_run);
+                _parent?._cache.Enqueue(_run);
             }
         }
-
-
-
     }
-
 }

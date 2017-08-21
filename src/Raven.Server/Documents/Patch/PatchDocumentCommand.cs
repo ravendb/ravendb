@@ -10,41 +10,43 @@ using Voron.Exceptions;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand
+    public class PatchDocumentCommand : TransactionOperationsMerger.MergedTransactionCommand, IDisposable
     {
         private readonly string _id;
         private readonly LazyStringValue _expectedChangeVector;
         private readonly bool _skipPatchIfChangeVectorMismatch;
-        private readonly bool _debugMode;
 
         private readonly JsonOperationContext _externalContext;
-        private readonly PatcherOperationScope _scope;
 
         private readonly DocumentDatabase _database;
-        private readonly Logger _logger;
         private readonly bool _isTest;
-        private readonly bool _scriptIsPuttingDocument;
 
         private ScriptRunner.SingleRun _run;
+        private readonly ScriptRunner.SingleRun _runIfMissing;
+        private ScriptRunner.ReturnRun _returnRun;
+        private ScriptRunner.ReturnRun _returnRunIfMissing;
 
-        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfChangeVectorMismatch, bool debugMode, PatcherOperationScope scope, ScriptRunner.SingleRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
+        public PatchDocumentCommand(
+            JsonOperationContext context, 
+            string id, 
+            LazyStringValue expectedChangeVector, 
+            bool skipPatchIfChangeVectorMismatch, 
+            PatchRequest run,
+            PatchRequest runIfMissing,
+            DocumentDatabase database, 
+            bool isTest)
         {
             _externalContext = context;
-            _scope = scope;
-            _run = run;
+            _returnRun = database.Scripts.GetScriptRunner(run,out _run);
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(runIfMissing, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
-            _debugMode = debugMode;
             _database = database;
-            _logger = logger;
             _isTest = isTest;
-            _scriptIsPuttingDocument = scriptIsPuttingDocument;
         }
 
         public PatchResult PatchResult { get; private set; }
-
-        public Func<ScriptRunner.SingleRun> PrepareScriptRunIfDocumentMissing { get; set; }
 
         public override int Execute(DocumentsOperationContext context)
         {
@@ -89,7 +91,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            if (originalDocument == null && PrepareScriptRunIfDocumentMissing == null)
+            if (originalDocument == null && _runIfMissing == null)
             {
                 PatchResult = new PatchResult
                 {
@@ -98,44 +100,17 @@ namespace Raven.Server.Documents.Patch
                 return 1;
             }
 
-            var document = originalDocument;
+            object documentInstance = originalDocument;
 
             if (originalDocument == null)
             {
-                _run = PrepareScriptRunIfDocumentMissing();
-
-                var djv = new DynamicJsonValue
-                {
-                    [Constants.Documents.Metadata.Key] =
-                    {
-                    }
-                };
-                var data = context.ReadObject(djv, _id);
-                document = new Document
-                {
-                    Data = data
-                };
+                _run = _runIfMissing;
+                documentInstance = _runIfMissing.CreateEmptyObject();
             }
+            var scriptResult = _run.Run(context, "execute", new[] {documentInstance,});
 
-            _scope.Initialize(context);
-
-            if(1 < DateTime.Now.Ticks)
-                throw new NotImplementedException();
-
-            //try
-            //{
-            //    _scope.PatchObject = _scope.ToJsObject(_run.JSEngine, document);
-
-            //    _run.Execute();
-            //}
-            //catch (Exception errorEx)
-            //{
-            //    _run.HandleError(errorEx);
-            //    throw;
-            //}
-
-            var modifiedDocument = _externalContext.ReadObject(_scope.ToBlittable(_scope.PatchObject as ObjectInstance), document.Id,
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(_externalContext));
+            var modifiedDocument = scriptResult.TranslateFromJurrasic<BlittableJsonReaderObject>(_externalContext, 
+                BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
             var result = new PatchResult
             {
@@ -144,17 +119,8 @@ namespace Raven.Server.Documents.Patch
                 ModifiedDocument = modifiedDocument
             };
 
-            if (_debugMode)
-            {
-                throw new NotImplementedException();
-                //DocumentPatcherBase.AddDebug(_externalContext, result, _scope);
-            }
-
             if (modifiedDocument == null)
             {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"After applying patch, modifiedDocument is null and document is null? {originalDocument == null}");
-
                 result.Status = PatchStatus.Skipped;
                 PatchResult = result;
 
@@ -165,14 +131,14 @@ namespace Raven.Server.Documents.Patch
 
             if (originalDocument == null)
             {
-                if (_isTest == false || _scriptIsPuttingDocument)
+                if (_isTest == false)
                     putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
 
                 result.Status = PatchStatus.Created;
             }
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
             {
-                if (_isTest == false || _scriptIsPuttingDocument)
+                if (_isTest == false)
                     putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
                         originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
 
@@ -187,6 +153,12 @@ namespace Raven.Server.Documents.Patch
 
             PatchResult = result;
             return 1;
+        }
+
+        public void Dispose()
+        {
+            _returnRun.Dispose();
+            _returnRunIfMissing.Dispose();
         }
     }
 }

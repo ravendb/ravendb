@@ -11,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
@@ -94,7 +95,7 @@ namespace Raven.Server.Documents.Handlers
                 }
 
                 context.OpenReadTransaction();
-                GetDocumentsById(context, new StringValues(ids),  metadataOnly);
+                GetDocumentsById(context, new StringValues(ids), metadataOnly);
             }
         }
 
@@ -175,7 +176,7 @@ namespace Raven.Server.Documents.Handlers
             }
 
             includeDocs.Fill(includes);
-           
+
             var actualEtag = ComputeEtagFor(documents, includes, changeVectors);
 
             var etag = GetStringFromHeaders("If-None-Match");
@@ -420,7 +421,6 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             var isTest = GetBoolValueQueryString("test", required: false) ?? false;
-            var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
             var skipPatchIfChangeVectorMismatch = GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -437,74 +437,62 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                PatchDocumentCommand command = Activator.CreateInstance<PatchDocumentCommand>();
-                if(1<DateTime.Now.Ticks)
-                    throw new NotImplementedException();
-
-                //Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch, debugMode, isTest);
-
-                if (isTest == false)
-                    await Database.TxMerger.Enqueue(command);
-                else
+                using (var command = new PatchDocumentCommand(context,
+                    id,
+                    changeVector,
+                    skipPatchIfChangeVectorMismatch,
+                    patch,
+                    patchIfMissing,
+                    Database,
+                    isTest
+                ))
                 {
-                    using (patch.IsPuttingDocuments == false ?
-                        context.OpenReadTransaction() :
-                        context.OpenWriteTransaction()) // PutDocument requires the write access to the docs storage
+                    if (isTest == false)
                     {
-                        command.Execute(context);
+                        await Database.TxMerger.Enqueue(command);
                     }
-                }
-
-                switch (command.PatchResult.Status)
-                {
-                    case PatchStatus.DocumentDoesNotExist:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
-                        return;
-                    case PatchStatus.Created:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-                        break;
-                    case PatchStatus.Skipped:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                        return;
-                    case PatchStatus.Patched:
-                    case PatchStatus.NotModified:
-                        HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-                        break;
-                    default:
-                        throw new ArgumentOutOfRangeException();
-                }
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(command.PatchResult.Status));
-                    writer.WriteString(command.PatchResult.Status.ToString());
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
-                    writer.WriteObject(command.PatchResult.ModifiedDocument);
-
-                    if (debugMode)
+                    else
                     {
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
-                        if (isTest)
-                            writer.WriteObject(command.PatchResult.OriginalDocument);
-                        else
-                            writer.WriteNull();
-
-                        writer.WriteComma();
-
-                        writer.WritePropertyName(nameof(command.PatchResult.Debug));
-                        if (command.PatchResult.Debug != null)
-                            writer.WriteObject(command.PatchResult.Debug);
-                        else
-                            writer.WriteNull();
+                        // PutDocument requires the write access to the docs storage
+                        // testing patching is rare enough not to optimize it
+                        using (context.OpenWriteTransaction())
+                        {
+                            command.Execute(context);
+                        }
                     }
 
-                    writer.WriteEndObject();
+                    switch (command.PatchResult.Status)
+                    {
+                        case PatchStatus.DocumentDoesNotExist:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                            return;
+                        case PatchStatus.Created:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+                            break;
+                        case PatchStatus.Skipped:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                            return;
+                        case PatchStatus.Patched:
+                        case PatchStatus.NotModified:
+                            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        writer.WriteStartObject();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.Status));
+                        writer.WriteString(command.PatchResult.Status.ToString());
+                        writer.WriteComma();
+
+                        writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
+                        writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                        writer.WriteEndObject();
+                    }
                 }
             }
         }
