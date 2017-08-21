@@ -2,6 +2,7 @@ using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Extensions;
+using Raven.Server.Config.Settings;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Utils.Metrics;
 using Sparrow.Json.Parsing;
@@ -76,18 +77,18 @@ namespace SlowTests.Core.AdminConsole
                 Assert.IsType<long>(result);
                 Assert.Equal(maxConcurrentFlushes, result);
 
-                var allowScriptsToAdjustNumberOfSteps = database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps;
+                var allowScriptsToAdjustNumberOfSteps = database.Configuration.Indexing.MapTimeout;
 
                 var result2 = new AdminJsConsole(database).ApplyScript(new AdminJsScript
                 {
                     Script = @"
-                                return database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps
+                                return database.Configuration.Indexing.MapTimeout
                              "
                 });
 
                 Assert.NotNull(result2);
-                Assert.IsType<bool>(result2);
-                Assert.Equal(allowScriptsToAdjustNumberOfSteps, result2);
+                Assert.IsType<TimeSetting>(result2);
+                Assert.Same(allowScriptsToAdjustNumberOfSteps, result2);
 
                 var serverUrl = database.Configuration.Core.ServerUrl;
 
@@ -148,7 +149,6 @@ namespace SlowTests.Core.AdminConsole
                 var configuration = database.Configuration;
 
                 Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
-                Assert.False(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
                 Assert.Null(configuration.Queries.MaxClauseCount);
                 Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
@@ -156,14 +156,12 @@ namespace SlowTests.Core.AdminConsole
                 {
                     Script = @"
                                 database.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = false;
-                                database.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps = true;
                                 database.Configuration.Queries.MaxClauseCount = 2048;
                                 database.Configuration.Storage.MaxConcurrentFlushes = 40;
                              "
                 });
 
                 Assert.False(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
-                Assert.True(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
                 Assert.Equal(2048, database.Configuration.Queries.MaxClauseCount);
                 Assert.Equal(40, database.Configuration.Storage.MaxConcurrentFlushes);
             }
@@ -193,7 +191,6 @@ namespace SlowTests.Core.AdminConsole
             var configuration = Server.Configuration;
 
             Assert.False(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
-            Assert.False(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
             Assert.Null(configuration.Queries.MaxClauseCount);
             Assert.Equal(10, configuration.Storage.MaxConcurrentFlushes);
 
@@ -201,14 +198,12 @@ namespace SlowTests.Core.AdminConsole
             {
                 Script = @"
                             server.Configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened = true;
-                            server.Configuration.Patching.AllowScriptsToAdjustNumberOfSteps = true;
                             server.Configuration.Queries.MaxClauseCount = 2048;
                             server.Configuration.Storage.MaxConcurrentFlushes = 40;
                             "
             });
 
             Assert.True(configuration.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened);
-            Assert.True(configuration.Patching.AllowScriptsToAdjustNumberOfSteps);
             Assert.Equal(2048, configuration.Queries.MaxClauseCount);
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }

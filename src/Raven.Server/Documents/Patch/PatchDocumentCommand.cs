@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Patch
         private readonly bool _isTest;
         private readonly bool _scriptIsPuttingDocument;
 
-        private DocumentPatcherBase.SingleScriptRun _run;
+        private ScriptRunner.SingleRun _run;
 
-        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfChangeVectorMismatch, bool debugMode, PatcherOperationScope scope, DocumentPatcherBase.SingleScriptRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
+        public PatchDocumentCommand(JsonOperationContext context, string id, LazyStringValue expectedChangeVector, bool skipPatchIfChangeVectorMismatch, bool debugMode, PatcherOperationScope scope, ScriptRunner.SingleRun run, DocumentDatabase database, Logger logger, bool isTest, bool scriptIsPuttingDocument)
         {
             _externalContext = context;
             _scope = scope;
@@ -44,7 +44,7 @@ namespace Raven.Server.Documents.Patch
 
         public PatchResult PatchResult { get; private set; }
 
-        public Func<DocumentPatcherBase.SingleScriptRun> PrepareScriptRunIfDocumentMissing { get; set; }
+        public Func<ScriptRunner.SingleRun> PrepareScriptRunIfDocumentMissing { get; set; }
 
         public override int Execute(DocumentsOperationContext context)
         {
@@ -56,7 +56,10 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (_skipPatchIfChangeVectorMismatch)
                     {
-                        PatchResult = new PatchResult { Status = PatchStatus.Skipped };
+                        PatchResult = new PatchResult
+                        {
+                            Status = PatchStatus.Skipped
+                        };
                         return 1;
                     }
 
@@ -71,7 +74,10 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (_skipPatchIfChangeVectorMismatch)
                     {
-                        PatchResult = new PatchResult { Status = PatchStatus.Skipped };
+                        PatchResult = new PatchResult
+                        {
+                            Status = PatchStatus.Skipped
+                        };
                         return 1;
                     }
 
@@ -85,7 +91,10 @@ namespace Raven.Server.Documents.Patch
 
             if (originalDocument == null && PrepareScriptRunIfDocumentMissing == null)
             {
-                PatchResult = new PatchResult { Status = PatchStatus.DocumentDoesNotExist };
+                PatchResult = new PatchResult
+                {
+                    Status = PatchStatus.DocumentDoesNotExist
+                };
                 return 1;
             }
 
@@ -95,36 +104,35 @@ namespace Raven.Server.Documents.Patch
             {
                 _run = PrepareScriptRunIfDocumentMissing();
 
-                var djv = new DynamicJsonValue { [Constants.Documents.Metadata.Key] = { } };
+                var djv = new DynamicJsonValue
+                {
+                    [Constants.Documents.Metadata.Key] =
+                    {
+                    }
+                };
                 var data = context.ReadObject(djv, _id);
-                document = new Document { Data = data };
+                document = new Document
+                {
+                    Data = data
+                };
             }
 
             _scope.Initialize(context);
 
-            try
-            {
-                var keeper = _run.JSEngine.OnLoopIterationCallTarget as DocumentPatcherBase.EngineLoopIterationKeeper;
-                if (keeper == null)
-                {
-                    _run.JSEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(document.Data.Size).OnLoopIteration;
-                }
-                else
-                {
-                    keeper.MaxLoopIterations = document.Data.Size;
-                }
+            if(1 < DateTime.Now.Ticks)
+                throw new NotImplementedException();
 
-                
+            //try
+            //{
+            //    _scope.PatchObject = _scope.ToJsObject(_run.JSEngine, document);
 
-                _scope.PatchObject = _scope.ToJsObject(_run.JSEngine, document);
-
-                _run.Execute();
-            }
-            catch (Exception errorEx)
-            {
-                _run.HandleError(errorEx);
-                throw;
-            }
+            //    _run.Execute();
+            //}
+            //catch (Exception errorEx)
+            //{
+            //    _run.HandleError(errorEx);
+            //    throw;
+            //}
 
             var modifiedDocument = _externalContext.ReadObject(_scope.ToBlittable(_scope.PatchObject as ObjectInstance), document.Id,
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk, new BlittableMetadataModifier(_externalContext));
@@ -137,7 +145,10 @@ namespace Raven.Server.Documents.Patch
             };
 
             if (_debugMode)
-                DocumentPatcherBase.AddDebug(_externalContext, result, _scope);
+            {
+                throw new NotImplementedException();
+                //DocumentPatcherBase.AddDebug(_externalContext, result, _scope);
+            }
 
             if (modifiedDocument == null)
             {

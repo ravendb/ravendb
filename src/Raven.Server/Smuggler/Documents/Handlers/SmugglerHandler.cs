@@ -61,7 +61,6 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                     var scriptEngine = new ScriptEngine();
 
                     scriptEngine.EnableDebugging = false;
-                    scriptEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(options.MaxStepsForTransformScript).OnLoopIteration;
 
                     //cfg.NullPropagation();
 

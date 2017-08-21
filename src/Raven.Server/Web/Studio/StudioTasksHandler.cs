@@ -69,45 +69,5 @@ namespace Raven.Server.Web.Studio
         {
             public List<string> Functions;
         }
-
-        [RavenAction("/databases/*/studio-tasks/validateCustomFunctions", "POST", AuthorizationStatus.ValidUser)]
-        public Task ValidateCustomFunctions()
-        {
-            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            {
-                try
-                {
-                    var functionsBlittable = context.Read(HttpContext.Request.Body, "ValidateCustomFunctions");
-                    ValidateCustomFunctions(functionsBlittable);
-                }
-                catch (Exception)
-                {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                    return HttpContext.Response.WriteAsync("\"Failed to validate custom functions!\"");
-                }
-
-                HttpContext.Response.WriteAsync("\"Validation Complete!\"");
-                return Task.CompletedTask;
-            }
-        }
-
-        private static void ValidateCustomFunctions(BlittableJsonReaderObject document)
-        {
-            var engine = new ScriptEngine();
-            //                cfg.NullPropagation();
-            engine.EnableDebugging = true;
-            engine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(1000).OnLoopIteration;
-
-
-            engine.Execute(string.Format(@"
-                        var customFunctions = function() {{ 
-                        var exports = {{ }};
-                        {0};
-                        return exports;
-                        }}();
-                        for(var customFunction in customFunctions) {{
-                        this[customFunction] = customFunctions[customFunction];
-                        }};", document["Functions"]));
-        }
     }
 }

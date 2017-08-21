@@ -52,11 +52,11 @@ exports.c = function(v) { throw 'oops'; }
                     {
                         var document = database.DocumentsStorage.Get(context, "simpleUsers/1-A");
 
-                        database.Patcher.Apply(context, document, new PatchRequest
-                        {
-                            Script = LinuxTestUtils.Dos2Unix(@"var s = 1234; 
-a(s);")
-                        });
+                        //                        database.Patcher.Apply(context, document, new PatchRequest
+                        //                        {
+                        //                            Script = LinuxTestUtils.Dos2Unix(@"var s = 1234; 
+                        //a(s);")
+                        //                        });
                     });
 
                     Assert.Equal(LinuxTestUtils.Dos2Unix(@"Unable to execute JavaScript: 

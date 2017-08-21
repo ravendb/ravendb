@@ -44,15 +44,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            base.RemoveEngineCustomizations(engine, scope);
-
-            engine.Global.Delete("varchar", true);
-            engine.Global.Delete("nVarchar", true);
-            engine.Global.Delete(Transformation.LoadAttachment, true);
-        }
-
         protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
             base.CustomizeEngine(engine, scope);

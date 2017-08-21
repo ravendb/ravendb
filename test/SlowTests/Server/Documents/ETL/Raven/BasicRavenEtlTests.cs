@@ -512,7 +512,7 @@ loadToOrders(orderData);
 
             Assert.Equal(1, errors.Count);
 
-            Assert.Equal("No `loadTo[CollectionName]` method call found in the script", errors[0]);
+            Assert.Equal("No `loadTo[CollectionName]` method call found in the scripts", errors[0]);
         }
 
         private class UserWithAddress : User

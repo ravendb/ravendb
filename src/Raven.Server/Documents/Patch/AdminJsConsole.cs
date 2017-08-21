@@ -38,10 +38,6 @@ namespace Raven.Server.Documents.Patch
         {
         }
 
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-        }
-
         private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
         private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
@@ -69,7 +65,6 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 jsVal = scriptEngint.CallGlobalFunction("ExecuteAdminScript", Database);
-
             }
             catch (Exception e)
             {
@@ -169,7 +164,9 @@ namespace Raven.Server.Documents.Patch
             ScriptEngine jintEngine;
             try
             {
-                jintEngine = CreateEngine(script.Script, executionString);
+                throw new NotImplementedException();
+
+                //jintEngine = CreateEngine(script.Script, executionString);
             }
             catch (NotSupportedException e)
             {

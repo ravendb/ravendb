@@ -68,8 +68,6 @@ namespace Raven.Client.ServerWide
 
         public ClientConfiguration Client;
 
-        public string CustomFunctions;
-
         public void AddIndex(IndexDefinition definition)
         {
             var lockMode = IndexLockMode.Unlock;

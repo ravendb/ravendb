@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Patch
     public class PatcherOperationScope : IDisposable
     {
         private readonly DocumentDatabase _database;
-        
+
         public readonly DynamicJsonArray DebugInfo = new DynamicJsonArray();
 
         private static readonly List<string> InheritedProperties = new List<string>
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Patch
             return ToJsObject2(engine, document);
         }
 
-        public static ObjectInstance ToJsObject2(Engine engine, Document document)
+        public static ObjectInstance ToJsObject2(ScriptEngine engine, Document document)
         {
             var instance = ToJsObject(engine, document.Data);
             return ApplyMetadataIfNecessary(instance, document.Id, document.ChangeVector, document.LastModified, document.Flags, document.IndexScore);
@@ -80,7 +80,7 @@ namespace Raven.Server.Documents.Patch
         private static ObjectInstance ApplyMetadataIfNecessary(ObjectInstance instance, LazyStringValue id, string changeVector, DateTime? lastModified, DocumentFlags? flags, double? indexScore)
         {
             var metadataValue = instance.GetPropertyValue(Constants.Documents.Metadata.Key);
-            
+
             if (metadataValue == null || metadataValue is ArrayInstance)
                 return instance;
 
@@ -100,13 +100,13 @@ namespace Raven.Server.Documents.Patch
 
             if (indexScore.HasValue)
                 metadata.SetPropertyValue(Constants.Documents.Metadata.IndexScore, indexScore, true);
-            
+
             return instance;
         }
 
         private static ObjectInstance ToJsObject(ScriptEngine engine, BlittableJsonReaderObject json)
         {
-            return new BlittableObjectInstance(engine, json);
+            return new BlittableObjectInstance(engine, json, null);
         }
 
         private static string CreatePropertyKey(string key, string property)
@@ -119,7 +119,7 @@ namespace Raven.Server.Documents.Patch
 
         private void ToBlittableJsonReaderObject(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, ObjectInstance jsObject, string propertyKey = null,
             bool recursiveCall = false)
-        {        
+        {
             writer.StartWriteObject();
             WriteRawObjectPropertiesToBlittable(writer, jsObject, propertyKey, recursiveCall);
             writer.WriteObjectEnd();
@@ -143,9 +143,9 @@ namespace Raven.Server.Documents.Patch
                         continue;
 
                     writer.WritePropertyName(prop.Name);
-                                        
+
                     if (properties.Remove(prop.Name, out var modifiedValue))
-                    {                        
+                    {
                         WriteJsonValue(prop.Name, modifiedValue);
                     }
                     else
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Patch
                 }
             }
         }
-        
+
         internal object ToJsValue(ScriptEngine jintEngine, BlittableJsonReaderObject.PropertyDetails propertyDetails)
         {
             switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
@@ -210,7 +210,7 @@ namespace Raven.Server.Documents.Patch
                 case BlittableJsonToken.CompressedString:
                     return ((LazyCompressedStringValue)propertyDetails.Value).ToString();
                 case BlittableJsonToken.StartObject:
-                    return new BlittableObjectInstance(jintEngine, (BlittableJsonReaderObject)propertyDetails.Value);
+                    return new BlittableObjectInstance(jintEngine, (BlittableJsonReaderObject)propertyDetails.Value, null);
                 case BlittableJsonToken.StartArray:
                     //return new BlittableObjectArrayInstance(jintEngine, (BlittableJsonReaderArray)propertyDetails.Value);
                     return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(jintEngine, propertyDetails.Value as BlittableJsonReaderArray);
@@ -242,15 +242,7 @@ namespace Raven.Server.Documents.Patch
                     writer.WriteValue((bool)v);
                     return;
                 case TypeCode.String:
-                    const string RavenDataByteArrayToBase64 = "raven-data:byte[];base64,";
                     var value = v.ToString();
-                    if (value != null && value.StartsWith(RavenDataByteArrayToBase64))
-                    {
-                        value = value.Remove(0, RavenDataByteArrayToBase64.Length);
-                        var byteArray = Convert.FromBase64String(value);
-                        writer.WriteValue(Encoding.UTF8.GetString(byteArray));
-                        return;
-                    }
                     writer.WriteValue(value);
                     return;
                 case TypeCode.Byte:
@@ -259,13 +251,13 @@ namespace Raven.Server.Documents.Patch
                 case TypeCode.SByte:
                     writer.WriteValue((SByte)v);
                     return;
-                case TypeCode.UInt16:                    
+                case TypeCode.UInt16:
                 case TypeCode.UInt32:
                 case TypeCode.Int16:
                 case TypeCode.Int32:
                     writer.WriteValue((int)v);
                     return;
-                case TypeCode.UInt64:                
+                case TypeCode.UInt64:
                 case TypeCode.Int64:
                     writer.WriteValue((long)v);
                     break;
@@ -278,11 +270,10 @@ namespace Raven.Server.Documents.Patch
                     return;
                 case TypeCode.DateTime:
                     writer.WriteValue(((DateTime)v).ToString(Default.DateTimeFormatsToWrite));
-                    return;                  
+                    return;
             }
-                      
-            
-            
+
+
             if (v == Null.Value || v == Undefined.Value)
             {
                 writer.WriteValueNull();
@@ -326,6 +317,7 @@ namespace Raven.Server.Documents.Patch
             // to support static / instance calls. This is ugly, but the code will go away with Jurrasic anyway
             return ToBlittable2(jsObject, propertyKey, recursiveCall);
         }
+
         public static DynamicJsonValue ToBlittable2(ObjectInstance jsObject, string propertyKey = null, bool recursiveCall = false)
         {
             if (jsObject is FunctionInstance)
@@ -418,6 +410,7 @@ namespace Raven.Server.Documents.Patch
             // ugly and temporary
             return ToBlittableValue2(v, propertyKey, recursiveCall, token, originalValue);
         }
+
         public static object ToBlittableValue2(object v, string propertyKey, bool recursiveCall, BlittableJsonToken? token = null, object originalValue = null)
         {
             var vType = v.GetType();
@@ -490,7 +483,6 @@ namespace Raven.Server.Documents.Patch
             if (v is ObjectInstance)
             {
                 return ToBlittable2(v as ObjectInstance, propertyKey, recursiveCall);
-                
             }
 
             throw new NotSupportedException(v.GetType().ToString());
@@ -513,14 +505,9 @@ namespace Raven.Server.Documents.Patch
             if (document == null)
                 return Null.Value;
 
-            var keeper = engine.OnLoopIterationCallTarget as DocumentPatcherBase.EngineLoopIterationKeeper;
-            keeper.LoopIterations += (MaxSteps / 2 + (document.Data.Size * AdditionalStepsPerSize));
-            // todo: normalize this calculation
-
-            // TODO: Make sure to add Constants.Indexing.Fields.DocumentIdFieldName to document.Data
             return ToJsObject(engine, document.Data);
         }
-        
+
         private static void ThrowDocumentsOperationContextIsNotSet()
         {
             throw new InvalidOperationException("Documents operation context is not set");

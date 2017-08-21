@@ -26,11 +26,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         }
 
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            
-        }
-
         public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;

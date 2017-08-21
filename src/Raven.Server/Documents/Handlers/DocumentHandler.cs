@@ -18,6 +18,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -436,7 +437,11 @@ namespace Raven.Server.Documents.Handlers
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
-                var command = Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch, debugMode, isTest);
+                PatchDocumentCommand command = Activator.CreateInstance<PatchDocumentCommand>();
+                if(1<DateTime.Now.Ticks)
+                    throw new NotImplementedException();
+
+                //Database.Patcher.GetPatchDocumentCommand(context, id, changeVector, patch, patchIfMissing, skipPatchIfChangeVectorMismatch, debugMode, isTest);
 
                 if (isTest == false)
                     await Database.TxMerger.Enqueue(command);

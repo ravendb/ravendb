@@ -20,17 +20,6 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract string[] LoadToDestinations { get; }
 
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            engine.Global.Delete(Transformation.LoadTo, true);
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < LoadToDestinations.Length; i++)
-            {
-                engine.Global.Delete(Transformation.LoadTo + LoadToDestinations[i], true);
-            }
-        }
-
         protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
             engine.SetGlobalFunction(Transformation.LoadTo, new Action<string, object>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));

@@ -16,6 +16,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            Scripts = new ScriptRunnerCache(this);
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
@@ -118,7 +120,6 @@ namespace Raven.Server.Documents
                 ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricsCountersManager();
-                Patcher = new DocumentPatcher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
@@ -147,7 +148,7 @@ namespace Raven.Server.Documents
 
         public readonly SystemTime Time = new SystemTime();
 
-        public DocumentPatcher Patcher { get; private set; }
+        public ScriptRunnerCache Scripts;
 
         public readonly TransactionOperationsMerger TxMerger;
 
@@ -236,7 +237,6 @@ namespace Raven.Server.Documents
                 _indexStoreTask = IndexStore.InitializeAsync(record);
                 ReplicationLoader?.Initialize(record);
                 EtlLoader.Initialize(record);
-                Patcher.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
@@ -413,13 +413,7 @@ namespace Raven.Server.Documents
                     NotificationCenter?.Dispose();
                     NotificationCenter = null;
                 });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    Patcher?.Dispose();
-                    Patcher = null;
-                });
-
+                
                 exceptionAggregator.Execute(() =>
                 {
                     SubscriptionStorage?.Dispose();

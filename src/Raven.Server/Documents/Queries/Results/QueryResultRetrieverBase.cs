@@ -368,7 +368,6 @@ namespace Raven.Server.Documents.Queries.Results
 
             jintEngine.RecursionDepthLimit = 100;
             //    cfg.NullPropagation();
-            jintEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(10_000).OnLoopIteration;
 
 
             if (query.DeclaredFunctions != null)
@@ -382,11 +381,10 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (o is Document doc)
                 {
-                    doc.EnsureMetadata();
-                    return new BlittableObjectInstance(jintEngine, _context.ReadObject(doc.Data, doc.Id));
+                    return new BlittableObjectInstance(jintEngine, doc.Data, doc);
                 }
                 if (o is BlittableJsonReaderObject obj)
-                    return new BlittableObjectInstance(jintEngine, obj);
+                    return new BlittableObjectInstance(jintEngine, obj, null);
                 if (o is LazyStringValue lsv)
                     return lsv.ToString();
                 if (o is LazyCompressedStringValue lcsv)
