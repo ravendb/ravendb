@@ -23,21 +23,20 @@ namespace Raven.Server.Smuggler.Documents
             _engine.EnableDebugging = true;
 #endif
 
-            _engine.RecursionDepthLimit = DocumentPatcherBase.MaxRecursionDepth;
-            _engine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(options.MaxStepsForTransformScript).OnLoopIteration;
+            //_engine.RecursionDepthLimit = DocumentPatcherBase.MaxRecursionDepth;
+            //_engine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(options.MaxStepsForTransformScript).OnLoopIteration;
 
             _engine.Execute(string.Format(@"
                     function Transform(docInner){{
                         return ({0}).apply(this, [docInner]);
                     }};", options.TransformScript));
+
+            throw new NotImplementedException();
+
         }
 
         public Document Transform(Document document, JsonOperationContext context)
         {
-            var keeper = _engine.OnLoopIterationCallTarget as DocumentPatcherBase.EngineLoopIterationKeeper;
-            if (keeper != null)
-                keeper.LoopIterations = 0;
-
             using (var scope = new OperationScope())
             {
                 var jsObject = scope.ToJsObject(_engine, document);

@@ -8,7 +8,7 @@ using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
 
 namespace Raven.Server.Documents
 {
-    public sealed class DocumentPatcher : DocumentPatcherBase, IDisposable
+    public sealed class DocumentPatcher : DocumentPatcherBase
     {
         internal const string PutDocument = "PutDocument";
         internal const string DeleteDocument = "DeleteDocument";
@@ -20,19 +20,6 @@ namespace Raven.Server.Documents
         {
         }
 
-        public string CustomFunctions { get; private set; }
-
-        public void Initialize(DatabaseRecord record)
-        {
-            Database.DatabaseRecordChanged += LoadCustomFunctions;
-            LoadCustomFunctions(record);
-        }
-
-        public void Dispose()
-        {
-            Database.DatabaseRecordChanged -= LoadCustomFunctions;
-        }
-
         protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
             engine.SetGlobalFunction(PutDocument, (Func<string, object, object, string, string>)((id, data, metadata, changeVector) => scope.PutDocument(id, data, metadata, changeVector, engine)));
@@ -40,55 +27,35 @@ namespace Raven.Server.Documents
             engine.SetGlobalFunction(DeleteDocument, (Action<string>)scope.DeleteDocument);
         }
 
-        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
-        {
-            engine.Global.Delete(PutDocument, false);
-            engine.Global.Delete(DeleteDocument, false);
-        }
-
-        private void LoadCustomFunctions(DatabaseRecord dbrecord)
-        {
-            lock (_locker)
-            {
-                if (string.IsNullOrEmpty(dbrecord?.CustomFunctions))
-                {
-                    CustomFunctions = null;
-                    return;
-                }
-
-                CustomFunctions = dbrecord.CustomFunctions;
-            }
-        }
-
         public PatchDocumentCommand GetPatchDocumentCommand(
             JsonOperationContext context, string id, LazyStringValue changeVector, 
             PatchRequest patch, PatchRequest patchIfMissing, bool skipPatchIfChangeVectorMismatch, bool debugMode, bool isTest = false)
         {
-            if (id == null)
-                throw new ArgumentNullException(nameof(id));
+            throw new NotImplementedException();
+            //if (id == null)
+            //    throw new ArgumentNullException(nameof(id));
 
-            if (string.IsNullOrWhiteSpace(patch.Script))
-                ThrowOnEmptyPatchScript();
+            //if (string.IsNullOrWhiteSpace(patch.Script))
+            //    ThrowOnEmptyPatchScript();
 
-            if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
-                ThrowOnEmptyPatchScript(patchIfMissing: true);
+            //if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
+            //    ThrowOnEmptyPatchScript(patchIfMissing: true);
 
-            var scope = CreateOperationScope(debugMode);
+            //var scope = CreateOperationScope(debugMode);
 
-            var run = CreateScriptRun(patch, scope, id); 
+            //var run = CreateScriptRun(patch, scope, id); 
 
-            var command = new PatchDocumentCommand(context, id, changeVector, skipPatchIfChangeVectorMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
+            //var command = new PatchDocumentCommand(context, id, changeVector, skipPatchIfChangeVectorMismatch, debugMode, scope, run, Database, Logger, isTest, patch.IsPuttingDocuments || patchIfMissing?.IsPuttingDocuments == true);
 
-            if (patchIfMissing != null)
-            {
-                command.PrepareScriptRunIfDocumentMissing = () =>
-                {
-                    CleanupEngine(patch, run.JSEngine, scope);
-                    return CreateScriptRun(patchIfMissing, scope, id);
-                };
-            }
+            //if (patchIfMissing != null)
+            //{
+            //    command.PrepareScriptRunIfDocumentMissing = () =>
+            //    {
+            //        return CreateScriptRun(patchIfMissing, scope, id);
+            //    };
+            //}
 
-            return command;
+            //return command;
         }
 
         private static void ThrowOnEmptyPatchScript(bool patchIfMissing = false)
@@ -97,14 +64,5 @@ namespace Raven.Server.Documents
                                                 "script must be non-null and not empty.");
         }
 
-        private SingleScriptRun CreateScriptRun(PatchRequest patch, PatcherOperationScope scope, string id)
-        {
-            var run = new SingleScriptRun(this, patch, scope);
-
-            run.Prepare(0);
-            run.SetDocumentId(id);
-
-            return run;
-        }
     }
 }

@@ -10,12 +10,13 @@ namespace Raven.Server.Documents.Patch
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly BlittableJsonReaderObject Blittable;
-        public HashSet<string> Deletes = new HashSet<string>();
-        public HashSet<object> Nested = new HashSet<object>();
-                
-        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent) : base(engine)
+        public readonly Document Document;
+        public HashSet<string> Deletes;
+
+        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, Document doc) : base(engine)
         {
             Blittable = parent;
+            Document = doc;
         }
 
         public override bool Delete(object key, bool throwOnError)
@@ -28,7 +29,7 @@ namespace Raven.Server.Documents.Patch
         {
             var keyAsString = key.ToString();
             Deletes.Remove(keyAsString);
-            
+
             int propertyIndex = Blittable.GetPropertyIndex(keyAsString);
             if (propertyIndex == -1)
             {
@@ -61,9 +62,9 @@ namespace Raven.Server.Documents.Patch
                     returnedValue = ((LazyCompressedStringValue)propertyDetails.Value).ToString();
                     break;
                 case BlittableJsonToken.StartObject:
-                    returnedValue = new BlittableObjectInstance(Engine, (BlittableJsonReaderObject)propertyDetails.Value);
+                    returnedValue = new BlittableObjectInstance(Engine, (BlittableJsonReaderObject)propertyDetails.Value, null);
                     break;
-                case BlittableJsonToken.StartArray:                                        
+                case BlittableJsonToken.StartArray:
                     returnedValue = CreateArrayInstanceBasedOnBlittableArray(Engine, propertyDetails.Value as BlittableJsonReaderArray);
                     break;
                 default:
@@ -76,7 +77,7 @@ namespace Raven.Server.Documents.Patch
         public static ArrayInstance CreateArrayInstanceBasedOnBlittableArray(ScriptEngine engine, BlittableJsonReaderArray blittableArray)
         {
             var returnedValue = engine.Array.Construct();
-            
+
             for (var i = 0; i < blittableArray.Length; i++)
             {
                 var valueTuple = blittableArray.GetValueTokenTupleByIndex(i);
@@ -102,7 +103,7 @@ namespace Raven.Server.Documents.Patch
                         arrayValue = ((LazyCompressedStringValue)valueTuple.Item1).ToString();
                         break;
                     case BlittableJsonToken.StartObject:
-                        arrayValue = new BlittableObjectInstance(engine, (BlittableJsonReaderObject)valueTuple.Item1);
+                        arrayValue = new BlittableObjectInstance(engine, (BlittableJsonReaderObject)valueTuple.Item1, null);
                         break;
                     case BlittableJsonToken.StartArray:
                         arrayValue = CreateArrayInstanceBasedOnBlittableArray(engine, valueTuple.Item1 as BlittableJsonReaderArray);
@@ -117,5 +118,5 @@ namespace Raven.Server.Documents.Patch
 
             return returnedValue;
         }
-    }    
+    }
 }

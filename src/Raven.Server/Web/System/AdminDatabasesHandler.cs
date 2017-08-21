@@ -657,39 +657,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.ServerAdmin)]
-        public async Task ModifyCustomFunctions()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
-                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out string functions) == false)
-                {
-                    throw new InvalidDataException("Functions property was not found.");
-                }
-
-                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(DatabasePutResult.RaftCommandIndex)] = index
-                    });
-                    writer.Flush();
-                }
-            }
-        }
-
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {

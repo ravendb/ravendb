@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Patch
 
         protected bool Equals(PatchRequest other)
         {
-            if(other == null)
+            if (other == null)
                 return false;
             return string.Equals(Script, other.Script);
         }
