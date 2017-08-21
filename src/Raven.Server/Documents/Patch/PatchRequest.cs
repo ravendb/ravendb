@@ -15,11 +15,6 @@ namespace Raven.Server.Documents.Patch
         /// <value>The type.</value>
         public readonly string Script;
 
-        /// <summary>
-        /// Additional arguments passed to JavaScript function from Script.
-        /// </summary>
-        public BlittableJsonReaderObject Values;
-
         public PatchRequest(string script)
         {
             Script = script;
@@ -35,15 +30,15 @@ namespace Raven.Server.Documents.Patch
         public override string GenerateScript()
         {
             return $@"
-function execute(doc){{ 
-    var actual = function() {{ 
+function execute(doc, args){{ 
+    var actual = function(args) {{ 
 
 
 {Script}
 
 
     }};
-    actual.call(doc);
+    actual.call(doc, args);
     return doc;
 }}";
         }
@@ -61,15 +56,14 @@ function execute(doc){{
             return Script.GetHashCode() ^ 42;
         }
 
-        public static PatchRequest Parse(BlittableJsonReaderObject input)
+        public static PatchRequest Parse(BlittableJsonReaderObject input, out BlittableJsonReaderObject args)
         {
             if (input.TryGet("Script", out string script) == false || script == null)
                 throw new InvalidDataException("Missing 'Script' property on 'Patch'");
 
             var patch = new PatchRequest(script);
 
-            if (input.TryGet("Values", out BlittableJsonReaderObject values))
-                patch.Values = values;
+            input.TryGet("Values", out args);
 
             return patch;
         }
