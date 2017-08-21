@@ -22,6 +22,7 @@ namespace SlowTests.Client.Attachments
         {
             const int size = 512 * 1024;
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
+            UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
             using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
             {
@@ -87,6 +88,7 @@ namespace SlowTests.Client.Attachments
         {
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";
             const int size = 512 * 1024;
+            UseNewLocalServer();
             var leader = await CreateRaftClusterAndGetLeader(3);
             using (var store = GetDocumentStore(defaultServer: leader, replicationFactor: 2))
             {
