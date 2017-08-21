@@ -146,7 +146,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (string.IsNullOrEmpty(transformation.Script))
                     return;
 
-                Transformation = new PatchRequest(transformation.Script);
+                Transformation = new PatchRequest(transformation.Script, PatchRequestType.RavenEtl);
 
                 LoadToCollections = transformation.GetCollectionsFromScript();
 
