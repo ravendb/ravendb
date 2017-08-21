@@ -252,7 +252,7 @@ namespace Raven.Server.Documents.Queries
             }, token);
         }
 
-        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation<BulkOperationCommand<PatchDocumentCommand>>(query, options, context, onProgress, (key, retrieveDetails) =>
             {

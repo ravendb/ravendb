@@ -328,13 +328,14 @@ namespace Raven.Server.Documents.Handlers
             if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                 throw new BadRequestException("Missing 'Query' property.");
 
-            var patch = PatchRequest.Parse(patchJson);
+            var patch = PatchRequest.Parse(patchJson, out var patchArgs);
             var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
 
             if (query.Metadata.IsDynamic == false)
             {
                 ExecuteQueryOperation(query.Metadata,
-                    (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(query, options.Query, patch, context, onProgress, token),
+                    (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(
+                        query, options.Query, patch, patchArgs, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
             }
             else

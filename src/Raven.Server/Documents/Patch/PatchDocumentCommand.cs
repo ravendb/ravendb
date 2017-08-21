@@ -25,20 +25,23 @@ namespace Raven.Server.Documents.Patch
         private readonly ScriptRunner.SingleRun _runIfMissing;
         private ScriptRunner.ReturnRun _returnRun;
         private ScriptRunner.ReturnRun _returnRunIfMissing;
+        private BlittableJsonReaderObject _patchIfMissingArgs, _patchArgs;
 
         public PatchDocumentCommand(
             JsonOperationContext context, 
             string id, 
             LazyStringValue expectedChangeVector, 
             bool skipPatchIfChangeVectorMismatch, 
-            PatchRequest run,
-            PatchRequest runIfMissing,
+            (PatchRequest run, BlittableJsonReaderObject args) patch,
+            (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
             DocumentDatabase database, 
             bool isTest)
         {
             _externalContext = context;
-            _returnRun = database.Scripts.GetScriptRunner(run,out _run);
-            _returnRunIfMissing = database.Scripts.GetScriptRunner(runIfMissing, out _runIfMissing);
+            _patchIfMissingArgs = patchIfMissing.args;
+            _patchArgs = patch.args;
+            _returnRun = database.Scripts.GetScriptRunner(patch.run, out _run);
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
@@ -101,13 +104,14 @@ namespace Raven.Server.Documents.Patch
             }
 
             object documentInstance = originalDocument;
-
+            var args = _patchArgs;
             if (originalDocument == null)
             {
                 _run = _runIfMissing;
+                args = _patchIfMissingArgs;
                 documentInstance = _runIfMissing.CreateEmptyObject();
             }
-            var scriptResult = _run.Run(context, "execute", new[] {documentInstance,});
+            var scriptResult = _run.Run(context, "execute", new[] {documentInstance, args});
 
             var modifiedDocument = scriptResult.TranslateFromJurrasic<BlittableJsonReaderObject>(_externalContext, 
                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
