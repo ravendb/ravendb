@@ -62,17 +62,6 @@ namespace Raven.Client.ServerWide.Operations
 
         public string Collection { get; set; }
 
-        //public DateTime TimeOfLastClientActivity { get; set; }
-        //public string LastChangeVector { get; set; }
-
-        //public class ClientConnectionIfo
-        //{
-        //    public string ClientUri { get; set; }
-        //    public SubscriptionOpeningStrategy Strategy { get; set; }
-        //    public DateTime ClientConnectionTime { get; set; }
-        //}
-        //public ClientConnectionIfo ClientConnection { get; set; }
-
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();

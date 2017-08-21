@@ -22,6 +22,7 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
     clientIP = ko.observable<string>();
     connectionStrategy = ko.observable<Raven.Client.Documents.Subscriptions.SubscriptionOpeningStrategy>();  
     clientDetailsIssue = ko.observable<string>(); // null, ok | client is not connected | failed to get details.. 
+    textClass = ko.observable<string>();
 
     validationGroup: KnockoutValidationGroup; 
     showSubscriptionDetails = ko.observable(false);
@@ -108,10 +109,12 @@ class ongoingTaskSubscriptionModel extends ongoingTask {
 
                         if (!this.clientIP()) { 
                             this.clientDetailsIssue("No client is connected");
+                            this.textClass("warning");
                         }
                     })
                     .fail(() => {
                         this.clientDetailsIssue("Failed to get client connection details");
+                        this.textClass("danger");
                     });
             });
     }
