@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Handlers
                 var statsDatabaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                 
                 stats.DatabaseChangeVector = statsDatabaseChangeVector;
-                stats.DatabaseId = ChangeVectorEntry.GuidToTruncatedBase64(Database.DocumentsStorage.Environment.DbId);
+                stats.DatabaseId = Database.DocumentsStorage.Environment.Base64Id;
                 stats.Is64Bit = IntPtr.Size == sizeof(long);
                 stats.Pager = Database.DocumentsStorage.Environment.Options.DataPager.GetType().ToString();
 

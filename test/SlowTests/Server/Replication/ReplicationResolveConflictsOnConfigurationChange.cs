@@ -91,12 +91,13 @@ namespace SlowTests.Server.Replication
 
                 var config = new ConflictSolver
                 {
-                    DatabaseResolverId = storage1.DbId.ToString()
+                    DatabaseResolverId = storage1.DbBase64Id
                 };
                 await SetupReplicationAsync(store1, config, store2);
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
+                WaitForUserToContinueTheTest(store1);
             }
         }
 

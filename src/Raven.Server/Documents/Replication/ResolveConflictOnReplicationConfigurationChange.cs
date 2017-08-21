@@ -211,13 +211,12 @@ namespace Raven.Server.Documents.Replication
 
             long maxEtag = -1;
             long duplicateResolverEtagAt = -1;
-            var resolverDbId = new Guid(resolver);
 
             foreach (var documentConflict in conflicts)
             {
                 foreach (var changeVectorEntry in documentConflict.ChangeVector.ToChangeVector())
                 {
-                    if (changeVectorEntry.DbId.Equals(resolverDbId))
+                    if (changeVectorEntry.DbId.Equals(resolver))
                     {
                         if (changeVectorEntry.Etag == maxEtag)
                         {

@@ -569,9 +569,9 @@ namespace Raven.Server.Documents.TcpHandlers
                 
                 var matchingCV = changeVector.FirstOrDefault(
                     x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
-                    x.DbId == TcpConnection.DocumentDatabase.DbId);
+                    x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
 
-                if (matchingCV.DbId == Guid.Empty && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
+                if (matchingCV.DbId == "" && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
                     return startEtag;
 
                 return matchingCV.Etag;
