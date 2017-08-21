@@ -123,7 +123,7 @@ namespace Raven.Server.Rachis
                 {
                     var status = new NodeStatus
                     {
-                        Connected = kvp.Value.Status.StartsWith("Connected"),
+                        Connected = kvp.Value.Status == AmbassadorStatus.Connected,
                         LastMatchingIndex = kvp.Value.FollowerMatchIndex,
                         LastReply = kvp.Value.LastReplyFromFollower,
                         LastSent = kvp.Value.LastSendToFollower,
@@ -132,7 +132,7 @@ namespace Raven.Server.Rachis
 
                     if (status.Connected == false)
                     {
-                        status.ErrorDetails = kvp.Value.Status;
+                        status.ErrorDetails = kvp.Value.StatusMessage;
                     }
 
                     dict[kvp.Key] = status;
@@ -363,7 +363,7 @@ namespace Raven.Server.Rachis
                 var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status} - {followerAmbassador.ThreadStatus}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.StatusMessage} - {followerAmbassador.ThreadStatus}");
             }
 
 
@@ -596,7 +596,7 @@ namespace Raven.Server.Rachis
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
             var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
-                node.Status,
+                node.StatusMessage,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
