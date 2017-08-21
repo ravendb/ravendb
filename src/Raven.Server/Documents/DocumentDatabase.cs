@@ -160,6 +160,8 @@ namespace Raven.Server.Documents
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
 
+        public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
+
         public RavenConfiguration Configuration { get; }
 
         public CancellationToken DatabaseShutdown => _databaseShutdown.Token;

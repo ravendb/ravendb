@@ -322,7 +322,7 @@ namespace Raven.Server.Documents.Replication
                             {
                                 NodeTag = tag,
                                 Etag = etag,
-                                DbId = ParseDbId(changeVector, current + 1)
+                                DbId = changeVector.Substring(current + 1, 22)
                             });
                             start = current + 23;
                             current = start;
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents.Replication
                             if (current + 23 > changeVector.Length)
                                 ThrowInvalidEndOfString("DbId", changeVector);
                             bool found = false;
-                            var dbId = ParseDbId(changeVector, current + 1);
+                            var dbId = changeVector.Substring(current + 1, 22);
                             for (int i = 0; i < entries.Count; i++)
                             {
                                 if (entries[i].DbId == dbId)
