@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -263,7 +264,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     await requestExecutor.ExecuteAsync(infoCmd, ctx);
                 }
-                catch (Exception e)
+                catch (AllTopologyNodesDownException e)
                 {
                     throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}", e);
                 }
