@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                     session.Query<Person>().Where(x => x.Name == "a").ToList();
 
                     session.Query<Person>()
-                        .Customize(x=>x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "a" && x.AddressId == "addresses/1")
                         .ToList();
                 }
@@ -139,13 +139,14 @@ namespace SlowTests.Issues
         }
 
         [Fact]
-        public void  ShouldDeleteSmallerAutoIndexes()
+        public async Task ShouldDeleteSmallerAutoIndexes()
         {
             using (var store = GetDocumentStore(modifyDatabaseRecord: rec =>
             {
                 rec.Settings["Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec"] = "0";
             }))
             {
+                var database = await GetDocumentDatabaseInstanceFor(store);
                 using (var session = store.OpenSession())
                 {
                     session.Query<User>().Where(x => x.Name == "John").ToList();
@@ -154,10 +155,13 @@ namespace SlowTests.Issues
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "John" && x.LastName == "Doe").ToList();
 
+                    database.IndexStore.RunIdleOperations();
+
                     session.Query<User>()
                         .Customize(x => x.WaitForNonStaleResults())
                         .Where(x => x.Name == "John" && x.LastName == "Doe" && x.Age > 10).ToList();
                 }
+                database.IndexStore.RunIdleOperations();
 
                 var autoIndexes = store.Admin.Send(new GetStatisticsOperation()).Indexes.Where(x => x.Name.StartsWith("Auto/")).ToList();
 
