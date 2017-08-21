@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 using FastTests;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 using Company = SlowTests.Core.Utils.Entities.Company;

@@ -3,11 +3,11 @@ import endpoints = require("endpoints");
 
 class createDatabaseCommand extends commandBase {
 
-    constructor(private databaseDocument: Raven.Client.Server.DatabaseRecord, private replicationFactor: number) {
+    constructor(private databaseDocument: Raven.Client.ServerWide.DatabaseRecord, private replicationFactor: number) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.DatabasePutResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasePutResult> {
         const args = {
             name: this.databaseDocument.DatabaseName,
             'replication-factor': this.replicationFactor

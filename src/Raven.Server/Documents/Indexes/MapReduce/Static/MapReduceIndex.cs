@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes.Configuration;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
@@ -306,12 +306,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                 return GetEnumerator();
             }
 
-            public Enumerator GetEnumerator()
+            private Enumerator GetEnumerator()
             {
                 return new Enumerator(_items.GetEnumerator(), this, _createBlittableResultStats);
             }
 
-            public class Enumerator : IEnumerator<MapResult>
+            private class Enumerator : IEnumerator<MapResult>
             {
                 private readonly IEnumerator _enumerator;
                 private readonly AnonymousObjectToBlittableMapResultsEnumerableWrapper _parent;
@@ -348,7 +348,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
                         var mapResult = new DynamicJsonValue();
 
                         _reduceKeyProcessor.Reset();
-                        
+
                         var propertiesInOrder = accessor.PropertiesInOrder;
                         int properties = propertiesInOrder.Count;
 
@@ -378,7 +378,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
 
                 public void Reset()
                 {
-                    throw new System.NotImplementedException();
+                    throw new NotImplementedException();
                 }
 
                 public MapResult Current { get; } = new MapResult();

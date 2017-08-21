@@ -12,7 +12,7 @@ namespace Raven.Server.Utils.Metrics
         public readonly double OneMinuteRate;
         public readonly double FiveMinuteRate;
         public readonly double FifteenMinuteRate;
-        public string Name { get; private set; }
+        public string Name { get; }
 
         [JsonConstructor]
         public MeterValue(string name, long count, double meanRate, double oneMinuteRate, double fiveMinuteRate, double fifteenMinuteRate)

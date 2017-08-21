@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Index;
 using Lucene.Net.Store;
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public static Dictionary<string, int[]> GetTermsAndDocumentsFor(IndexReader reader, int docBase, string field, string indexName, IState state)
         {
-            var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms(indexName));
+            var termsCachePerField = CacheInstance.TermsCachePerReader.GetValue(reader, x => new CachedIndexedTerms());
 
             if (termsCachePerField.Results.TryGetValue(field, out FieldCacheInfo info) && info.Done)
                 return info.Results;
@@ -86,7 +85,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                                                     "Viewing Index Entries are a debug tool, and should not be used on indexes of this size. You might want to try Luke, instead.");
             }
 
-            var results = new Dictionary<string,object>[reader.MaxDoc];
+            var results = new Dictionary<string, object>[reader.MaxDoc];
             using (var termDocs = reader.TermDocs(state))
             using (var termEnum = reader.Terms(state))
             {
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             propertyName.EndsWith(Constants.Documents.Indexing.Fields.RangeFieldSuffix))
                             continue;
 
-                        
+
                         if (result.TryGetValue(propertyName, out var oldValue))
                         {
                             var oldValueAsArray = oldValue as DynamicJsonArray;
@@ -204,11 +203,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         public class CachedIndexedTerms : ILowMemoryHandler
         {
             public readonly ConcurrentDictionary<string, FieldCacheInfo> Results = new ConcurrentDictionary<string, FieldCacheInfo>();
-            private readonly object _indexName;
 
-            public CachedIndexedTerms(string indexName)
+            public CachedIndexedTerms()
             {
-                _indexName = indexName;
                 LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
             }
 

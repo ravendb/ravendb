@@ -1,10 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -94,7 +91,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true),
+                    ["DocsPutsPerSec"] = Database.Metrics.DocPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true)
                 });
             }
 
@@ -109,7 +106,7 @@ namespace Raven.Server.Documents.Handlers
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true),
+                    ["BytesPutsPerSecond"] = Database.Metrics.BytesPutsPerSecond.CreateMeterData(true, GetBoolValueQueryString("empty", required: false) ?? true)
                 });
             }
 

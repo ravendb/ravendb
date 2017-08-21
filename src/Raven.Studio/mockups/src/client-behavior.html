@@ -1,0 +1,80 @@
+﻿<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+<body>
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+
+                <div class="content-margin">
+                    <div class="toolbar">
+                        <div class="btn btn-primary">
+                            <i class="icon-save"></i> <span>Save</span>
+                        </div>
+                    </div>
+
+                    <div class="panel">
+                        <div class="padding padding-sm">
+                            <div class="row">
+                                <div class="col-sm-6 col-xl-4">
+                                    <div class="toggle">
+                                        <input id="toggle-balance" type="checkbox">
+                                        <label for="toggle-balance">
+                                            Read balance bahavior <i class="icon-info text-info clickable"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-xl-4">
+                                    <div class="dropdown">
+                                        <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                            None
+                                            <span class="caret"></span>
+                                        </button>
+                                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
+                                            <li><a href="#">None</a></li>
+                                            <li><a href="#">RoundRobin</a></li>
+                                            <li><a href="#">FastestNode</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel">
+                        <div class="padding padding-sm">
+                            <div class="row">
+                                <div class="col-sm-6 col-xl-4">
+                                    <div class="toggle">
+                                        <input id="toggle-maxrequests" type="checkbox">
+                                        <label for="toggle-maxrequests">
+                                            Max number of requests per session
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6 col-xl-4 form-inline">
+                                    <input class="form-control" type="number" placeholder="max requests">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+
+</body>
+</html>

@@ -72,7 +72,7 @@ namespace Micro.Benchmark.Benchmarks.Sorting
 
         private int[] values;
 
-        [Setup]
+        [GlobalSetup]
         public void Setup()
         {
             values = Generator(ArraySize);

@@ -5,7 +5,6 @@ using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
@@ -324,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             };
         }
 
-        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, TransactionOperationContext context)
+        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
         {
             HashSet<string> groupByFields;
 
@@ -411,8 +410,9 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
 
+                var retriever = new MapReduceQueryResultRetriever(null, null,context, fieldsToFetch);
                 var result = reader
-                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), new MapReduceQueryResultRetriever(context, fieldsToFetch), context, CancellationToken.None)
+                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)

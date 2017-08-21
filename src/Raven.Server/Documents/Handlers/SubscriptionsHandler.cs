@@ -10,8 +10,10 @@ using Sparrow.Json;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Conventions;
 using System.Linq;
-using Raven.Client.Documents.Exceptions.Subscriptions;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 
@@ -36,7 +38,7 @@ namespace Raven.Server.Documents.Handlers
                 if (tryout.Collection == null)
                     throw new ArgumentException("Collection must be specified");
 
-                var pageSize = GetIntValueQueryString("pageSize", required: true) ?? 1;
+                var pageSize = GetIntValueQueryString("pageSize") ?? 1;
 
                 var fetcher = new SubscriptionDocumentsFetcher(Database, pageSize, -0x42,
                     new IPEndPoint(HttpContext.Connection.RemoteIpAddress, HttpContext.Connection.RemotePort));
@@ -49,7 +51,7 @@ namespace Raven.Server.Documents.Handlers
                         Collection = tryout.Collection,
                         IncludeRevisions = tryout.IncludeRevisions,
                         Script = tryout.Script
-                    },
+                    }
                 };
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -72,7 +74,7 @@ namespace Raven.Server.Documents.Handlers
                             }
                             else
                             {
-                                var docWithExcepton = new DocumentWithException()
+                                var docWithExcepton = new DocumentWithException
                                 {
                                     Exception = itemDetails.Exception.ToString(),
                                     ChangeVector = itemDetails.Doc.ChangeVector,
@@ -99,6 +101,20 @@ namespace Raven.Server.Documents.Handlers
             {
                 var json = await context.ReadForMemoryAsync(RequestBodyStream(), null);
                 var options = JsonDeserializationServer.SubscriptionCreationParams(json);
+                if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(
+                    options.ChangeVector, 
+                    out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorSpecialValue))
+                {
+                    switch (changeVectorSpecialValue)
+                    {
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.BeginningOfTime:
+                                options.ChangeVector = null;
+                                break;
+                            case Constants.Documents.SubscriptionChagneVectorSpecialStates.LastDocument:
+                                options.ChangeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, options.Criteria.Collection);
+                                break;
+                    }
+                }
                 var id = GetLongQueryString("id", required: false);
                 var disabled = GetBoolValueQueryString("disabled", required: false);
                 var subscriptionId = await Database.SubscriptionStorage.PutSubscription(options, id, disabled);
@@ -108,7 +124,7 @@ namespace Raven.Server.Documents.Handlers
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        ["Id"] = subscriptionId
+                        ["Name"] = options.Name??subscriptionId.ToString()
                     });
                 }
             }
@@ -124,6 +140,93 @@ namespace Raven.Server.Documents.Handlers
             await NoContent();
         }
 
+        [RavenAction("/databases/*/subscriptions/SubscriptionState", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSubscriptionState()
+        {
+            var subscriptionName = GetStringQueryString("name", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (string.IsNullOrEmpty(subscriptionName))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var subscriptionState = Database
+                    .SubscriptionStorage
+                    .GetSubscriptionFromServerStore(subscriptionName);
+
+                
+                if (subscriptionState == null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                context.Write(writer, subscriptionState.ToJson());
+
+                return Task.CompletedTask;
+            }
+        }
+
+
+        [RavenAction("/databases/*/subscriptions/SubscriptionConnectionDetails", "GET", AuthorizationStatus.ValidUser)]
+        public Task GetSubscriptionConnectionDetails()
+        {
+            var subscriptionId = GetLongQueryString("id", false);
+            var subscriptionName = GetStringQueryString("name", false);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                if (subscriptionId.HasValue == false && string.IsNullOrEmpty(subscriptionName))
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    return Task.CompletedTask;
+                }
+
+                var subscriptionData = Database
+                    .SubscriptionStorage
+                    .GetRunningSubscription(context, subscriptionId, subscriptionName, false);
+                
+                var subscriptionConnection = subscriptionData.Connection;
+                if (subscriptionData == null || subscriptionConnection == null || subscriptionConnection.ConnectionException!= null)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                    return Task.CompletedTask;
+                }
+
+                context.Write(writer, new OngoingTaskSubscription
+                {
+                    TaskConnectionStatus = OngoingTaskConnectionStatus.Active,
+                    TimeOfLastClientActivity = subscriptionData.TimeOfLastClientActivity,
+                    Collection = subscriptionData.Criteria.Collection,
+                    LastChangeVector = subscriptionData.ChangeVector,
+                    TaskId = subscriptionData.SubscriptionId,
+                    TaskState = OngoingTaskState.Enabled,
+                    ResponsibleNode = new NodeId
+                    {
+                        NodeTag = ServerStore.NodeTag,
+                        NodeUrl = ServerStore.NodeHttpServerUrl
+                    },
+                    TaskName = subscriptionData.SubscriptionName,
+                    ClientConnection = new OngoingTaskSubscription.ClientConnectionIfo
+                    {
+                        ClientUri = subscriptionConnection.ClientUri,
+                        Strategy = subscriptionConnection.Strategy,
+                        ClientConnectionTime = subscriptionConnection.Stats.ConnectedAt
+                    }
+                    
+                }.ToJson());
+
+                return Task.CompletedTask;
+            }
+        }
+
         [RavenAction("/databases/*/subscriptions", "GET", AuthorizationStatus.ValidUser)]
         public Task GetAll()
         {
@@ -137,8 +240,8 @@ namespace Raven.Server.Documents.Handlers
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                IEnumerable<Subscriptions.SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
-                if (id == null)
+                IEnumerable<SubscriptionStorage.SubscriptionGeneralDataAndStats> subscriptions;
+                if (string.IsNullOrEmpty(name) && id == null)
                 {
                     subscriptions = running
                         ? Database.SubscriptionStorage.GetAllRunningSubscriptions(context, history, start, pageSize)
@@ -149,10 +252,10 @@ namespace Raven.Server.Documents.Handlers
                     var subscription = running
                         ? Database
                             .SubscriptionStorage
-                            .GetRunningSubscription(context, id.Value, name, history)
+                            .GetRunningSubscription(context, id, name, history)
                         : Database
                             .SubscriptionStorage
-                            .GetSubscription(context, name, history);
+                            .GetSubscription(context, id, name, history);
 
                     if (subscription == null)
                     {
@@ -165,11 +268,60 @@ namespace Raven.Server.Documents.Handlers
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    DocumentConventions documentConventions = DocumentConventions.Default;
 
                     writer.WriteStartObject();
 
-                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(x, documentConventions, context));
+                    var subscriptionsAsBlittable = subscriptions.Select(x => EntityToBlittable.ConvertEntityToBlittable(new
+                    {
+                        x.SubscriptionId,
+                        x.SubscriptionName,
+                        x.ChangeVector,
+                        x.Criteria,
+                        x.Connection?.SubscriptionState.TimeOfLastClientActivity
+                        ,
+                        Connection = new
+                        {
+                            x.Connection?.ClientUri,
+                            x.Connection?.Strategy,
+                            x.Connection?.Stats,
+                            ConnectionException = x.Connection?.ConnectionException?.Message
+                        },
+                        RecentConnections = x.RecentConnections?.Select(r=> new
+                        {
+                            r.SubscriptionState.SubscriptionId,
+                            r.SubscriptionState.SubscriptionName,
+                            State = new
+                            {
+                                r.SubscriptionState.ChangeVector,
+                                r.SubscriptionState.Criteria
+                            },
+                            Connection = new
+                            {
+                                r.ClientUri,
+                                r.Options.Strategy,
+                                r.Stats,
+                                r.ConnectionException?.Message
+                            }
+                        }).ToList(),
+                        FailedConnections = x.RecentRejectedConnections?.Select(r => new
+                        {
+                            r.SubscriptionState.SubscriptionId,
+                            r.SubscriptionState.SubscriptionName,
+                            State = new
+                            {
+                                r.SubscriptionState.ChangeVector,
+                                r.SubscriptionState.Criteria
+                            },
+                            Connection = new
+                            {
+                                r.ClientUri,
+                                r.Options.Strategy,
+                                r.Stats,
+                                r.ConnectionException?.Message
+                            }
+                        }).ToList()
+                        
+                    }, DocumentConventions.Default, context));
                     writer.WriteArray(context, "Results", subscriptionsAsBlittable, (w, c, subscription) =>
                     {
                         c.Write(w, subscription);

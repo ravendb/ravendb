@@ -7,10 +7,10 @@
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 

@@ -38,8 +38,8 @@ namespace Sparrow.Json
         {
             public PathCacheHolder(FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> path, FastDictionary<int, object, NumericEqualityComparer> byIndex)
             {
-                this.Path = path;
-                this.ByIndex = byIndex;
+                Path = path;
+                ByIndex = byIndex;
             }
             
             public readonly FastDictionary<StringSegment, object, StringSegmentEqualityStructComparer> Path;
@@ -396,10 +396,10 @@ namespace Sparrow.Json
             int memorySize = maxByteCount + escapePositionsSize;
             var memory = longLived ? GetLongLivedMemory(memorySize) : GetMemory(memorySize);
 
-            fixed (char* pField = field.String)
+            fixed (char* pField = field.Buffer)
             {
                 var address = memory.Address;
-                var actualSize = Encodings.Utf8.GetBytes(pField + field.Start, field.Length, address, memory.SizeInBytes);
+                var actualSize = Encodings.Utf8.GetBytes(pField + field.Offset, field.Length, address, memory.SizeInBytes);
 
                 state.FindEscapePositionsIn(address, actualSize, escapePositionsSize);
 

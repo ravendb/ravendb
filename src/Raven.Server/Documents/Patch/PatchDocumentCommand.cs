@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Patch
                     throw new ConcurrencyException($"Could not patch document '{_id}' because non current change vector was used")
                     {
                         ActualChangeVector = null,
-                        ExpectedChangeVector = _expectedChangeVector,
+                        ExpectedChangeVector = _expectedChangeVector
                     };
                 }
 
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Patch
             else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
             {
                 if (_isTest == false || _scriptIsPuttingDocument)
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id, 
+                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
                         originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
 
                 result.Status = PatchStatus.Patched;

@@ -79,7 +79,7 @@ namespace Raven.Server.Web.Studio
                     var functionsBlittable = context.Read(HttpContext.Request.Body, "ValidateCustomFunctions");
                     ValidateCustomFunctions(functionsBlittable);
                 }
-                catch (Exception) 
+                catch (Exception)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return HttpContext.Response.WriteAsync("\"Failed to validate custom functions!\"");
@@ -90,7 +90,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void ValidateCustomFunctions(BlittableJsonReaderObject document)
+        private static void ValidateCustomFunctions(BlittableJsonReaderObject document)
         {
             var engine = new Engine(cfg =>
             {

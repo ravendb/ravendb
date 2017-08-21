@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client.Documents.Indexes;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes
@@ -96,7 +95,8 @@ namespace Raven.Server.Documents.Indexes
 
         public IEnumerator<Index> GetEnumerator()
         {
-            return _indexesByEtag.Values.GetEnumerator();
+            // This doesn't happen often enough for this lock to hurt
+            return _indexesByName.Values.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -104,6 +104,9 @@ namespace Raven.Server.Documents.Indexes
             return GetEnumerator();
         }
 
+        /// <summary>
+        /// This value should be used sparingly: fetching it locks the cache.
+        /// </summary>
         public int Count => _indexesByEtag.Count;
     }
 }

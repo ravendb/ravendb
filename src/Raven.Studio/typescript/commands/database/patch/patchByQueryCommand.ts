@@ -4,18 +4,26 @@ import endpoints = require("endpoints");
 
 class patchByQueryCommand extends commandBase {
 
-    constructor(private indexName: string, private queryStr: string, private patchRequest: Raven.Server.Documents.Patch.PatchRequest, private db: database) {
+    constructor(private queryStr: string, private patchRequest: Raven.Server.Documents.Patch.PatchRequest, private db: database) {
         super();
     }
 
     execute(): JQueryPromise<operationIdDto> {
-        const url = endpoints.databases.queries.queries + this.indexName;
-        const urlParams = "?query=" + encodeURIComponent(this.queryStr) + "&allowStale=true";
-        return this.patch(url + urlParams, JSON.stringify(this.patchRequest), this.db)
+        const url = endpoints.databases.queries.queries;
+        const urlParams = "?allowStale=true";
+        
+        const payload = {
+            Patch: this.patchRequest, 
+            Query: {
+                Query: this.queryStr
+            }
+        };
+        
+        return this.patch(url + urlParams, JSON.stringify(payload), this.db)
             .done((response: operationIdDto) => {
-                this.reportSuccess("Scheduled patch of index: " + this.indexName);
+                this.reportSuccess("Scheduled patch based on query");
             })
-            .fail((response: JQueryXHR) => this.reportError("Failed to schedule patch of index " + this.indexName, response.responseText, response.statusText));
+            .fail((response: JQueryXHR) => this.reportError("Failed to schedule patch", response.responseText, response.statusText));
     }
 
 }

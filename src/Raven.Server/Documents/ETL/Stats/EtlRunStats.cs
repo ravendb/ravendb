@@ -1,6 +1,4 @@
-﻿using Sparrow.Json;
-
-namespace Raven.Server.Documents.ETL.Stats
+﻿namespace Raven.Server.Documents.ETL.Stats
 {
     public class EtlRunStats
     {

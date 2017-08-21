@@ -11,7 +11,7 @@ using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
-    class TransactionDebugHandler : DatabaseRequestHandler
+    public class TransactionDebugHandler : DatabaseRequestHandler
     {
         public class TransactionInfo
         {

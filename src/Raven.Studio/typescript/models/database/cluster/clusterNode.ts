@@ -1,6 +1,7 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 
 import clusterTopology = require("models/database/cluster/clusterTopology");
+import generalUtils = require("common/generalUtils");
 
 class clusterNode {
     tag = ko.observable<string>();
@@ -8,6 +9,10 @@ class clusterNode {
     type = ko.observable<clusterNodeType>();
     connected = ko.observable<boolean>();
     errorDetails = ko.observable<string>();
+    errorDetailsShort = ko.pureComputed(() => {
+        const longError = this.errorDetails();
+        return generalUtils.trimMessage(longError);
+    });
 
     cssIcon = ko.pureComputed(() => {
         const type = this.type();

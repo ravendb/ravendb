@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using Raven.Server.Config.Attributes;
-using Raven.Server.Config.Settings;
 using Raven.Server.Utils;
 
 namespace Raven.Server.Config.Categories
@@ -11,7 +10,7 @@ namespace Raven.Server.Config.Categories
     public class SecurityConfiguration : ConfigurationCategory
     {
         [Description(
-            "The path of the .pfx certificate file. If specified, RavenDB will use HTTPS / SSL for all network activities. You can use the ~/ prefix to refer to RavenDB's base directory.")]
+            "The path to .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities. You can use the '~/' prefix to refer to RavenDB's base directory.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Path")]
         public string CertificatePath { get; set; }
@@ -22,7 +21,7 @@ namespace Raven.Server.Config.Categories
         public string CertificatePassword { get; set; }
 
         [Description(
-            "A command or executable to run which will provide a .pfx certificate file. If specified, RavenDB will use HTTPS / SSL for all network activities.")]
+            "A command or executable providing a .pfx certificate file. If specified, RavenDB will use HTTPS/SSL for all network activities.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.Certificate.Exec")]
         public string CertificateExec { get; set; }
@@ -136,6 +135,6 @@ namespace Raven.Server.Config.Categories
         None = 0,
         Local = 1 << 0,
         PrivateNetwork = 1 << 1,
-        PublicNetwork = 1 << 2,
+        PublicNetwork = 1 << 2
     }
 }

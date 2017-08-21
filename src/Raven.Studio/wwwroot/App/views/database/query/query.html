@@ -16,16 +16,15 @@
                         <div class="btn-group btn-group-sm pull-right" role="group">
                             <div class="dropdown">
                                 <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"
-                                    data-bind="enable: recentQueries().length">
-    <i class="icon-recent"></i><span>Recent</span>
-                                                        <span class="caret"></span>
-                                                    </button>
+                                        data-bind="enable: recentQueries().length">
+                                    <i class="icon-recent"></i><span>Recent</span>
+                                    <span class="caret"></span>
+                                </button>
                                 <div class="dropdown-menu" role="menu">
                                     <ul class="menu max-height" data-bind="foreach: recentQueries">
                                         <li>
                                             <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                                 <span data-bind="visible: queryText">
-                                                    <span class="text-muted">|</span>
                                                     <span data-bind="text: queryText"></span>
                                                 </span>
                                                 <span data-bind="with: transformerQuery">
@@ -46,16 +45,20 @@
                                 </div>
                             </div>
                             <div class="dropdown">
-                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true"
-                                    aria-expanded="true">
-                                <i class="icon-settings"></i><span>Settings</span>
-                                <span class="caret"></span>
-                            </button>
+                                <button class="btn btn-default btn-sm dropdown-toggle" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                                    <i class="icon-settings"></i><span>Settings</span>
+                                    <span class="caret"></span>
+                                </button>
                                 <div class="dropdown-menu settings-menu" data-bind="dropdownPanel: true, template: { name: 'settings-template' }">
                                 </div>
                             </div>
                         </div>
-                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', hasFocus: queryTextHasFocus, completer:queryCompleter, completerHostObject: $root }"></pre>
+                        <pre class="form-control editor query-source" 
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+                        
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
+                            <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
+                        </div>
                     </div>
                     <div class="query-controls">
                         <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
@@ -77,7 +80,55 @@
         <div class="flex-window-head">
             <div class="clearfix">
                 <div class="results-info pull-left">
-                    <small data-bind="html: querySummary"></small>
+                    <div  data-bind="visible: queryStats() && hasEditableIndex(), if: queryStats() && hasEditableIndex()"  class="dropdown" >
+                        <button class="btn btn-info btn-sm dropdown-toggle" type="button" id="dropdownMenu" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                            <span>
+                                <i class="icon-index"></i> <span>Index '</span><span data-bind="text: queriedIndexLabel"></span>'
+                            </span>
+                            <span class="caret"></span>
+                        </button>
+                        <ul class="dropdown-menu" aria-labelledby="dropdownMenu">
+                            
+                            <li>
+                                <a href="#" data-bind="attr: { href: editIndexUrl }">
+                                    <strong><i data-bind="attr: { class: isAutoIndex() ? 'icon-preview' : 'icon-edit' }"></i> <span data-bind="text: isAutoIndex() ? 'View index' : 'Edit index'"></span></strong>
+                                </a>
+                            </li>
+
+                            <li class="has-disable-reason" 
+                                data-original-title="Available only for static and auto indexes">
+                                <a href="#" data-bind="css: { 'disabled' : isDynamicIndex }, attr: { 'data-original-title': !isDynamicIndex() ? '' : 'Available only for static and auto indexes', href: termsUrl }" title="Navigate to index terms">
+                                    <i class="icon-terms"></i> <span>View index terms</span>
+                                </a>
+                            </li>
+
+                            <li>
+                                <a href="#" data-bind="attr: { href: indexPerformanceUrl }" title="Navigate to index performance">
+                                    <i class="icon-traffic-watch"></i> <span>Index performance</span>
+                                </a>
+                            </li>
+
+                            <li class="has-disable-reason"  data-original-title="Available only for map/reduce indexes">
+                                
+                                <a href="#" data-bind="visible: isMapReduceIndex, attr: { href: visualizerUrl }" title="Map/Reduce Visualizer">
+                                    <i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span>
+                                </a>
+
+                                <a data-bind="visible: !isMapReduceIndex()" class="disabled has-disable-reason" title="Available only for map/reduce indexes">
+                                    <i class="icon-map-reduce-visualizer"></i> <span>Map/Reduce Visualizer</span>
+                                </a>
+                            </li>
+
+                        </ul>
+                    </div>
+                    <small data-bind="if: queryStats, visible: queryStats">
+                        <strong data-bind="if: !hasEditableIndex(), visible: !hasEditableIndex()">
+                            <i class="icon-documents"></i><span data-bind="text: queriedIndexDescription"></span>
+                        </strong>
+                        <span data-bind="visible: queriedIndex() && queriedIndex().indexOf('collection') === 0">&nbsp;collection</span>
+                        &nbsp;was used to get the results in
+                        <strong data-bind="text: queryStats().DurationInMs + ' ms'"></strong>.
+                    </small>
                 </div>
                 <div class="btn-group btn-group-sm pull-right" role="group">
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
@@ -123,7 +174,7 @@
                         </div>
                     </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
-                    <button type="button" class="btn btn-default btn-upcoming" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
+                    <!-- TODO <button type="button" class="btn btn-default" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>-->
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>
@@ -201,7 +252,7 @@
         </div>
         <div class="col-xs-5">
             <div class="toggle">
-                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries">
+                <input type="checkbox" class="styled" data-bind="checked: criteria().indexEntries, disable: isDynamicIndex">
                 <label></label>
             </div>
         </div>
@@ -234,7 +285,7 @@
                             <span>Loading, please wait <i class="fa fa-spinner fa-spin fa-2x"></i></span>
                         </div>
                 customColumns: currentColumnsParams,
-                isIndexMapReduce: isIndexMapReduce,
+                isMapReduceIndex: isMapReduceIndex,
                 selectedIndices: selectedResultIndices
                 --
                     <div id="queryResultsGrid"

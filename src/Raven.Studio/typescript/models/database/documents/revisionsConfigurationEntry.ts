@@ -25,7 +25,7 @@ class revisionsConfigurationEntry {
         minimumRevisionAgeToKeep: this.minimumRevisionAgeToKeep
     });
 
-    constructor(collection: string, dto: Raven.Client.Server.Revisions.RevisionsCollectionConfiguration) {
+    constructor(collection: string, dto: Raven.Client.ServerWide.Revisions.RevisionsCollectionConfiguration) {
         this.collection(collection);
 
         this.limitRevisions(dto.MinimumRevisionsToKeep != null);
@@ -93,7 +93,7 @@ class revisionsConfigurationEntry {
         return this;
     }
 
-    toDto(): Raven.Client.Server.Revisions.RevisionsCollectionConfiguration {
+    toDto(): Raven.Client.ServerWide.Revisions.RevisionsCollectionConfiguration {
         return {
             Active: !this.disabled(),
             MinimumRevisionsToKeep: this.limitRevisions() ? this.minimumRevisionsToKeep() : null,

@@ -250,10 +250,11 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
+            _client?.Dispose();
+
             _cts.Cancel();
 
             _counters.Clear();
-            _client?.Dispose();
 
             _task.Wait();
 

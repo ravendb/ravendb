@@ -28,6 +28,15 @@ function getManageServerMenuItem() {
             itemRouteToHighlight: 'admin/settings/cluster'
         }),
         new leafMenuItem({
+            route: 'admin/settings/debugInfo',
+            moduleId: 'viewmodels/manage/infoPackage',
+            title: 'Gather Debug Info',
+            nav: true,
+            css: 'icon-gather-debug-information',
+            dynamicHash: appUrl.forDebugInfo,
+            enabled: accessHelper.isGlobalAdmin
+        }),
+        new leafMenuItem({
             route: 'admin/settings/adminJsConsole',
             moduleId: "viewmodels/manage/adminJsConsole",
             title: "Administrator JS Console",
@@ -36,16 +45,16 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forAdminJsConsole,
             enabled: accessHelper.isGlobalAdmin
         }),
-        /* TODO
         new leafMenuItem({
-            route: 'admin/settings/backup',
-            moduleId: 'viewmodels/manage/backup',
-            title: 'Backup',
+            route: 'admin/settings/clientConfiguration',
+            moduleId: 'viewmodels/manage/clientConfiguration',
+            title: 'Client Configuration',
             nav: true,
-            css: 'icon-backup',
-            dynamicHash: appUrl.forBackup,
+            css: 'icon-client-configuration',
+            dynamicHash: appUrl.forGlobalClientConfiguration,
             enabled: accessHelper.isGlobalAdmin
-        }),
+        })
+        /* TODO
         new leafMenuItem({
             route: 'admin/settings/compact',
             moduleId: 'viewmodels/manage/compact',
@@ -53,15 +62,6 @@ function getManageServerMenuItem() {
             nav: true,
             css: 'icon-compact',
             dynamicHash: appUrl.forCompact,
-            enabled: accessHelper.isGlobalAdmin
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/restore',
-            moduleId: 'viewmodels/manage/restore',
-            title: 'Restore',
-            nav: true,
-            css: 'icon-restore',
-            dynamicHash: appUrl.forRestore,
             enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
@@ -100,15 +100,6 @@ function getManageServerMenuItem() {
             dynamicHash: appUrl.forLicenseInformation,
             enabled: canReadOrWrite
         }),*/
-        new leafMenuItem({
-            route: 'admin/settings/debugInfo',
-            moduleId: 'viewmodels/manage/infoPackage',
-            title: 'Gather Debug Info',
-            nav: true,
-            css: 'icon-gather-debug-information',
-            dynamicHash: appUrl.forDebugInfo,
-            enabled: accessHelper.isGlobalAdmin
-        }),
         /*
         new leafMenuItem({
             route: 'admin/settings/ioTest',
@@ -137,16 +128,7 @@ function getManageServerMenuItem() {
             css: 'icon-studio-config',
             dynamicHash: appUrl.forStudioConfig,
             enabled: canReadOrWrite
-        }),
-        new leafMenuItem({
-            route: 'admin/settings/hotSpare',
-            moduleId: 'viewmodels/manage/hotSpare',
-            title: 'Hot Spare',
-            nav: true,
-            css: 'icon-hot-spare',
-            dynamicHash: appUrl.forHotSpare,
-            enabled: accessHelper.isGlobalAdmin
-        })*/
+        }),*/
     ];
 
     return new intermediateMenuItem('Manage server', items, 'icon-manage-server');

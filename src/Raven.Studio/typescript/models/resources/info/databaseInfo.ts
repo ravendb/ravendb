@@ -50,7 +50,7 @@ class databaseInfo {
 
     nodes = ko.observableArray<databaseGroupNode>([]);
 
-    constructor(dto: Raven.Client.Server.Operations.DatabaseInfo) {
+    constructor(dto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         this.initializeObservables();
 
         this.update(dto);
@@ -80,7 +80,7 @@ class databaseInfo {
         return { qualifier: input.substr(0, 2), name: input.substr(3) };
     }
 
-    private computeBackupStatus(dto: Raven.Client.Server.Operations.BackupInfo) {
+    private computeBackupStatus(dto: Raven.Client.ServerWide.Operations.BackupInfo) {
         if (!dto.LastBackup) {
             return "text-danger";
         }
@@ -157,7 +157,7 @@ class databaseInfo {
         });
     }
 
-    update(dto: Raven.Client.Server.Operations.DatabaseInfo): void {
+    update(dto: Raven.Client.ServerWide.Operations.DatabaseInfo): void {
         this.name = dto.Name;
         this.disabled(dto.Disabled);
         this.isAdmin(dto.IsAdmin);
@@ -192,7 +192,7 @@ class databaseInfo {
         //TODO: consider in place update? of nodes?
     }
 
-    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.Server.Operations.DbGroupNodeStatus;}) {
+    private applyNodesStatuses(nodes: databaseGroupNode[], statuses: { [key: string]: Raven.Client.ServerWide.Operations.DbGroupNodeStatus;}) {
         nodes.forEach(node => {
             if (node.tag() in statuses) {
                 const nodeStatus = statuses[node.tag()];
@@ -202,7 +202,7 @@ class databaseInfo {
         });
     }
 
-    private mapNodes(type: databaseGroupNodeType, nodes: Array<Raven.Client.Server.Operations.NodeId>): Array<databaseGroupNode> {
+    private mapNodes(type: databaseGroupNodeType, nodes: Array<Raven.Client.ServerWide.Operations.NodeId>): Array<databaseGroupNode> {
         return _.map(nodes, v => databaseGroupNode.for(v.NodeTag, v.NodeUrl, v.ResponsibleNode, type));
     }
 }

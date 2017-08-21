@@ -754,7 +754,7 @@ namespace Raven.Client.Documents.Session
         /// <param name = "ordering">Ordering type.</param>
         public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending);
+            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
             return this;
         }
 
@@ -1091,11 +1091,6 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
-                IsSpatialQuery = IsSpatialQuery,
-                SpatialFieldName = SpatialFieldName,
-                QueryShape = QueryShape,
-                SpatialRelation = SpatialRelation,
-                SpatialUnits = SpatialUnits,
                 DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,

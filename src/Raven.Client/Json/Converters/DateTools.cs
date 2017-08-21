@@ -99,27 +99,27 @@ namespace Raven.Client.Json.Converters
             {
                 return date.ToString(YEAR_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.MONTH)
+            if (resolution == Resolution.MONTH)
             {
                 return date.ToString(MONTH_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.DAY)
+            if (resolution == Resolution.DAY)
             {
                 return date.ToString(DAY_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.HOUR)
+            if (resolution == Resolution.HOUR)
             {
                 return date.ToString(HOUR_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.MINUTE)
+            if (resolution == Resolution.MINUTE)
             {
                 return date.ToString(MINUTE_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.SECOND)
+            if (resolution == Resolution.SECOND)
             {
                 return date.ToString(SECOND_FORMAT, CultureInfo.InvariantCulture);
             }
-            else if (resolution == Resolution.MILLISECOND)
+            if (resolution == Resolution.MILLISECOND)
             {
                 return date.ToString(MILLISECOND_FORMAT, CultureInfo.InvariantCulture);
             }

@@ -72,7 +72,7 @@ namespace Micro.Benchmark.Benchmarks.PageLocator
         private PageLocatorV6 _cacheV6;
         private PageLocatorV7 _cacheV7;
 
-        [Setup]
+        [GlobalSetup]
         public void Setup()
         {
             _cacheV1 = new PageLocatorV1(null, CacheSize);

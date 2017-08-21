@@ -14,11 +14,13 @@ import documentObject = require("models/database/documents/document");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
 
 class editSubscriptionTask extends viewModelBase {
 
+    completer = defaultAceCompleter.completer();
     editedSubscription = ko.observable<ongoingTaskSubscriptionEdit>();
     isAddingNewSubscriptionTask = ko.observable<boolean>(true);
 
@@ -35,7 +37,7 @@ class editSubscriptionTask extends viewModelBase {
 
     spinners = {
         globalToggleDisable: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -55,7 +57,7 @@ class editSubscriptionTask extends viewModelBase {
             new ongoingTaskInfoCommand(this.activeDatabase(), "Subscription", args.taskId, args.taskName)
                 .execute()
                 .done((result: Raven.Client.Documents.Subscriptions.SubscriptionState) => {
-                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result));
+                    this.editedSubscription(new ongoingTaskSubscriptionEdit(result, true));
 
                     if (this.editedSubscription().collection()) {
                         this.editedSubscription().getCollectionRevisionsSettings()
@@ -175,9 +177,9 @@ class editSubscriptionTask extends viewModelBase {
             const extraClassProvider = (item: documentObject | Raven.Server.Documents.Handlers.DocumentWithException) => {
                 const documentItem = item as Raven.Server.Documents.Handlers.DocumentWithException;
                 return documentItem.Exception ? "exception-row" : "";
-            }
+            };
 
-            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), this.editedSubscription().collections().map(x => x.name), {
+            const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), this.gridController(), {
                 showRowSelectionCheckbox: false,
                 showSelectAllCheckbox: false,
                 enableInlinePreview: true,

@@ -27,7 +27,7 @@
                         
                         <div class="form-group" data-bind="visible: databaseModel.isFromBackup">
                             <h3>RESTORE POINT</h3>
-                            <div data-bind="validationElement: databaseModel.selectedRestorePoint, validationOptions: { insertMessages: false }">
+                            <div data-bind="validationOptions: { insertMessages: false }, validationElement: databaseModel.selectedRestorePoint">
                                 <div class="dropdown btn-block">
                                     <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" 
                                             data-bind="disable: databaseModel.restorePoints().length == 0, attr: { title: databaseModel.restorePoints().length == 0 ? 'No restore points in selected directory' : '' }, , disable: databaseModel.spinners.fetchingRestorePoints()">

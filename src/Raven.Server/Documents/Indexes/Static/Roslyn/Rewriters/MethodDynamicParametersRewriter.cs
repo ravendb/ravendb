@@ -3,7 +3,6 @@ using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Org.BouncyCastle.Utilities.Collections;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
@@ -15,7 +14,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
         {
         }
 
-        private const string dynamicStr = "dynamic";
+        private const string DynamicString = "dynamic";
+
         public override SyntaxNode VisitMethodDeclaration(MethodDeclarationSyntax node)
         {
             var originalParameters = node.ParameterList.Parameters;
@@ -32,19 +32,19 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 {
                     sb.Append(", ");
                 }
-                if (param.Type.ToString() == dynamicStr)
+                if (param.Type.ToString() == DynamicString)
                 {
                     sb.Append(param);
                     continue;
                 }
-                sb.Append($"{dynamicStr} d_{param.Identifier.WithLeadingTrivia()}");
+                sb.Append($"{DynamicString} d_{param.Identifier.WithLeadingTrivia()}");
             }
             sb.Append(')');
             var modifiedParameterList = node.WithParameterList(SyntaxFactory.ParseParameterList(sb.ToString()));
             var statements = new List<StatementSyntax>();
             foreach (var param in originalParameters)
             {
-                if (param.Type.ToString() == dynamicStr)
+                if (param.Type.ToString() == DynamicString)
                     continue;
                 statements.Add(SyntaxFactory.ParseStatement($"{param.Type} {param.Identifier.WithLeadingTrivia()} = ({param.Type})d_{param.Identifier.WithLeadingTrivia()};"));
             }

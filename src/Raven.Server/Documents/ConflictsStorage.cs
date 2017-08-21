@@ -1,14 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -53,7 +50,7 @@ namespace Raven.Server.Documents
             Etag = 5,
             Collection = 6,
             LastModified = 7,
-            Flags = 8,
+            Flags = 8
         }
 
         static ConflictsStorage()
@@ -150,7 +147,7 @@ namespace Raven.Server.Documents
             var list = new List<DocumentConflict>();
             LazyStringValue lastId = null;
 
-            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], Slices.Empty, 0, false))
+            foreach (var tvr in table.SeekForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], Slices.Empty, 0))
             {
                 var conflict = TableValueToConflictDocument(context, ref tvr.Result.Reader);
 
@@ -197,7 +194,7 @@ namespace Raven.Server.Documents
                 Etag = TableValueToEtag((int)ConflictsTable.Etag, ref tvr),
                 Collection = TableValueToString(context, (int)ConflictsTable.Collection, ref tvr),
                 LastModified = TableValueToDateTime((int)ConflictsTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr),
+                Flags = TableValueToFlags((int)ConflictsTable.Flags, ref tvr)
             };
 
             var read = tvr.Read((int)ConflictsTable.Data, out int size);
@@ -294,7 +291,7 @@ namespace Raven.Server.Documents
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
-                var deleteCount = conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, true, long.MaxValue, conflictDocument =>
+                conflictsTable.DeleteForwardFrom(ConflictsSchema.Indexes[IdAndChangeVectorSlice], prefixSlice, true, long.MaxValue, conflictDocument =>
                 {
                     var etag = TableValueToEtag((int)ConflictsTable.Etag, ref conflictDocument.Reader);
                     _documentsStorage.EnsureLastEtagIsPersisted(context, etag);
@@ -652,7 +649,7 @@ namespace Raven.Server.Documents
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Conflict,
-                    IsSystemDocument = false,
+                    IsSystemDocument = false
                 });
             }
         }
@@ -679,7 +676,7 @@ namespace Raven.Server.Documents
                         Id = lowerId.ToString(),
                         ChangeVector = changeVector,
                         CollectionName = collectionName.Name,
-                        IsSystemDocument = collectionName.IsSystem,
+                        IsSystemDocument = collectionName.IsSystem
                     });
                     return new DeleteOperationResult
                     {

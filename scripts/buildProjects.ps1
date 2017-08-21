@@ -6,20 +6,8 @@ function BuildServer ( $srcDir, $outDir, $spec ) {
     $output = [io.path]::combine($outDir, "Server");
     $commandArgs += @( "--output", $output )
     $commandArgs += @( "--configuration", "Release" )
-    
-    if ($spec.TargetId -ne 'rpi') {
-        $commandArgs += $( "--runtime", "$($spec.Runtime)" )
-    }
-
+    $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"
-
-    if ($spec.TargetId -eq "rpi") {
-        $bin = [io.path]::combine($srcDir, "bin");
-        write-host "Clean $bin"
-        Remove-Item -Recurse -Force $bin
-
-        $commandArgs += "/p:ARM=true"
-    }
 
     if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($spec.Arch)"
@@ -99,19 +87,8 @@ function BuildRvn ( $srcDir, $outDir, $spec ) {
     $output = [io.path]::combine($outDir, "rvn");
     $commandArgs += @( "--output", $output )
     $commandArgs += @( "--configuration", "Release" )
-    
-    if ($spec.TargetId -ne 'rpi') {
-        $commandArgs += $( "--runtime", "$($spec.Runtime)" )
-    }
-
+    $commandArgs += $( "--runtime", "$($spec.Runtime)" )
     $commandArgs += "$srcDir"
-
-    if ($spec.TargetId -eq "rpi") {
-        $bin = [io.path]::combine($srcDir, "bin");
-        Remove-Item -Recurse -Force $bin
-
-        $commandArgs += "/p:ARM=true"
-    }
 
     if ([string]::IsNullOrEmpty($spec.Arch) -eq $false) {
         $commandArgs += "/p:Platform=$($spec.Arch)"

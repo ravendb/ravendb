@@ -17,7 +17,7 @@
             </div>
             <div class="row flex-row margin-bottom">
                 <label class="control-label col-sm-4 col-lg-2">Backup type <i id="backup-info" class="icon-info text-info"></i></label>
-                <div class="col-sm-4 col-lg-4" data-bind="validationElement: backupType, validationOptions: { insertMessages: false }">
+                <div class="col-sm-4 col-lg-4" data-bind="validationOptions: { insertMessages: false }, validationElement: backupType">
                     <div class="dropdown btn-block">
                         <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown">
                             <span data-bind="text: backupType() || 'Select backup type..'"></span>
@@ -58,7 +58,7 @@
                 </div>
             </div>
             <div class="row flex-row margin-bottom">
-                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Inceremental</label>
+                <label class="control-label col-xs-12 col-sm-4 col-lg-2">Incremental</label>
                 <div class="col-xs-6 col-sm-4 col-lg-4" data-bind="validationElement: incrementalBackupFrequency">
                     <div class="dropdown btn-block">
                         <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
@@ -128,7 +128,7 @@
                     </div>
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="s3RegionInput"
@@ -212,7 +212,7 @@
             </div>
         </div>
     </div>
-
+    
     <div class="panel" data-bind="with: glacierSettings">
         <div class="padding">
             <div class="toggle">
@@ -232,7 +232,7 @@
                     </div>
                     <div class="row flex-row margin-bottom">
                         <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
-                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: awsRegionName, validationOptions: { insertMessages: false }">
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationOptions: { insertMessages: false }, validationElement: awsRegionName">
                             <div class="dropdown btn-block">
                                 <input type="text" class="form-control dropdown-toggle" data-toggle="dropdown"
                                        id="glacierRegionInput"
@@ -262,6 +262,69 @@
                     </div>
                     <div class="text-right">
                         <button data-bind="click: _.partial($root.testCredentials, $data)" class="btn btn-info">
+                            <i class="icon-rocket"></i>
+                            &nbsp;&nbsp;<span>Test credentials</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="panel" data-bind="with: ftpSettings">
+        <div class="padding">
+            <div class="toggle">
+                <input id="toggle-ftp" type="checkbox" data-bind="checked: enabled">
+                <label for="toggle-ftp">FTP</label>
+            </div>
+
+            <div class="row" data-bind="collapse: enabled">
+                <div class="col-sm-8 col-lg-6 margin-top">
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">
+                            Host <i id="ftp-host-info" class="icon-info text-info"></i>
+                        </label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: url">
+                            <input data-bind="textInput: url" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Port</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: port">
+                            <input data-bind="textInput: port" type="text" class="form-control" placeholder="default: 21" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">User name</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: userName">
+                            <input data-bind="textInput: userName" type="text" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Password</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: password">
+                            <input data-bind="textInput: password" type="password" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="row flex-row margin-bottom" data-bind="visible: isFtps">
+                        <label class="control-label col-xs-12 col-sm-6 col-lg-4">Certificate</label>
+                        <div class="col-xs-12 col-sm-6 col-lg-8" data-bind="validationElement: certificateFileName">
+                            <div class="input-group file-input">
+                                <input type="file" id="filePicker" data-bind="event: { change: fileSelected }, disable: isLoadingFile" tabindex="-1", disabled>
+                                <span class="static-name form-control" data-bind="text: certificateFileName() || 'Select file...'"></span>
+                                <span class="input-group-btn">
+                                    <label for="filePicker" class="btn btn-default">
+                                        <i class="icon-document"></i>
+                                        <span>Browse</span>
+                                    </label>
+                                </span>
+                                <p class="help-block" data-bind="validationMessage: certificateFileName"></p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-right">
+                        <button data-bind="click: _.partial($root.testCredentials, $data), disable: isTestingCredentials, css: { 'btn-spinner': isTestingCredentials }" class="btn btn-info">
                             <i class="icon-rocket"></i>
                             &nbsp;&nbsp;<span>Test credentials</span>
                         </button>

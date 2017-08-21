@@ -4,10 +4,10 @@ using System.Linq;
 using System.Threading;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations.ConnectionStrings;
-using Raven.Client.Server.Operations.ETL;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
+using Raven.Client.ServerWide.Operations.ETL;
 using Raven.Server.Documents.ETL;
 using Xunit;
 

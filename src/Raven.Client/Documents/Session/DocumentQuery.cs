@@ -930,20 +930,6 @@ namespace Raven.Client.Documents.Session
             return GenerateSpatialQueryData(fieldName, criteria);
         }
 
-        /// <summary>
-        ///   Returns a <see cref = "System.String" /> that represents this instance.
-        /// </summary>
-        /// <returns>
-        ///   A <see cref = "System.String" /> that represents this instance.
-        /// </returns>
-        public override string ToString()
-        {
-            var query = base.ToString();
-            if (IsSpatialQuery)
-                return string.Format(CultureInfo.InvariantCulture, "{0} SpatialField: {1} QueryShape: {2} Relation: {3}", query, SpatialFieldName, QueryShape, SpatialRelation);
-            return query;
-        }
-
         public T First()
         {
             return ExecuteQueryOperation(1).First();
@@ -1119,11 +1105,6 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
-                IsSpatialQuery = IsSpatialQuery,
-                SpatialFieldName = SpatialFieldName,
-                QueryShape = QueryShape,
-                SpatialRelation = SpatialRelation,
-                SpatialUnits = SpatialUnits,
                 DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,

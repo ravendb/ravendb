@@ -1,4 +1,5 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {  
@@ -12,6 +13,8 @@ namespace Raven.Client.Documents.Commands
 
         public class Conflict
         {
+            public DateTime LastModified { get; set; }
+
             public string ChangeVector { get; set; }
 
             public BlittableJsonReaderObject Doc { get; set; }

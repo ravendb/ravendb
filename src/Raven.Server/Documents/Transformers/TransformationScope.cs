@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Transformers
 
                 var document = new Document
                 {
-                    Data = _context.ReadObject(result, string.Empty),
+                    Data = _context.ReadObject(result, string.Empty)
                 };
 
                 yield return document;

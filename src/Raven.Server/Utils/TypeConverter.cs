@@ -16,7 +16,7 @@ using Sparrow.Extensions;
 
 namespace Raven.Server.Utils
 {
-    internal class TypeConverter
+    internal static class TypeConverter
     {
         private const string TypePropertyName = "$type";
 
@@ -149,7 +149,7 @@ namespace Raven.Server.Utils
             var jsonObject = value as BlittableJsonReaderObject;
             if (jsonObject != null)
             {
-                if(jsonObject.TryGetWithoutThrowingOnError("$values",out jsonArray))
+                if (jsonObject.TryGetWithoutThrowingOnError("$values", out jsonArray))
                     return new DynamicArray(jsonArray);
 
                 return new DynamicBlittableJson(jsonObject);
@@ -223,7 +223,7 @@ namespace Raven.Server.Utils
                 // HACK
                 return (T)value;
             }
-          
+
             if (value is T)
                 return (T)value;
 

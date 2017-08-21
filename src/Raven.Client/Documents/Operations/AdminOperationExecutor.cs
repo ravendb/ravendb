@@ -2,7 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Http;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Sparrow.Json;
 

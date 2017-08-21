@@ -8,30 +8,59 @@
         height: 30px;
         flex-basis: 30px;
         flex-shrink: 1;
-        
+
         & > div {
             flex-grow: 1;
             flex-shrink: 0;
         }
     }
-    
+
+    .edit-conflict {
+        width: 100px;
+        flex-grow: 1;
+    }
+
     .conflicted-files {
         margin-bottom: @grid-gutter-width/4;
         flex-basis: 40%;
         height: 40%;
         flex-shrink: 1;
+
         .message {
             display: flex;
-            justify-content:center;
+            justify-content: center;
             align-items: center;
         }
 
+        .conflicted-item {
+            .actions {
+                opacity: .6;
+                transition: .2s opacity ease;
+            }
+
+            .usethis {
+                opacity: 0;
+                transition: .2s opacity ease;
+            }
+
+            &:hover {
+                .actions, .usethis {
+                    opacity: 1;
+                }
+            }
+        }
+
+        .file-info {
+            font-size: 12px;
+            line-height: 16px;
+            font-weight: bold;
+        }
+
         & > div {
-            flex-grow: 1;
             background-color: @gray-darker;
-            flex-shrink: 0;
-            .scroll;
-            width: 10%;
+            flex: 1 1 auto;
+            min-width: 300px;
+            transition: flex-basis 500ms ease-in-out;
 
             & + div {
                 margin-left: @grid-gutter-width/4;
@@ -39,7 +68,17 @@
 
             pre {
                 min-height: 100%;
+                border-top: 1px solid @gray-dark;
+                background-color: @gray-darker;
             }
+        }
+
+        .vectors {
+            .title {
+                padding-top: 5px;
+            }
+
+            line-height: 18px;
         }
     }
 

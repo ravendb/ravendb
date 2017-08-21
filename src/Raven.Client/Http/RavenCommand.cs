@@ -6,7 +6,6 @@ using System.Net.Http;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 
@@ -31,10 +30,9 @@ namespace Raven.Client.Http
     public abstract class RavenCommand<TResult>
     {
         public CancellationToken CancellationToken = CancellationToken.None;
-        public Dictionary<ServerNode, ExceptionDispatcher.ExceptionSchema> FailedNodes;
+        public Dictionary<ServerNode, Exception> FailedNodes;
 
         public TResult Result;
-        public int AuthenticationRetries;
         public abstract bool IsReadRequest { get; }
 
         public HttpStatusCode StatusCode;
@@ -42,13 +40,15 @@ namespace Raven.Client.Http
         public RavenCommandResponseType ResponseType { get; protected set; }
 
         public TimeSpan? Timeout { get; protected set; }
+        public bool AggressiveCacheAllowed { get; protected set; }
 
         protected RavenCommand()
         {
             ResponseType = RavenCommandResponseType.Object;
+            AggressiveCacheAllowed = true;
         }
 
-        public abstract HttpRequestMessage CreateRequest(ServerNode node, out string url);
+        public abstract HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url);
 
         public virtual void SetResponse(BlittableJsonReaderObject response, bool fromCache)
         {

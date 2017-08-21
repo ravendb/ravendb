@@ -2,7 +2,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import killOperationComamnd = require('commands/operations/killOperationCommand');
 import moment = require("moment");
 import document = require("models/database/documents/document");
-import runningTask = require("models/database/debug/runningTask");
 import autoRefreshBindingHandler = require("common/bindingHelpers/autoRefreshBindingHandler");
 import messagePublisher = require("common/messagePublisher");
 import tableNavigationTrait = require("common/tableNavigationTrait");
@@ -14,7 +13,7 @@ type taskType = {
 }
 
 class runningTasks extends viewModelBase {
-
+ /* TODO
     allTasks = ko.observableArray<runningTask>();
     filterType = ko.observable<string>(null);
     selectedTask = ko.observable<runningTask>();
@@ -96,7 +95,6 @@ class runningTasks extends viewModelBase {
     fetchTasks(): JQueryPromise<runningTaskDto[]> {
         var db = this.activeDatabase();
         if (db) {
-            /* TODO
             var deferred = $.Deferred();
             new getOperationsCommand(db)
                 .execute()
@@ -104,7 +102,7 @@ class runningTasks extends viewModelBase {
                     this.processRunningTasksResults(results);
                     deferred.resolve(results);
                 });
-            return deferred; */
+            return deferred; 
         }
 
         return null;
@@ -204,7 +202,7 @@ class runningTasks extends viewModelBase {
         $(document).off("mousedown.tasksTableColumnResize");
         $(document).off("mouseup.tasksTableColumnResize");
         $(document).off("mousemove.tasksTableColumnResize");
-    }
+    }*/
 }
 
 export = runningTasks;

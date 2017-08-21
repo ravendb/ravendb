@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Commands
 {
@@ -12,13 +13,13 @@ namespace Raven.Client.Documents.Commands
             _name = name;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions?taskName={_name}";
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Delete,
+                Method = HttpMethod.Delete
             };
             return request;
         }

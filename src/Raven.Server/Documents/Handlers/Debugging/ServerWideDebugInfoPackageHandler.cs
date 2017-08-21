@@ -4,19 +4,16 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.Commands;
-using Raven.Server.Documents.Handlers.Admin;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
-using Raven.Server.Web.Authentication;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -33,14 +30,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
-            {               
+            {
                 using (var ms = new MemoryStream())
                 {
                     using (var archive = new ZipArchive(ms, ZipArchiveMode.Create, true))
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
                         NodeDebugInfoRequestHeader requestHeader;
-                        using (var requestHeaderJson = await transactionOperationContext.ReadForMemoryAsync(HttpContext.Request.Body, "remote-cluster-info-package/read request header"))
+                        using (var requestHeaderJson =
+                            await transactionOperationContext.ReadForMemoryAsync(HttpContext.Request.Body, "remote-cluster-info-package/read request header"))
                         {
                             requestHeader = JsonDeserializationServer.NodeDebugInfoRequestHeader(requestHeaderJson);
                         }
@@ -50,6 +48,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         {
                             await WriteForDatabase(archive, jsonOperationContext, localEndpointClient, databaseName);
                         }
+
                     }
 
                     ms.Position = 0;
@@ -61,9 +60,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/cluster-info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetClusterwideInfoPackage()
         {
-            var contentDisposition = $"attachment; filename=Cluster wide debug-info {DateTime.UtcNow}.zip";
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} Cluster Wide.zip";
 
-            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;            
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext jsonOperationContext))
@@ -75,18 +74,35 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     {
                         var localEndpointClient = new LocalEndpointClient(Server);
 
-                        await WriteServerWide(archive, jsonOperationContext, 
-                            localEndpointClient, Path.Combine($"Node - [{ServerStore.NodeTag}]","server-wide"));
-                        await WriteForAllLocalDatabases(archive, jsonOperationContext, 
-                            localEndpointClient, $"Node - [{ServerStore.NodeTag}]");
+                        using (var localMemoryStream = new MemoryStream())
+                        {
+                            //assuming that if the name tag is empty
+                            var nodeName = $"Node - [{ServerStore.NodeTag ?? "Empty node tag"}]";
 
+                            using (var localArchive = new ZipArchive(localMemoryStream, ZipArchiveMode.Create, true))
+                            {
+
+                                await WriteServerWide(localArchive, jsonOperationContext, localEndpointClient);
+                                await WriteForAllLocalDatabases(localArchive, jsonOperationContext, localEndpointClient);
+
+
+                            }
+
+                            localMemoryStream.Position = 0;
+                            var entry = archive.CreateEntry($"{nodeName}.zip");
+                            using (var entryStream = entry.Open())
+                            {
+                                localMemoryStream.CopyTo(entryStream);
+                                entryStream.Flush();
+                            }
+                        }
                         var databaseNames = ServerStore.Cluster.GetDatabaseNames(transactionOperationContext).ToList();
                         var topology = ServerStore.GetClusterTopology(transactionOperationContext);
-                        
+
                         //this means no databases are defined in the cluster
                         //in this case just output server-wide endpoints from all cluster nodes
                         if (databaseNames.Count == 0)
-                        {                            
+                        {
                             foreach (var tagWithUrl in topology.AllNodes)
                             {
                                 if (tagWithUrl.Value.Contains(ServerStore.NodeHttpServerUrl))
@@ -95,17 +111,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 try
                                 {
                                     await WriteDebugInfoPackageForNodeAsync(
-                                        jsonOperationContext, 
-                                        archive, 
-                                        tag: tagWithUrl.Key, 
+                                        jsonOperationContext,
+                                        archive,
+                                        tag: tagWithUrl.Key,
                                         url: tagWithUrl.Value,
                                         certificate: Server.ServerCertificateHolder.Certificate,
-                                        databaseNames:null);
+                                        databaseNames: null);
                                 }
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{tagWithUrl.Key}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName);
+                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
                                 }
                             }
                         }
@@ -130,7 +146,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                 catch (Exception e)
                                 {
                                     var entryName = $"Node - [{urlToDatabaseNamesMap.Value.Item2}]";
-                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryName);
+                                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryName);
                                 }
                             }
                         }
@@ -140,14 +156,14 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     await ms.CopyToAsync(ResponseBodyStream());
                 }
             }
-        }       
+        }
 
         private async Task WriteDebugInfoPackageForNodeAsync(
-            JsonOperationContext jsonOperationContext, 
-            ZipArchive archive, 
-            string tag, 
-            string url, 
-            IEnumerable<string> databaseNames, 
+            JsonOperationContext jsonOperationContext,
+            ZipArchive archive,
+            string tag,
+            string url,
+            IEnumerable<string> databaseNames,
             X509Certificate2 certificate)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
@@ -168,7 +184,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/admin/debug/info-package", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var contentDisposition = $"attachment; filename=Server wide debug-info {DateTime.UtcNow}.zip";
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Node [{ServerStore.NodeTag}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -187,7 +203,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext, 
+        private async Task<Stream> GetDebugInfoFromNodeAsync(JsonOperationContext jsonOperationContext,
             string url, IEnumerable<string> databaseNames, X509Certificate2 certificate)
         {
             var bodyJson = new DynamicJsonValue
@@ -206,14 +222,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(url, certificate);
                 requestExecutor.DefaultTimeout = ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan;
 
-                var rawStreamCommand = new GetRawStreamResultCommand("/debug/remote-cluster-info-package", ms);
+                var rawStreamCommand = new GetRawStreamResultCommand("admin/debug/remote-cluster-info-package", ms);
 
                 await requestExecutor.ExecuteAsync(rawStreamCommand, jsonOperationContext);
+                rawStreamCommand.Result.Position = 0;
                 return rawStreamCommand.Result;
             }
         }
 
-        private async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix = "server-wide")
+        private static async Task WriteServerWide(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, string prefix = "server-wide")
         {
             //theoretically this could be parallelized,
             //however ZipArchive allows only one archive entry to be open concurrently
@@ -234,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,entryRoute);
+                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, entryRoute);
                 }
             }
         }
@@ -243,7 +260,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext transactionOperationContext))
             using (transactionOperationContext.OpenReadTransaction())
-            {                
+            {
                 foreach (var databaseName in ServerStore.Cluster.GetDatabaseNames(transactionOperationContext))
                 {
                     var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
@@ -260,7 +277,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         }
 
         private static bool IsDatabaseBeingDeleted(string tag, DatabaseRecord databaseRecord)
-        {            
+        {
             return databaseRecord?.DeletionInProgress != null &&
                                          databaseRecord.DeletionInProgress.TryGetValue(tag, out DeletionInProgressStatus deletionInProgress) &&
                                          deletionInProgress != DeletionInProgressStatus.No;
@@ -270,7 +287,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             var endpointParameters = new Dictionary<string, StringValues>
             {
-                {"database", new StringValues(databaseName)},
+                {"database", new StringValues(databaseName)}
             };
 
             foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))
@@ -291,7 +308,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 catch (Exception e)
                 {
-                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e,archive,path ?? databaseName);
+                    DebugInfoPackageUtils.WriteExceptionAsZipEntry(e, archive, path ?? databaseName);
                 }
             }
         }
@@ -302,7 +319,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var clusterTopology = ServerStore.GetClusterTopology(transactionOperationContext);
             foreach (var databaseName in databaseNames)
             {
-                var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);            
+                var databaseRecord = ServerStore.Cluster.ReadDatabase(transactionOperationContext, databaseName);
 
                 var nodeUrlsAndTags = databaseRecord.Topology.AllNodes.Select(tag => (clusterTopology.GetUrlFromTag(tag), tag));
                 foreach (var urlAndTag in nodeUrlsAndTags)

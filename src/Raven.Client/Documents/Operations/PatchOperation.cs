@@ -56,7 +56,6 @@ namespace Raven.Client.Documents.Operations
 
         public class PatchCommand : RavenCommand<PatchResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly string _id;
             private readonly string _changeVector;
             private readonly BlittableJsonReaderObject _patch;
@@ -74,8 +73,8 @@ namespace Raven.Client.Documents.Operations
                     throw new ArgumentNullException(nameof(patch.Script));
                 if (patchIfMissing != null && string.IsNullOrWhiteSpace(patchIfMissing.Script))
                     throw new ArgumentNullException(nameof(patchIfMissing.Script));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
                 _id = id ?? throw new ArgumentNullException(nameof(id));
                 _changeVector = changeVector;
                 _patch = EntityToBlittable.ConvertEntityToBlittable(new
@@ -90,7 +89,7 @@ namespace Raven.Client.Documents.Operations
 
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/docs?id={Uri.EscapeDataString(_id)}";
                 if (_skipPatchIfChangeVectorMismatch)
@@ -105,7 +104,7 @@ namespace Raven.Client.Documents.Operations
                     Method = HttpMethods.Patch,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _patch);
+                        ctx.Write(stream, _patch);
                     })
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);

@@ -28,7 +28,7 @@ fi
 COMMAND="$COMMAND --print-id"
 COMMAND="$COMMAND --daemon"
 
-if [ ! -f "$CUSTOM_SETTINGS_PATH" ]; then
+if [ -f "$CUSTOM_SETTINGS_PATH" ]; then
     COMMAND="$COMMAND --config-path=\"$CUSTOM_SETTINGS_PATH\""
 fi
 

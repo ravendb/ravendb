@@ -12,14 +12,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Suggestions
         /// <param name="size">The size of the n-gram to be used to compute the string distance.</param>
         public NGramDistance(int size)
         {
-            this._n = size;
+            _n = size;
         }
 
         /// <summary>
         /// Creates an N-Gram distance measure using n-grams of size 2.
         /// </summary>
         public NGramDistance()
-            : this((int)2)
+            : this(2)
         {
         }
 

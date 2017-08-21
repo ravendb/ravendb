@@ -3,7 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
 using Xunit;

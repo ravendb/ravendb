@@ -2,7 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Configuration
@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.Configuration
         {
             public override bool IsReadRequest => false;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/configuration/client";
 
@@ -41,7 +41,7 @@ namespace Raven.Client.Documents.Operations.Configuration
 
         public class Result
         {
-            public long RaftCommandIndex { get; set; }
+            public long Etag { get; set; }
 
             public ClientConfiguration Configuration { get; set; }
         }

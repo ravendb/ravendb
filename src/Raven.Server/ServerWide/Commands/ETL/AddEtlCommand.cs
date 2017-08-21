@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 

@@ -12,7 +12,7 @@ class getIndexEntriesFieldsCommand extends commandBase {
         const args = {
             name: this.indexName,
             op: "entries-fields"
-        }
+        };
         const url = endpoints.databases.index.indexesDebug;
 
         return this.query(url, args, this.db);

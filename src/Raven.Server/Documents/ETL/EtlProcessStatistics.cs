@@ -2,7 +2,6 @@
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL
@@ -122,7 +121,7 @@ namespace Raven.Server.Documents.ETL
                 [nameof(TransformationSuccesses)] = TransformationSuccesses,
                 [nameof(TransformationErrors)] = TransformationErrors,
                 [nameof(LoadSuccesses)] = LoadSuccesses,
-                [nameof(LoadErrors)] = LoadErrors,
+                [nameof(LoadErrors)] = LoadErrors
             };
             return json;
         }

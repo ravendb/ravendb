@@ -4,15 +4,15 @@ import endpoints = require("endpoints");
 
 class deleteOngoingTaskCommand extends commandBase {
     
-    constructor(private db: database, private taskType: Raven.Client.Server.Operations.OngoingTaskType, private taskId: number, private taskName: string) {
+    constructor(private db: database, private taskType: Raven.Client.ServerWide.Operations.OngoingTaskType, private taskId: number, private taskName: string) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         const args = { id: this.taskId, type: this.taskType, taskName: this.taskName };
         const url = endpoints.databases.ongoingTasks.adminTasks + this.urlEncodeArgs(args);
 
-        return this.del<Raven.Client.Server.Operations.ModifyOngoingTaskResult>(url, null, this.db)
+        return this.del<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>(url, null, this.db)
             .done(() => this.reportSuccess(`Successfullly deleted ${this.taskType} task`))
             .fail((response: JQueryXHR) => this.reportError(`Failed to delete ${this.taskType}`, response.responseText));
     }

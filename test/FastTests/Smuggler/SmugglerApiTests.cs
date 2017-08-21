@@ -9,8 +9,8 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server.Expiration;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Expiration;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

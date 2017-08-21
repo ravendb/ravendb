@@ -52,7 +52,7 @@ namespace Raven.Client.Documents.Session.Operations
                     ChangeVector = changeVector,
                     Document = document,
                     Metadata = metadata,
-                    Entity = entity,
+                    Entity = entity
                 };
             }
 

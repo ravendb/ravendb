@@ -19,6 +19,9 @@ namespace Raven.Client.Http
         private long _totalSize;
         private readonly UnmanagedBuffersPool _unmanagedBuffersPool;
 
+        /// <summary>
+        /// This value should not be used outside of tests: fetching it locks the cache.
+        /// </summary>
         public int NumberOfItems => _items.Count;
 
         public HttpCache(long maxSize = 1024 * 1024L * 512L)
@@ -35,6 +38,7 @@ namespace Raven.Client.Http
             public DateTime LastServerUpdate;
             public int Usages;
             public int Utilization;
+            public int Generation;
             public AllocatedMemoryData Allocation;
             public HttpCache Cache;
 
@@ -52,8 +56,11 @@ namespace Raven.Client.Http
                 if (Interlocked.CompareExchange(ref Usages, -(1000 * 1000), 0) != 0)
                     return;
 
-                Cache._unmanagedBuffersPool.Return(Allocation);
-                Interlocked.Add(ref Cache._totalSize, -Size);
+                if (Allocation != null)
+                {
+                    Cache._unmanagedBuffersPool.Return(Allocation);
+                    Interlocked.Add(ref Cache._totalSize, -Size);
+                }
                 Allocation = null;
                 GC.SuppressFinalize(this);
 
@@ -109,6 +116,7 @@ namespace Raven.Client.Http
                 Allocation = mem,
                 LastServerUpdate = SystemTime.UtcNow,
                 Cache = this,
+                Generation = Generation
             };
             _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
             {
@@ -116,6 +124,28 @@ namespace Raven.Client.Http
                 return httpCacheItem;
             });
         }
+
+        public void SetNotFound(string url)
+        {
+            var httpCacheItem = new HttpCacheItem
+            {
+                Usages = 1,
+                ChangeVector = "404 Response",
+                Ptr = null,
+                Size = 0,
+                Allocation = null,
+                LastServerUpdate = SystemTime.UtcNow,
+                Cache = this,
+                Generation = Generation
+            };
+            _items.AddOrUpdate(url, httpCacheItem, (s, oldItem) =>
+            {
+                oldItem.Release();
+                return httpCacheItem;
+            });
+        }
+
+        public int Generation;
 
         private void FreeSpace()
         {
@@ -183,6 +213,8 @@ namespace Raven.Client.Http
                 }
             }
 
+            public bool MightHaveBeenModified => Item.Generation != Item.Cache.Generation;
+
             public void NotModified()
             {
                 if (Item != null)
@@ -213,7 +245,7 @@ namespace Raven.Client.Http
                         Item = item
                     };
                     changeVector = item.ChangeVector;
-                    obj = new BlittableJsonReaderObject(item.Ptr, item.Size, context);
+                    obj = item.Ptr != null ? new BlittableJsonReaderObject(item.Ptr, item.Size, context) : null;
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Url returned from the cache with etag: {changeVector}. {url}.");
                     return releaser;
@@ -226,10 +258,12 @@ namespace Raven.Client.Http
 
         public void Clear()
         {
-            foreach (var key in _items.Keys)
+            // PERF: _items.Values locks the entire dictionary to produce a
+            // snapshot. This does not lock.
+            foreach (var item in _items)
             {
                 HttpCacheItem value;
-                if (_items.TryRemove(key, out value) == false)
+                if (_items.TryRemove(item.Key, out value) == false)
                     continue;
 
                 value.Dispose();
@@ -238,9 +272,9 @@ namespace Raven.Client.Http
 
         public void Dispose()
         {
-            foreach (var item in _items.Values)
+            foreach (var item in _items)
             {
-                item.Dispose();
+                item.Value.Dispose();
             }
             _unmanagedBuffersPool.Dispose();
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using Sparrow.Collections;
 using static Sparrow.Json.BlittableJsonDocumentBuilder;
 
@@ -492,7 +491,7 @@ namespace Sparrow.Json
             switch (currentState.State)
             {
                 case ContinuationState.ReadPropertyValue:
-                    currentState.Properties.Add(new BlittableJsonDocumentBuilder.PropertyTag
+                    currentState.Properties.Add(new PropertyTag
                     {
                         Position = _writeToken.ValuePos,
                         Type = (byte)_writeToken.WrittenToken,
@@ -521,7 +520,7 @@ namespace Sparrow.Json
             _writer.WriteDocumentMetadata(rootOffset, documentToken);
         }
 
-        private void ThrowIllegalStateException(BlittableJsonDocumentBuilder.ContinuationState state, string realOperation)
+        private void ThrowIllegalStateException(ContinuationState state, string realOperation)
         {
             throw new InvalidOperationException($"Cannot perform {realOperation} when encountered the {state} state");
         }

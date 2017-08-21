@@ -12,7 +12,7 @@ namespace Raven.Server.Exceptions
         
         public IndexWriterCreationException(Exception e, string field) : base(e)
         {
-            this.Field = field;
+            Field = field;
         }
     }
 }

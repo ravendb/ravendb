@@ -3,6 +3,7 @@
 import clusterTopology = require("models/database/cluster/clusterTopology");
 import getClusterTopologyCommand = require("commands/database/cluster/getClusterTopologyCommand");
 import changesContext = require("common/changesContext");
+import topology = require("../../viewmodels/manage/topology");
 
 class clusterTopologyManager {
 
@@ -12,6 +13,8 @@ class clusterTopologyManager {
 
     localNodeTag: KnockoutComputed<string>;
     localNodeUrl: KnockoutComputed<string>;
+    
+    currentTerm: KnockoutComputed<number>;
 
     nodesCount: KnockoutComputed<number>;
 
@@ -43,6 +46,11 @@ class clusterTopologyManager {
     }
 
     private initObservables() {
+        this.currentTerm = ko.pureComputed(() => {
+            const topology = this.topology();
+            return topology ? topology.currentTerm() : null;
+        });
+        
         this.localNodeTag = ko.pureComputed(() => {
             const topology = this.topology();
             return topology ? topology.nodeTag() : null;

@@ -156,18 +156,18 @@ namespace Sparrow.Collections.LockFree
             capacity = Math.Max(capacity, MIN_SIZE);
 
             capacity = AlignToPowerOfTwo(capacity);
-            this._entries = new Entry[capacity];
-            this._size = new Counter32();
-            this._topDict = topDict;
+            _entries = new Entry[capacity];
+            _size = new Counter32();
+            _topDict = topDict;
         }
 
         protected DictionaryImpl(int capacity, DictionaryImpl<TKey, TKeyStore, TValue> other)
         {
             capacity = AlignToPowerOfTwo(capacity);
-            this._entries = new Entry[capacity];
-            this._size = other._size;
-            this._topDict = other._topDict;
-            this._keyComparer = other._keyComparer;
+            _entries = new Entry[capacity];
+            _size = other._size;
+            _topDict = other._topDict;
+            _keyComparer = other._keyComparer;
         }
 
 
@@ -236,7 +236,7 @@ namespace Sparrow.Collections.LockFree
             return h | REGULAR_HASH_BITS;
         }
 
-        internal sealed override int Count => this.Size;
+        internal sealed override int Count => Size;
 
         internal sealed override void Clear()
         {
@@ -341,10 +341,10 @@ namespace Sparrow.Collections.LockFree
             // every reprobeCheckPeriod reprobes, check if table is crowded
             // and initiale a resize
             if ((reprobeCnt & reprobeCheckPeriod) == reprobeCheckPeriod && 
-                this.TableIsCrowded(lenMask))
+                TableIsCrowded(lenMask))
             {
-                this.Resize();
-                this.HelpCopy();
+                Resize();
+                HelpCopy();
             }
         }
 
@@ -849,9 +849,9 @@ namespace Sparrow.Collections.LockFree
         // wrapper, to encourage inlining for the fast no-copy-in-progress case.
         private void HelpCopy()
         {
-            if (this._newTable != null)
+            if (_newTable != null)
             {
-                this.HelpCopyImpl(copy_all: false);
+                HelpCopyImpl(copy_all: false);
             }
         }
 
@@ -859,8 +859,8 @@ namespace Sparrow.Collections.LockFree
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void HelpCopyImpl(bool copy_all)
         {
-            var newTable = this._newTable;
-            var oldEntries = this._entries;
+            var newTable = _newTable;
+            var oldEntries = _entries;
             int toCopy = oldEntries.Length;
 
 #if DEBUG
@@ -873,13 +873,13 @@ namespace Sparrow.Collections.LockFree
             bool panic = false;
             int claimedChunk = -1;
 
-            while (this._copyDone < toCopy)
+            while (_copyDone < toCopy)
             {
                 // Still needing to copy?
                 // Carve out a chunk of work.
                 if (!panic)
                 {
-                    claimedChunk = this._claimedChunk;
+                    claimedChunk = _claimedChunk;
 
                     for (;;)
                     {
@@ -898,7 +898,7 @@ namespace Sparrow.Collections.LockFree
                             break;
                         }
 
-                        var alreadyClaimed = Interlocked.CompareExchange(ref this._claimedChunk, claimedChunk + 1, claimedChunk);
+                        var alreadyClaimed = Interlocked.CompareExchange(ref _claimedChunk, claimedChunk + 1, claimedChunk);
                         if (alreadyClaimed == claimedChunk)
                         {
                             break;
@@ -926,7 +926,7 @@ namespace Sparrow.Collections.LockFree
                 int copyStart = claimedChunk * CHUNK_SIZE;
                 for (int i = 0; i < MIN_COPY_WORK; i++)
                 {
-                    if (this._copyDone >= toCopy)
+                    if (_copyDone >= toCopy)
                     {
                         PromoteNewTable();
                         return;
@@ -941,7 +941,7 @@ namespace Sparrow.Collections.LockFree
                 if (workdone > 0)
                 {
                     // See if we can promote
-                    var copyDone = Interlocked.Add(ref this._copyDone, workdone);
+                    var copyDone = Interlocked.Add(ref _copyDone, workdone);
 
                     // Check for copy being ALL done, and promote.  
                     if (copyDone >= toCopy)
@@ -970,7 +970,7 @@ namespace Sparrow.Collections.LockFree
             if (_topDict._table == this)
             {
                 // Attempt to promote
-                if (Interlocked.CompareExchange(ref _topDict._table, this._newTable, this) == this)
+                if (Interlocked.CompareExchange(ref _topDict._table, _newTable, this) == this)
                 {
                     // System.Console.WriteLine("size: " + _newTable.Length);
                     _topDict._lastResizeTickMillis = CurrentTickMillis();
@@ -990,19 +990,19 @@ namespace Sparrow.Collections.LockFree
         // read it yet.
         internal DictionaryImpl<TKey, TKeyStore, TValue> CopySlotAndGetNewTable(int idx, bool shouldHelp)
         {
-            var newTable = this._newTable;
+            var newTable = _newTable;
 
             // We're only here because the caller saw a Prime, which implies a
             // table-copy is in progress.
             Debug.Assert(newTable != null);
 
-            if (CopySlot(ref this._entries[idx], newTable))
+            if (CopySlot(ref _entries[idx], newTable))
             {
                 // Record the slot copied
-                var copyDone = Interlocked.Increment(ref this._copyDone);
+                var copyDone = Interlocked.Increment(ref _copyDone);
 
                 // Check for copy being ALL done, and promote.  
-                if (copyDone >= this._entries.Length)
+                if (copyDone >= _entries.Length)
                 {
                     PromoteNewTable();
                 }
@@ -1011,7 +1011,7 @@ namespace Sparrow.Collections.LockFree
             // Generically help along any copy (except if called recursively from a helper)
             if (shouldHelp)
             {
-                this.HelpCopy();
+                HelpCopy();
             }
 
             return newTable;
@@ -1140,7 +1140,7 @@ namespace Sparrow.Collections.LockFree
             // Check for resize already in progress, probably triggered by another thread
             // reads of this._newTable in Resize are not volatile
             // we are just opportunistically checking if a new table has arrived.
-            return this._newTable ?? ResizeImpl();
+            return _newTable ?? ResizeImpl();
         }
 
         // Resizing after too many probes.  "How Big???" heuristics are here.
@@ -1152,7 +1152,7 @@ namespace Sparrow.Collections.LockFree
         {
             // No copy in-progress, so start one.  
             //First up: compute new table size.
-            int oldlen = this._entries.Length;
+            int oldlen = _entries.Length;
 
             const int MAX_SIZE = 1 << 30;
             const int MAX_CHURN_SIZE = 1 << 15;
@@ -1196,7 +1196,7 @@ namespace Sparrow.Collections.LockFree
             // TODO: VS some tuning may be needed
             int kBs4 = (((newsz << 1) + 4) << 3/*word to bytes*/) >> 12/*kBs4*/;
 
-            var newTable = this._newTable;
+            var newTable = _newTable;
 
             // Now, if allocation is big enough,
             // limit the number of threads actually allocating memory to a
@@ -1212,24 +1212,24 @@ namespace Sparrow.Collections.LockFree
                     return newTable;         // Use the new table already
                 }
 
-                SpinWait.SpinUntil(() => this._newTable != null, 8 * kBs4);
-                newTable = this._newTable;
+                SpinWait.SpinUntil(() => _newTable != null, 8 * kBs4);
+                newTable = _newTable;
             }
 
             // Last check, since the 'new' below is expensive and there is a chance
             // that another thread slipped in a new table while we ran the heuristic.
-            newTable = this._newTable;
+            newTable = _newTable;
             // See if resize is already in progress
             if (newTable != null)
             {
                 return newTable;          // Use the new table already
             }
 
-            newTable = this.CreateNew(newsz);
+            newTable = CreateNew(newsz);
 
             // The new table must be CAS'd in to ensure only 1 winner
-            var prev = this._newTable ??
-                        Interlocked.CompareExchange(ref this._newTable, newTable, null);
+            var prev = _newTable ??
+                        Interlocked.CompareExchange(ref _newTable, newTable, null);
 
             if (prev != null)
             {

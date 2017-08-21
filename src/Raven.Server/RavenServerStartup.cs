@@ -1,11 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.IO;
-using System.Linq;
 using System.Net;
-using System.Net.Sockets;
-using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
@@ -14,15 +10,14 @@ using Microsoft.AspNetCore.Http.Extensions;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
+using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Config;
-using Raven.Server.Config.Categories;
 using Raven.Server.Routing;
 using Raven.Server.TrafficWatch;
-using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
@@ -46,7 +41,7 @@ namespace Raven.Server
                 //KeepAliveInterval = Debugger.IsAttached ? 
                 //    TimeSpan.FromHours(24) : TimeSpan.FromSeconds(30), 
                 KeepAliveInterval = TimeSpan.FromHours(24),
-                ReceiveBufferSize = 4096,
+                ReceiveBufferSize = 4096
             });
 
             _router = app.ApplicationServices.GetService<RequestRouter>();
@@ -74,8 +69,6 @@ namespace Raven.Server
             "/debug/server-id"
         };
 
-        private const string UnsafePageHtmlResource = "Raven.Server.Web.Assets.Unsafe.html";
-
         private Task UnsafeRequestHandler(HttpContext context)
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
@@ -88,13 +81,7 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-
-                using (var reader = new StreamReader(
-                    Assembly.GetEntryAssembly().GetManifestResourceStream(UnsafePageHtmlResource)))
-                {
-                    var html = reader.ReadToEnd();
-                    return context.Response.WriteAsync(html);
-                }
+                return context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
             }
 
             context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
@@ -103,7 +90,7 @@ namespace Raven.Server
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Message");
-                writer.WriteString(String.Join(" ", UnsafeWarning));
+                writer.WriteString(string.Join(" ", UnsafeWarning));
                 writer.WriteComma();
                 writer.WritePropertyName("MessageAsArray");
                 writer.WriteStartArray();
@@ -143,7 +130,7 @@ namespace Raven.Server
             "Running in a potentially unsafe mode.",
             "Server certificate information has not been set up and the server address is not configured within allowed unsecured access address range.",
             $"Please find the RavenDB settings file *settings.json* in the server directory and fill in your certificate information in either { RavenConfiguration.GetKey(x => x.Security.CertificatePath) } or { RavenConfiguration.GetKey(x => x.Security.CertificateExec) }",
-            $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } setting value." 
+            $"If you would rather like to keep your server unsecured, please relax the { RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed) } setting to match the { RavenConfiguration.GetKey(x => x.Core.ServerUrl) } setting value."
         };
 
         private async Task RequestHandler(HttpContext context)
@@ -178,7 +165,7 @@ namespace Raven.Server
                         TenantName = tenant ?? "N/A",
                         CustomInfo = "", // TODO: Implement
                         InnerRequestsCount = 0, // TODO: Implement
-                        QueryTimings = null, // TODO: Implement
+                        QueryTimings = null // TODO: Implement
                     };
 
                     TrafficWatchManager.DispatchMessage(twn);
@@ -305,6 +292,11 @@ namespace Raven.Server
                 return;
             }
 
+            if (exception is DatabaseNotRelevantException)
+            {
+                response.StatusCode = (int)HttpStatusCode.Gone;
+                return;
+            }
 
             response.StatusCode = (int)HttpStatusCode.InternalServerError;
         }

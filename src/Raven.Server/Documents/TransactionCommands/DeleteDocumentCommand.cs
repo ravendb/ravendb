@@ -1,6 +1,5 @@
 ﻿using System.Runtime.ExceptionServices;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 using Voron.Exceptions;
 
 namespace Raven.Server.Documents.TransactionCommands

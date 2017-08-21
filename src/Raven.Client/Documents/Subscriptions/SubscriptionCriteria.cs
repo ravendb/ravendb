@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Linq.Expressions;
+using System.Reflection;
 using Lambda2Js;
 using Raven.Client.Documents.Conventions;
 
@@ -97,6 +99,22 @@ namespace Raven.Client.Documents.Subscriptions
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
+                var nodeAsConst = context.Node as ConstantExpression;
+
+                if (nodeAsConst != null && nodeAsConst.Type == typeof(bool))
+                {
+                    context.PreventDefault();
+                    var writer = context.GetWriter();
+                    var val = nodeAsConst.Value.ToString().ToLower();
+
+                    using (writer.Operation(nodeAsConst))
+                    {
+                        writer.Write(val);
+                    }
+
+                    return;
+                }                
+                
                 var node = context.Node as MemberExpression;
                 if (node == null )
                     return;
@@ -120,9 +138,26 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         context.Visitor.Visit(node.Expression);
                     }
+
                     javascriptWriter.Write(".");
-                    javascriptWriter.Write(node.Member.Name);
+
+                    if (node.Member.Name == "Count" && IsCollection(node.Member.DeclaringType))
+                    {
+                        javascriptWriter.Write("length");
+                    }
+                    else
+                    {
+                        javascriptWriter.Write(node.Member.Name);
+                    }
                 }
+            }
+
+            private static bool IsCollection(Type type)
+            {
+                if (type.GetGenericArguments().Length == 0)
+                    return false;
+
+                return typeof(IEnumerable).IsAssignableFrom(type.GetGenericTypeDefinition());
             }
         }
 

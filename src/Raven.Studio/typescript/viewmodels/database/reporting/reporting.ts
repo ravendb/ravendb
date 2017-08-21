@@ -28,11 +28,6 @@ class reporting extends viewModelBase {
     isCacheDisable = ko.observable<boolean>(false);
     isExportEnabled = ko.computed(() => this.reportResults() ? this.reportResults().totalResultCount() > 0 : false);
 
-    constructor() {
-        super();
-        this.appUrls = appUrl.forCurrentDatabase();
-    }
-
     exportCsv() {
         eventsCollector.default.reportEvent("reporting", "export-csv");
 

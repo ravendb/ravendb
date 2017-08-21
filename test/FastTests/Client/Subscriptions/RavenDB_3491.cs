@@ -192,7 +192,7 @@ namespace FastTests.Client.Subscriptions
                 var us4 = new User { Id = "users/4", Name = "Hila", Age = 29 };
                 var us5 = new User { Id = "users/5", Name = "Revital", Age = 34 };
 
-                long subscriptionId;
+                string subscriptionName;
                 var subscriptionReleasedAwaiter = Task.CompletedTask;
                 using (var session = store.OpenAsyncSession())
                 {
@@ -209,11 +209,11 @@ namespace FastTests.Client.Subscriptions
                         Criteria = new SubscriptionCriteria("Users"),
                         ChangeVector = user2ChangeVector
                     };
-                    subscriptionId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                    subscriptionName = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                     var users = new List<dynamic>();
                     
-                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
+                    using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionName)))
                     {
                         var docs = new BlockingCollection<dynamic>();
                         var keys = new BlockingCollection<string>();
@@ -237,7 +237,8 @@ namespace FastTests.Client.Subscriptions
                         }));
 
                         var db = await GetDatabase(store.Database);
-                        subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionId);
+                        var subscriptionState = db.SubscriptionStorage.GetSubscriptionFromServerStore(subscriptionName);
+                        subscriptionReleasedAwaiter = db.SubscriptionStorage.GetSubscriptionConnectionInUseAwaiter(subscriptionState.SubscriptionId);
 
                         dynamic doc;
                         Assert.True(docs.TryTake(out doc, _waitForDocTimeout));
@@ -275,7 +276,7 @@ namespace FastTests.Client.Subscriptions
 
                 Assert.True(Task.WaitAll(new[] {subscriptionReleasedAwaiter}, 250));
                 
-                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionId)))
+                using (var subscription = store.Subscriptions.Open(new SubscriptionConnectionOptions(subscriptionName)))
                 {
                     var docs = new BlockingCollection<dynamic>();
                     GC.KeepAlive(subscription.Run(x =>

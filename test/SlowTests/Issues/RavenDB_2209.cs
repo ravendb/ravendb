@@ -12,7 +12,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_2209 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-6244")]
+        [Fact]
         public void LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
         {
             using (var store = GetDocumentStore())

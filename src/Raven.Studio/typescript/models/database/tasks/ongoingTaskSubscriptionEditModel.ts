@@ -22,9 +22,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
     activeDatabase = activeDatabaseTracker.default.database;
    
-    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionState) {
+    constructor(dto: Raven.Client.Documents.Subscriptions.SubscriptionState, isEdit: boolean) {
         super(dto);
 
+        this.isEdit = isEdit;
         dto.Criteria.Script = dto.Criteria.Script || ""; 
         this.editViewUpdate(dto);
         this.editViewInitializeObservables(); 
@@ -72,6 +73,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.collection.extend({
             required: true
         });
+        
+        this.script.extend({
+            aceValidation: true
+        });
 
         this.includeRevisions.extend({
             validation: [
@@ -87,7 +92,8 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
 
         this.validationGroup = ko.validatedObservable({
             collection: this.collection,
-            includeRevisions: this.includeRevisions
+            includeRevisions: this.includeRevisions,
+            script: this.script
         });
     }
 
@@ -95,7 +101,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
     getCollectionRevisionsSettings() {
         return new getRevisionsConfigurationCommand(this.activeDatabase())
             .execute()
-            .done((revisionsConfig: Raven.Client.Server.Revisions.RevisionsConfiguration) => {
+            .done((revisionsConfig: Raven.Client.ServerWide.Revisions.RevisionsConfiguration) => {
                 if (revisionsConfig) {
                     let revisionIsSet: boolean = false;
 
@@ -145,11 +151,10 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                      IncludeRevisions: false
                 },
                 ChangeVector: null,
-                LastEtagReachedInServer: null,
                 SubscriptionId: 0,
                 SubscriptionName: null,
                 TimeOfLastClientActivity: null
-            });
+            }, true);
     }
 }
 

@@ -65,7 +65,7 @@ namespace Raven.Server.NotificationCenter.Notifications
                 CountOfIndexes = countOfIndexes,
                 CountOfStaleIndexes = countOfStaleIndexes,
                 LastIndexingErrorTime = lastIndexingErrorTime,
-                ModifiedCollections = modifiedCollections,
+                ModifiedCollections = modifiedCollections
             };
         }
 
@@ -96,11 +96,11 @@ namespace Raven.Server.NotificationCenter.Notifications
 
             public DynamicJsonValue ToJson()
             {
-                return new DynamicJsonValue()
+                return new DynamicJsonValue
                 {
                     [nameof(Name)] = Name,
                     [nameof(Count)] = Count,
-                    [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector,
+                    [nameof(LastDocumentChangeVector)] = LastDocumentChangeVector
                 };
             }
 

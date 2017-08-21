@@ -1,6 +1,6 @@
 ﻿using System;
-using Sparrow.Collections;
 using System.Threading;
+using Sparrow.Collections;
 using Sparrow.Json;
 
 namespace Sparrow.Platform

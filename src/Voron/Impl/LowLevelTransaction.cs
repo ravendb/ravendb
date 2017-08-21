@@ -733,8 +733,8 @@ namespace Voron.Impl
             PageFromScratchBuffer scratchPage;
             if (_scratchPagesTable.TryGetValue(pageNumber, out scratchPage))
             {
-                _transactionPages.Remove(scratchPage);
-                _unusedScratchPages.Add(scratchPage);
+                if (_transactionPages.Remove(scratchPage))
+                    _unusedScratchPages.Add(scratchPage);
 
                 _scratchPagesTable.Remove(pageNumber);
             }

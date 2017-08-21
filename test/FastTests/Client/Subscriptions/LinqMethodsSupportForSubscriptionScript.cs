@@ -158,7 +158,6 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-
         [Fact]
         public async Task CanHandleWhere()
         {
@@ -350,18 +349,191 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task CanHandleBooleanConstantsAndCount()
+        {
+            //RavenDB-7866
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Name = "Michael",
+                        Comments = new List<string>
+                        {
+                            "cool", "great", "nice", "special", "the best",
+                            "fantastic", "awesome", "amazing", "life changing",
+                            "unforgettable" , "a must", "don't miss", "once in a lifetime"
+                        },
+                        Votes = 15,
+                        Survey = true
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Name = "Maxim",
+                        Comments = new List<string>
+                        {
+                            "cool", "great", "nice", "special", "the best",
+                            "fantastic", "awesome", "amazing", "life changing",
+                            "unforgettable" , "a must", "don't miss", "once in a lifetime"
+                        },
+                        Votes = 12,
+                        Survey = false
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Name = "Aviv",
+                        Comments = new List<string>
+                        {
+                            "annoying"
+                        },
+                        Votes = 18,
+                        Survey = false
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call =>
+                            call.Comments.Count > 12 &&
+                            call.Votes > 10 &&
+                            call.Survey == false
+                    )
+                };
+
+                Assert.Equal("return this.Comments.length>12&&this.Votes>10&&this.Survey===false;",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Maxim", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleCountAsProperty()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "cool", "great", "nice", "special", "the best"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Michael",
+                            Count = 27
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "unforgettable" , "a must", "don't miss", "once in a lifetime"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Maxim",
+                            Count = 17
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall()
+                    {
+                        Comments = new List<string>
+                        {
+                            "annoying"
+                        },
+                        Person = new Person
+                        {
+                            Name = "Aviv",
+                            Count = 7
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call =>
+                            call.Comments.Count > 3 &&
+                            call.Person.Count < 20
+                    )
+                };
+
+                Assert.Equal("return this.Comments.length>3&&this.Person.Count<20;",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Maxim", call.Person.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
         private class SupportCall
         {
             public string Name { get; set; }
             public int SupportCallNumber { get; set; }
             public List<string> Comments { get; set; }
             public List<Person> Contacts { get; set; }
+            public int Votes { get; set; }
+            public bool Survey { get; set; }
+            public Person Person { get; set; }
+
         }
 
         private class Person
         {
             public string Name { get; set; }
             public int Phone { get; set; }
+            public long Count { get; set; }
         }
     }
 }

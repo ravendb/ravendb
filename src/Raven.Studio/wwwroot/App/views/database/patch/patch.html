@@ -1,10 +1,10 @@
-<div class="flex-window stretch patch content-margin">
+<div class="flex-window stretch patch content-margin" id="patchContainer">
     <div class="flex-window-head">
         <div id="patch-target" data-bind="collapse: !test.testMode()">
             <div class="clearfix">
                 <h3 class="pull-left-sm">Patch target</h3>
                 <div class="pull-right-sm flex-horizontal">
-                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationElement: patchSaveName, validationOptions: { insertMessages: false }">
+                    <div class="input-group patch-save" data-bind="css: { active: inSaveMode }, validationOptions: { insertMessages: false }, validationElement: patchSaveName">
                         <input class="form-control" style="display: none" placeholder="Patch name" data-bind="textInput: patchSaveName">
                         <span class="input-group-btn">
                             <button class="btn btn-success" data-class="active" type="button" data-bind="click: savePatch, css: { 'btn-spinner': spinners.save }" title="Save patch under given name">
@@ -35,7 +35,7 @@
                 </div>
 
                 <div class="row" data-bind="visible: isDocumentMode, with: patchDocument">
-                    <label class="control-label col-sm-3 col-lg-2">Document Id</label>
+                    <label class="control-label col-sm-3 col-lg-2">Document ID</label>
 
                     <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: selectedItem">
                         <div class="input-group">
@@ -56,66 +56,28 @@
                     </div>
                 </div>
 
-                <div class="row" data-bind="visible: isIndexMode()">
-                    <label class="control-label col-sm-3 col-lg-2">Index</label>
-
-                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                <span data-bind="text: patchDocument().selectedItem() || 'Select index...'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <div class="dropdown-menu has-info">
-                                <ul class="menu max-height" data-bind="foreach: indexNames">
-                                    <li><a href="#" data-bind="text: $data, click: _.partial($parent.useIndex, $data)"></a></li>
-                                </ul>
-                                <div class="bg-info">
-                                    <i class="icon-info text-info"></i> <span>Map-Reduce indexes are not available for patching</span>
-                                </div>
-                            </div>
-                        </div>
-                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
-                    </div>
-                </div>
-
-                <div class="row" data-bind="visible: isCollectionMode()">
-                    <label class="control-label col-sm-3 col-lg-2">Collection</label>
-
-                    <div class="col-sm-9 col-lg-4 margin-bottom" data-bind="validationElement: patchDocument().selectedItem">
-                        <div class="dropdown btn-block">
-                            <button class="btn btn-block form-control dropdown-toggle text-left" type="button" data-toggle="dropdown">
-                                <span data-bind="text: patchDocument().selectedItem() || 'Select collection...'"></span>
-                                <span class="caret"></span>
-                            </button>
-                            <div class="dropdown-menu">
-                                <ul class="menu max-height" data-bind="foreach: collections">
-                                    <li><a href="#" data-bind="text: name, click: _.partial($parent.useCollection, $data)"></a></li>
-                                </ul>
-                            </div>
-                        </div>
-                        <span class="help-block" data-bind="validationMessage: patchDocument().selectedItem"></span>
-                    </div>
-                </div>
-
-                <div class="row" data-bind="visible: !isDocumentMode()">
+                <div class="row" data-bind="visible: isQueryMode">
                     <div class="col-sm-9 col-lg-4 col-sm-offset-3 col-lg-offset-2 margin-bottom">
                         <div class="checkbox">
                             <input id="checkbox2" class="styled" type="checkbox" data-bind="checked: patchDocument().patchAll">
                             <label for="checkbox2">
-                                <span data-bind="visible: isCollectionMode">Patch all in collection</span>
-                                <span data-bind="visible: isIndexMode()">Patch all documents matching query</span>
+                                <span>Patch all documents matching query</span>
                             </label>
                         </div>
                     </div>
                 </div>
-                <div class="row" data-bind="visible: isIndexMode">
+                <div class="row" data-bind="visible: isQueryMode">
                     <label class="control-label col-sm-3 col-lg-2 query-label">Query <small><i class="icon-info text-info"></i></small></label>
 
                     <div class="col-sm-9 col-lg-10 margin-bottom">
                         <div class="patch-container">
                             <div class="patch-main">
                                 <pre class="form-control editor query-source"
-                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, typeName:'query', lang:'ace/mode/lucene', completer:queryCompleter, completerHostObject: $root }"></pre>
+                                     data-bind="aceEditor: { code: patchDocument().query, allowResize: false, minHeight: 100, maxHeight: 100, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query"></pre>
+                                
+                                <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().query">
+                                    <div class="help-block" data-bind="validationMessage: patchDocument().query"></div>
+                                </div>
                             </div>
                             <div class="query-controls">
                                 <button class="btn btn-default btn-block text-center" data-bind="click: runQuery">
@@ -156,9 +118,9 @@
             <div class="col-sm-9 col-lg-10">
                 <div class="patch-container">
                     <div class="patch-main">
-                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript' }, validationElement: patchDocument().script" style="height: 160px;"></pre>
+                        <pre class="form-control patch-source" data-bind="aceEditor: { code: patchDocument().script, lang:'ace/mode/javascript', completer: jsCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script" style="height: 160px;"></pre>
 
-                        <div data-bind="validationElement: patchDocument().script">
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: patchDocument().script">
                             <div class="help-block" data-bind="validationMessage: patchDocument().script"></div>
                         </div>
                     </div>
@@ -173,8 +135,9 @@
                         </button>
                     </div>
                     <div class="test-controls">
-                        <button class="btn btn-primary btn-block text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
-                            <i class="icon-rocket"></i><span>Test</span>
+                        <button class="btn btn-primary btn-block btn-lg text-center" data-bind="click: test.runTest, css: { 'btn-spinner' : test.spinners.testing }, disable: test.spinners.testing" ttile="Dry patch run. It doesn't modify any data">
+                            <i class="icon-rocket"></i><span>Test</span><br />
+                            <small class="kbd"><kbd>ctrl</kbd> <strong>+</strong> <kbd>enter</kbd></small>
                         </button>
                         <div class="flex-separator"></div>
                         <button class="btn btn-default btn-block text-center test-close" data-bind="click: test.closeTestMode" title="Leave test mode">
@@ -337,7 +300,7 @@
                                 </div>
                                 <div class="col-xs-6">
                                     <div data-bind="with: previewItem()">
-                                        for: &nbsp;<strong data-bind="text: patchOnOption"></strong> - <strong data-bind="text: selectedItem"></strong>
+                                        for: &nbsp;<strong data-bind="text: patchOnOption"></strong> <strong data-bind="text: selectedItem() ? '-' + selectedItem() : ''"></strong>
                                     </div>
                                 </div>
                             </div>

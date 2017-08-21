@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
@@ -19,11 +18,8 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly DocumentDatabase _database;
         private DocumentsOperationContext _context;
-        
-        private readonly long _startDocumentEtag;
 
-        private DatabaseSmugglerOptions _options;
-        private SmugglerResult _result;
+        private readonly long _startDocumentEtag;
 
         private IDisposable _returnContext;
         private IDisposable _disposeTransaction;
@@ -49,8 +45,6 @@ namespace Raven.Server.Smuggler.Documents
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
         {
             _currentTypeIndex = 0;
-            _options = options;
-            _result = result;
             _returnContext = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out _context);
             _disposeTransaction = _context.OpenReadTransaction();
 
@@ -77,7 +71,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 yield return new DocumentItem
                 {
-                    Document = document,
+                    Document = document
                 };
             }
         }
@@ -93,7 +87,7 @@ namespace Raven.Server.Smuggler.Documents
             {
                 yield return new DocumentItem
                 {
-                    Document = document,
+                    Document = document
                 };
             }
         }

@@ -1,6 +1,4 @@
-﻿using Sparrow.Json;
-
-namespace Raven.Server.Documents.Replication
+﻿namespace Raven.Server.Documents.Replication
 {
     internal class ReplicationMessageReply
     {

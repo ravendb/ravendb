@@ -10,7 +10,7 @@ using System.Text;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Extensions.Streams;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             _database = database;
             _logger = LoggingSource.Instance.GetLogger<RelationalDatabaseWriter>(_database.Name);
             _providerFactory = GetDbProviderFactory(etl.Configuration);
-            _commandBuilder = _providerFactory.CreateCommandBuilder();
+            _commandBuilder = _providerFactory.InitializeCommandBuilder();
             _connection = _providerFactory.CreateConnection();
             _connection.ConnectionString = etl.Configuration.Connection.ConnectionString;
 
@@ -350,10 +350,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 return string.Join(".", tableName.Split('.').Select(_commandBuilder.QuoteIdentifier).ToArray());
             }
-            else
-            {
-                return tableName;
-            }
+
+            return tableName;
         }
 
         public static string SanitizeSqlValue(string sqlValue)
@@ -445,20 +443,20 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                         colParam.Value = blittableJsonReaderArray.ToString();
                         break;
                     default:
-                    {
-                        if (column.Value is Stream stream)
                         {
-                            colParam.DbType = DbType.Binary;
+                            if (column.Value is Stream stream)
+                            {
+                                colParam.DbType = DbType.Binary;
 
-                            if (stream == Stream.Null)
-                                colParam.Value = DBNull.Value;
-                            else
-                                colParam.Value = stream.ReadData();
+                                if (stream == Stream.Null)
+                                    colParam.Value = DBNull.Value;
+                                else
+                                    colParam.Value = stream.ReadData();
 
-                            break;
+                                break;
+                            }
+                            throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
                         }
-                        throw new InvalidOperationException("Cannot understand how to save " + column.Type + " for " + colParam.ParameterName);
-                    }
                 }
             }
         }

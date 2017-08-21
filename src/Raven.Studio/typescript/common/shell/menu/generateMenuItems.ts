@@ -8,7 +8,6 @@ import database = require("models/resources/database");
 import getManageServerMenuItem = require("common/shell/menu/items/manageServer");
 import getDatabasesMenuItem = require("common/shell/menu/items/databases");
 import getSettingsMenuItem = require("common/shell/menu/items/settings");
-import getTransformersMenuItems = require("common/shell/menu/items/transformers");
 import getIndexesMenuItem = require("common/shell/menu/items/indexes");
 import getDocumentsMenuItem = require("common/shell/menu/items/documents");
 
@@ -47,11 +46,9 @@ function generateNoActiveDatabaseMenuItems() {
 
 function generateActiveDatabaseMenuItems() {
     const appUrls = appUrl.forCurrentDatabase();
-    const transformersItems = getTransformersMenuItems(appUrls);
     return [
         getDocumentsMenuItem(appUrls),
         getIndexesMenuItem(appUrls),
-        ...transformersItems,
         getSettingsMenuItem(appUrls),
         new separatorMenuItem('Server'),
         getDatabasesMenuItem(appUrls),

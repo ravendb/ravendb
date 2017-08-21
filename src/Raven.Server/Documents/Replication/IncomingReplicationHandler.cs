@@ -262,25 +262,21 @@ namespace Raven.Server.Documents.Replication
                         }
                     case ReplicationMessageType.Heartbeat:
                         AddReplicationPulse(ReplicationPulseDirection.IncomingHeartbeat);
-
                         if (message.TryGet(nameof(ReplicationMessageHeader.DatabaseChangeVector), out string changeVector))
                         {
-                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector);
+                            var cmd = new MergedUpdateDatabaseChangeVectorCommand(changeVector, _replicationFromAnotherSource);
                             if (_prevChangeVectorUpdate != null && _prevChangeVectorUpdate.IsCompleted == false)
                             {
                                 if (_log.IsInfoEnabled)
                                 {
                                     _log.Info(
                                         $"The previous task of updating the database change vector was not completed and has the status of {_prevChangeVectorUpdate.Status}, " +
-                                        $"nevertheless we create an additional task.");
+                                        "nevertheless we create an additional task.");
                                 }
                             }
                             else
                             {
-                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask().ContinueWith(_ =>
-                                {
-                                    _replicationFromAnotherSource.Set();
-                                });
+                                _prevChangeVectorUpdate = _database.TxMerger.Enqueue(cmd).AsTask();
                             }
                         }
                         break;
@@ -539,7 +535,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(ReplicationMessageReply.Exception)] = null,
                 [nameof(ReplicationMessageReply.DatabaseChangeVector)] = databaseChangeVector,
                 [nameof(ReplicationMessageReply.DatabaseId)] = _database.DbId.ToString(),
-                [nameof(ReplicationMessageReply.NodeTag)] = _parent._server.NodeTag,
+                [nameof(ReplicationMessageReply.NodeTag)] = _parent._server.NodeTag
 
             };
 
@@ -639,7 +635,7 @@ namespace Raven.Server.Documents.Replication
                 var item = new ReplicationItem
                 {
                     Type = *(ReplicationBatchItem.ReplicationItemType*)ReadExactly(sizeof(byte)),
-                    Position = writeBuffer.SizeInBytes,
+                    Position = writeBuffer.SizeInBytes
                 };
 
                 var changeVectorSize = *(int*)ReadExactly(sizeof(int));
@@ -766,7 +762,7 @@ namespace Raven.Server.Documents.Replication
                 OccurredAt = SystemTime.UtcNow,
                 Direction = direction,
                 From = ConnectionInfo,
-                ExceptionMessage = exceptionMessage,
+                ExceptionMessage = exceptionMessage
             });
         }
 
@@ -827,9 +823,12 @@ namespace Raven.Server.Documents.Replication
         private class MergedUpdateDatabaseChangeVectorCommand : TransactionOperationsMerger.MergedTransactionCommand
         {
             private readonly string _changeVector;
-            public MergedUpdateDatabaseChangeVectorCommand(string chageVector)
+            private readonly AsyncManualResetEvent _trigger;
+
+            public MergedUpdateDatabaseChangeVectorCommand(string chageVector, AsyncManualResetEvent trigger)
             {
                 _changeVector = chageVector;
+                _trigger = trigger;
             }
             public override int Execute(DocumentsOperationContext context)
             {
@@ -839,6 +838,17 @@ namespace Raven.Server.Documents.Replication
                 {
                     var merged = ChangeVectorUtils.MergeVectors(current, _changeVector);
                     DocumentsStorage.SetDatabaseChangeVector(context, merged);
+                    context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += _ =>
+                    {
+                        try
+                        {
+                            _trigger.Set();
+                        }
+                        catch
+                        {
+                            //
+                        }
+                    };
                     return 1;
                 }
                 return 0;

@@ -9,8 +9,8 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -144,7 +144,7 @@ namespace StressTests
 
                 var dbname = $"Northwind{i}";
                 DbNumToDbName.Add(i, dbname);
-                var doc = MultiDatabase.CreateDatabaseDocument(dbname);
+                var doc = new DatabaseRecord(dbname);
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.Admin.ForDatabase(dbname).Send(new CreateSampleDataOperation());
                 Console.WriteLine($"Done creating {dbname}");

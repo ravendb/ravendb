@@ -1,5 +1,5 @@
 ﻿using Jint;
-using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

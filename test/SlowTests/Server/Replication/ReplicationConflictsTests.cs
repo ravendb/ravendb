@@ -4,14 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Server.Replication;
-using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
-using Raven.Server.Documents;
+using Raven.Client.Exceptions.Documents;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Utils;
@@ -327,7 +324,7 @@ namespace SlowTests.Server.Replication
 
                 WaitUntilHasConflict(store2, "foo/bar");
 
-                var operation = store2.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
+                var operation = store2.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{userIndex.IndexName}'" }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));
             }
@@ -359,7 +356,7 @@ namespace SlowTests.Server.Replication
                 WaitUntilHasConflict(store2, "foo/bar");
 
                 // /indexes/Raven/DocumentsByEntityName
-                var operation = store2.Operations.Send(new PatchByIndexOperation(new IndexQuery
+                var operation = store2.Operations.Send(new PatchByQueryOperation(new IndexQuery
                 {
                     Query = $"FROM INDEX '{userIndex.IndexName}'"
                 }, new PatchRequest

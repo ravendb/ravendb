@@ -52,20 +52,28 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public Tree ReadTree(string treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, treeName, ByteStringType.Immutable, out treeNameSlice);
-            return ReadTree(treeNameSlice, type, newPageAllocator, pageLocator);
+            return ReadTree(treeNameSlice, type, isIndexTree, newPageAllocator);
         }
 
-        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public Tree ReadTree(Slice treeName, RootObjectType type = RootObjectType.VariableSizeTree, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             EnsureTrees();
 
             Tree tree;
             if (_trees.TryGetValue(treeName, out tree))
+            {
+                if (newPageAllocator == null)
+                    return tree;
+
+                if (tree.HasNewPageAllocator == false)
+                    tree.SetNewPageAllocator(newPageAllocator);
+
                 return tree;
+            }
 
             TreeRootHeader* header = (TreeRootHeader*)_lowLevelTransaction.RootObjects.DirectRead(treeName);
             if (header != null)
@@ -73,7 +81,7 @@ namespace Voron.Impl
                 if (header->RootObjectType != type)
                     ThrowInvalidTreeType(treeName, type, header);
 
-                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, newPageAllocator, pageLocator);
+                tree = Tree.Open(_lowLevelTransaction, this, treeName, header, type, isIndexTree, newPageAllocator);
 
                 if ((tree.State.Flags & TreeFlags.LeafsCompressed) == TreeFlags.LeafsCompressed)
                     tree.InitializeCompression();
@@ -331,16 +339,16 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public Tree CreateTree(string name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             Slice treeNameSlice;
             Slice.From(Allocator, name, ByteStringType.Immutable, out treeNameSlice);
-            return CreateTree(treeNameSlice, type, flags, newPageAllocator, pageLocator);
+            return CreateTree(treeNameSlice, type, flags, isIndexTree, newPageAllocator);
         }
 
-        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public Tree CreateTree(Slice name, RootObjectType type = RootObjectType.VariableSizeTree, TreeFlags flags = TreeFlags.None, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
-            Tree tree = ReadTree(name, type, newPageAllocator, pageLocator);
+            Tree tree = ReadTree(name, type, isIndexTree, newPageAllocator);
             if (tree != null)
                 return tree;
 
@@ -348,7 +356,7 @@ namespace Voron.Impl
                 throw new InvalidOperationException("No such tree: '" + name +
                                                     "' and cannot create trees in read transactions");
 
-            tree = Tree.Create(_lowLevelTransaction, this, name, flags, pageLocator: pageLocator);
+            tree = Tree.Create(_lowLevelTransaction, this, name, flags);
             tree.State.RootObjectType = type;
 
             byte* ptr;
@@ -427,7 +435,7 @@ namespace Voron.Impl
             return val->RootObjectType;
         }
 
-        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, NewPageAllocator newPageAllocator = null)
+        public FixedSizeTree GetGlobalFixedSizeTree(Slice name, ushort valSize, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             if (_globalFixedSizeTree == null)
                 _globalFixedSizeTree = new FastDictionary<Slice, FixedSizeTree, SliceStructComparer>(SliceStructComparer.Instance);
@@ -435,9 +443,13 @@ namespace Voron.Impl
             FixedSizeTree tree;
             if (_globalFixedSizeTree.TryGetValue(name, out tree) == false)
             {
-                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, newPageAllocator: newPageAllocator);
+                tree = new FixedSizeTree(LowLevelTransaction, LowLevelTransaction.RootObjects, name, valSize, isIndexTree: isIndexTree,
+                    newPageAllocator: newPageAllocator);
                 _globalFixedSizeTree[tree.Name] = tree;
             }
+            else if (newPageAllocator != null && tree.HasNewPageAllocator == false)
+                tree.SetNewPageAllocator(newPageAllocator);
+
             return tree;
         }
     }

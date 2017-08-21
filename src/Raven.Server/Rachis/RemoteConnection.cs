@@ -43,7 +43,7 @@ namespace Raven.Server.Rachis
                 [nameof(RachisHello.DebugSourceIdentifier)] = helloMsg.DebugSourceIdentifier,
                 [nameof(RachisHello.DebugDestinationIdentifier)] = helloMsg.DebugDestinationIdentifier,
                 [nameof(RachisHello.InitialMessageType)] = helloMsg.InitialMessageType,
-                [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId,
+                [nameof(RachisHello.TopologyId)] = helloMsg.TopologyId
             });
         }
 
@@ -88,7 +88,7 @@ namespace Raven.Server.Rachis
                 [nameof(RequestVoteResponse.NotInTopology)] = rvr.NotInTopology,
                 [nameof(RequestVoteResponse.Term)] = rvr.Term,
                 [nameof(RequestVoteResponse.VoteGranted)] = rvr.VoteGranted,
-                [nameof(RequestVoteResponse.Message)] = rvr.Message,
+                [nameof(RequestVoteResponse.Message)] = rvr.Message
             });
         }
 
@@ -100,7 +100,7 @@ namespace Raven.Server.Rachis
                 [nameof(LogLengthNegotiation.Term)] = lln.Term,
                 [nameof(LogLengthNegotiation.PrevLogIndex)] = lln.PrevLogIndex,
                 [nameof(LogLengthNegotiation.PrevLogTerm)] = lln.PrevLogTerm,
-                [nameof(LogLengthNegotiation.Truncated)] = lln.Truncated,
+                [nameof(LogLengthNegotiation.Truncated)] = lln.Truncated
             });
         }
 
@@ -118,7 +118,7 @@ namespace Raven.Server.Rachis
                 [nameof(LogLengthNegotiationResponse.MaxIndex)] = lln.MaxIndex,
                 [nameof(LogLengthNegotiationResponse.MinIndex)] = lln.MinIndex,
                 [nameof(LogLengthNegotiationResponse.MidpointIndex)] = lln.MidpointIndex,
-                [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm,
+                [nameof(LogLengthNegotiationResponse.MidpointTerm)] = lln.MidpointTerm
 
             });
         }
@@ -133,7 +133,7 @@ namespace Raven.Server.Rachis
                 [nameof(RequestVote.LastLogTerm)] = rv.LastLogTerm,
                 [nameof(RequestVote.LastLogIndex)] = rv.LastLogIndex,
                 [nameof(RequestVote.IsTrialElection)] = rv.IsTrialElection,
-                [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection,
+                [nameof(RequestVote.IsForcedElection)] = rv.IsForcedElection
             });
         }
 
@@ -148,7 +148,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntries.PrevLogTerm)] = ae.PrevLogTerm,
                 [nameof(AppendEntries.Term)] = ae.Term,
                 [nameof(AppendEntries.TruncateLogBefore)] = ae.TruncateLogBefore,
-                [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader,
+                [nameof(AppendEntries.TimeAsLeader)] = ae.TimeAsLeader
 
             };
 
@@ -173,7 +173,7 @@ namespace Raven.Server.Rachis
                 ["Type"] = nameof(InstallSnapshot),
                 [nameof(InstallSnapshot.LastIncludedIndex)] = installSnapshot.LastIncludedIndex,
                 [nameof(InstallSnapshot.LastIncludedTerm)] = installSnapshot.LastIncludedTerm,
-                [nameof(InstallSnapshot.Topology)] = installSnapshot.Topology,
+                [nameof(InstallSnapshot.Topology)] = installSnapshot.Topology
             });
         }
 
@@ -184,7 +184,7 @@ namespace Raven.Server.Rachis
                 ["Type"] = nameof(InstallSnapshotResponse),
                 [nameof(InstallSnapshotResponse.CurrentTerm)] = installSnapshotResponse.CurrentTerm,
                 [nameof(InstallSnapshotResponse.LastLogIndex)] = installSnapshotResponse.LastLogIndex,
-                [nameof(InstallSnapshotResponse.Done)] = installSnapshotResponse.Done,
+                [nameof(InstallSnapshotResponse.Done)] = installSnapshotResponse.Done
             });
         }
 
@@ -319,7 +319,7 @@ namespace Raven.Server.Rachis
                 [nameof(AppendEntriesResponse.Success)] = aer.Success,
                 [nameof(AppendEntriesResponse.Message)] = aer.Message,
                 [nameof(AppendEntriesResponse.CurrentTerm)] = aer.CurrentTerm,
-                [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex,
+                [nameof(AppendEntriesResponse.LastLogIndex)] = aer.LastLogIndex
             };
             
             Send(context, msg);

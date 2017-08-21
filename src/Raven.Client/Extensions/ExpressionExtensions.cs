@@ -21,7 +21,7 @@ namespace Raven.Client.Extensions
         {
             var propertySeparator = '.';
             var collectionSeparator = "[].";
-            var collectionSeparatorAsString = collectionSeparator.ToString();
+            var collectionSeparatorAsString = collectionSeparator;
             var propertyPath = path.ToPropertyPath(propertySeparator, collectionSeparator);
             var properties = propertyPath.Split(propertySeparator);
             var type = typeof(T);

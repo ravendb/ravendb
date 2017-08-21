@@ -1,9 +1,8 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Exceptions.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
@@ -100,7 +99,7 @@ namespace Raven.Server.Documents.Handlers
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 var queryJson = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
-                var query = IndexQueryServerSide.Create(queryJson);
+                var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
 
                 var runner = new QueryRunner(Database, context);
 

@@ -1,12 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Client.Subscriptions
 {
     public class TestSubscriptionOnDisabledDatabase:RavenTestBase
     {
-        public TimeSpan ReasonableWaitTime = TimeSpan.FromSeconds(25);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(20);
 
         [Fact]
         public async Task Run()
@@ -37,14 +38,6 @@ namespace SlowTests.Client.Subscriptions
                     }
                 });
 
-
-                using (var session = store.OpenSession())
-                {
-                    for (var i = 0; i < 30; i++)
-                        session.Store(new User { Name = i.ToString() });
-                    session.SaveChanges();
-                }
-
                 var mre = new ManualResetEvent(false);
 
                 subscription.AfterAcknowledgment += batch =>
@@ -54,7 +47,15 @@ namespace SlowTests.Client.Subscriptions
                     return Task.CompletedTask;
                 };
 
-                Assert.True(mre.WaitOne(ReasonableWaitTime));
+
+                using (var session = store.OpenSession())
+                {
+                    for (var i = 0; i < 30; i++)
+                        session.Store(new User { Name = i.ToString() });
+                    session.SaveChanges();
+                }
+               
+                Assert.True(mre.WaitOne(_reasonableWaitTime));
                 mre.Reset();
 
                 store.Admin.Server.Send(new DisableDatabaseToggleOperation(store.Database, true));
@@ -89,7 +90,7 @@ namespace SlowTests.Client.Subscriptions
                         session.Store(new User { Name = i.ToString() });
                     session.SaveChanges();
                 }
-                Assert.True(mre.WaitOne(ReasonableWaitTime));
+                Assert.True(mre.WaitOne(_reasonableWaitTime));
             }
         }
     }

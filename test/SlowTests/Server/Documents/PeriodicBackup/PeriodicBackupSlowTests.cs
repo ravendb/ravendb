@@ -9,8 +9,8 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -19,7 +19,49 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 {
     public class PeriodicBackupTestsSlow : RavenTestBase
     {
-       [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task can_backup_to_directory()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+
+                var config = new PeriodicBackupConfiguration
+                {
+                    LocalSettings = new LocalSettings
+                    {
+                        FolderPath = backupPath
+                    },
+                    IncrementalBackupFrequency = "* * * * *" //every minute
+                };
+                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
+                var result = await store.Admin.Server.SendAsync(operation);
+                var periodicBackupTaskId = result.TaskId;
+
+                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
+                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
+            }
+
+            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
+            {
+                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
+                    Directory.GetDirectories(backupPath).First());
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    var user = await session.LoadAsync<User>("users/1");
+                    Assert.NotNull(user);
+                    Assert.Equal("oren", user.Name);
+                }
+            }
+        }
+
+        [Fact(Skip = "RavenDB-7931 - Takes too long"), Trait("Category", "Smuggler")]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

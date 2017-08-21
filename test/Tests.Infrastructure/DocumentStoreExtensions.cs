@@ -107,7 +107,7 @@ namespace FastTests
                     }
 
 
-                    var command = new PutDocumentCommand(id, changeVector, documentJson, Context);
+                    var command = new PutDocumentCommand(id, changeVector, documentJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context, cancellationToken);
 
@@ -214,7 +214,7 @@ namespace FastTests
                 if (ids == null)
                     throw new ArgumentNullException(nameof(ids));
 
-                var command = new GetDocumentCommand(ids, includes: null, transformer: null, transformerParameters: null, metadataOnly: false, context: Context);
+                var command = new GetDocumentCommand(ids, includes: null, transformer: null, transformerParameters: null, metadataOnly: false);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -237,7 +237,7 @@ namespace FastTests
 
             public async Task<QueryResult> QueryAsync(IndexQuery query, bool metadataOnly = false, bool indexEntriesOnly = false)
             {
-                var command = new QueryCommand(_store.Conventions, Context, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
+                var command = new QueryCommand(_store.Conventions, query, metadataOnly: metadataOnly, indexEntriesOnly: indexEntriesOnly);
 
                 await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -290,7 +290,7 @@ namespace FastTests
                 {
                     var payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<TResult>(url, Context, HttpMethod.Delete, payloadJson);
+                    var command = new JsonCommandWithPayload<TResult>(url, HttpMethod.Delete, payloadJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
 
@@ -306,7 +306,7 @@ namespace FastTests
                     if (payload != null)
                         payloadJson = EntityToBlittable.ConvertEntityToBlittable(payload, session.Advanced.DocumentStore.Conventions, session.Advanced.Context);
 
-                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, Context, method, payloadJson);
+                    var command = new JsonCommandWithPayload<BlittableJsonReaderObject>(url, method, payloadJson);
 
                     await RequestExecutor.ExecuteAsync(command, Context);
                 }
@@ -338,7 +338,7 @@ namespace FastTests
 
                 public override bool IsReadRequest => true;
 
-                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}{_url}";
 
@@ -361,10 +361,9 @@ namespace FastTests
             {
                 private readonly string _url;
                 private readonly HttpMethod _method;
-                private readonly JsonOperationContext _context;
                 private readonly BlittableJsonReaderObject _payload;
 
-                public JsonCommandWithPayload(string url, JsonOperationContext context, HttpMethod method, BlittableJsonReaderObject payload)
+                public JsonCommandWithPayload(string url, HttpMethod method, BlittableJsonReaderObject payload)
                 {
                     if (url == null)
                         throw new ArgumentNullException(nameof(url));
@@ -373,7 +372,6 @@ namespace FastTests
                         url = $"/{url}";
 
                     _url = url;
-                    _context = context;
                     _method = method;
                     _payload = payload;
 
@@ -383,7 +381,7 @@ namespace FastTests
 
                 public override bool IsReadRequest => false;
 
-                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     url = $"{node.Url}/databases/{node.Database}{_url}";
 
@@ -393,7 +391,7 @@ namespace FastTests
                         Content = new BlittableJsonContent(stream =>
                         {
                             if (_payload != null)
-                                _context.Write(stream, _payload);
+                                ctx.Write(stream, _payload);
                         })
                     };
 

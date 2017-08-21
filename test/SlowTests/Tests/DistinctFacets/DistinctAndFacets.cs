@@ -157,7 +157,7 @@ namespace SlowTests.Tests.DistinctFacets
             }
         }
 
-        [Fact(Skip = "RavenDB-6244")]
+        [Fact]
         public void CanGetDistinctResult_WithFacets_LazyAndCached()
         {
             using (var store = GetDocumentStore())

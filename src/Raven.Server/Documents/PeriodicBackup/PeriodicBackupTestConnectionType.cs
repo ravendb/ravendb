@@ -7,6 +7,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         Local,
         S3,
         Glacier,
-        Azure
+        Azure,
+        FTP
     }
 }

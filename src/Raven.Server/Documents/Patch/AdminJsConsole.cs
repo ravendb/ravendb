@@ -3,9 +3,9 @@ using System.Diagnostics;
 using System.Dynamic;
 using Jint;
 using Jint.Native;
-using Raven.Client.Documents.Exceptions.Patching;
+using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 

@@ -90,11 +90,6 @@ namespace Raven.Client.Documents.Linq
 
         public Parameters TransformerParameters => _transformerParameters;
 
-        public void AddQueryInput(string name, object value)
-        {
-            AddTransformerParameter(name, value);
-        }
-
         public void AddTransformerParameter(string name, object value)
         {
             _transformerParameters[name] = value;

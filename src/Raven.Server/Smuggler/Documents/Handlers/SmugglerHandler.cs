@@ -49,7 +49,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 if (!string.IsNullOrEmpty(options.FileName) && options.FileName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
                     throw new InvalidOperationException($"{options.FileName} is Invalid File Name");
 
-                if (string.IsNullOrEmpty(options?.TransformScript))
+                if (string.IsNullOrEmpty(options.TransformScript))
                 {
                     NoContentStatus();
                     return;
@@ -192,7 +192,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                         using (var file = await getFile())
                         using (var stream = new GZipStream(new BufferedStream(file, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                         {
-                            var source = new StreamSource(stream, context, Database);
+                            var source = new StreamSource(stream, context);
                             var destination = new DatabaseDestination(Database);
 
                             var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
@@ -274,7 +274,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
                 using (var stream = new GZipStream(new BufferedStream(await GetImportStream(), 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
                 using (var token = CreateOperationToken())
                 {
-                    var source = new StreamSource(stream, context, Database);
+                    var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(Database);
 
                     var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, token: token.Token);
@@ -381,7 +381,7 @@ namespace Raven.Server.Smuggler.Documents.Handlers
             using (stream)
             using (token)
             {
-                var source = new StreamSource(stream, context, Database);
+                var source = new StreamSource(stream, context);
                 var destination = new DatabaseDestination(Database);
                 var smuggler = new DatabaseSmuggler(source, destination, Database.Time, options, result, onProgress, token.Token);
 

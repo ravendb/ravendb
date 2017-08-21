@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -37,25 +38,26 @@ namespace SlowTests.Core.Subscriptions
                 var id = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
 
                 using (var subscription = store.Subscriptions.Open(
-                    new SubscriptionConnectionOptions(id){
+                    new SubscriptionConnectionOptions(id)
+                    {
                         MaxDocsPerBatch = 31
                     }))
                 {
-                    var docs = new List<dynamic>();
+                    var ids = new List<string>();
 
                     GC.KeepAlive(subscription.Run(batch =>
                     {
                         foreach (var item in batch.Items)
                         {
-                            docs.Add(item);
+                            ids.Add(item.Id);
                         }
                     }));
-                    
-                    SpinWait.SpinUntil(() => docs.Count >= 100, TimeSpan.FromSeconds(60));
-                    Assert.Equal(100, docs.Count);
-                    foreach (var doc in docs)
+
+                    Assert.True(SpinWait.SpinUntil(() => ids.Count >= 100, TimeSpan.FromSeconds(60)));
+                    Assert.Equal(100, ids.Count);
+                    foreach (var i in ids)
                     {
-                        Assert.True(doc.Id.StartsWith("users/"));
+                        Assert.True(i.StartsWith("users/"));
                     }
                 }
             }

@@ -7,7 +7,7 @@ class databaseGroupNode {
     type = ko.observable<databaseGroupNodeType>();
     responsibleNode = ko.observable<string>();
 
-    lastStatus = ko.observable<Raven.Client.Server.Operations.DatabasePromotionStatus>();
+    lastStatus = ko.observable<Raven.Client.ServerWide.Operations.DatabasePromotionStatus>();
     lastError = ko.observable<string>();
     lastErrorShort = ko.pureComputed(() => {
         const longError = this.lastError();
@@ -21,8 +21,6 @@ class databaseGroupNode {
                 return "icon-dbgroup-member";
             case "Promotable":
                 return "icon-dbgroup-promotable";
-            case "Watcher":
-                return "icon-dbgroup-watcher";
             case "Rehab":
                 return "icon-dbgroup-rehab";
         }
@@ -33,7 +31,7 @@ class databaseGroupNode {
         switch (this.lastStatus()) {
             case "Ok":
                 return "state-success";
-            case "NotRespondingMovedToRehab":
+            case "NotResponding":
                 return "state-danger";
             default:
                 return "state-warning";
@@ -44,7 +42,7 @@ class databaseGroupNode {
         switch (this.lastStatus()) {
             case "Ok":
                 return "Active";
-            case "NotRespondingMovedToRehab":
+            case "NotResponding":
                 return "Error";
             default:
                 return "Catching up";

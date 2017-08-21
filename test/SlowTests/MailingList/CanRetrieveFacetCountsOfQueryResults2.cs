@@ -115,7 +115,7 @@ namespace SlowTests.MailingList
                                                   .ToFacets("facets/AttributeFacets");
                     var results = query.ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(2, results.Count);
 
@@ -129,7 +129,7 @@ namespace SlowTests.MailingList
                             x => x.Range.Contains("hasgarden"));
                     Assert.Equal(3, fullGardenFacet.Hits);
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

@@ -7,13 +7,13 @@ namespace Raven.Server.Documents.Queries
 {
     public class ExecutingQueryInfo
     {
-        public DateTime StartTime { get; private set; }
+        public DateTime StartTime { get; }
 
-        public IIndexQuery QueryInfo { get; private set; }
+        public IIndexQuery QueryInfo { get; }
 
-        public long QueryId { get; private set; }
+        public long QueryId { get; }
 
-        public OperationCancelToken Token { get; private set; }
+        public OperationCancelToken Token { get; }
 
         public TimeSpan Duration => _stopwatch.Elapsed;
 

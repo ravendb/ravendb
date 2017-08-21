@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Session.Operations
         {
             _session.IncrementRequestCount();
 
-            return new SuggestionCommand(_session.Conventions, _session.Context, _query);
+            return new SuggestionCommand(_session.Conventions, _query);
         }
 
         public void SetResult(SuggestionQueryResult result)

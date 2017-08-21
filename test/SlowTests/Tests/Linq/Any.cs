@@ -103,7 +103,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .Count(p => p.StringList.Count > 0 && p.SomeProperty == "Value");
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(1, count);
                 }

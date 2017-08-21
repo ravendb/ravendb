@@ -1,9 +1,9 @@
-﻿using Raven.Client.Server;
+﻿using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    class ModifyCustomFunctionsCommand : UpdateDatabaseCommand
+    public class ModifyCustomFunctionsCommand : UpdateDatabaseCommand
     {
         public string CustomFunctions { get; set; }
         public ModifyCustomFunctionsCommand() : base(null)

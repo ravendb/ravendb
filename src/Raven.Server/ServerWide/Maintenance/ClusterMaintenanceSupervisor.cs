@@ -3,13 +3,11 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Sockets;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Server;
-using Raven.Client.Server.Commands;
-using Raven.Client.Server.Tcp;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config.Categories;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -257,11 +255,16 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        if (headerResponse.AuthorizationSuccessful == false)
+                        switch (headerResponse.Status)
                         {
-                            throw new UnauthorizedAccessException(
-                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
-                        }
+                            case TcpConnectionStatus.Ok:
+                                break;
+                            case TcpConnectionStatus.AuthorizationFailed:
+                                throw new UnauthorizedAccessException(
+                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
+                            case TcpConnectionStatus.TcpVersionMissmatch:
+                                throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
+                        }                        
                     }
 
                     WriteClusterMaintenanceConnectionHeader(writer);
@@ -276,6 +279,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                     writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
+                    writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
+                    writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
                 }

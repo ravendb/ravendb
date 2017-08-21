@@ -8,7 +8,7 @@ class getDocumentsLeftToReplicate extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<documentCountDto> {
+    execute(): JQueryPromise<any> {
         var url = "/admin/replication/docs-left-to-replicate";//TODO: use endpoints
         var args = {
             SourceUrl: this.sourceUrl,

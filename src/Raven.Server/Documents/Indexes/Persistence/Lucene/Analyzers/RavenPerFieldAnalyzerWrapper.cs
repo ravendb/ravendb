@@ -10,7 +10,6 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
 using Lucene.Net.Documents;
-using Sparrow;
 using Sparrow.Collections;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
@@ -24,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public bool Equals(string inDictionary, string value)
-            {                
+            {
                 if (value.Length == 0 || value[0] != '@')
                     return string.Equals(inDictionary, value, StringComparison.Ordinal);
 

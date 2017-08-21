@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 typeAliases: new[] { "DateTime", "System.DateTime", "DateTimeOffset", "System.DateTimeOffset", "SystemTime", "Raven.Client.Util.SystemTime", "Client.Util.SystemTime", "Util.SystemTime" },
                 error: @"Cannot use {0} during a map or reduce phase.
 The map or reduce functions must be referentially transparent, that is, for the same set of values, they always return the same results.
-Using {0} invalidate that premise, and is not allowed"),
+Using {0} invalidate that premise, and is not allowed")
         };
 
         private SyntaxNode _root;

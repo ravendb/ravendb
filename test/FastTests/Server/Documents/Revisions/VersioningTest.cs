@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
-using Raven.Client.Server.Revisions;
+using Raven.Client.ServerWide.Revisions;
 using Sparrow.Json;
 
 namespace FastTests.Server.Documents.Revisions

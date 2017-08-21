@@ -15,6 +15,7 @@ namespace Voron.Data.Tables
 {
     public unsafe class Table : IDisposable
     {
+        private readonly bool _forGlobalReadsOnly;
         private readonly TableSchema _schema;
         private readonly Transaction _tx;
         private readonly Tree _tableTree;
@@ -110,6 +111,7 @@ namespace Voron.Data.Tables
         {
             _schema = schema;
             _tx = tx;
+            _forGlobalReadsOnly = true;
         }
 
         public bool ReadByKey(Slice key, out TableValueReader reader)
@@ -163,6 +165,8 @@ namespace Voron.Data.Tables
 
         public long Update(long id, TableValueBuilder builder)
         {
+            AssertWritableTable();
+
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             int size = builder.Size;
@@ -241,8 +245,15 @@ namespace Voron.Data.Tables
             }
         }
 
+        public bool IsOwned(long id)
+        {
+            return ActiveDataSmallSection.IsOwned(id);
+        }
+
         public void Delete(long id)
         {
+            AssertWritableTable();
+
             var ptr = DirectRead(id, out int size);
             if (ptr == null)
                 return;
@@ -314,6 +325,8 @@ namespace Voron.Data.Tables
 
         private void DeleteValueFromIndex(long id, ref TableValueReader value)
         {
+            AssertWritableTable();
+
             if (_schema.Key != null)
             {
                 using (_schema.Key.GetSlice(_tx.Allocator, ref value, out Slice keySlice))
@@ -345,6 +358,8 @@ namespace Voron.Data.Tables
 
         public long Insert(TableValueBuilder builder)
         {
+            AssertWritableTable();
+
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
@@ -400,6 +415,8 @@ namespace Voron.Data.Tables
 
         private void UpdateValuesFromIndex(long id, ref TableValueReader oldVer, TableValueBuilder newVer)
         {
+            AssertWritableTable();
+
             using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out Slice idAsSlice))
             {
                 if (_schema.Key != null)
@@ -452,6 +469,8 @@ namespace Voron.Data.Tables
 
         internal long Insert(ref TableValueReader reader)
         {
+            AssertWritableTable();
+
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
 
@@ -502,6 +521,8 @@ namespace Voron.Data.Tables
 
         private void InsertIndexValuesFor(long id, ref TableValueReader value)
         {
+            AssertWritableTable();
+
             var pk = _schema.Key;
             using (Slice.External(_tx.Allocator, (byte*)&id, sizeof(long), out Slice idAsSlice))
             {
@@ -541,13 +562,13 @@ namespace Voron.Data.Tables
         private FixedSizeTree GetFixedSizeTree(TableSchema.FixedSizeSchemaIndexDef indexDef)
         {
             if (indexDef.IsGlobal)
-                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), newPageAllocator: _globalPageAllocator);
+                return _tx.GetGlobalFixedSizeTree(indexDef.Name, sizeof(long), isIndexTree: true, newPageAllocator: _globalPageAllocator);
 
             var tableTree = _tx.ReadTree(Name);
-            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long));
+            return GetFixedSizeTree(tableTree, indexDef.Name, sizeof(long), isIndexTree: true);
         }
 
-        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize)
+        private FixedSizeTree GetFixedSizeTree(Tree parent, Slice name, ushort valSize, bool isIndexTree = false)
         {
             if (_fixedSizeTreeCache.TryGetValue(parent.Name, out FastDictionary<Slice, FixedSizeTree, SliceStructComparer> cache) == false)
             {
@@ -557,7 +578,7 @@ namespace Voron.Data.Tables
 
             if (cache.TryGetValue(name, out FixedSizeTree tree) == false)
             {
-                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, newPageAllocator: _tablePageAllocator);
+                var fixedSizeTree = new FixedSizeTree(_tx.LowLevelTransaction, parent, name, valSize, isIndexTree: isIndexTree | parent.IsIndexTree, newPageAllocator: _tablePageAllocator);
                 return cache[fixedSizeTree.Name] = fixedSizeTree;
             }
 
@@ -613,7 +634,7 @@ namespace Voron.Data.Tables
             return id;
         }
 
-        internal Tree GetTree(Slice name)
+        internal Tree GetTree(Slice name, bool isIndexTree)
         {
             if (_treesBySliceCache.TryGetValue(name, out Tree tree))
                 return tree;
@@ -622,7 +643,7 @@ namespace Voron.Data.Tables
             if (treeHeader == null)
                 throw new InvalidOperationException($"Cannot find tree {name} in table {Name}");
 
-            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, newPageAllocator: _tablePageAllocator);
+            tree = Tree.Open(_tx.LowLevelTransaction, _tx, name, (TreeRootHeader*)treeHeader, isIndexTree: isIndexTree, newPageAllocator: _tablePageAllocator);
             _treesBySliceCache[name] = tree;
 
             return tree;
@@ -631,12 +652,14 @@ namespace Voron.Data.Tables
         internal Tree GetTree(TableSchema.SchemaIndexDef idx)
         {
             if (idx.IsGlobal)
-                return _tx.ReadTree(idx.Name, newPageAllocator: _globalPageAllocator);
-            return GetTree(idx.Name);
+                return _tx.ReadTree(idx.Name, isIndexTree: true, newPageAllocator: _globalPageAllocator);
+            return GetTree(idx.Name, true);
         }
 
         public bool DeleteByKey(Slice key)
         {
+            AssertWritableTable();
+
             var pkTree = GetTree(_schema.Key);
 
             var readResult = pkTree.Read(key);
@@ -952,6 +975,8 @@ namespace Voron.Data.Tables
 
         public void DeleteByPrimaryKey(Slice value, Func<TableValueHolder, bool> deletePredicate)
         {
+            AssertWritableTable();
+
             var pk = _schema.Key;
             var tree = GetTree(pk);
             TableValueHolder tableValueHolder = null;
@@ -1166,6 +1191,8 @@ namespace Voron.Data.Tables
 
         public bool Set(TableValueBuilder builder)
         {
+            AssertWritableTable();
+
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
             long id;
@@ -1188,6 +1215,8 @@ namespace Voron.Data.Tables
 
         public int DeleteBackwardFrom(TableSchema.FixedSizeSchemaIndexDef index, long value, long numberOfEntriesToDelete)
         {
+            AssertWritableTable();
+
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
@@ -1215,6 +1244,8 @@ namespace Voron.Data.Tables
 
         public void DeleteByPrimaryKeyPrefix(Slice startSlice, Action<TableValueHolder> beforeDelete = null)
         {
+            AssertWritableTable();
+
             var pk = _schema.Key;
             var tree = GetTree(pk);
             TableValueHolder tableValueHolder = null;
@@ -1246,6 +1277,8 @@ namespace Voron.Data.Tables
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Action<TableValueHolder> beforeDelete = null)
         {
+            AssertWritableTable();
+
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
@@ -1289,6 +1322,8 @@ namespace Voron.Data.Tables
         public long DeleteForwardFrom(TableSchema.SchemaIndexDef index, Slice value, bool startsWith, long numberOfEntriesToDelete,
             Func<TableValueHolder, bool> beforeDelete)
         {
+            AssertWritableTable();
+
             if (numberOfEntriesToDelete < 0)
                 ThrowNonNegativeNumberOfEntriesToDelete();
 
@@ -1434,6 +1469,13 @@ namespace Voron.Data.Tables
             report.AddPreAllocatedBuffers(_tablePageAllocator, calculateExactSizes);
 
             return report;
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertWritableTable()
+        {
+            if (_forGlobalReadsOnly)
+                throw new InvalidOperationException("Table is meant to be used for global reads only while it attempted to modify the data");
         }
 
         public struct SeekResult

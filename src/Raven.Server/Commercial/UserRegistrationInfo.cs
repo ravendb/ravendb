@@ -1,4 +1,4 @@
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 
 namespace Raven.Server.Commercial
 {

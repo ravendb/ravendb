@@ -1,9 +1,8 @@
 ﻿using System;
-using Raven.Client.Documents.Replication.Messages;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -58,8 +57,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (InitialChangeVector == "DoNotChange")
+                        if (Constants.Documents.SubscriptionChagneVectorSpecialStates.TryParse(InitialChangeVector , 
+                            out Constants.Documents.SubscriptionChagneVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChagneVectorSpecialStates.DoNotChange)
                         {
+                            if (receivedSubscriptionState.Modifications == null)
+                                receivedSubscriptionState.Modifications = new DynamicJsonValue();
+
                             receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
                             modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
                         }
@@ -82,7 +85,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Criteria)] = new DynamicJsonValue()
+            json[nameof(Criteria)] = new DynamicJsonValue
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,

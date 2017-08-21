@@ -18,6 +18,11 @@ namespace Raven.Client.Json
             _source = metadata;
         }
 
+        public MetadataAsDictionary():this(new Dictionary<string, object>())
+        {
+            
+        }
+
         public MetadataAsDictionary(Dictionary<string, object> metadata)
         {
             _metadata = metadata;
@@ -157,8 +162,7 @@ namespace Raven.Client.Json
             if (_metadata != null)
                 return _metadata.ContainsKey(key);
 
-            object value;
-            return _source.TryGetMember(key, out value);
+            return _source.TryGetMember(key, out _);
         }
 
         public void CopyTo(KeyValuePair<string, object>[] array, int arrayIndex)

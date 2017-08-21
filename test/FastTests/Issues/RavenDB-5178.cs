@@ -1,5 +1,5 @@
-﻿using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+﻿using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace FastTests.Issues
@@ -13,7 +13,7 @@ namespace FastTests.Issues
             {
                 var longName = "LongDatabaseName_" + new string('z', 100);
 
-                var doc = MultiDatabase.CreateDatabaseDocument(longName);
+                var doc = new DatabaseRecord(longName);
 
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 try

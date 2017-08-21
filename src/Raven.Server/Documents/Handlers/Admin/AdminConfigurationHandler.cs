@@ -23,11 +23,13 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     var record = ServerStore.Cluster.ReadDatabase(context, Database.Name, out long index);
                     record.Client = clientConfiguration;
+                    record.Client.Etag ++; // we don't care _what_ the value is, just that it is changing
 
                     var result = await ServerStore.WriteDatabaseRecordAsync(Database.Name, record, index);
                     await Database.RachisLogIndexNotifications.WaitForIndexNotification(result.Etag);
                 }
-
+                
+                NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }

@@ -33,7 +33,7 @@ namespace Raven.Server.Utils
         /// <summary>
         /// Gets the parent process of specified process.
         /// </summary>
-        /// <param name="id">The process id.</param>
+        /// <param name="processId">The process id.</param>
         /// <returns>An instance of the Process class.</returns>
         public static Process GetParentProcess(int processId)
         {
@@ -52,7 +52,7 @@ namespace Raven.Server.Utils
         public static Process GetParentProcess(IntPtr handle)
         {
             ParentProcessUtilities pbi = new ParentProcessUtilities();
-            int status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out int returnLength);
+            int status = NtQueryInformationProcess(handle, 0, ref pbi, Marshal.SizeOf(pbi), out int _);
             if (status != 0)
                 return null;
 

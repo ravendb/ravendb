@@ -6,7 +6,6 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Server.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup.Azure;
@@ -24,8 +23,9 @@ using System.Linq;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Sparrow.Collections;
@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             PeriodicBackupStatus backupStatus)
         {
             var taskStatus = GetTaskStatus(databaseRecord, configuration, skipErrorLog: true);
-            return taskStatus == TaskStatus.Disabled ? null : 
+            return taskStatus == TaskStatus.Disabled ? null :
                 GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
@@ -371,8 +371,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             long? startDocumentEtag, DocumentsOperationContext context, DocumentsTransaction tx)
         {
             long lastEtag;
-            var exception = new Reference<Exception>();
-            using (status.LocalBackup.UpdateStats(isFullBackup, exception))
+            using (status.LocalBackup.UpdateStats(isFullBackup))
             {
                 try
                 {
@@ -392,7 +391,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
                 catch (Exception e)
                 {
-                    exception.Value = e;
+                    status.LocalBackup.Exception = e;
                     throw;
                 }
             }
@@ -468,7 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Periodic backup status with task id {status.TaskId} was updated");
 
-                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Item1);
+                await _serverStore.WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
             }
             catch (Exception e)
             {
@@ -502,12 +501,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
                     await UploadToS3(settings, stream, folderName, fileName, uploadProgress, archiveDescription);
                 },
-                ref backupStatus.UploadToS3);
+                ref backupStatus.UploadToS3, "S3");
 
             CreateUploadTaskIfNeeded(configuration.GlacierSettings, tasks, backupPath, isFullBackup,
-                async (settings, stream, uploadProgress) => 
-                await UploadToGlacier(settings, stream, folderName, fileName, uploadProgress),
-                ref backupStatus.UploadToGlacier);
+                async (settings, stream, uploadProgress) =>
+                    await UploadToGlacier(settings, stream, folderName, fileName, uploadProgress),
+                ref backupStatus.UploadToGlacier, "Glacier");
 
             CreateUploadTaskIfNeeded(configuration.AzureSettings, tasks, backupPath, isFullBackup,
                 async (settings, stream, uploadProgress) =>
@@ -515,7 +514,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var archiveDescription = GetArchiveDescription(isFullBackup, configuration.BackupType);
                     await UploadToAzure(settings, stream, folderName, fileName, uploadProgress, archiveDescription);
                 },
-                ref backupStatus.UploadToAzure);
+                ref backupStatus.UploadToAzure, "Azure");
+
+            CreateUploadTaskIfNeeded(configuration.FtpSettings, tasks, backupPath, isFullBackup,
+                async (settings, stream, uploadProgress) =>
+                    await UploadToFtp(settings, stream, folderName, fileName, uploadProgress),
+                ref backupStatus.UploadToFtp, "FTP");
 
             await Task.WhenAll(tasks);
         }
@@ -526,9 +530,10 @@ namespace Raven.Server.Documents.PeriodicBackup
             string backupPath,
             bool isFullBackup,
             Func<S, FileStream, UploadProgress, Task> uploadToServer,
-            ref T uploadStatus)
+            ref T uploadStatus,
+            string backupDestination)
             where S : BackupSettings
-            where T: CloudUploadStatus
+            where T : CloudUploadStatus
         {
             if (CanBackupUsing(settings) == false)
                 return;
@@ -540,8 +545,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             tasks.Add(Task.Run(async () =>
             {
-                var exception = new Reference<Exception>();
-                using (localUploadStatus.UpdateStats(isFullBackup, exception))
+                using (localUploadStatus.UpdateStats(isFullBackup))
                 using (var fileStream = File.OpenRead(backupPath))
                 {
                     var uploadProgress = localUploadStatus.UploadProgress;
@@ -555,12 +559,12 @@ namespace Raven.Server.Documents.PeriodicBackup
                     catch (OperationCanceledException e)
                     {
                         // shutting down
-                        exception.Value = e;
+                        localUploadStatus.Exception = e;
                     }
                     catch (Exception e)
                     {
-                        exception.Value = e;
-                        throw;
+                        localUploadStatus.Exception = e;
+                        throw new InvalidOperationException($"Failed to backup to {backupDestination}", e);
                     }
                     finally
                     {
@@ -585,7 +589,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress,
             string archiveDescription)
         {
-            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey, 
+            using (var client = new RavenAwsS3Client(settings.AwsAccessKey, settings.AwsSecretKey,
                 settings.AwsRegionName, settings.BucketName, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
@@ -595,25 +599,42 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info(string.Format("Successfully uploaded backup {0} to S3 bucket {1}, " +
-                                               "with key {2}", fileName, settings.BucketName, key));
+                    _logger.Info(string.Format($"Successfully uploaded backup file '{fileName}' " +
+                                               $"to S3 bucket named: {settings.BucketName}, " +
+                                               $"with key: {key}"));
             }
         }
 
         private async Task UploadToGlacier(
-            GlacierSettings settings, 
+            GlacierSettings settings,
             Stream stream,
             string folderName,
             string fileName,
             UploadProgress uploadProgress)
         {
-            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey, 
+            using (var client = new RavenAwsGlacierClient(settings.AwsAccessKey, settings.AwsSecretKey,
                 settings.AwsRegionName, settings.VaultName, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(_database.Name, folderName, fileName);
                 var archiveId = await client.UploadArchive(stream, key);
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup {fileName} to Glacier, archive ID: {archiveId}");
+                    _logger.Info($"Successfully uploaded backup file '{fileName}' to Glacier, archive ID: {archiveId}");
+            }
+        }
+
+        private async Task UploadToFtp(
+            FtpSettings settings,
+            Stream stream,
+            string folderName,
+            string fileName,
+            UploadProgress uploadProgress)
+        {
+            using (var client = new RavenFtpClient(settings.Url, settings.Port, settings.UserName, 
+                settings.Password, settings.CertificateAsBase64, settings.CertificateFileName, uploadProgress, _cancellationToken.Token))
+            {
+                await client.UploadFile(folderName, fileName, stream);
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Successfully uploaded backup file '{fileName}' to an ftp server");
             }
         }
 
@@ -625,7 +646,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             UploadProgress uploadProgress,
             string archiveDecription)
         {
-            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey, 
+            using (var client = new RavenAzureClient(settings.AccountName, settings.AccountKey,
                 settings.StorageContainer, uploadProgress, _cancellationToken.Token))
             {
                 var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
@@ -635,8 +656,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 });
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Successfully uploaded backup {fileName} " +
-                                 $"to Azure container {settings.StorageContainer}, with key {key}");
+                    _logger.Info($"Successfully uploaded backup file '{fileName}' " +
+                                 $"to Azure container: {settings.StorageContainer}, with key: {key}");
             }
         }
 
@@ -981,7 +1002,8 @@ namespace Raven.Server.Documents.PeriodicBackup
             if (CanBackupUsing(configuration.LocalSettings) == false &&
                 CanBackupUsing(configuration.S3Settings) == false &&
                 CanBackupUsing(configuration.GlacierSettings) == false &&
-                CanBackupUsing(configuration.AzureSettings) == false)
+                CanBackupUsing(configuration.AzureSettings) == false &&
+                CanBackupUsing(configuration.FtpSettings) == false)
             {
                 if (skipErrorLog == false)
                 {

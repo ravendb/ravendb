@@ -23,7 +23,7 @@ class extensions {
 
         const regex1 = /^[^\\/:\*\?"<>\|]*$/; // forbidden characters \ / : * ? " < > |
         if (!regex1.test(databaseName)) {
-            return `The database name can't contain any of the following characters: \\ / : * ? " < > |`;
+            return `Database name can't contain any of the following characters: \\ / : * ? " < > |`;
         }
 
         const regex2 = /^(nul|null|prn|con|lpt[0-9]|com[0-9])(\.|$)/i; // forbidden file names
@@ -32,11 +32,15 @@ class extensions {
         }
 
         if (databaseName.startsWith(".")) {
-            return "The database name can't start with a dot!";
+            return "Database name can't start with a dot!";
         }
 
         if (databaseName.endsWith(".")) {
-            return "The database name can't end with a dot!";
+            return "Database name can't end with a dot!";
+        }
+
+        if (databaseName.length > 230) {
+            return "Database name can't exceed 230 characters";
         }
 
         return null;
@@ -66,34 +70,15 @@ class extensions {
                 return !val || base64regex.test(val);
             },
             message: 'Invaild base64 string.'
-        };       
-
-        (ko.validation.rules as any)['validJson'] = {
-            validator: (text: string) => {
-                let isValidJson = false;
-                try {
-                    JSON.parse(text);
-                    isValidJson = true;
-                }
-                catch (e) { }
-                return isValidJson;
-            },
-            message: 'Invalid json format.'
         };
 
-        (ko.validation.rules as any)['validJavascript'] = {
+        (ko.validation.rules as any)['aceValidation'] = {
             validator: (text: string) => {
-                try {
-                    eval("throw 0;" + text);
-                } catch (e) {
-                    if (e === 0)
-                        return true;
-                }
-                return false;
-            },
-            message: 'Invalid javascript.'
+                // we return true here, as validation is handled in aceEditorBindingHandler
+                return true; 
+            }
         };
-
+        
         ko.validation.init({
             errorElementClass: 'has-error',
             errorMessageClass: 'help-block',

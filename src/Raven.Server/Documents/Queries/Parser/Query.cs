@@ -1,7 +1,7 @@
-using System;
 using System.Collections.Generic;
 using System.IO;
 using Newtonsoft.Json;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -14,6 +14,9 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<(QueryExpression Expression, FieldToken Alias)> With;
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
+
+        public Dictionary<StringSegment, ValueToken> DeclaredFunctions;
+
         public string QueryText;
 
         public string ToJsonAst()
@@ -26,14 +29,19 @@ namespace Raven.Server.Documents.Queries.Parser
         public override string ToString()
         {
             var writer = new StringWriter();
+            if (DeclaredFunctions != null)
+            {
+                foreach (var function in DeclaredFunctions)
+                {
+                    writer.Write("DECLARE ");
+                    writer.WriteLine(function.Value);
+                }
+            }
             if (Select != null)
             {
                 WriteSelectOrWith("SELECT", writer, Select, IsDistinct);
             }
-            if (With != null)
-            {
-                WriteSelectOrWith("WITH", writer, With, isDistinct: false);
-            }
+           
             writer.Write(" FROM ");
             if (From.Index)
             {
@@ -60,6 +68,10 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             writer.WriteLine();
+            if (With != null)
+            {
+                WriteSelectOrWith("WITH", writer, With, isDistinct: false);
+            }
             if (GroupBy != null)
             {
                 writer.Write("GROUP BY ");
@@ -136,13 +148,24 @@ namespace Raven.Server.Documents.Queries.Parser
         public void ToJsonAst(JsonWriter writer)
         {
             writer.WriteStartObject();
+            if (DeclaredFunctions != null)
+            {
+                writer.WritePropertyName("Declare");
+                writer.WriteStartObject();
+                foreach (var declaredFunction in DeclaredFunctions)
+                {
+                    writer.WritePropertyName(declaredFunction.Key);
+                    writer.WriteValue(declaredFunction.Value);
+                }
+                writer.WriteEndObject();
+            }
             if (Select != null)
             {
-                WriteSelectOrWith(writer, Select, "Select");
+                WriteSelectOrWith(writer, Select, "Select",QueryText);
             }
             if (With != null)
             {
-                WriteSelectOrWith(writer, With, "With");
+                WriteSelectOrWith(writer, With, "With",QueryText);
             }
             writer.WritePropertyName("From");
             writer.WriteStartObject();
@@ -205,7 +228,7 @@ namespace Raven.Server.Documents.Queries.Parser
             writer.WriteEndObject();
         }
 
-        private void WriteSelectOrWith(JsonWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems, string clause)
+        public static void WriteSelectOrWith(JsonWriter writer, List<(QueryExpression Expression, FieldToken Alias)> clauseItems, string clause, string queryText)
         {
             writer.WritePropertyName(clause);
             writer.WriteStartArray();
@@ -214,11 +237,11 @@ namespace Raven.Server.Documents.Queries.Parser
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Expression");
-                field.Expression.ToJsonAst(QueryText, writer);
+                field.Expression.ToJsonAst(queryText, writer);
                 if (field.Alias != null)
                 {
                     writer.WritePropertyName("Alias");
-                    QueryExpression.WriteValue(QueryText, writer, field.Alias.TokenStart, field.Alias.TokenLength,
+                    QueryExpression.WriteValue(queryText, writer, field.Alias.TokenStart, field.Alias.TokenLength,
                         field.Alias.EscapeChars);
                 }
                 writer.WriteEndObject();

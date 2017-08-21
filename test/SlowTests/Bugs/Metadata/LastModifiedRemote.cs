@@ -5,13 +5,11 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Xunit;
 
@@ -23,7 +21,7 @@ namespace SlowTests.Bugs.Metadata
         public void CanAccessLastModifiedAsMetadata()
         {
             var name = "CanAccessLastModifiedAsMetadata_1";
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
+            var doc = new DatabaseRecord(name);
 
             DoNotReuseServer();
             using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name }.Initialize())

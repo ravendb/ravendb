@@ -2,8 +2,39 @@
 @db-group-member-color: #6ebf3a;
 @db-group-task-name-color: @gray-light;
 
+.fullscreen {
+    #databaseGroupGraphContainer {
+        width: 100%;
+        
+        .exit-button {
+            display: block;
+        }
+        
+        & > h3 {
+            display: block;
+        }
+    }
+    
+    
+}
+
 #databaseGroupGraphContainer {
     min-height: 400px;
+    position: relative;
+    
+    & > h3 {
+        display: none;
+        position: absolute;
+        left: 15px;
+        top: 20px;
+    }
+    
+    .exit-button {
+        display: none;
+        position: absolute;
+        right: 15px;
+        top: 15px;
+    }
 
     .db-node {
         .node-bg {

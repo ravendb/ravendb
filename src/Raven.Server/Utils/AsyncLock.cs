@@ -7,29 +7,29 @@ namespace Raven.Server.Utils
     // credits to: http://www.hanselman.com/blog/ComparingTwoTechniquesInNETAsynchronousCoordinationPrimitives.aspx
     public sealed class AsyncLock
     {
-        private readonly SemaphoreSlim m_semaphore = new SemaphoreSlim(1, 1);
-        private readonly Task<IDisposable> m_releaser;
+        private readonly SemaphoreSlim _semaphore = new SemaphoreSlim(1, 1);
+        private readonly Task<IDisposable> _releaser;
 
         public AsyncLock()
         {
-            m_releaser = Task.FromResult((IDisposable)new Releaser(this));
+            _releaser = Task.FromResult((IDisposable)new Releaser(this));
         }
 
         public Task<IDisposable> LockAsync()
         {
-            var wait = m_semaphore.WaitAsync();
+            var wait = _semaphore.WaitAsync();
             return wait.IsCompleted ?
-                        m_releaser :
+                        _releaser :
                         wait.ContinueWith((_, state) => (IDisposable)state,
-                            m_releaser.Result, CancellationToken.None,
+                            _releaser.Result, CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }
 
         private sealed class Releaser : IDisposable
         {
-            private readonly AsyncLock m_toRelease;
-            internal Releaser(AsyncLock toRelease) { m_toRelease = toRelease; }
-            public void Dispose() { m_toRelease.m_semaphore.Release(); }
+            private readonly AsyncLock _mToRelease;
+            internal Releaser(AsyncLock toRelease) { _mToRelease = toRelease; }
+            public void Dispose() { _mToRelease._semaphore.Release(); }
         }
     }
 }

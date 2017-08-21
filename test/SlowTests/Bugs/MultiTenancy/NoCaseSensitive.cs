@@ -1,7 +1,6 @@
 using FastTests;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
@@ -14,7 +13,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();            
             using (var documentStore = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("repro");
+                var doc = new DatabaseRecord("repro");
                 documentStore.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var session = documentStore.OpenSession("repro"))

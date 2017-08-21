@@ -22,6 +22,9 @@ namespace Raven.Server.Utils
             if (remoteAsString == localAsString)
                 return ConflictStatus.AlreadyMerged;
 
+            if(string.IsNullOrEmpty(remoteAsString))
+                return ConflictStatus.AlreadyMerged;
+
             if (string.IsNullOrEmpty(remoteAsString) || string.IsNullOrEmpty(localAsString))
                 return ConflictStatus.Update;
 
@@ -107,14 +110,14 @@ namespace Raven.Server.Utils
             } while (etag != 0);
             }
             
-        private static long ParseToLong(string s, int count, int len)
+        private static long ParseToLong(string s, int start, int len)
             {
             int num;
-            num = s[count] - '0';
+            num = s[start] - '0';
             for (int i = 1; i < len; i++)
             {
                 num *= 10;
-                num += s[count+i] - '0';
+                num += s[start+i] - '0';
         }
             return num;
         }
@@ -231,7 +234,6 @@ namespace Raven.Server.Utils
             
             return _mergeVectorBuffer.SerializeVector();
         }
-
 
         public static unsafe string NewChangeVector(string nodeTag, long etag, Guid dbId)
         {

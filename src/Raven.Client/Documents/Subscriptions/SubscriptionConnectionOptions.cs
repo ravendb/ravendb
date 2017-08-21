@@ -76,20 +76,9 @@ namespace Raven.Client.Documents.Subscriptions
                 throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
             
             SubscriptionName = subscriptionName;
-            SubscriptionId = -1;
-        }
-        
-        public SubscriptionConnectionOptions(long subscriptionId): this()
-        {
-            if (subscriptionId <= 0)
-                throw new ArgumentOutOfRangeException(nameof(subscriptionId));
-
-            SubscriptionId = subscriptionId;
-            SubscriptionName = subscriptionId.ToString();
         }
 
         public string SubscriptionName { get; set; }
-        public long SubscriptionId { get; set; }
         public TimeSpan TimeToWaitBeforeConnectionRetry { get; set; }
         public bool IgnoreSubscriberErrors { get; set; }
         public SubscriptionOpeningStrategy Strategy { get; set; }

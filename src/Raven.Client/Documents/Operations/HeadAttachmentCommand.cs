@@ -1,14 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 
@@ -32,13 +28,13 @@ namespace Raven.Client.Documents.Operations
             _changeVector = changeVector;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
 
             var request = new HttpRequestMessage
             {
-                Method = HttpMethods.Head,
+                Method = HttpMethods.Head
             };
 
             if (_changeVector != null)

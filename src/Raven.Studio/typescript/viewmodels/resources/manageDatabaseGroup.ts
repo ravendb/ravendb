@@ -1,5 +1,6 @@
 import viewModelBase = require("viewmodels/viewModelBase");
 
+import app = require("durandal/app");
 import getDatabaseCommand = require("commands/resources/getDatabaseCommand");
 import databaseInfo = require("models/resources/info/databaseInfo");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
@@ -9,6 +10,7 @@ import deleteDatabaseFromNodeCommand = require("commands/resources/deleteDatabas
 import databaseGroupGraph = require("models/database/dbGroup/databaseGroupGraph");
 import ongoingTasksCommand = require("commands/database/tasks/getOngoingTasksCommand");
 import toggleDynamicNodeAssignmentCommand = require("commands/database/dbGroup/toggleDynamicNodeAssignmentCommand");
+import showDataDialog = require("viewmodels/common/showDataDialog");
 
 class manageDatabaseGroup extends viewModelBase {
 
@@ -21,7 +23,6 @@ class manageDatabaseGroup extends viewModelBase {
     nodes: KnockoutComputed<databaseGroupNode[]>;
     additionalNodes: KnockoutComputed<string[]>;
     addNodeEnabled: KnockoutComputed<boolean>;
-    expandedDetails = ko.observableArray<string>([]);
 
     spinners = {
         addNode: ko.observable<boolean>(false)
@@ -30,7 +31,7 @@ class manageDatabaseGroup extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("addNode", "deleteNodeFromGroup", "toggleExpand");
+        this.bindToCurrentInstance("addNode", "deleteNodeFromGroup", "showErrorDetails");
 
         this.initObservables();
     }
@@ -67,6 +68,11 @@ class manageDatabaseGroup extends viewModelBase {
     compositionComplete(): void {
         super.compositionComplete();
 
+        this.registerDisposableHandler($(document), "fullscreenchange", () => {
+            $("body").toggleClass("fullscreen", $(document).fullScreen());
+            this.graph.onResize();
+        });
+
         this.graph.init($("#databaseGroupGraphContainer"));
     }
 
@@ -92,7 +98,7 @@ class manageDatabaseGroup extends viewModelBase {
             });
     }
 
-    private onDatabaseInfoFetched(dbInfoDto: Raven.Client.Server.Operations.DatabaseInfo) {
+    private onDatabaseInfoFetched(dbInfoDto: Raven.Client.ServerWide.Operations.DatabaseInfo) {
         const dbInfo = new databaseInfo(dbInfoDto);
         this.currentDatabaseInfo(dbInfo);
         
@@ -127,12 +133,10 @@ class manageDatabaseGroup extends viewModelBase {
             });
     }
 
-    toggleExpand(tag: string) {
-        if (_.includes(this.expandedDetails(), tag)) {
-            this.expandedDetails.remove(tag);
-        } else {
-            this.expandedDetails.push(tag);
-        }
+    showErrorDetails(tag: string) {
+        const node = this.nodes().find(x => x.tag() === tag);
+
+        app.showBootstrapDialog(new showDataDialog("Error details. Node: " + tag, node.lastError(), "plain"));
     }
 
 }

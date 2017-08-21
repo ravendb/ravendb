@@ -48,7 +48,7 @@ namespace SlowTests.SlowTests.Issues
                     Query = $"FROM INDEX '{stats.IndexName}'"
                 };
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(queryToDelete));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(queryToDelete));
                 operation.WaitForCompletion(TimeSpan.FromMinutes(2));
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(2));

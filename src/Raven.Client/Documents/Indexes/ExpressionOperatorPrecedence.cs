@@ -73,6 +73,6 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// pseudo operator for comparisons
         /// </summary>
-        ParenthesisNotNeeded = 0,
+        ParenthesisNotNeeded = 0
     }
 }

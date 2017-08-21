@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             {
                 context.Write(writer, new DynamicJsonValue
                 {
-                    ["ServerId"] = ServerStore.GetServerId().ToString(),
+                    ["ServerId"] = ServerStore.GetServerId().ToString()
                 });
             }
 

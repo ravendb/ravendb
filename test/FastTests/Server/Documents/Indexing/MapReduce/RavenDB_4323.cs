@@ -2,8 +2,8 @@
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce

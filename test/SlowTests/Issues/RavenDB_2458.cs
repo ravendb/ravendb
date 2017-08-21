@@ -9,10 +9,9 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.Exceptions.Documents.Patching;
+using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

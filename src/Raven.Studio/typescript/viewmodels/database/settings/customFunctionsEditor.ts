@@ -6,9 +6,11 @@ import customFunctions = require("models/database/documents/customFunctions");
 import jsonUtil = require("common/jsonUtil");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 class customFunctionsEditor extends viewModelBase {
 
+    completer = defaultAceCompleter.completer();
     documentText = ko.observable<string>();
     isSaveEnabled: KnockoutComputed<boolean>;
 
@@ -18,7 +20,7 @@ class customFunctionsEditor extends viewModelBase {
 
     spinners = {
         save: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
@@ -32,7 +34,7 @@ class customFunctionsEditor extends viewModelBase {
 
     private initValidation() {
         this.documentText.extend({
-            validJavascript: true
+            aceValidation: true
         });
     }
 
@@ -49,11 +51,6 @@ class customFunctionsEditor extends viewModelBase {
                 content: "Custom functions can be used in:" +
                 "<ul><li>patches</li><li>custom column bindings on document grids</li> </ul><pre>exports.greet = <span class=\"token keyword\">function</span>(name) {<br/>    <span class=\"token keyword\">return</span> <span class=\"token string\">\"Hello \" + name + \"!\"</span>;<br/>}</pre>"
             });
-    }
-
-    detached() {
-        super.detached();
-        aceEditorBindingHandler.detached();
     }
 
     fetchCustomFunctions() {

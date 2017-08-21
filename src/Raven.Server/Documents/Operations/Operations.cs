@@ -5,9 +5,9 @@ using System.ComponentModel;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter.Notifications;
@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Operations
 
                 if (state.Description.EndTime.HasValue && state.Description.EndTime < twoDaysAgo)
                 {
-                    _completed.TryRemove(taskAndState.Key, out Operation value);
+                    _completed.TryRemove(taskAndState.Key, out Operation _);
                 }
 
                 var task = state.Task;
@@ -236,15 +236,9 @@ namespace Raven.Server.Documents.Operations
             _completed.Clear();
         }
 
-        public IEnumerable<Operation> GetAll()
-        {
-            return _active.Values.Union(_completed.Values);
-        }
+        public IEnumerable<Operation> GetAll() => _active.Values.Union(_completed.Values);
 
-        public ICollection<Operation> GetActive()
-        {
-            return _active.Values;
-        }
+        public ICollection<Operation> GetActive() => _active.Values;
 
         public class Operation
         {
@@ -360,6 +354,9 @@ namespace Raven.Server.Documents.Operations
             [Description("Database import")]
             DatabaseImport,
 
+            [Description("Database compact")]
+            DatabaseCompact,
+
             [Description("Index compact")]
             IndexCompact,
 
@@ -373,7 +370,7 @@ namespace Raven.Server.Documents.Operations
             BulkInsert,
 
             [Description("Database Restore")]
-            DatabaseRestore,
+            DatabaseRestore
         }
     }
 }

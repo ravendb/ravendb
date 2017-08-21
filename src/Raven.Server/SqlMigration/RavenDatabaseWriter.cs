@@ -86,7 +86,7 @@ namespace Raven.Server.SqlMigration
                 // Execute queries parallelly
                 var readers = GetReadersOfEmbeddedTables(table);
 
-                string unsupportedStr = String.Empty;
+                /*string unsupportedStr = String.Empty;
                 string removeUnsupportedStr = String.Empty;
 
                 foreach (var item in table.UnsupportedColumns)
@@ -102,9 +102,9 @@ namespace Raven.Server.SqlMigration
 
 
                 var query = "Select " + unsupportedStr + $"* INTO #TempTable from {SqlDatabase.TableQuote(table.Name)}" + removeUnsupportedStr + " SELECT * FROM #TempTable DROP TABLE #TempTable";
-                Console.WriteLine(query);
+                Console.WriteLine(query);*/
 
-                //var query = $"Select * from {SqlDatabase.TableQuote(table.Name)}";
+                var query = $"Select * from {SqlDatabase.TableQuote(table.Name)}";
 
                 using (var cmd = new SqlCommand(query, _connection))
                 {

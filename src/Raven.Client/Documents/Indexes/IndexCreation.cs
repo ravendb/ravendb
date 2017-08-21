@@ -11,9 +11,9 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Util;
 using Sparrow.Logging;
 

@@ -4,7 +4,7 @@ import document = require("models/database/documents/document");
 
 class patchDocument extends document {
 
-    static readonly allPatchOptions: Array<patchOption> = ["Document", "Collection", "Index"];
+    static readonly allPatchOptions: Array<patchOption> = ["Document", "Query"];
 
     patchOnOption = ko.observable<patchOption>();
     selectedItem = ko.observable<string>();
@@ -13,18 +13,12 @@ class patchDocument extends document {
 
     patchAll = ko.observable<boolean>(false);
 
-    selectedIndex: KnockoutComputed<string>;
-
     constructor(dto: patchDto) {
         super(dto);
         this.patchOnOption(dto.PatchOnOption);
         this.query(dto.Query);
         this.script(dto.Script);
         this.selectedItem(dto.SelectedItem);
-
-        this.selectedIndex = ko.pureComputed(() => {
-            return this.patchOnOption() === "Index" ? this.selectedItem() : null;
-        });
     }
 
     static empty() {

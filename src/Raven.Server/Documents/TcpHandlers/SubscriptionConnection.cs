@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Subscriptions;
@@ -15,14 +15,10 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Utils;
 using Sparrow.Utils;
-using System.Linq;
-using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
-using Voron;
+using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -53,9 +49,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
         private SubscriptionConnectionState _connectionState;
         private bool _isDisposed;
+        public SubscriptionState SubscriptionState;
 
-        public long SubscriptionId => _options.SubscriptionId;
+        public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
+        
 
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
@@ -67,6 +65,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
+            
         }
 
         private async Task ParseSubscriptionOptionsAsync()
@@ -90,16 +89,14 @@ namespace Raven.Server.Documents.TcpHandlers
                 if (translation == null)
                     throw new SubscriptionClosedException("Cannot find any subscription with the name " + _options.SubscriptionName);
 
-                if (translation.TryGet(nameof(SubscriptionState.SubscriptionId), out long id) == false)
+                if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
                     throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
-
-                if (_options.SubscriptionId > 0 && _options.SubscriptionId != id)
-                    throw new SubscriptionClosedException("Subscription named " + _options.SubscriptionName + " has id of " + id + " but the subscription expected " + _options.SubscriptionId);
-
-                _options.SubscriptionId = id;
+                
+                SubscriptionId = id;
             }
-
         }
+
+        
 
         public async Task InitAsync()
         {
@@ -110,8 +107,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
+
+            
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
-            await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
+            SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
 
             _connectionState = TcpConnection.DocumentDatabase.SubscriptionStorage.OpenSubscription(this);
             var timeout = TimeSpan.FromMilliseconds(16);
@@ -168,6 +167,8 @@ namespace Raven.Server.Documents.TcpHandlers
             _buffer.SetLength(0);
         }
 
+        
+
         public static void SendSubscriptionDocuments(TcpConnectionOptions tcpConnectionOptions)
         {
             var remoteEndPoint = tcpConnectionOptions.TcpClient.Client.RemoteEndPoint;
@@ -180,15 +181,31 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     try
                     {
-                        await connection.InitAsync();
-                        await connection.ProcessSubscriptionAsync();
+                        bool gotSemaphore;
+                        if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
+                        {
+                            throw new SubscriptionClosedException(
+                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.ConcurrentConnections})");
+                        }
+                        try
+                        {
+                            await connection.InitAsync();
+                            await connection.ProcessSubscriptionAsync();
+                        }
+                        finally
+                        {
+                            if (gotSemaphore)
+                            {
+                                tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                            }
+                        }
                     }
                     catch (Exception e)
                     {                        
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Failed to process subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}",
+                                $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
                                 e);
                         }
                         try
@@ -205,7 +222,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Finished processing subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}");
+                                $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
                         }
                     }
                 }
@@ -267,7 +284,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
+                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
                         }
@@ -295,7 +312,26 @@ namespace Raven.Server.Documents.TcpHandlers
             void RegisterNotification(DocumentChange notification)
             {
                 if (notification.CollectionName == criteria.Collection)
-                    _waitForMoreDocuments.Set();
+                {
+                    try
+                    {
+                        _waitForMoreDocuments.Set();
+                    }
+                    catch
+                    {
+                        if (this.CancellationTokenSource.IsCancellationRequested)
+                            return;
+                        try
+                        {
+                            this.CancellationTokenSource.Cancel();
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                }
+                    
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
@@ -349,18 +385,17 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Starting processing documents for subscription {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
-            var subscription = TcpConnection.DocumentDatabase.SubscriptionStorage.GetSubscriptionFromServerStore(_options.SubscriptionName);
 
             using (DisposeOnDisconnect)
             using (TcpConnection.DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext docsContext))
-            using (RegisterForNotificationOnNewDocuments(subscription.Criteria))
+            using (RegisterForNotificationOnNewDocuments(SubscriptionState.Criteria))
             {
                 var replyFromClientTask = GetReplyFromClientAsync();
-                var startEtag = GetStartEtagForSubscription(docsContext, subscription);
+                var startEtag = GetStartEtagForSubscription(docsContext, SubscriptionState);
 
                 string lastChangeVector = null;
 
-                var patch = SetupFilterScript(subscription.Criteria);
+                var patch = SetupFilterScript(SubscriptionState.Criteria);
                 var fetcher = new SubscriptionDocumentsFetcher(TcpConnection.DocumentDatabase,_options.MaxDocsPerBatch, SubscriptionId, TcpConnection.TcpClient.Client.RemoteEndPoint);
                 while (CancellationTokenSource.IsCancellationRequested == false)
                 {
@@ -379,12 +414,12 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            foreach (var result in fetcher.GetDataToSend(docsContext, subscription, patch, startEtag))
+                            foreach (var result in fetcher.GetDataToSend(docsContext, SubscriptionState, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(subscription.ChangeVector)
+                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVector)
                                     ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, subscription.ChangeVector);
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVector);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -409,9 +444,9 @@ namespace Raven.Server.Documents.TcpHandlers
                                 if (result.Exception != null)
                                 {
                                     writer.WriteValue(BlittableJsonToken.StartObject,
-                                        docsContext.ReadObject(new DynamicJsonValue()
+                                        docsContext.ReadObject(new DynamicJsonValue
                                         {
-                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
+                                            [Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Client.Constants.Documents.Metadata.Key]
                                         }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
@@ -464,7 +499,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
                         using (docsContext.OpenReadTransaction())
                         {
-                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, subscription.Criteria.Collection);
+                            long globalEtag = TcpConnection.DocumentDatabase.DocumentsStorage.GetLastDocumentEtag(docsContext, SubscriptionState.Criteria.Collection);
 
                             if (globalEtag > startEtag)
                                 continue;
@@ -501,7 +536,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                                Options.SubscriptionId,
+                                SubscriptionId,
                                 Options.SubscriptionName,
                                 startEtag,
                                 lastChangeVector);
@@ -533,16 +568,19 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
-                {
-                    return startEtag;
-                }
-
                 if (string.IsNullOrEmpty(subscription.ChangeVector))
-                {
                     return startEtag;
-                }
-                return startEtag;
+
+                var changeVector = subscription.ChangeVector.ToChangeVector();
+                
+                var matchingCV = changeVector.FirstOrDefault(
+                    x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
+                    x.DbId == TcpConnection.DocumentDatabase.DbId);
+
+                if (matchingCV.DbId == Guid.Empty && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
+                    return startEtag;
+
+                return matchingCV.Etag;
             }
         }
 
@@ -619,7 +657,6 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 // ignored
             }
-
             CancellationTokenSource.Dispose();
         }
     }

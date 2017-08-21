@@ -17,14 +17,18 @@ namespace SlowTests.MailingList
                 new DynamicMultiMapDataSetIndex().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    Enumerable.Range(1, 50).ForEach(x => session.Store(new Song
+                    foreach (var x in Enumerable.Range(1, 50))
                     {
-                        Id = "songs/" + x,
-                        Title = "Title:" + x,
-                        Interpret = "Interpret: " + x,
-                        Year = 2012,
-                        Attributes = new[] { new Attribute("SoundCode", "Rock") }
-                    }));
+                        session.Store(new Song
+                        {
+                            Id = "songs/" + x,
+                            Title = "Title:" + x,
+                            Interpret = "Interpret: " + x,
+                            Year = 2012,
+                            Attributes = new[] { new Attribute("SoundCode", "Rock") }
+                        });
+                    }
+
                     session.Store(new DataSet
                     {
                         Items = Enumerable.Range(1, 50).Select(x =>

@@ -8,8 +8,8 @@ using System.Reflection;
 using System.Text;
 using System.Threading;
 using Raven.Server;
+using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
-using static Raven.Client.Util.CliDelimiter;
 
 namespace rvn
 {
@@ -39,7 +39,8 @@ namespace rvn
                         {
                             throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
                         }
-                        var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe"); ;
+                        var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
+                        ;
                         pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
                     }
                     try
@@ -61,16 +62,16 @@ namespace rvn
                     var buffer = new char[16 * 1024];
                     var sb = new StringBuilder();
 
-                    Delimiter[] delimiters =
+                    RavenCli.Delimiter[] delimiters =
                     {
-                        Delimiter.NotFound,
-                        Delimiter.ReadLine,
-                        Delimiter.ReadKey,
-                        Delimiter.Clear,
-                        Delimiter.Logout,
-                        Delimiter.Shutdown,
-                        Delimiter.RestartServer,
-                        Delimiter.ContinuePrinting
+                        RavenCli.Delimiter.NotFound,
+                        RavenCli.Delimiter.ReadLine,
+                        RavenCli.Delimiter.ReadKey,
+                        RavenCli.Delimiter.Clear,
+                        RavenCli.Delimiter.Logout,
+                        RavenCli.Delimiter.Shutdown,
+                        RavenCli.Delimiter.RestartServer,
+                        RavenCli.Delimiter.ContinuePrinting
                     };
 
                     string restOfString = null;
@@ -85,9 +86,9 @@ namespace rvn
                             skipOnceRead = true; // to avoid situation where another delimiter passed in previous Read, and next Read might blocked forever
                         }
 
-                        var delimiter = Delimiter.NotFound;
+                        var delimiter = RavenCli.Delimiter.NotFound;
                         // ReSharper disable once LoopVariableIsNeverChangedInsideLoop
-                        while (delimiter == Delimiter.NotFound)
+                        while (delimiter == RavenCli.Delimiter.NotFound)
                         {
                             if (skipOnceRead == false)
                             {
@@ -103,17 +104,17 @@ namespace rvn
                             }
 
                             var sbString = sb.ToString();
-                            var firstDelimiterPos = sbString.IndexOf(DelimiterKeyWord, StringComparison.Ordinal);
+                            var firstDelimiterPos = sbString.IndexOf(RavenCli.DelimiterKeyWord, StringComparison.Ordinal);
                             if (firstDelimiterPos == -1)
                                 continue;
                             var delimiterString = sbString.Substring(firstDelimiterPos);
 
-                            Delimiter firstDelimiter = Delimiter.NotFound;
+                            RavenCli.Delimiter firstDelimiter = RavenCli.Delimiter.NotFound;
                             int firstIndex = 0;
                             var lowestPos = 8192;
                             foreach (var del in delimiters)
                             {
-                                var index = delimiterString.IndexOf(GetDelimiterString(del), StringComparison.Ordinal);
+                                var index = delimiterString.IndexOf(RavenCli.GetDelimiterString(del), StringComparison.Ordinal);
                                 if (index == -1)
                                     continue;
                                 if (index < lowestPos)
@@ -123,10 +124,10 @@ namespace rvn
                                     firstIndex = index;
                                 }
                             }
-                            if (firstDelimiter == Delimiter.NotFound)
+                            if (firstDelimiter == RavenCli.Delimiter.NotFound)
                                 continue;
 
-                            var posAgterFirstDelimiter = firstIndex + GetDelimiterString(firstDelimiter).Length;
+                            var posAgterFirstDelimiter = firstIndex + RavenCli.GetDelimiterString(firstDelimiter).Length;
                             restOfString = delimiterString.Substring(posAgterFirstDelimiter);
 
                             delimiter = firstDelimiter;
@@ -134,30 +135,30 @@ namespace rvn
                         }
 
                         var str = sb.ToString();
-                        Console.Write(str.Substring(0, str.IndexOf(DelimiterKeyWord, StringComparison.Ordinal)));
+                        Console.Write(str.Substring(0, str.IndexOf(RavenCli.DelimiterKeyWord, StringComparison.Ordinal)));
 
-                        if (delimiter == Delimiter.ContinuePrinting)
+                        if (delimiter == RavenCli.Delimiter.ContinuePrinting)
                         {
                             continue;
                         }
 
                         switch (delimiter)
                         {
-                            case Delimiter.ReadLine:
+                            case RavenCli.Delimiter.ReadLine:
                                 writer.WriteLine(Console.ReadLine());
                                 break;
-                            case Delimiter.ReadKey:
+                            case RavenCli.Delimiter.ReadKey:
                                 writer.Write(Console.ReadKey().KeyChar);
                                 break;
-                            case Delimiter.Clear:
+                            case RavenCli.Delimiter.Clear:
                                 Console.Clear();
                                 break;
-                            case Delimiter.Logout:
-                            case Delimiter.Shutdown:
+                            case RavenCli.Delimiter.Logout:
+                            case RavenCli.Delimiter.Shutdown:
                                 Console.WriteLine();
                                 Environment.Exit(0);
                                 break;
-                            case Delimiter.RestartServer:
+                            case RavenCli.Delimiter.RestartServer:
                                 Console.WriteLine();
                                 for (int i = 10; i >= 0; i--)
                                 {

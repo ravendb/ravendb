@@ -3,10 +3,10 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 
 namespace FastTests.Client.Subscriptions
 {

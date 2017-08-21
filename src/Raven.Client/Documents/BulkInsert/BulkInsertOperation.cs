@@ -7,11 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Exceptions.BulkInsert;
 using Raven.Client.Documents.Identity;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -98,13 +98,13 @@ namespace Raven.Client.Documents.BulkInsert
                 Timeout = TimeSpan.FromHours(12); // global max timeout
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/bulk_insert?id={_id}";
                 return new HttpRequestMessage
                 {
                     Method = HttpMethod.Post,
-                    Content = _stream,
+                    Content = _stream
                 };
             }
 
@@ -159,24 +159,28 @@ namespace Raven.Client.Documents.BulkInsert
             _operationId = bulkInsertGetIdRequest.Result;
         }
 
-        public void Store(object entity, string id)
+        public void Store(object entity, string id, IMetadataDictionary metadata = null)
         {
-            AsyncHelpers.RunSync(() => StoreAsync(entity, id));
+            AsyncHelpers.RunSync(() => StoreAsync(entity, id, metadata));
         }
 
-        public string Store(object entity)
+        public string Store(object entity, IMetadataDictionary metadata = null)
         {
-            return AsyncHelpers.RunSync(() => StoreAsync(entity));
+            return AsyncHelpers.RunSync(() => StoreAsync(entity, metadata));
         }
 
-        public async Task<string> StoreAsync(object entity)
+        public async Task<string> StoreAsync(object entity, IMetadataDictionary metadata = null)
         {
-            var id = GetId(entity);
-            await StoreAsync(entity, id).ConfigureAwait(false);
+            if (metadata == null || metadata.TryGetValue(Constants.Documents.Metadata.Id, out var id) == false)
+            {
+                id = GetId(entity);
+            }
+
+            await StoreAsync(entity, id , metadata).ConfigureAwait(false);
             return id;
         }
 
-        public async Task StoreAsync(object entity, string id)
+        public async Task StoreAsync(object entity, string id , IMetadataDictionary metadata = null)
         {
             VerifyValidId(id);
 
@@ -186,39 +190,49 @@ namespace Raven.Client.Documents.BulkInsert
                 await EnsureStream().ConfigureAwait(false);
             }
 
-            JsonOperationContext tempContext;
-            using (_requestExecutor.ContextPool.AllocateOperationContext(out tempContext))
-            using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _requestExecutor.Conventions, tempContext, new DocumentInfo
+            var docInfo = new DocumentInfo
             {
                 Collection = _requestExecutor.Conventions.GetCollectionName(entity)
-            }))
+            };
+
+            JsonOperationContext tempContext;
+            using (_requestExecutor.ContextPool.AllocateOperationContext(out tempContext))
             {
-                if (_first == false)
+                if (metadata != null)
                 {
-                    _jsonWriter.WriteComma();
+                    docInfo.MetadataInstance = metadata;
+                    docInfo.Metadata = EntityToBlittable.ConvertEntityToBlittable(metadata, _requestExecutor.Conventions, tempContext);
                 }
-                _first = false;
 
-                var cmd = new DynamicJsonValue
+                using (var doc = EntityToBlittable.ConvertEntityToBlittable(entity, _requestExecutor.Conventions, tempContext, docInfo))
                 {
-                    [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
-                    [nameof(PutCommandDataWithBlittableJson.Id)] = id,
-                    [nameof(PutCommandDataWithBlittableJson.Document)] = doc,
-                };
-
-                try
-                {
-                    tempContext.Write(_jsonWriter, cmd);
-                }
-                catch (Exception e)
-                {
-                    var error = await GetExceptionFromOperation().ConfigureAwait(false);
-                    if (error != null)
+                    if (_first == false)
                     {
-                        throw error;
+                        _jsonWriter.WriteComma();
                     }
-                    await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
-                }
+                    _first = false;
+
+                    var cmd = new DynamicJsonValue
+                    {
+                        [nameof(PutCommandDataWithBlittableJson.Type)] = "PUT",
+                        [nameof(PutCommandDataWithBlittableJson.Id)] = id,
+                        [nameof(PutCommandDataWithBlittableJson.Document)] = doc
+                    };
+
+                    try
+                    {
+                        tempContext.Write(_jsonWriter, cmd);
+                    }
+                    catch (Exception e)
+                    {
+                        var error = await GetExceptionFromOperation().ConfigureAwait(false);
+                        if (error != null)
+                        {
+                            throw error;
+                        }
+                        await ThrowOnUnavailableStream(id, e).ConfigureAwait(false);
+                    }
+                } 
             }
         }
 

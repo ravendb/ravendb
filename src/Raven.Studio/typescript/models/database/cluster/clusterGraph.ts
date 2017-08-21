@@ -215,7 +215,7 @@ class clusterGraph {
 
         const nodeIcon = (node: clusterNodeWithLayout) => {
             if (node.tag() === leaderTag) {
-                return "&#xe959;";
+                return "&#xe9d5;";
             }
 
             switch (node.type()) {

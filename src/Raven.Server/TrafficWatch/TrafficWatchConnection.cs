@@ -68,7 +68,7 @@ namespace Raven.Server.TrafficWatch
             }
             catch (Exception e)
             {
-                if(_logger.IsInfoEnabled)
+                if (_logger.IsInfoEnabled)
                     _logger.Info("Error when handling web socket connection", e);
                 _cancellationTokenSource.Cancel();
             }
@@ -99,7 +99,7 @@ namespace Raven.Server.TrafficWatch
                 ["AbsoluteUri"] = change.AbsoluteUri,
                 ["TenantName"] = change.TenantName,
                 ["CustomInfo"] = change.CustomInfo,
-                ["InnerRequestsCount"] = change.InnerRequestsCount,
+                ["InnerRequestsCount"] = change.InnerRequestsCount
                 //["QueryTimings"] = notification.QueryTimings // TODO :: implement this
             };
 
@@ -113,12 +113,6 @@ namespace Raven.Server.TrafficWatch
                 _bufferStream.TryGetBuffer(out ArraySegment<byte> bytes);
                 return bytes;
             }
-        }
-
-        private async Task SendMessage(byte[] message)
-        {
-            ArraySegment<byte> arraySegment = new ArraySegment<byte>(message);
-            await SendMessage(arraySegment);
         }
 
         private async Task SendMessage(ArraySegment<byte> message)

@@ -9,7 +9,7 @@
         <div class="row flex-row" data-bind="with: stats">
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
-                    <div class="name"><i class="icon-database"></i> <span>Database Id</span></div>
+                    <div class="name"><i class="icon-database"></i> <span>Database ID</span></div>
                     <div class="value long"><span data-bind="text: databaseId"></span></div>
                 </div>
             </div>
@@ -20,6 +20,7 @@
                         <span data-bind="foreach: databaseChangeVector">
                             <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
                         </span>
+                        <span data-bind="visible: databaseChangeVector.length === 0">not yet defined</span>
                     </div>
                 </div>
             </div>

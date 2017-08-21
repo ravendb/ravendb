@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 
 class saveExternalReplicationTaskCommand extends commandBase {
    
-    private externalReplicationToSend: Raven.Client.Server.ExternalReplication;
+    private externalReplicationToSend: Raven.Client.ServerWide.ExternalReplication;
 
     constructor(private db: database, private taskId: number, private replicationSettings: externalReplicationDataFromUI) {
         super();
@@ -16,10 +16,10 @@ class saveExternalReplicationTaskCommand extends commandBase {
             Url: replicationSettings.DestinationURL,
             // Other vals:
             TaskId: taskId
-        } as Raven.Client.Server.ExternalReplication;
+        } as Raven.Client.ServerWide.ExternalReplication;
     }
  
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         return this.updateReplication()
             .fail((response: JQueryXHR) => {
                 if (this.taskId === 0) {
@@ -38,18 +38,18 @@ class saveExternalReplicationTaskCommand extends commandBase {
             });
     }
 
-    private updateReplication(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+    private updateReplication(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
 
         const url = endpoints.databases.ongoingTasks.adminTasksExternalReplication;
         
-        const addRepTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
+        const addRepTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
         const payload = {          
             Watcher: this.externalReplicationToSend
         };
 
         this.post(url, JSON.stringify(payload), this.db)
-            .done((results: Array<Raven.Client.Server.Operations.ModifyOngoingTaskResult>) => {
+            .done((results: Array<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>) => {
                 addRepTask.resolve(results[0]);
             })
             .fail(response => addRepTask.reject(response));

@@ -5,6 +5,7 @@
 //-----------------------------------------------------------------------
 
 using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -50,7 +51,7 @@ namespace Raven.Client.Documents.Identity
             set => _range = value;
         }
 
-        [System.Diagnostics.DebuggerDisplay("[{Min}-{Max}]: {Current}")]
+        [DebuggerDisplay("[{Min}-{Max}]: {Current}")]
         protected class RangeValue
         {
             public readonly long Min;

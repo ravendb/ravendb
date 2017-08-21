@@ -17,6 +17,7 @@ using Raven.Server.Routing;
 using Raven.Server.Web;
 using Sparrow.Exceptions;
 using Sparrow.Json;
+using AuthenticationManager = Microsoft.AspNetCore.Http.Authentication.AuthenticationManager;
 
 namespace Raven.Server.ServerWide
 {
@@ -32,7 +33,7 @@ namespace Raven.Server.ServerWide
             _server = server;
         }
 
-        public async Task<HttpResponse> InvokeAsync(RouteInformation route,Dictionary<string,StringValues> parameters = null)
+        public async Task<HttpResponse> InvokeAsync(RouteInformation route, Dictionary<string, StringValues> parameters = null)
         {
             var requestContext = new RequestHandlerContext
             {
@@ -45,16 +46,16 @@ namespace Raven.Server.ServerWide
                     MatchLength = route.Path.Length
                 }
             };
-            
+
             if (parameters != null && parameters.Count > 0)
             {
                 requestContext.HttpContext.Request.Query = new QueryCollection(parameters);
                 if (parameters.TryGetValue("database", out StringValues values))
                 {
-                    if(values.Count != 1)
+                    if (values.Count != 1)
                         ThrowInvalidDatabasesParameter(values, "databases");
                     UpdateRouteMatchWithDatabaseName(requestContext, values);
-                }             
+                }
             }
 
             var (endpointHandler, databaseLoadingWaitTask) = route.TryGetHandler(requestContext);
@@ -97,10 +98,10 @@ namespace Raven.Server.ServerWide
             catch (InvalidStartOfObjectException e)
             {
                 //precaution, ideally this exception should never be thrown
-                throw new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.",e);
+                throw new InvalidOperationException("Expected to find a blittable object as a result of debug endpoint, but found something else (see inner exception for details). This should be investigated as all RavenDB endpoints are supposed to return an object.", e);
             }
         }
-     
+
         private class LocalInvocationCustomHttpContext : HttpContext, IDisposable
         {
             public LocalInvocationCustomHttpContext(string method, string path)
@@ -118,7 +119,10 @@ namespace Raven.Server.ServerWide
             public override HttpResponse Response { get; }
             public override ConnectionInfo Connection { get; } = null;
             public override WebSocketManager WebSockets { get; } = null;
+
+            [Obsolete]
             public override AuthenticationManager Authentication { get; } = null;
+
             public override ClaimsPrincipal User { get; set; }
             public override IDictionary<object, object> Items { get; set; }
             public override IServiceProvider RequestServices { get; set; }

@@ -24,28 +24,28 @@ namespace Raven.Server.Utils
             CreateCertificateAuthorityCertificate(subjectName, out AsymmetricKeyParameter caPrivateKey);
             return CreateSelfSignedCertificateBasedOnPrivateKey(subjectName, issuerName, caPrivateKey, false, 1);
         }
-        
+
         public static X509Certificate2 CreateSelfSignedClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
         {
             return CreateSelfSignedCertificateBasedOnPrivateKey(
-                subjectName, 
-                certificateHolder.Certificate.Subject, 
+                subjectName,
+                certificateHolder.Certificate.Subject,
                 certificateHolder.PrivateKey.Key,
-                true, 
+                true,
                 5);
         }
 
         public static X509Certificate2 CreateSelfSignedExpiredClientCertificate(string subjectName, RavenServer.CertificateHolder certificateHolder)
         {
             return CreateSelfSignedCertificateBasedOnPrivateKey(
-                subjectName, 
-                certificateHolder.Certificate.Subject, 
+                subjectName,
+                certificateHolder.Certificate.Subject,
                 certificateHolder.PrivateKey.Key,
-                true, 
+                true,
                 -1);
         }
 
-        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string subjectName, string issuerName, 
+        private static X509Certificate2 CreateSelfSignedCertificateBasedOnPrivateKey(string subjectName, string issuerName,
             AsymmetricKeyParameter issuerPrivKey, bool isClientCertificate, int yearsUntilExpiration)
         {
             const int keyStrength = 2048;
@@ -97,7 +97,7 @@ namespace Raven.Server.Utils
             store.Save(stream, new char[0], random);
             var convertedCertificate =
                 new X509Certificate2(
-                    stream.ToArray(), null,
+                    stream.ToArray(), (string)null,
                     X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.Exportable);
             stream.Position = 0;
 
@@ -143,11 +143,9 @@ namespace Raven.Server.Utils
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
             // selfsign certificate
-            X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
+            certificateGenerator.Generate(signatureFactory);
 
             caPrivateKey = issuerKeyPair.Private;
-
-            return;
         }
 
         private static SecureRandom GetSeededSecureRandom()

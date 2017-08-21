@@ -185,7 +185,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(1, results.Count);
                     Assert.Equal("entity/1", results.First().Id);
                     Assert.Equal("Ole mundo", results.First().Title);
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }
@@ -215,7 +215,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(1, results.Count);
                     Assert.Equal("entity/1", results.First().Id);
                     Assert.Equal("Ole mundo", results.First().Title);
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

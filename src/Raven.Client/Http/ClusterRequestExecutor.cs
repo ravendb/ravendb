@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Server.Commands;
+using Raven.Client.ServerWide.Commands;
 using Sparrow.Json;
 
 namespace Raven.Client.Http
@@ -75,7 +75,7 @@ namespace Raven.Client.Http
             return ExecuteAsync(serverNode, nodeIndex, context, new GetTcpInfoCommand("health-check"), shouldRetry: false);
         }
 
-        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout)
+        public override async Task<bool> UpdateTopologyAsync(ServerNode node, int timeout, bool forceUpdate = false)
         {
             if (_disposed)
                 return false;
@@ -116,7 +116,7 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
-                    else if (_nodeSelector.OnUpdateTopology(newTopology))
+                    else if (_nodeSelector.OnUpdateTopology(newTopology, forceUpdate: forceUpdate))
                     {
                         DisposeAllFailedNodesTimers();
 
@@ -125,6 +125,8 @@ namespace Raven.Client.Http
                             _nodeSelector.ScheduleSpeedTest();
                         }
                     }
+
+                    OnTopologyUpdated(newTopology);
                 }
             }
             finally

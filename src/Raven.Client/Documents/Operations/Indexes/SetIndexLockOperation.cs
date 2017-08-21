@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _mode = mode;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/set-lock?name={Uri.EscapeDataString(_indexName)}&mode={_mode}";
 

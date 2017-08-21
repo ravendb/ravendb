@@ -3,7 +3,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Http;
-using Raven.Client.Server.Commands;
+using Raven.Client.ServerWide.Commands;
 using Raven.Server.Documents;
 using Sparrow.Json;
 

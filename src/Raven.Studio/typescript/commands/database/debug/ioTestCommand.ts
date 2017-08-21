@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import database = require("models/resources/database");
 
 class ioTestCommand extends commandBase {
-
+/* TODO
     operationIdTask = $.Deferred();
 
     constructor(private db: database, private testParameters: performanceTestRequestDto, private onStatus: (state: operationStateDto) => void) {
@@ -25,7 +25,7 @@ class ioTestCommand extends commandBase {
     }
 
     private monitorIoTest(parentPromise: JQueryDeferred<any>, operationId: number) {
-        /* TODOnew getOperationStatusCommand(null, operationId)
+        new getOperationStatusCommand(null, operationId)
             .execute();
             .done((result: operationStatusDto) => {
                 if (result.Completed) {
@@ -40,8 +40,8 @@ class ioTestCommand extends commandBase {
                     this.onStatus(result.State);
                     setTimeout(() => this.monitorIoTest(parentPromise, operationId), 500);
                 }
-            });*/
-    }
+            });
+    }*/
 }
 
 export = ioTestCommand;

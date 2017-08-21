@@ -48,7 +48,11 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Additional code files to be compiled with this index.
         /// </summary>
-        public Dictionary<string, string> AdditionalSources { get; set; }
+        public Dictionary<string, string> AdditionalSources
+        {
+            get => _additionalSources ?? (_additionalSources = new Dictionary<string, string>());
+            set => _additionalSources = value;
+        }
 
         /// <summary>
         /// All the map functions for this index
@@ -216,6 +220,8 @@ namespace Raven.Client.Documents.Indexes
         private HashSet<string> _maps;
         [JsonIgnore]
         private Dictionary<string, IndexFieldOptions> _fields;
+        [JsonIgnore]
+        private Dictionary<string, string> _additionalSources;
         [JsonIgnore]
         private IndexConfiguration _configuration;
 
@@ -397,6 +403,9 @@ namespace Raven.Client.Documents.Indexes
 
             foreach (var kvp in _configuration)
                 definition.Configuration[kvp.Key] = kvp.Value;
+
+            foreach (var kvp in _additionalSources)
+                definition.AdditionalSources[kvp.Key] = kvp.Value;
 
             return definition;
         }

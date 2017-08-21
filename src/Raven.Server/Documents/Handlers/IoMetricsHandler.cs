@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Sparrow;
@@ -124,7 +123,7 @@ namespace Raven.Server.Documents.Handlers
             var fileMetrics = new IOMetricsFileStats
             {
                 File = Path.GetFileName(fileMetric.FileName),
-                Status = fileMetric.Closed ? FileStatus.Closed : FileStatus.InUse,
+                Status = fileMetric.Closed ? FileStatus.Closed : FileStatus.InUse
             };
 
             foreach (var recentMetric in fileMetric.GetRecentMetrics())
@@ -170,7 +169,7 @@ namespace Raven.Server.Documents.Handlers
                 FileSize = recentMetric.FileSize,
                 HumaneFileSize = Sizes.Humane(recentMetric.FileSize),
                 Duration = Math.Round(recentMetric.Duration.TotalMilliseconds, 2),
-                Type = recentMetric.Type,
+                Type = recentMetric.Type
             };
         }
     }
@@ -211,7 +210,7 @@ namespace Raven.Server.Documents.Handlers
                 [nameof(MinAcceleration)] = MinAcceleration,
                 [nameof(CompressedSize)] = CompressedSize,
                 [nameof(HumaneCompressedSize)] = HumaneCompressedSize,
-                [nameof(Type)] = Type,
+                [nameof(Type)] = Type
             };
         }
     }
@@ -249,9 +248,9 @@ namespace Raven.Server.Documents.Handlers
                         [nameof(Start)] = Start,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.OriginalSize)] = Size,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneOriginalSize)] = HumaneSize,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.CompressedSize)] = CompressedSize,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.HumaneCompressedSize)] = HumaneCompressedSize,
-                        [nameof(IOMetricsRecentStatsAdditionalTypes.Acceleration)] = Acceleration,
+                        [nameof(CompressedSize)] = CompressedSize,
+                        [nameof(HumaneCompressedSize)] = HumaneCompressedSize,
+                        [nameof(Acceleration)] = Acceleration,
                         [nameof(IOMetricsRecentStatsAdditionalTypes.CompressionRatio)] = CompressedSize * 1.0 / Size,
                         [nameof(Duration)] = Duration,
                         [nameof(Type)] = Type

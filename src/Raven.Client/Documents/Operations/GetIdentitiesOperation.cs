@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
-using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Sparrow.Json;
@@ -21,7 +20,7 @@ namespace Raven.Client.Documents.Operations
 
         public override bool IsReadRequest => true;
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/debug/identities";
             var request = new HttpRequestMessage

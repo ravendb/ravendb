@@ -14,7 +14,7 @@ namespace Raven.Server.Commercial
         private static readonly string[] Terms =
         {
             "type", "version", "expiration", "updatesExpiration",
-            "RAM", "cores", "ISV", "encryption", "fips", "monitoring", "hotSpare"
+            "RAM", "cores", "ISV", "encryption", "fips", "monitoring"
         };
 
         private enum ValueType : byte
@@ -39,7 +39,7 @@ namespace Raven.Server.Commercial
             return Convert.FromBase64String(str);
         }
 
-        public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsAParameters)
+        public static Dictionary<string, object> Validate(License licenseKey, RSAParameters rsaParameters)
         {
             var keys = ExtractKeys(licenseKey.Keys);
 
@@ -93,7 +93,7 @@ namespace Raven.Server.Commercial
                     binaryWriter.Write(licenseKey.Id.ToByteArray());
                     binaryWriter.Write(licenseKey.Name);
 
-                    rsa.ImportParameters(rsAParameters);
+                    rsa.ImportParameters(rsaParameters);
 
                     using (var sha1 = SHA1.Create())
                     {
@@ -119,7 +119,7 @@ namespace Raven.Server.Commercial
         private static Keys ExtractKeys(IEnumerable<string> keys)
         {
             var keysArray = keys.ToArray();
-            var stringKey = string.Join("", keysArray);
+            var stringKey = string.Join(string.Empty, keysArray);
             var keysByteArray = GetBytesFromBase64String(stringKey);
             var attributes = keysByteArray.Skip(128).Take(keysByteArray.Length - 128).ToArray();
             Array.Resize(ref keysByteArray, 128);

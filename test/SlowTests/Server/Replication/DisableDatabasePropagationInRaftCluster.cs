@@ -3,8 +3,8 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -38,7 +38,7 @@ namespace SlowTests.Server.Replication
                 master.Initialize();
                 slave.Initialize();
 
-                var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
+                var doc = new DatabaseRecord(databaseName);
 
                 //since we have only Raft clusters, it is enough to create database only on one server
                 var databaseResult = master.Admin.Server.Send(new CreateDatabaseOperation(doc, 2));

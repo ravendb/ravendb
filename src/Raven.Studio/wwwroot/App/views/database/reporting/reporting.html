@@ -120,7 +120,7 @@
             <div data-bind="visible: hasFilter">
                 <div class="row">
                     <div class="col-md-11">
-                        <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre>
+                        <pre class="form-control" style="height: 100px;" data-bind="aceEditor: { code: filter }"></pre> <!-- TODO: validation errors --> 
                     </div>
                     <div class="col-md-1">
                         <button type="button" class="close pull-left" title="Remove the filter" data-bind="click: hasFilter.bind(hasFilter, false)">

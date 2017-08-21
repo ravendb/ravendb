@@ -4,15 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using NCrontab.Advanced;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL.SQL;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL.SQL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -51,7 +50,7 @@ namespace Raven.Server.Web.System
                 using (context.OpenReadTransaction())
                 {
                     databaseRecord = store.Cluster.ReadDatabase(context, dbName);
-                
+
                     if (databaseRecord == null)
                     {
                         return ongoingTasksResult;
@@ -63,11 +62,11 @@ namespace Raven.Server.Web.System
                     ongoingTasksResult.OngoingTasksList.AddRange(CollectSubscriptionTasks(context, databaseRecord, clusterTopology, store));
                 }
 
-                foreach (var tasks in new []
+                foreach (var tasks in new[]
                 {
                     CollectExternalReplicationTasks(databaseRecord.ExternalReplication, dbTopology,clusterTopology, store),
                     CollectEtlTasks(databaseRecord, dbTopology, clusterTopology, store),
-                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store),
+                    CollectBackupTasks(databaseRecord, dbTopology, clusterTopology, store)
                 })
                 {
                     ongoingTasksResult.OngoingTasksList.AddRange(tasks);
@@ -88,6 +87,7 @@ namespace Raven.Server.Web.System
             {
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(keyValue.Value);
                 var tag = databaseRecord.Topology.WhoseTaskIsIt(subscriptionState, store.IsPassive());
+
                 yield return new OngoingTaskSubscription
                 {
                     // Supply only needed fields for List View  
@@ -100,7 +100,9 @@ namespace Raven.Server.Web.System
                     TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
                     TaskId = subscriptionState.SubscriptionId,
                     Collection = subscriptionState.Criteria.Collection,
-                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity
+                    TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
+                    LastChangeVector = subscriptionState.ChangeVector
+
                 };
             }
         }
@@ -112,20 +114,26 @@ namespace Raven.Server.Web.System
 
             foreach (var watcher in watchers)
             {
+                NodeId responsibale = null;
+
                 var tag = dbTopology.WhoseTaskIsIt(watcher, store.IsPassive());
+                if (tag != null)
+                {
+                    responsibale = new NodeId
+                    {
+                        NodeTag = tag,
+                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                    };
+                }
 
                 yield return new OngoingTaskReplication
                 {
                     TaskId = watcher.TaskId,
                     TaskName = watcher.Name,
-                    ResponsibleNode = new NodeId
-                    {
-                        NodeTag = tag,
-                        NodeUrl = clusterTopology.GetUrlFromTag(tag)
-                    },
+                    ResponsibleNode = responsibale,
                     DestinationDatabase = watcher.Database,
                     TaskState = watcher.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
-                    DestinationUrl = watcher.Url,
+                    DestinationUrl = watcher.Url
                 };
             }
         }
@@ -175,14 +183,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private static CrontabSchedule GetSchedule(string backupFrequency)
-        {
-            if (string.IsNullOrWhiteSpace(backupFrequency))
-                return null;
-
-            return CrontabSchedule.TryParse(backupFrequency);
-        }
-
         private static List<string> GetBackupDestinations(PeriodicBackupConfiguration backupConfiguration)
         {
             var backupDestinations = new List<string>();
@@ -195,6 +195,8 @@ namespace Raven.Server.Web.System
                 backupDestinations.Add("S3");
             if (backupConfiguration.GlacierSettings != null && backupConfiguration.GlacierSettings.Disabled == false)
                 backupDestinations.Add("Glacier");
+            if (backupConfiguration.FtpSettings != null && backupConfiguration.FtpSettings.Disabled == false)
+                backupDestinations.Add("FTP");
 
             return backupDestinations;
         }
@@ -233,7 +235,7 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         DestinationUrl = connection.Url,
-                        DestinationDatabase = connection.Database,
+                        DestinationDatabase = connection.Database
                     };
                 }
             }
@@ -244,7 +246,7 @@ namespace Raven.Server.Web.System
                 {
                     var tag = dbTopology.WhoseTaskIsIt(sqlEtl, store.IsPassive());
 
-                    var taskState = OngoingTaskState.Enabled; 
+                    var taskState = OngoingTaskState.Enabled;
 
                     if (sqlEtl.Disabled || sqlEtl.Transforms.All(x => x.Disabled))
                         taskState = OngoingTaskState.Disabled;
@@ -270,7 +272,7 @@ namespace Raven.Server.Web.System
                             NodeUrl = clusterTopology.GetUrlFromTag(tag)
                         },
                         DestinationServer = server,
-                        DestinationDatabase = database,
+                        DestinationDatabase = database
                     };
                 }
             }
@@ -308,7 +310,7 @@ namespace Raven.Server.Web.System
                             {
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
-                            }                               
+                            }
 
                             tag = dbTopology.WhoseTaskIsIt(watcher, ServerStore.IsPassive());
 
@@ -329,7 +331,7 @@ namespace Raven.Server.Web.System
                             WriteResult(context, replicationTaskInfo);
 
                             break;
-                           
+
                         case OngoingTaskType.Backup:
 
                             var backup = record?.PeriodicBackups?.Find(x => x.TaskId == key);
@@ -384,7 +386,7 @@ namespace Raven.Server.Web.System
                                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
                                 break;
                             }
-                            
+
                             WriteResult(context, new OngoingTaskRavenEtl
                             {
                                 TaskId = ravenEtl.TaskId,
@@ -392,10 +394,10 @@ namespace Raven.Server.Web.System
                                 Configuration = ravenEtl
                             });
                             break;
-                            
+
                         case OngoingTaskType.Subscription:
 
-                            var nameKey = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName"); 
+                            var nameKey = GetQueryStringValueAndAssertIfSingleAndNotEmpty("taskName");
                             var itemKey = SubscriptionState.GenerateSubscriptionItemKeyName(record.DatabaseName, nameKey);
                             var doc = ServerStore.Cluster.Read(context, itemKey);
                             if (doc == null)
@@ -405,8 +407,27 @@ namespace Raven.Server.Web.System
                             }
 
                             var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
-                            WriteResult(context, subscriptionState.ToJson());
+
+                            tag = dbTopology?.WhoseTaskIsIt(subscriptionState, ServerStore.IsPassive());
+                            var ongoingSubscriptionTask = new OngoingTaskSubscription
+                            {
+                                Collection = subscriptionState.Criteria.Collection,
+                                TimeOfLastClientActivity = subscriptionState.TimeOfLastClientActivity,
+                                LastChangeVector = subscriptionState.ChangeVector,
+                                ResponsibleNode = new NodeId
+                                {
+                                    NodeTag = tag,
+                                    NodeUrl = clusterTopology.GetUrlFromTag(tag)
+                                },
+                                TaskId = subscriptionState.SubscriptionId,
+                                TaskName = subscriptionState.SubscriptionName,
+                                // todo: here we'll need to talk with the running node? TaskConnectionStatus = subscriptionState.Disabled ? OngoingTaskConnectionStatus.NotActive : OngoingTaskConnectionStatus.Active,
+                                TaskState = subscriptionState.Disabled ? OngoingTaskState.Disabled : OngoingTaskState.Enabled,
+                            };
+                            WriteResult(context, ongoingSubscriptionTask);
+
                             
+
                             break;
 
                         default:
@@ -419,7 +440,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        private void WriteResult(TransactionOperationContext context, OngoingTask taskInfo)
+        private void WriteResult(JsonOperationContext context, OngoingTask taskInfo)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -430,7 +451,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private void WriteResult(TransactionOperationContext context, DynamicJsonValue dynamicJsonValue)
+        private void WriteResult(JsonOperationContext context, DynamicJsonValue dynamicJsonValue)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
@@ -449,7 +470,7 @@ namespace Raven.Server.Web.System
 
             var key = GetLongQueryString("key");
             var typeStr = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            var disable = GetBoolValueQueryString("disable", required: true) ?? true;
+            var disable = GetBoolValueQueryString("disable") ?? true;
             var taskName = GetStringQueryString("taskName", required: false);
 
             if (Enum.TryParse<OngoingTaskType>(typeStr, true, out var type) == false)
@@ -458,9 +479,9 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var (index, _) = await ServerStore.ToggleTaskState(key, taskName, type, disable, Database.Name);
-                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index); 
-                
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK; 
+                await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -487,7 +508,7 @@ namespace Raven.Server.Web.System
                 {
                     throw new InvalidDataException($"{nameof(UpdateExternalReplicationCommand.Watcher)} was not found.");
                 }
-               
+
                 var watcher = JsonDeserializationClient.ExternalReplication(watcherBlittable);
                 var (index, _) = await ServerStore.UpdateExternalReplication(Database.Name, watcher);
                 await Database.RachisLogIndexNotifications.WaitForIndexNotification(index);
@@ -504,8 +525,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId, 
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index, 
+                        [nameof(ModifyOngoingTaskResult.TaskId)] = watcher.TaskId == 0 ? index : watcher.TaskId,
+                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index,
                         [nameof(OngoingTask.ResponsibleNode)] = responsibleNode
                     });
                     writer.Flush();

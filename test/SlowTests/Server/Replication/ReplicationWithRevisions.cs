@@ -3,7 +3,7 @@ using FastTests;
 using FastTests.Server.Documents.Revisions;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 

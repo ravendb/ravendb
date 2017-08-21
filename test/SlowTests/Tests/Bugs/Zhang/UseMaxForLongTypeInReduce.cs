@@ -67,7 +67,7 @@ select new {Name = g.Key, CreatedTimeTicks = createdTimeTicks}
                     session.Advanced.DocumentQuery<object>("test").WaitForNonStaleResults().ToArray<object>();
                 }
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
     }

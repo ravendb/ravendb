@@ -5,13 +5,13 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Util.RateLimiting;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Patch;
@@ -247,7 +247,7 @@ namespace Raven.Server.Documents.Queries
                 return new BulkOperationCommand<DeleteDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.DeleteDetails
                 {
                     Id = key,
-                    Etag = x.DeleteResult?.Etag,
+                    Etag = x.DeleteResult?.Etag
                 });
             }, token);
         }
@@ -388,7 +388,7 @@ namespace Raven.Server.Documents.Queries
                 return count;
             }
 
-            public Action<IBulkOperationDetails> AfterExecute { get; set; }
+            public Action<IBulkOperationDetails> AfterExecute { private get; set; }
         }
     }
 }

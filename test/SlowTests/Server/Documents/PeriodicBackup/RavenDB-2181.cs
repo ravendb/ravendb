@@ -12,7 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Json;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;

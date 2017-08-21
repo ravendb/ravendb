@@ -1,5 +1,3 @@
-using System;
-
 namespace Raven.Server.Smuggler.Documents.Processors
 {
     public static class BuildVersion

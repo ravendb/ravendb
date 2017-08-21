@@ -1,7 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Replication;
 using Sparrow.Collections;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Replication
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Replication
                     [nameof(To)] = To?.ToJson(),
                     [nameof(IsExternal)] = IsExternal,
                     [nameof(From)] = From?.ToJson(),
-                    [nameof(ExceptionMessage)] = ExceptionMessage,
+                    [nameof(ExceptionMessage)] = ExceptionMessage
                 };
             }
         }
@@ -108,6 +107,6 @@ namespace Raven.Server.Documents.Replication
         IncomingError,
         IncomingEnd,
         IncomingHeartbeat,
-        IncomingHeartbeatAcknowledge,
+        IncomingHeartbeatAcknowledge
     }
 }

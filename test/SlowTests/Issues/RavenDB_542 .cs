@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     WaitForIndexing(store);
 
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

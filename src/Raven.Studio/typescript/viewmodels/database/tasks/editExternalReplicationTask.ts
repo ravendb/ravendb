@@ -32,8 +32,8 @@ class editExternalReplicationTask extends viewModelBase {
 
             new ongoingTaskInfoCommand(this.activeDatabase(), "Replication", this.taskId)
                 .execute()
-                .done((result: Raven.Client.Server.Operations.OngoingTaskReplication) => { 
-                    this.editedExternalReplication(new ongoingTaskReplication(result));
+                .done((result: Raven.Client.ServerWide.Operations.OngoingTaskReplication) => { 
+                    this.editedExternalReplication(new ongoingTaskReplication(result, true));
                     deferred.resolve();
                 })
                 .fail(() => router.navigate(appUrl.forOngoingTasks(this.activeDatabase())));
@@ -94,7 +94,7 @@ class editExternalReplicationTask extends viewModelBase {
     }
 
     testConnection() {
-        if(this.isValid(this.editedExternalReplication().destinationURL)) {
+        if (this.isValid(this.editedExternalReplication().destinationURL)) {
             eventsCollector.default.reportEvent("external-replication", "test-connection");
 
             this.spinners.test(true);

@@ -7,8 +7,8 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Session;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Exceptions.Documents.Session;
 using Xunit;
 
 namespace SlowTests.MailingList

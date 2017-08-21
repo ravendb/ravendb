@@ -148,7 +148,7 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
                     }
                     else
                     {
-                        result = str1.CompareTo(str2);
+                        result = string.Compare(str1, str2);
                     }
 
                     if (result != 0)

@@ -31,7 +31,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public void can_get_in_progress_operation_when_deleting_by_index()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +41,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new DeleteByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }));
 
                 var progresses = new List<IOperationProgress>();
 
@@ -54,21 +54,23 @@ namespace SlowTests.Issues
 
                 Assert.NotEmpty(progresses);
 
-                //Assert.Equal(1500, progresses.Last().ProcessedEntries);
-                //Assert.Equal(1500, progresses.Last().TotalEntries);
+                var result = progresses.Last().ToJson();
+                Assert.Equal(1500L, result["Processed"]);
+                Assert.Equal(1500L, result["Total"]);
             }
         }
 
-        [Fact(Skip = "RavenDB-6285")]
+        [Fact]
         public void can_get_in_progress_operation_when_patching_by_script()
         {
             using (var store = GetDocumentStore())
             {
+                new Company_ByName().Execute(store);
                 put_1500_companies(store);
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByIndexOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }, new PatchRequest
+                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }, new PatchRequest
                 {
                     Script = @"this.Sample = 'Value'"
                 }));
@@ -84,8 +86,9 @@ namespace SlowTests.Issues
 
                 Assert.NotEmpty(progresses);
 
-                //Assert.Equal(1500, progresses.Last().ProcessedEntries);
-                //Assert.Equal(1500, progresses.Last().TotalEntries);
+                var result = progresses.Last().ToJson();
+                Assert.Equal(1500L, result["Processed"]);
+                Assert.Equal(1500L, result["Total"]);
             }
         }
 

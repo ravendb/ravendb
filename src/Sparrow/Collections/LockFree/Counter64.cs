@@ -3,8 +3,6 @@
 // This file is distributed under the MIT License. See LICENSE.md for details.
 
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -52,7 +50,7 @@ namespace Sparrow.Collections.LockFree
         {
             get
             {
-                var count = this.cnt;
+                var count = cnt;
                 var cells = this.cells;
 
                 if (cells != null)
@@ -79,7 +77,7 @@ namespace Sparrow.Collections.LockFree
         {
             get
             {
-                if (this.cellCount == 0)
+                if (cellCount == 0)
                 {
                     return Value;
                 }
@@ -101,10 +99,10 @@ namespace Sparrow.Collections.LockFree
         {
             Cell cell = null;
 
-            int curCellCount = this.cellCount;
-            if (curCellCount > 1 & this.cells != null)
+            int curCellCount = cellCount;
+            if (curCellCount > 1 & cells != null)
             {
-                cell = this.cells[GetIndex(curCellCount)];
+                cell = cells[GetIndex(curCellCount)];
             }
 
             var drift = cell == null ?
@@ -122,10 +120,10 @@ namespace Sparrow.Collections.LockFree
         {
             Cell cell = null;
 
-            int curCellCount = this.cellCount;
-            if (curCellCount > 1 & this.cells != null)
+            int curCellCount = cellCount;
+            if (curCellCount > 1 & cells != null)
             {
-                cell = this.cells[GetIndex(curCellCount)];
+                cell = cells[GetIndex(curCellCount)];
             }
 
             var drift = cell == null ?
@@ -143,10 +141,10 @@ namespace Sparrow.Collections.LockFree
         {
             Cell cell = null;
 
-            int curCellCount = this.cellCount;
-            if (curCellCount > 1 & this.cells != null)
+            int curCellCount = cellCount;
+            if (curCellCount > 1 & cells != null)
             {
-                cell = this.cells[GetIndex(curCellCount)];
+                cell = cells[GetIndex(curCellCount)];
             }
 
             var drift = cell == null ?
@@ -196,9 +194,9 @@ namespace Sparrow.Collections.LockFree
                     Interlocked.CompareExchange(ref cells[curCellCount], new Cell(), null);
                 }
 
-                if (this.cellCount == curCellCount)
+                if (cellCount == curCellCount)
                 {
-                    Interlocked.CompareExchange(ref this.cellCount, curCellCount + 1, curCellCount);
+                    Interlocked.CompareExchange(ref cellCount, curCellCount + 1, curCellCount);
                     //if (Interlocked.CompareExchange(ref this.cellCount, curCellCount + 1, curCellCount) == curCellCount)
                     //{
                     //    System.Console.WriteLine(curCellCount + 1);

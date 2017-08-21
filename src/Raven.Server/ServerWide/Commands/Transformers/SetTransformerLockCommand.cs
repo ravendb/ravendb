@@ -1,6 +1,6 @@
 using System;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.Transformers

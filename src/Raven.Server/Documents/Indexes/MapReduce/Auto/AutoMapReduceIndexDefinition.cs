@@ -173,7 +173,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Name = name,
                     Storage = FieldStorage.Yes,
                     Indexing = FieldIndexing.Default,
-                    Aggregation = (AggregationOperation)aggregationAsInt,
+                    Aggregation = (AggregationOperation)aggregationAsInt
                 };
 
                 mapFields[i] = field;

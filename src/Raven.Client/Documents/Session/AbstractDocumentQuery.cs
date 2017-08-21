@@ -3,6 +3,7 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,7 +14,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
@@ -36,10 +36,6 @@ namespace Raven.Client.Documents.Session
         protected QueryOperator DefaultOperator;
         protected bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
-        protected bool IsSpatialQuery;
-        protected string SpatialFieldName, QueryShape;
-        protected SpatialUnits? SpatialUnits;
-        protected SpatialRelation SpatialRelation;
         protected double DistanceErrorPct;
         private readonly LinqPathProvider _linqPathProvider;
         protected Action<IndexQuery> BeforeQueryExecutionAction;
@@ -106,7 +102,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected int? PageSize;
 
-        protected QueryOperation QueryOperation;
+        public QueryOperation QueryOperation { get; protected set; }
 
         protected LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
 
@@ -343,7 +339,7 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
         {
-            return GenerateSpatialQueryData(fieldName, SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within, distanceErrorPct, radiusUnits);
+            throw new NotImplementedException("This feature is not yet implemented");
         }
 
         protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
@@ -458,13 +454,11 @@ namespace Raven.Client.Documents.Session
 
             return new QueryOperation(TheSession,
                 IndexName,
-                CollectionName,
                 indexQuery,
                 FieldsToFetchToken?.Projections,
                 TheWaitForNonStaleResults,
                 Timeout,
                 TransformResultsFunc,
-                Includes,
                 DisableEntitiesTracking);
         }
 
@@ -1263,46 +1257,8 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "query">The query.</param>
         /// <returns></returns>
-        protected virtual IndexQuery GenerateIndexQuery(string query)
+        protected IndexQuery GenerateIndexQuery(string query)
         {
-            if (IsSpatialQuery)
-            {
-                if (IndexName == "dynamic" || FromToken.IsDynamic)
-                    throw new NotSupportedException("Dynamic indexes do not support spatial queries. A static index, with spatial field(s), must be defined.");
-
-                var spatialQuery = new SpatialIndexQuery
-                {
-                    Query = query,
-                    Start = Start,
-                    WaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
-                    WaitForNonStaleResults = TheWaitForNonStaleResults,
-                    WaitForNonStaleResultsTimeout = Timeout,
-                    CutoffEtag = CutoffEtag,
-                    SpatialFieldName = SpatialFieldName,
-                    QueryShape = QueryShape,
-                    RadiusUnitOverride = SpatialUnits,
-                    SpatialRelation = SpatialRelation,
-                    DistanceErrorPercentage = DistanceErrorPct,
-                    HighlightedFields = HighlightedFields.Select(x => x.Clone()).ToArray(),
-                    HighlighterPreTags = HighlighterPreTags.ToArray(),
-                    HighlighterPostTags = HighlighterPostTags.ToArray(),
-                    HighlighterKeyName = HighlighterKeyName,
-                    Transformer = Transformer,
-                    AllowMultipleIndexEntriesForSameDocumentToResultTransformer = AllowMultipleIndexEntriesForSameDocumentToResultTransformer,
-                    TransformerParameters = TransformerParameters,
-                    QueryParameters = QueryParameters,
-                    DisableCaching = DisableCaching,
-                    ShowTimings = ShowQueryTimings,
-                    ExplainScores = ShouldExplainScores,
-                    Includes = Includes.ToArray()
-                };
-
-                if (PageSize.HasValue)
-                    spatialQuery.PageSize = PageSize.Value;
-
-                return spatialQuery;
-            }
-
             var indexQuery = new IndexQuery
             {
                 Query = query,
@@ -1322,7 +1278,6 @@ If you really want to do in memory filtering on the data returned from the query
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
                 ExplainScores = ShouldExplainScores,
-                Includes = Includes.ToArray(),
                 IsIntersect = IsIntersect
             };
 
@@ -1366,11 +1321,47 @@ If you really want to do in memory filtering on the data returned from the query
 
             BuildSelect(queryText);
             BuildFrom(queryText);
+            BuildWith(queryText);
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
 
             return queryText.ToString();
+        }
+
+        private void BuildWith(StringBuilder queryText)
+        {
+            if (Includes == null || Includes.Count == 0)
+                return;
+
+            queryText.Append(" WITH ");
+            bool first = true;
+            foreach (var include in Includes)
+            {
+                if (first == false)
+                    queryText.Append(",");
+                first = false;
+                var requiredQuotes = false;
+                for (int i = 0; i < include.Length; i++)
+                {
+                    var ch = include[i];
+                    if (char.IsLetterOrDigit(ch) == false && ch != '_')
+                    {
+                        requiredQuotes = true;
+                        break;
+                    }
+                }
+                queryText.Append("include(");
+                if (requiredQuotes)
+                {
+                    queryText.Append("'").Append(include.Replace("'", "\\'")).Append("'");
+                }
+                else
+                {
+                    queryText.Append(include);
+                }
+                queryText.Append(")");
+            }
         }
 
         /// <summary>

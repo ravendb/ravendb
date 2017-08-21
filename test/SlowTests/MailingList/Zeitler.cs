@@ -2,7 +2,6 @@ using System;
 using System.Linq;
 using System.Text;
 using FastTests;
-using Raven.Client.Util.Encryption;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -31,7 +30,7 @@ namespace SlowTests.MailingList
                 //	Url = "http://localhost:8082/databases/entitytagstore"
                 //}.Initialize();
 
-                byte[] hash = Encryptor.Current.Hash.Compute16(Encoding.UTF8.GetBytes("/api/Cars"));
+                byte[] hash = Encoding.UTF8.GetBytes("/api/Cars");
 
                 var persistentCacheKey = new PersistentCacheKey()
                 {

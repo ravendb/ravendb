@@ -1,4 +1,6 @@
-﻿class exportDatabaseModel {
+﻿/// <reference path="../../../../typings/tsd.d.ts"/>
+
+class exportDatabaseModel {
 
     includeDocuments = ko.observable(true);
     includeIndexes = ko.observable(true);
@@ -15,7 +17,12 @@
     includedCollections = ko.observableArray<string>([]);
 
     transformScript = ko.observable<string>();
+    
+    validationGroup: KnockoutValidationGroup;
 
+    constructor() {
+        this.initValidation();
+    }
 
     toDto(): Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions {
         const operateOnTypes: Array<Raven.Client.Documents.Smuggler.DatabaseItemType> = [];
@@ -43,6 +50,16 @@
             RemoveAnalyzers: this.removeAnalyzers(),
             OperateOnTypes: operateOnTypes.join(",") as Raven.Client.Documents.Smuggler.DatabaseItemType
         } as Raven.Client.Documents.Smuggler.DatabaseSmugglerOptions;
+    }
+
+    private initValidation() {
+        this.transformScript.extend({
+            aceValidation: true
+        });
+        
+        this.validationGroup = ko.validatedObservable({
+            transformScript: this.transformScript
+        });
     }
 }
 

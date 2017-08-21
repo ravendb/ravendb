@@ -1,7 +1,6 @@
 using System;
 using System.IO;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,6 +9,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
@@ -103,15 +103,18 @@ namespace Raven.Server
                             if (CommandLineSwitches.PrintServerId)
                                 Console.WriteLine($"Server ID is {server.ServerStore.GetServerId()}.");
 
-                            Console.WriteLine(RuntimeSettings.Describe());
+                            new RuntimeSettings(Console.Out).Print();
 
                             if (CommandLineSwitches.LaunchBrowser)
                                 BrowserHelper.OpenStudioInBrowser(server.ServerStore.NodeHttpServerUrl);
 
                             new ClusterMessage(Console.Out, server.ServerStore).Print();
 
-                            Console.WriteLine($"Server available on: {server.ServerStore.NodeHttpServerUrl}");
-
+                            var prevColor = Console.ForegroundColor;
+                            Console.Write("Server available on: ");
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine($"{server.ServerStore.NodeHttpServerUrl}");
+                            Console.ForegroundColor = prevColor;
                             var consoleMre = new ManualResetEvent(false);
 
                             server.GetTcpServerStatusAsync()
@@ -119,7 +122,11 @@ namespace Raven.Server
                                 {
                                     if (tcp.IsCompleted)
                                     {
-                                        Console.WriteLine($"Tcp listening on {string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                        prevColor = Console.ForegroundColor;
+                                        Console.Write("Tcp listening on ");
+                                        Console.ForegroundColor = ConsoleColor.Green;
+                                        Console.WriteLine($"{string.Join(", ", tcp.Result.Listeners.Select(l => l.LocalEndpoint))}");
+                                        Console.ForegroundColor = prevColor;
                                     }
                                     else
                                     {
@@ -183,7 +190,7 @@ namespace Raven.Server
                 Logger.Info("Server is running as a service");
             Console.WriteLine("Running as Service");
 
-            AssemblyLoadContext.Default.Unloading += (s) =>
+            AssemblyLoadContext.Default.Unloading += s =>
             {
                 if (ShutdownServerMre.WaitOne(0))
                     return; // already done

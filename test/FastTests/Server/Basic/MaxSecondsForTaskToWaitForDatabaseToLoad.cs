@@ -7,8 +7,8 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Sparrow.Json;
@@ -83,7 +83,7 @@ namespace FastTests.Server.Basic
 
         private static DatabaseRecord GenerateDatabaseDoc(string name)
         {
-            var doc = MultiDatabase.CreateDatabaseDocument(name);
+            var doc = new DatabaseRecord(name);
             doc.Settings[RavenConfiguration.GetKey(x => x.Replication.ReplicationMinimalHeartbeat)] = "1";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "true";
             doc.Settings[RavenConfiguration.GetKey(x => x.Core.ThrowIfAnyIndexOrTransformerCouldNotBeOpened)] = "true";

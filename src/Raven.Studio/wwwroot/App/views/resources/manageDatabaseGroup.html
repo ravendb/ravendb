@@ -1,4 +1,4 @@
-<div class="destinations flex-vertical absolute-fill content-margin">
+<div class="destinations flex-vertical absolute-fill content-margin" xmlns="http://www.w3.org/1999/html">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
@@ -84,10 +84,9 @@
                     </div>
                     <div class="panel-addon" data-bind="visible: lastError">
                         <div class="padding small" data-bind="css: { 'bg-danger': badgeClass() === 'state-danger', 'bg-warning': badgeClass() === 'state-warning' }">
-                            <div data-bind="text: _.includes($root.expandedDetails(), tag()) ? lastErrorShort() : lastError()"></div>
-                            <div data-bind="visible: lastErrorShort() !== lastError()">
-                                <a href="#" 
-                                    data-bind="click: _.partial($root.toggleExpand, tag()), text: _.includes($root.expandedDetails(), tag()) ? 'hide details' : 'see more'"></a>
+                            <div data-bind="text: lastErrorShort()"></div>
+                            <div>
+                                <a href="#" data-bind="click: _.partial($root.showErrorDetails, tag())">show details</a>
                             </div>
                         </div>
                     </div>
@@ -96,19 +95,29 @@
         </div>
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-horizontal flex-header">
-                <div></div><h3>Database group topology <i class="icon-info text-info"></i></h3>
+                <div></div><h3>Database group topology</h3>
                 <div class="flex-separator"></div>
+                <button data-bind="click: graph.enterFullScreen" class="btn btn-default">
+                    <i class="icon-fullscreen"></i>
+                    <span>Full screen mode</span>
+                </button>
+                <!-- TODO
                 <div class="btn-group dropdown-right">
-                    <button class="btn btn-default dropdown-toggle btn-upcoming" disabled="disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                    <button class="btn btn-default dropdown-toggle" disabled="disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                         <i class="icon-export"></i><span>Download topology</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                         <li><a href="#">.zip</a></li>
                     </ul>
-                </div>
+                </div>-->
             </div>
             <div class="panel flex-grow" id="databaseGroupGraphContainer">
+                <h3>Database group topology</h3>
+                <button class="btn btn-default exit-button" data-bind="click: graph.exitFullScreen">
+                    <i class="icon-exit-fullscreen"></i>
+                    <span>Exit full screen</span>
+                </button>
             </div>
             <div class="legend">
                 <div class="row">

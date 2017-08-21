@@ -45,7 +45,7 @@ class databases extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase");
+        this.bindToCurrentInstance("newDatabase", "toggleDatabase", "togglePauseDatabaseIndexing", "toggleDisableDatabaseIndexing", "deleteDatabase", "activateDatabase", "updateDatabaseInfo");
 
         this.initObservables();
     }
@@ -72,7 +72,7 @@ class databases extends viewModelBase {
         return true;
     }
 
-    activate(args: any): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    activate(args: any): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         super.activate(args);
 
         // we can't use createNotifications here, as it is called after *database changes API* is connected, but user
@@ -90,7 +90,7 @@ class databases extends viewModelBase {
         this.updateUrl(appUrl.forDatabases());
     }
 
-    private fetchDatabases(): JQueryPromise<Raven.Client.Server.Operations.DatabasesInfo> {
+    private fetchDatabases(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabasesInfo> {
         return new getDatabasesCommand()
             .execute()
             .done(info => this.databases(new databasesInfo(info)));
@@ -121,10 +121,10 @@ class databases extends viewModelBase {
         }
     }
 
-    private updateDatabaseInfo(databaseName: string) {
+    updateDatabaseInfo(databaseName: string) {
         return new getDatabaseCommand(databaseName)
             .execute()
-            .done((result: Raven.Client.Server.Operations.DatabaseInfo) => {
+            .done((result: Raven.Client.ServerWide.Operations.DatabaseInfo) => {
                 this.databases().updateDatabase(result);
                 this.filterDatabases();
             });
@@ -143,7 +143,7 @@ class databases extends viewModelBase {
 
         const matchesFilters = (rs: databaseInfo) => {
             const matchesText = !hasSearchText || rs.name.toLowerCase().indexOf(searchText) >= 0;
-            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable"));
+            const matchesLocal = !localOnly || _.some(rs.nodes(), x => x.tag() === nodeTag && (x.type() === "Member" || x.type() === "Promotable" || x.type() === "Rehab"));
 
             return matchesText && matchesLocal;
         };
@@ -424,7 +424,7 @@ class databases extends viewModelBase {
 
             // using foreach to register knockout dependencies
             clusterNodes.forEach(n => {
-                if (n.type() === "Member" || n.type() === "Promotable") {
+                if (n.type() === "Member" || n.type() === "Promotable" || n.type() === "Rehab") {
                     nodeTags.add(n.tag());
                 }
             });

@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations
             return new DynamicJsonValue(GetType())
             {
                 ["Processed"] = Processed,
-                ["Total"] = Total,
+                ["Total"] = Total
             };
         }
     }
@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations
         {
             return new DynamicJsonValue(GetType())
             {
-                ["Processed"] = Processed,
+                ["Processed"] = Processed
             };
         }
     }

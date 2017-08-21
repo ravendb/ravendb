@@ -5,12 +5,10 @@ using System.Linq;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Documents.Exceptions.Patching;
-using Raven.Client.Extensions;
+using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Util;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
@@ -129,7 +127,7 @@ namespace Raven.Server.Documents.ETL
                         enumerators.Add((docs, tombstones, collection));
                     }
                 }
-                
+
                 using (var merged = new ExtractedItemsEnumerator<TExtracted>(stats))
                 {
                     foreach (var en in enumerators)
@@ -172,7 +170,7 @@ namespace Raven.Server.Documents.ETL
                         continue;
                     }
                 }
-                
+
                 using (stats.For(EtlOperations.Transform))
                 {
                     CancellationToken.ThrowIfCancellationRequested();
@@ -325,7 +323,7 @@ namespace Raven.Server.Documents.ETL
             {
                 // This has lower priority than request processing, so we let the OS
                 // schedule this appropriately
-                Threading.TrySettingCurrentThreadPriority(ThreadPriority.BelowNormal);
+                Thread.CurrentThread.Priority = ThreadPriority.BelowNormal;
                 NativeMemory.EnsureRegistered();
                 Run();
             })
@@ -385,7 +383,7 @@ namespace Raven.Server.Documents.ETL
                     var didWork = false;
 
                     var state = GetProcessState();
-                    
+
                     var loadLastProcessedEtag = state.GetLastProcessedEtagForNode(_serverStore.NodeTag);
 
                     using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -488,7 +486,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract bool ShouldFilterOutSystemDocument(bool isHiLo);
 
-        private bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
+        private static bool AlreadyLoadedByDifferentNode(ExtractedItem item, EtlProcessState state)
         {
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                 remoteAsString: item.ChangeVector,
@@ -569,7 +567,7 @@ namespace Raven.Server.Documents.ETL
 
             exceptionAggregator.Execute(() => _cts.Dispose());
             exceptionAggregator.Execute(() => _waitForChanges.Dispose());
-            
+
             exceptionAggregator.ThrowIfNeeded();
         }
     }

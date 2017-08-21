@@ -1,9 +1,6 @@
-﻿using System;
-using System.Threading.Tasks;
-using Raven.Client.Server.Commands;
+﻿using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Web.System
 {
@@ -15,16 +12,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
-                var tcpServerUrl = Server.ServerStore.NodeTcpServerUrl;
-                if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
-                    tcpServerUrl = tcpServerUrl.Remove(15, 8);
-
-                var output = new DynamicJsonValue
-                {
-                    [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                    [nameof(TcpConnectionInfo.Certificate)] = Server.ServerCertificateHolder.CertificateForClients,
-                };
-
+                var output = Server.ServerStore.GetTcpInfoAndCertificates();
                 context.Write(writer, output);
             }
 

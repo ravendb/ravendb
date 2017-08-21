@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,9 +11,7 @@ using Microsoft.Net.Http.Headers;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Extensions;
-using Raven.Client.Util;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -84,7 +83,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        private void ThrowNotSupportedType(string contentType)
+        private static void ThrowNotSupportedType(string contentType)
         {
             throw new InvalidOperationException($"The requested Content type '{contentType}' is not supported. Use 'application/json' or 'multipart/mixed'.");
         }
@@ -301,7 +300,7 @@ namespace Raven.Server.Documents.Handlers
                                 [Constants.Documents.Metadata.Id] = putResult.Id,
                                 [Constants.Documents.Metadata.Collection] = putResult.Collection.Name,
                                 [Constants.Documents.Metadata.ChangeVector] = putResult.ChangeVector,
-                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified,
+                                [Constants.Documents.Metadata.LastModified] = putResult.LastModified
                             };
 
                             if (putResult.Flags != DocumentFlags.None)
@@ -328,7 +327,7 @@ namespace Raven.Server.Documents.Handlers
                                 [nameof(BatchRequestParser.CommandData.Id)] = cmd.Id,
                                 [nameof(BatchRequestParser.CommandData.ChangeVector)] = patchResult.ChangeVector,
                                 [nameof(BatchRequestParser.CommandData.Type)] = CommandType.PATCH.ToString(),
-                                ["PatchStatus"] = patchResult.Status.ToString(),
+                                ["PatchStatus"] = patchResult.Status.ToString()
                             });
                             break;
                         case CommandType.DELETE:
@@ -387,7 +386,7 @@ namespace Raven.Server.Documents.Handlers
                                     [nameof(BatchRequestParser.CommandData.ChangeVector)] = attachmentPutResult.ChangeVector,
                                     [nameof(AttachmentDetails.Hash)] = attachmentPutResult.Hash,
                                     [nameof(BatchRequestParser.CommandData.ContentType)] = attachmentPutResult.ContentType,
-                                    [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size,
+                                    [nameof(AttachmentDetails.Size)] = attachmentPutResult.Size
                                 });
                             }
 
@@ -403,7 +402,7 @@ namespace Raven.Server.Documents.Handlers
                             {
                                 ["Type"] = CommandType.AttachmentPUT.ToString(),
                                 [Constants.Documents.Metadata.Id] = cmd.Id,
-                                ["Name"] = cmd.Name,
+                                ["Name"] = cmd.Name
                             });
 
                             break;

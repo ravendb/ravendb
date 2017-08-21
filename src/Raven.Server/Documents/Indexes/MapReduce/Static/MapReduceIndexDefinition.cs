@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             OutputReduceToCollection = definition.OutputReduceToCollection;
         }
 
-        public HashSet<string> GroupByFields { get; private set; }
-        public string OutputReduceToCollection { get; private set; }
+        public HashSet<string> GroupByFields { get; }
+        public string OutputReduceToCollection { get; }
     }
 }

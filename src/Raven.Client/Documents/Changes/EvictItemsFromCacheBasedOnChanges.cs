@@ -5,6 +5,8 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Threading;
+using Raven.Client.Http;
 
 namespace Raven.Client.Documents.Changes
 {
@@ -12,18 +14,18 @@ namespace Raven.Client.Documents.Changes
     {
         private readonly string _databaseName;
         private readonly IDatabaseChanges _changes;
-        private readonly Action<string> _evictCacheOldItems;
         private readonly IDisposable _documentsSubscription;
         private readonly IDisposable _indexesSubscription;
+        private RequestExecutor _requestExecutor;
 
-        public EvictItemsFromCacheBasedOnChanges(string databaseName, IDatabaseChanges changes, Action<string> evictCacheOldItems)
+        public EvictItemsFromCacheBasedOnChanges(DocumentStore store, string databaseName)
         {
             _databaseName = databaseName;
-            _changes = changes;
-            _evictCacheOldItems = evictCacheOldItems;
-            var docSub = changes.ForAllDocuments();
+            _changes = store.Changes(databaseName);
+            _requestExecutor = store.GetRequestExecutor(databaseName);
+            var docSub = _changes.ForAllDocuments();
             _documentsSubscription = docSub.Subscribe(this);
-            var indexSub = changes.ForAllIndexes();
+            var indexSub = _changes.ForAllIndexes();
             _indexesSubscription = indexSub.Subscribe(this);
         }
 
@@ -31,7 +33,7 @@ namespace Raven.Client.Documents.Changes
         {
             if (change.Type == DocumentChangeTypes.Put || change.Type == DocumentChangeTypes.Delete)
             {
-                _evictCacheOldItems(_databaseName);
+                Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
         }
 
@@ -39,7 +41,7 @@ namespace Raven.Client.Documents.Changes
         {
             if (change.Type == IndexChangeTypes.BatchCompleted || change.Type == IndexChangeTypes.IndexRemoved)
             {
-                _evictCacheOldItems(_databaseName);
+                Interlocked.Increment(ref _requestExecutor.Cache.Generation);
             }
         }
 
@@ -53,17 +55,10 @@ namespace Raven.Client.Documents.Changes
 
         public void Dispose()
         {
-            _documentsSubscription.Dispose();
-            _indexesSubscription.Dispose();
-            using (_changes as IDisposable)
+            using (_changes)
             {
-                //var remoteDatabaseChanges = changes as RemoteDatabaseChanges;
-                //if (remoteDatabaseChanges != null)
-                //{
-                //    throw new NotImplementedException();
-
-                //    remoteDatabaseChanges.DisposeAsync().Wait(TimeSpan.FromSeconds(3));
-                //}
+                _documentsSubscription.Dispose();
+                _indexesSubscription.Dispose();
             }
         }
     }

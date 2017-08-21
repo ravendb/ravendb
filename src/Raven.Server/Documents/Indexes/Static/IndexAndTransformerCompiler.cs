@@ -5,7 +5,6 @@ using System.IO;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Runtime.Loader;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,9 +14,9 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Emit;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters.ReduceIndex;
@@ -29,7 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static
     [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
     public static class IndexAndTransformerCompiler
     {
-        private static readonly bool EnableDebugging = true; // for debugging purposes
+        internal static readonly bool EnableDebugging = false; // for debugging purposes (mind http://issues.hibernatingrhinos.com/issue/RavenDB-6960)
 
         private const string IndexNamespace = "Raven.Server.Documents.Indexes.Static.Generated";
 
@@ -60,12 +59,12 @@ namespace Raven.Server.Documents.Indexes.Static
             MetadataReference.CreateFromFile(typeof(ExpressionType).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Enumerable).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(IndexAndTransformerCompiler).GetTypeInfo().Assembly.Location),
-            MetadataReference.CreateFromFile(typeof(DynamicAttribute).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(BoostedValue).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Lucene.Net.Documents.Document).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Runtime")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("Microsoft.CSharp")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("mscorlib")).Location),
+            MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("netstandard")).Location),
             MetadataReference.CreateFromFile(Assembly.Load(new AssemblyName("System.Collections")).Location),
             MetadataReference.CreateFromFile(typeof(Regex).GetTypeInfo().Assembly.Location),
             MetadataReference.CreateFromFile(typeof(Uri).GetTypeInfo().Assembly.Location)
@@ -111,7 +110,7 @@ namespace Raven.Server.Documents.Indexes.Static
             var res = GetUsingDirectiveAndSyntaxTreesAndRefrences(extentions);
 
             var compilationUnit = SyntaxFactory.CompilationUnit()
-                .WithUsings(RoslynHelper.CreateUsings(res.usingDirectiveSyntaxs))
+                .WithUsings(RoslynHelper.CreateUsings(res.UsingDirectiveSyntaxes))
                 .WithMembers(SyntaxFactory.SingletonList<MemberDeclarationSyntax>(@namespace))
                 .NormalizeWhitespace();
 
@@ -129,13 +128,13 @@ namespace Raven.Server.Documents.Indexes.Static
                 ? SyntaxFactory.ParseSyntaxTree(File.ReadAllText(sourceFile), path: sourceFile, encoding: Encoding.UTF8)
                 : SyntaxFactory.ParseSyntaxTree(formatedCompilationUnit.ToFullString());
 
-            res.syntaxTrees.Add(st);
-            var syntaxTrees = res.syntaxTrees;
+            res.SyntaxTrees.Add(st);
+            var syntaxTrees = res.SyntaxTrees;
 
             var compilation = CSharpCompilation.Create(
                 assemblyName: name + ".dll",
                 syntaxTrees: syntaxTrees,
-                references: res.references,
+                references: res.References,
                 options: new CSharpCompilationOptions(OutputKind.DynamicallyLinkedLibrary)
                     .WithOptimizationLevel(OptimizationLevel.Release)
                 );
@@ -188,7 +187,7 @@ namespace Raven.Server.Documents.Indexes.Static
             };
         }
 
-        private static (UsingDirectiveSyntax[] usingDirectiveSyntaxs, List<SyntaxTree> syntaxTrees, MetadataReference[] references) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
+        private static (UsingDirectiveSyntax[] UsingDirectiveSyntaxes, List<SyntaxTree> SyntaxTrees, MetadataReference[] References) GetUsingDirectiveAndSyntaxTreesAndRefrences(Dictionary<string, string> extentions)
         {
             var syntaxTrees = new List<SyntaxTree>();
             if (extentions == null)
@@ -537,7 +536,7 @@ namespace Raven.Server.Documents.Indexes.Static
             return SyntaxFactory.ArrayCreationExpression(SyntaxFactory.ArrayType(
                         SyntaxFactory.PredefinedType(SyntaxFactory.Token(SyntaxKind.StringKeyword)))
                     .WithRankSpecifiers(
-                        SyntaxFactory.SingletonList<ArrayRankSpecifierSyntax>(
+                        SyntaxFactory.SingletonList(
                             SyntaxFactory.ArrayRankSpecifier(
                                     SyntaxFactory.SingletonSeparatedList<ExpressionSyntax>(
                                         SyntaxFactory.OmittedArraySizeExpression()

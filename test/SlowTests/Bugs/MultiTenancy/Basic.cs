@@ -4,13 +4,11 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
-using System;
 using System.Diagnostics;
 using FastTests;
 using System.Linq;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace SlowTests.Bugs.MultiTenancy
@@ -23,7 +21,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
+                var doc = new DatabaseRecord("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 string userId;
@@ -57,7 +55,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
+                var doc = new DatabaseRecord("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var s = store.OpenSession("Northwind"))
@@ -84,7 +82,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
+                var doc = new DatabaseRecord("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 using (var s = store.OpenSession("Northwind"))
@@ -112,7 +110,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
+                var doc = new DatabaseRecord("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
                 store.Database = "Northwind";
 
@@ -142,7 +140,7 @@ namespace SlowTests.Bugs.MultiTenancy
             DoNotReuseServer();
             using (var store = GetDocumentStore())
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("Northwind");
+                var doc = new DatabaseRecord("Northwind");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
                 string userId;

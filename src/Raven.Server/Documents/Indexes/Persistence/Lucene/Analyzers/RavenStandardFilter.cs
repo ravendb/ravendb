@@ -97,10 +97,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers
 
         public bool Reset(System.IO.TextReader reader)
         {
-            var input = (StandardTokenizer)_innerInputStream;
-            if (input != null)
+            var i = (StandardTokenizer)_innerInputStream;
+            if (i != null)
             {
-                input.Reset(reader);
+                i.Reset(reader);
                 return true;
             }
             return false;

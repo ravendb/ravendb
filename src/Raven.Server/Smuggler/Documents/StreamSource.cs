@@ -5,7 +5,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
@@ -23,7 +22,6 @@ namespace Raven.Server.Smuggler.Documents
     {
         private readonly Stream _stream;
         private readonly DocumentsOperationContext _context;
-        private readonly DocumentDatabase _database;
         private JsonOperationContext.ManagedPinnedBuffer _buffer;
         private JsonOperationContext.ReturnBuffer _returnBuffer;
         private JsonOperationContext.ManagedPinnedBuffer _writeBuffer;
@@ -38,11 +36,10 @@ namespace Raven.Server.Smuggler.Documents
 
         private Size _totalObjectsRead = new Size(0, SizeUnit.Bytes);
 
-        public StreamSource(Stream stream, DocumentsOperationContext context, DocumentDatabase database)
+        public StreamSource(Stream stream, DocumentsOperationContext context)
         {
             _stream = stream;
             _context = context;
-            _database = database;
         }
 
         public IDisposable Initialize(DatabaseSmugglerOptions options, SmugglerResult result, out long buildVersion)
@@ -175,7 +172,7 @@ namespace Raven.Server.Smuggler.Documents
         }
 
         public IEnumerable<KeyValuePair<string, long>> GetIdentities()
-        {            
+        {
             return InternalGetIdentities();
         }
 
@@ -199,7 +196,7 @@ namespace Raven.Server.Smuggler.Documents
                 }
             }
         }
-      
+
         private unsafe string ReadType()
         {
             if (UnmanagedJsonParserHelper.Read(_stream, _parser, _state, _buffer) == false)
@@ -209,7 +206,7 @@ namespace Raven.Server.Smuggler.Documents
                 return null;
 
             if (_state.CurrentTokenType != JsonParserToken.String)
-                ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType );
+                ThrowInvalidJson("Expected property type to be string, but was " + _state.CurrentTokenType);
 
             return _context.AllocateStringValue(null, _state.StringBuffer, _state.StringSize).ToString();
         }
@@ -250,7 +247,7 @@ namespace Raven.Server.Smuggler.Documents
         private long SkipArray()
         {
             var count = 0L;
-            foreach (var builder in ReadArray())
+            foreach (var _ in ReadArray())
             {
                 count++; //skipping
             }
@@ -266,7 +263,6 @@ namespace Raven.Server.Smuggler.Documents
             if (_state.CurrentTokenType != JsonParserToken.StartArray)
                 ThrowInvalidJson("Expected start array, got " + _state.CurrentTokenType);
 
-            var context = _context;
             var builder = CreateBuilder(_context, null);
             try
             {
@@ -280,14 +276,14 @@ namespace Raven.Server.Smuggler.Documents
                     if (actions != null)
                     {
                         var oldContext = _context;
-                        context = actions.GetContextForNewDocument();
+                        var context = actions.GetContextForNewDocument();
                         if (_context != oldContext)
                         {
                             builder.Dispose();
                             builder = CreateBuilder(context, null);
                         }
                     }
-                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk); ;
+                    builder.Renew("import/object", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                     ReadObject(builder);
 
                     var reader = builder.CreateReader();
@@ -363,9 +359,9 @@ namespace Raven.Server.Smuggler.Documents
                             Id = modifier.Id,
                             ChangeVector = modifier.ChangeVector,
                             Flags = modifier.Flags,
-                            NonPersistentFlags = modifier.NonPersistentFlags,
+                            NonPersistentFlags = modifier.NonPersistentFlags
                         },
-                        Attachments = attachments,
+                        Attachments = attachments
                     };
                     attachments = null;
                 }

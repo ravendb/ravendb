@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
         [RavenAction("/databases/*/debug/info-package", "GET", AuthorizationStatus.ValidUser, IsDebugInformationEndpoint = true)]
         public async Task GetInfoPackage()
         {
-            var contentDisposition = $"attachment; filename=debug-info of {Database.Name} {DateTime.UtcNow}.zip";
+           
+            var contentDisposition = $"attachment; filename={DateTime.UtcNow:yyyy-MM-dd H:mm:ss} - Database [{Database.Name}].zip";
             HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         var localEndpointClient = new LocalEndpointClient(Server);
                         var endpointParameters = new Dictionary<string, StringValues>
                         {
-                            { "database",new StringValues(Database.Name) },
+                            { "database",new StringValues(Database.Name) }
                         };
 
                         foreach (var route in DebugInfoPackageUtils.Routes.Where(x => x.TypeOfRoute == RouteInformation.RouteType.Databases))

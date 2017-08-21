@@ -5,8 +5,6 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Extensions;
-using Raven.Server.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -14,7 +12,6 @@ using Sparrow.Logging;
 using Sparrow.Utils;
 using Voron.Global;
 using static Sparrow.DatabasePerformanceMetrics;
-using ExceptionExtensions = Raven.Client.Extensions.ExceptionExtensions;
 
 namespace Raven.Server.Documents
 {
@@ -186,7 +183,7 @@ namespace Raven.Server.Documents
             DoCommandNotification((MergedTransactionCommand)op);
         }
 
-        private void DoCommandNotification(MergedTransactionCommand cmd)
+        private static void DoCommandNotification(MergedTransactionCommand cmd)
         {
             if (cmd.Exception != null)
             {
@@ -343,6 +340,7 @@ namespace Raven.Server.Documents
                     {
                         var currentPendingOps = GetBufferForPendingOps();
                         PendingOperations result;
+                        bool calledCompletePreviousTx = false;
                         try
                         {
                             var transactionMeter = TransactionPerformanceMetrics.MeterPerformanceRate();
@@ -357,6 +355,7 @@ namespace Raven.Server.Documents
                             {
                                 transactionMeter.Dispose();
                             }
+                            calledCompletePreviousTx = true;
                             CompletePreviousTransaction(previous, ref previousPendingOps, throwOnError: true);
                         }
                         catch (Exception e)
@@ -367,9 +366,12 @@ namespace Raven.Server.Documents
                                     $"Failed to run merged transaction with {currentPendingOps.Count:#,#} operations in async manner, will retry independently",
                                     e);
                             }
-                            CompletePreviousTransaction(previous, ref previousPendingOps,
-                                // if this previous threw, it won't throw again
-                                throwOnError: false);
+                            if (calledCompletePreviousTx == false)
+                            {
+                                CompletePreviousTransaction(previous, ref previousPendingOps,
+                                    // if this previous threw, it won't throw again
+                                    throwOnError: false);
+                            }
                             previous.Dispose();
                             context.Transaction.Dispose();
                             NotifyTransactionFailureAndRerunIndependently(currentPendingOps, e);
@@ -423,7 +425,7 @@ namespace Raven.Server.Documents
             ref List<MergedTransactionCommand> previousPendingOps,
             bool throwOnError)
         {
-            try
+           try
             {
                 previous.EndAsyncCommit();
                 if (_log.IsInfoEnabled)

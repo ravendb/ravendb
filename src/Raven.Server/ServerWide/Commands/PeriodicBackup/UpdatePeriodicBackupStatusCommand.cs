@@ -1,5 +1,5 @@
-﻿using Raven.Client.Server;
-using Raven.Client.Server.PeriodicBackup;
+﻿using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.PeriodicBackup;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 

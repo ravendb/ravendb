@@ -29,6 +29,9 @@ namespace Raven.Client.Util
             _locks = new ConcurrentDictionary<string, object>(comparer);
         }
 
+        /// <summary>
+        /// This locks the entire dictionary. Use carefully.
+        /// </summary>
         public IEnumerable<TVal> Values => _items.Values;
 
         public TVal GetOrAdd(string key, Func<string, TVal> valueGenerator)
@@ -51,6 +54,10 @@ namespace Raven.Client.Util
             }
         }
 
+
+        /// <summary>
+        /// This locks the entire dictionary. Use carefully.
+        /// </summary>
         public List<TVal> ValuesSnapshot
         {
             get
@@ -98,17 +105,14 @@ namespace Raven.Client.Util
                 object value;
                 if (_locks.TryGetValue(key, out value) == false)
                 {
-                    TVal val;
-                    _items.TryRemove(key, out val); // just to be on the safe side
+                    _items.TryRemove(key, out _); // just to be on the safe side
                     Interlocked.Increment(ref _version);
                     return;
                 }
                 lock (value)
                 {
-                    object o;
-                    _locks.TryRemove(key, out o);
-                    TVal val;
-                    _items.TryRemove(key, out val);
+                    _locks.TryRemove(key, out _);
+                    _items.TryRemove(key, out _);
                     Interlocked.Increment(ref _version);
                 }
             }
@@ -142,8 +146,7 @@ namespace Raven.Client.Util
             using (_globalLocker.EnterReadLock())
             {
                 var result = _items.TryRemove(key, out val);
-                object value;
-                _locks.TryRemove(key, out value);
+                _locks.TryRemove(key, out _);
 
                 Interlocked.Increment(ref _version);
                 return result;

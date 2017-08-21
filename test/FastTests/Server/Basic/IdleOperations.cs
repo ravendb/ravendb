@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Linq;
 using Raven.Client.Extensions;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Xunit;
 
 namespace FastTests.Server.Basic
@@ -68,7 +68,7 @@ namespace FastTests.Server.Basic
                 for (var i = 0; i < 10; i++)
                 {
                     var name = "IdleOperations_CleanupResources_DB_" + i;
-                    var doc = MultiDatabase.CreateDatabaseDocument(name);
+                    var doc = new DatabaseRecord(name);
 
                     store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 

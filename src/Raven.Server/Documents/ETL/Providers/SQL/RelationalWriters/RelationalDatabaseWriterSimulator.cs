@@ -5,7 +5,7 @@ using System.Data.SqlClient;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
         {
             _configuration = configuration;
             _providerFactory = DbProviderFactories.GetFactory(configuration.FactoryName);
-            _commandBuilder = _providerFactory.CreateCommandBuilder();
+            _commandBuilder = _providerFactory.InitializeCommandBuilder();
         }
 
         public IEnumerable<string> SimulateExecuteCommandText(SqlTableWithRecords records, CancellationToken token)
@@ -135,10 +135,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
             {
                 return string.Join(".", tableName.Split('.').Select(x => _commandBuilder.QuoteIdentifier(x)).ToArray());
             }
-            else
-            {
-                return tableName;
-            }
+
+            return tableName;
         }
     }
 }

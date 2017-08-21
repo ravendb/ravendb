@@ -27,6 +27,33 @@ namespace FastTests.Client.Documents
         }
 
         [Fact]
+        public async Task CanChangeDocumentCollectionWithDeleteAndSave()
+        {
+            using (var store = GetDocumentStore())
+            {
+                const string documentId = "users/1";
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(documentId);
+                    await session.SaveChangesAsync();
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new Person { Name = "Grisha" }, documentId);
+                    await session.SaveChangesAsync();
+                }
+            }
+        }
+
+
+        [Fact]
         public async Task GetAsync()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +75,7 @@ namespace FastTests.Client.Documents
                 using (requestExecuter.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
                     var getDocumentCommand = new GetDocumentCommand(new[] { "users/1", "users/2" }, includes: null, transformer: null,
-                        transformerParameters: null, metadataOnly: false, context: context);
+                        transformerParameters: null, metadataOnly: false);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);
@@ -81,7 +108,7 @@ namespace FastTests.Client.Documents
                     }
 
                     getDocumentCommand = new GetDocumentCommand(new[] {"users/1", "users/2"}, includes: null, transformer: null, transformerParameters: null,
-                        metadataOnly: true, context: context);
+                        metadataOnly: true);
 
                     requestExecuter
                         .Execute(getDocumentCommand, context);

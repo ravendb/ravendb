@@ -32,11 +32,12 @@ namespace Raven.TestDriver
                 throw new FileNotFoundException("Server file was not found", locator.ServerPath);
             }
 
-            var commandArguments = new List<string>()
-                {
+            var commandArguments = new List<string>
+            {
                     locator.CommandArguments,
                     "--ServerUrl=http://127.0.0.1:0",
-                    "--RunInMemory=true"
+                    "--RunInMemory=true",
+                    "--Testing.ExitOnParentProcessExit=" + Process.GetCurrentProcess().Id
                 };
 
             var argumentsString = string.Join(" ", commandArguments); 

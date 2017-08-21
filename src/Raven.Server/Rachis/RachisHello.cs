@@ -1,6 +1,4 @@
-﻿using Raven.Client.Server.Tcp;
-
-namespace Raven.Server.Rachis
+﻿namespace Raven.Server.Rachis
 {
     /// <summary>
     /// Initial message sent when we open a connection to a remote server

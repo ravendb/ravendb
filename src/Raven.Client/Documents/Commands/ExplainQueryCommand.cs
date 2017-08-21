@@ -19,17 +19,15 @@ namespace Raven.Client.Documents.Commands
         }
 
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly IndexQuery _indexQuery;
 
-        public ExplainQueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery)
+        public ExplainQueryCommand(DocumentConventions conventions, IndexQuery indexQuery)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
@@ -41,9 +39,9 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteIndexQuery(_conventions, _context, _indexQuery);
+                            writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                         }
                     }
                 )

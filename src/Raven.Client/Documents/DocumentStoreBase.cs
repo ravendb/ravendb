@@ -45,11 +45,11 @@ namespace Raven.Client.Documents
         /// Subscribe to change notifications from the server
         /// </summary>
 
-        public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
+        public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
 
         public abstract IDatabaseChanges Changes(string database = null);
 
-        public abstract IDisposable DisableAggressiveCaching();
+        public abstract IDisposable DisableAggressiveCaching(string database = null);
 
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
@@ -212,9 +212,9 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>
-        public IDisposable AggressivelyCache()
+        public IDisposable AggressivelyCache(string database = null)
         {
-            return AggressivelyCacheFor(TimeSpan.FromDays(1));
+            return AggressivelyCacheFor(TimeSpan.FromDays(1), database);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)

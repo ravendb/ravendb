@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Queries
                     return new MatchAllDocsQuery();
                 case OperatorType.Method:
                     var methodName = QueryExpression.Extract(query.QueryText, expression.Field);
-                    var methodType = GetMethodType(methodName);
+                    var methodType = QueryMethod.GetMethodType(methodName);
 
                     switch (methodType)
                     {
@@ -195,8 +195,12 @@ namespace Raven.Server.Documents.Queries
                             return HandleExists(query, expression, metadata);
                         case MethodType.Exact:
                             return HandleExact(context, query, expression, metadata, parameters, analyzer);
+                        case MethodType.Count:
+                            return HandleCount(context, query, expression, metadata, parameters, analyzer);
+                        case MethodType.Sum:
+                            return HandleSum(context, query, expression, metadata, parameters, analyzer);
                         default:
-                            ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                            QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                             break;
                     }
 
@@ -378,6 +382,30 @@ namespace Raven.Server.Documents.Queries
             return ToLuceneQuery(context, query, (QueryExpression)expression.Arguments[0], metadata, parameters, analyzer, exact: true);
         }
 
+        private static Lucene.Net.Search.Query HandleCount(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        {
+            if (expression.Arguments == null || expression.Arguments.Count == 0)
+                ThrowMethodExpectsOperatorAfterInvocation("count", metadata.QueryText, parameters);
+
+            var queryExpression = (QueryExpression)expression.Arguments[0];
+
+            queryExpression.Field = expression.Field;
+
+            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer);
+        }
+
+        private static Lucene.Net.Search.Query HandleSum(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        {
+            if (expression.Arguments == null || expression.Arguments.Count != 2)
+                ThrowMethodExpectsOperatorAfterInvocation("sum", metadata.QueryText, parameters);
+
+            var queryExpression = (QueryExpression)expression.Arguments[1];
+
+            queryExpression.Field = expression.Arguments[0] as FieldToken;
+
+            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer);
+        }
+
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
         {
             if (value.Type == ValueTokenType.Parameter)
@@ -411,9 +439,35 @@ namespace Raven.Server.Documents.Queries
                     ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 yield return (parameterValue, parameterValueType);
+                yield break;
             }
 
-            yield return (QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars), value.Type);
+            switch (value.Type)
+            {
+                case ValueTokenType.String:
+                    var valueAsString = QueryExpression.Extract(query.QueryText, value.TokenStart + 1, value.TokenLength - 2, value.EscapeChars);
+                    yield return (valueAsString, ValueTokenType.String);
+                    yield break;
+                case ValueTokenType.Long:
+                    var valueAsLong = long.Parse(QueryExpression.Extract(query.QueryText, value));
+                    yield return (valueAsLong, ValueTokenType.Long);
+                    yield break;
+                case ValueTokenType.Double:
+                    var valueAsDouble = double.Parse(QueryExpression.Extract(query.QueryText, value));
+                    yield return (valueAsDouble, ValueTokenType.Double);
+                    yield break;
+                case ValueTokenType.True:
+                    yield return (LuceneDocumentConverterBase.TrueString, ValueTokenType.String);
+                    yield break;
+                case ValueTokenType.False:
+                    yield return (LuceneDocumentConverterBase.FalseString, ValueTokenType.String);
+                    yield break;
+                case ValueTokenType.Null:
+                    yield return (null, ValueTokenType.String);
+                    yield break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(value.Type), value.Type, null);
+            }
         }
 
         public static (object Value, ValueTokenType Type) GetValue(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
@@ -660,33 +714,6 @@ namespace Raven.Server.Documents.Queries
             return previous == current;
         }
 
-        private static MethodType GetMethodType(string methodName)
-        {
-            if (string.Equals(methodName, "search", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Search;
-
-            if (string.Equals(methodName, "boost", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Boost;
-
-            if (string.Equals(methodName, "startsWith", StringComparison.OrdinalIgnoreCase))
-                return MethodType.StartsWith;
-
-            if (string.Equals(methodName, "endsWith", StringComparison.OrdinalIgnoreCase))
-                return MethodType.EndsWith;
-
-            if (string.Equals(methodName, "lucene", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Lucene;
-
-            if (string.Equals(methodName, "exists", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Exists;
-
-            if (string.Equals(methodName, "exact", StringComparison.OrdinalIgnoreCase))
-                return MethodType.Exact;
-
-            throw new NotSupportedException($"Method '{methodName}' is not supported.");
-
-        }
-
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
         {
             throw new NotSupportedException($"Unhandled token type: {type}");
@@ -702,11 +729,6 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException("Expected query parameter to be " + expectedValueType + " but was " + item.Type + ": " + item.Value, queryText, parameters);
         }
 
-        private static void ThrowMethodNotSupported(MethodType methodType, string queryText, BlittableJsonReaderObject parameters)
-        {
-            throw new InvalidQueryException($"Method '{methodType}' is not supported.", queryText, parameters);
-        }
-
         private static void ThrowUnhandledExpressionOperatorType(OperatorType type, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Unhandled expression operator type: {type}", queryText, parameters);
@@ -714,7 +736,12 @@ namespace Raven.Server.Documents.Queries
 
         private static void ThrowMethodExpectsArgumentOfTheFollowingType(string methodName, ValueTokenType expectedType, ValueTokenType gotType, string queryText, BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException($"Method '{methodName}' expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
+            throw new InvalidQueryException($"Method {methodName}() expects to get an argument of type {expectedType} while it got {gotType}", queryText, parameters);
+        }
+
+        private static void ThrowMethodExpectsOperatorAfterInvocation(string methodName, string queryText, BlittableJsonReaderObject parameters)
+        {
+            throw new InvalidQueryException($"Method {methodName}() expects operator after its invocation", queryText, parameters);
         }
 
         public static void ThrowParametersWereNotProvided(string queryText)
@@ -730,17 +757,6 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnexpectedParameterValue(object parameter, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Parameter value '{parameter}' of type {parameter.GetType().FullName} is not supported", queryText, parameters);
-        }
-
-        private enum MethodType
-        {
-            Search,
-            Boost,
-            StartsWith,
-            EndsWith,
-            Lucene,
-            Exists,
-            Exact
         }
     }
 }

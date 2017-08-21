@@ -1,19 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Exceptions;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Json.Converters;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -269,7 +265,7 @@ namespace FastTests.Server.Replication
         {
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/replication/debug/incoming-rejection-info";
 
@@ -311,7 +307,7 @@ namespace FastTests.Server.Replication
         {
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/replication/tombstones";
 

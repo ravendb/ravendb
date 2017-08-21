@@ -2,7 +2,7 @@ using System;
 using System.Data.Common;
 using System.Data.SqlClient;
 using Npgsql;
-using Raven.Client.Server.ETL.SQL;
+using Raven.Client.ServerWide.ETL.SQL;
 
 namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 {
@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
 
     public static class DbProviderFactoryExtensions
     {
-        public static DbCommandBuilder CreateCommandBuilder(this DbProviderFactory factory)
+        public static DbCommandBuilder InitializeCommandBuilder(this DbProviderFactory factory)
         {
             if (factory is SqlClientFactory)
                 return new DbCommandBuilder
@@ -38,9 +38,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters
                     Start = "\"",
                     End = "\""
                 };
-            return new DbCommandBuilder
-            {
-            };
+            return new DbCommandBuilder();
         }
     }
 }

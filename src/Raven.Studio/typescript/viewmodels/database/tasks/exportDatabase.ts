@@ -17,10 +17,13 @@ import getCollectionsStatsCommand = require("commands/database/documents/getColl
 import getNextOperationId = require("commands/database/studio/getNextOperationId");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
+import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import generalUtils = require("common/generalUtils");
+import defaultAceCompleter = require("common/defaultAceCompleter");
 
 class exportDatabase extends viewModelBase {
 
+    completer = defaultAceCompleter.completer();
     model = new exportDatabaseModel();
 
     static isExporting = ko.observable(false);
@@ -28,6 +31,7 @@ class exportDatabase extends viewModelBase {
 
     showAdvancedOptions = ko.observable(false);
     showTransformScript = ko.observable(false);
+    canExportDocumentRevisions = ko.pureComputed(() => !!collectionsTracker.default.revisionsBin());
 
     collections = ko.observableArray<string>();
     filter = ko.observable<string>("");
@@ -59,6 +63,12 @@ class exportDatabase extends viewModelBase {
             .done((collections: string[]) => {
                 this.collections(collections);
             });
+    }
+
+    compositionComplete() {
+        super.compositionComplete();
+        
+        this.model.includeRevisionDocuments(this.canExportDocumentRevisions());
     }
 
     private fetchCollections(): JQueryPromise<Array<string>> {
@@ -169,6 +179,10 @@ class exportDatabase extends viewModelBase {
     }
 
     startExport() {
+        if (!this.isValid(this.model.validationGroup)) {
+            return;
+        }
+        
         eventsCollector.default.reportEvent("database", "export");
 
         exportDatabase.isExporting(true);

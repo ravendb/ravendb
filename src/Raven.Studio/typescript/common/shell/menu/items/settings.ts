@@ -1,19 +1,11 @@
 ﻿import intermediateMenuItem = require("common/shell/menu/intermediateMenuItem");
 import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import separatorMenuItem = require("common/shell/menu/separatorMenuItem");
-
+import accessHelper = require("viewmodels/shell/accessHelper");
 export = getSettingsMenuItem;
 
 function getSettingsMenuItem(appUrls: computedAppUrls) {
     const items: menuItem[] = [
-        new leafMenuItem({
-            route: 'databases/manageDatabaseGroup',
-            moduleId: 'viewmodels/resources/manageDatabaseGroup',
-            title: 'Manage database group',
-            nav: true,
-            css: 'icon-topology',
-            dynamicHash: appUrls.manageDatabaseGroup
-        }),
         new leafMenuItem({
             route: ['databases/record', 'databases/settings/databaseRecord'],
             moduleId: 'viewmodels/database/settings/databaseRecord',
@@ -31,48 +23,39 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
         }),*/
-        /* TODO: move to tasks menu
         new leafMenuItem({
-            route: 'databases/settings/replication',
-            moduleId: 'viewmodels/database/settings/replications',
-            title: 'Replication',
+            title: 'Transformers',
+            route: 'databases/transformers',
+            moduleId: 'viewmodels/database/transformers/transformers',
+            css: 'icon-etl',
             nav: true,
-            css: 'icon-replication',
-            dynamicHash: appUrls.replications
-        }),*/
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/etl',
-            moduleId: 'viewmodels/database/settings/etl',
-            title: 'ETL',
-            nav: true,
-            css: 'icon-plus',
-            dynamicHash: appUrls.etl
-        }),*/
-        /* TODO
-        new leafMenuItem({
-            route: 'databases/settings/sqlReplication',
-            moduleId: 'viewmodels/database/settings/sqlReplications',
-            title: 'SQL Replication',
-            nav: true,
-            css: 'icon-sql-replication',
-            dynamicHash: appUrls.sqlReplications
-        }),*/
-        new leafMenuItem({
-            route: 'databases/settings/editSqlReplication(/:sqlReplicationName)',
-            moduleId: 'viewmodels/database/settings/editSqlReplication',
-            title: 'Edit SQL Replication',
-            nav: false,
-            css: 'icon-sql-replication',
-            dynamicHash: appUrls.editSqlReplication
+            dynamicHash: appUrls.transformers,
         }),
         new leafMenuItem({
-            route: 'databases/settings/sqlReplicationConnectionStringsManagement',
-            moduleId: 'viewmodels/database/settings/sqlReplicationConnectionStringsManagement',
-            title: 'SQL Replication Connection Strings',
+            route: 'databases/transformers/edit(/:transformerName)',
+            moduleId: 'viewmodels/database/transformers/editTransformer',
+            title: 'Edit Transformer',
+            css: 'icon-edit',
             nav: false,
-            css: 'icon-sql-replication-connection-string',
-            dynamicHash: appUrls.sqlReplicationsConnections
+            itemRouteToHighlight: 'databases/transformers'
+        }),
+        
+        new leafMenuItem({
+            route: 'databases/settings/customFunctionsEditor',
+            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
+            title: 'Custom Functions',
+            nav: true,
+            css: 'icon-custom-functions',
+            dynamicHash: appUrls.customFunctionsEditor
+        }),
+        new leafMenuItem({
+            route: 'databases/settings/connectionStrings',
+            moduleId: "viewmodels/database/settings/connectionStrings",
+            title: "Connection Strings",
+            nav: true,
+            css: 'icon-manage-connection-strings',
+            dynamicHash: appUrls.connectionStrings,
+            enabled: accessHelper.isGlobalAdmin
         }),
         new leafMenuItem({
             route: 'databases/settings/revisions',
@@ -83,12 +66,20 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.revisions
         }),
         new leafMenuItem({
-            route: 'databases/settings/customFunctionsEditor',
-            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
-            title: 'Custom Functions',
+            route: 'databases/settings/clientConfiguration',
+            moduleId: 'viewmodels/database/settings/clientConfiguration',
+            title: 'Client Configuration',
             nav: true,
-            css: 'icon-custom-functions',
-            dynamicHash: appUrls.customFunctionsEditor
+            css: 'icon-client-configuration',
+            dynamicHash: appUrls.clientConfiguration
+        }),
+        new leafMenuItem({
+            route: 'databases/manageDatabaseGroup',
+            moduleId: 'viewmodels/resources/manageDatabaseGroup',
+            title: 'Manage database group',
+            nav: true,
+            css: 'icon-topology',
+            dynamicHash: appUrls.manageDatabaseGroup
         }),
         
         /*TODO
@@ -100,16 +91,8 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-studio-config',
             dynamicHash: appUrls.databaseStudioConfig
         })*/
-
+        new separatorMenuItem(),
         new separatorMenuItem('Tasks'),
-        new leafMenuItem({
-            route: 'databases/tasks/ongoingTasks',
-            moduleId: 'viewmodels/database/tasks/ongoingTasks',
-            title: 'Manage Ongoing Tasks',
-            nav: true,
-            css: 'icon-manage-ongoing-tasks',
-            dynamicHash: appUrls.ongoingTasksUrl
-        }),
         new leafMenuItem({
             route: 'databases/tasks/editExternalReplicationTask',
             moduleId: 'viewmodels/database/tasks/editExternalReplicationTask',
@@ -132,6 +115,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             title: 'Subscription Task',
             nav: false,
             dynamicHash: appUrls.editSubscriptionTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/ongoingTasks'
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/editRavenEtlTask',
+            moduleId: 'viewmodels/database/tasks/editRavenEtlTask',
+            title: 'RavenDB ETL Task',
+            nav: false,
+            dynamicHash: appUrls.editRavenEtlTaskUrl,
             itemRouteToHighlight: 'databases/tasks/ongoingTasks'
         }),
         new leafMenuItem({
@@ -158,6 +149,14 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-create-sample-data',
             dynamicHash: appUrls.sampleDataUrl
         }),
+        new leafMenuItem({
+            route: 'databases/tasks/ongoingTasks',
+            moduleId: 'viewmodels/database/tasks/ongoingTasks',
+            title: 'Manage Ongoing Tasks',
+            nav: true,
+            css: 'icon-manage-ongoing-tasks',
+            dynamicHash: appUrls.ongoingTasksUrl
+        }),
         /* TODO:
         new leafMenuItem({
             route: 'databases/tasks/csvImport',
@@ -167,7 +166,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: csvImportUrl
         })*/
-
+        new separatorMenuItem(),
         new separatorMenuItem('Statistics'),
         new leafMenuItem({
             route: 'databases/status',
@@ -176,6 +175,15 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-stats',
             dynamicHash: appUrls.status
+        }),
+        new leafMenuItem({
+            route: 'databases/status/ioStats',
+            moduleId: 'viewmodels/database/status/ioStats',
+            title: 'IO Stats',
+            tooltip: "Displays IO metrics statatus",
+            nav: true,
+            css: 'icon-io-test',
+            dynamicHash: appUrls.ioStats
         }),
         new leafMenuItem({
             route: 'databases/status/storage/report',
@@ -253,14 +261,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 dynamicHash: appUrls.statusDebugRoutes
             }),
             new leafMenuItem({
-                route: 'databases/status/debug/sqlReplication',
-                moduleId: 'viewmodels/database/status/debug/statusDebugSqlReplication',
-                title: 'SQL Replication',
-                tooltip: "Shows information about SQL replication",
-                nav: activeDatabase() && activeDatabase().isBundleActive("SqlReplication"),
-                dynamicHash: appUrls.statusDebugSqlReplication
-            }),
-            new leafMenuItem({
                 route: 'databases/status/debug/indexFields',
                 moduleId: 'viewmodels/database/status/debug/statusDebugIndexFields',
                 title: 'Index fields',
@@ -284,24 +284,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
                 nav: true,
                 dynamicHash: appUrls.statusDebugWebSocket
             }),
-            new leafMenuItem({
-                route: 'databases/status/debug/explainReplication',
-                moduleId: 'viewmodels/database/status/debug/statusDebugExplainReplication',
-                title: 'Explain replication',
-                tooltip: "Shows information about replication of given document to given replication destination",
-                nav: activeDatabase() && activeDatabase().isBundleActive("Replication"),
-                dynamicHash: appUrls.statusDebugExplainReplication
-            })
-        ], 'icon-plus'),*/
-        new leafMenuItem({
-            route: 'databases/status/ioStats',
-            moduleId: 'viewmodels/database/status/ioStats',
-            title: 'IO Stats',
-            tooltip: "Displays IO metrics statatus",
-            nav: true,
-            css: 'icon-io-test',
-            dynamicHash: appUrls.ioStats
-        }),
+           */
         /* TODO:
         new leafMenuItem({
             route: 'databases/status/requests',
@@ -353,14 +336,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             dynamicHash: appUrls.replicationStats
         }),
         /* TODO
-        new leafMenuItem({
-            route: 'databases/status/sqlReplicationPerfStats',
-            moduleId: 'viewmodels/database/status/sqlReplicationPerfStats',
-            title: 'SQL Replication Stats',
-            nav: true,
-            dynamicHash: appUrls.sqlReplicationPerfStats
-        }),*/
-        /* TODO:
         new leafMenuItem({
             route: 'databases/status/userInfo',
             moduleId: 'viewmodels/database/status/userInfo',

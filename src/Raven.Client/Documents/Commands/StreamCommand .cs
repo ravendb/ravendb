@@ -19,11 +19,11 @@ namespace Raven.Client.Documents.Commands
             ResponseType = RavenCommandResponseType.Empty;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {
-                Method = HttpMethod.Get,
+                Method = HttpMethod.Get
             };
             url = $"{node.Url}/databases/{node.Database}/{_url}";
             return request;

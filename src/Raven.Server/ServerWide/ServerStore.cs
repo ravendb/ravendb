@@ -5,19 +5,21 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Session;
 using Raven.Client.Util;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -37,7 +39,6 @@ using Raven.Server.ServerWide.Commands.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Raven.Server.Utils;
-using Raven.Server.Web.Authentication;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -57,6 +58,8 @@ namespace Raven.Server.ServerWide
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
 
+        private const string LicenseStoargeKey = "License/Stoarge/Key";
+
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
         public CancellationToken ServerShutdown => _shutdownNotification.Token;
@@ -75,11 +78,13 @@ namespace Raven.Server.ServerWide
         public readonly LicenseManager LicenseManager;
         public readonly FeedbackSender FeedbackSender;
         public readonly SecretProtection Secrets;
-        
+
 
         private readonly TimeSpan _frequencyToCheckForIdleDatabases;
 
-        private long _lastClientConfigurationIndex;
+        public long LastClientConfigurationIndex { get; private set; } = -2;
+
+        public long LastLicenseIndex { get; private set; }
 
         public Operations Operations { get; }
 
@@ -99,7 +104,7 @@ namespace Raven.Server.ServerWide
 
             Operations = new Operations(ResourceName, _operationsStorage, NotificationCenter, null);
 
-            LicenseManager = new LicenseManager(NotificationCenter);
+            LicenseManager = new LicenseManager(this);
 
             FeedbackSender = new FeedbackSender();
 
@@ -178,11 +183,11 @@ namespace Raven.Server.ServerWide
                             var newNodes = clusterTopology.AllNodes;
                             var nodesChanges = ClusterTopology.DictionaryDiff(oldNodes, newNodes);
                             oldNodes = newNodes;
-                            foreach (var node in nodesChanges.removedValues)
+                            foreach (var node in nodesChanges.RemovedValues)
                             {
                                 ClusterMaintenanceSupervisor.RemoveFromCluster(node.Key);
                             }
-                            foreach (var node in nodesChanges.addedValues)
+                            foreach (var node in nodesChanges.AddedValues)
                             {
                                 ClusterMaintenanceSupervisor.AddToCluster(node.Key, clusterTopology.GetUrlFromTag(node.Key));
                             }
@@ -205,7 +210,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-        
+
         public ClusterTopology GetClusterTopology(TransactionOperationContext context)
         {
             return _engine.GetTopology(context);
@@ -266,9 +271,9 @@ namespace Raven.Server.ServerWide
                     catch (Exception e)
                     {
                         throw new CryptographicException($"Unable to unprotect the secret key file {secretKey}. " +
-                                                         $"Was the server store encrypted using a different OS user? In that case, " +
-                                                         $"you must provide an unprotected key (rvn server put-key). " +
-                                                         $"Admin assistance required.", e);
+                                                         "Was the server store encrypted using a different OS user? In that case, " +
+                                                         "you must provide an unprotected key (rvn server put-key). " +
+                                                         "Admin assistance required.", e);
                     }
                 }
             }
@@ -363,6 +368,12 @@ namespace Raven.Server.ServerWide
 
             ContextPool = new TransactionContextPool(_env);
 
+            using (ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
+            {
+                // warm-up the json convertor, it takes about 250ms at first conversion.
+                EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
+            }
+
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
@@ -397,24 +408,27 @@ namespace Raven.Server.ServerWide
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                foreach (var db in _engine.StateMachine.ItemsStartingWith(context, "db/", 0, int.MaxValue))
+                foreach (var db in _engine.StateMachine.GetDatabaseNames(context))
                 {
-                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db.Item1, 0, "Init"));
+                    DatabasesLandlord.ClusterOnDatabaseChanged(this, (db, 0, "Init"));
                 }
 
-                if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long etag) != null)
-                    _lastClientConfigurationIndex = etag;
+                if (_engine.StateMachine.Read(context, Constants.Configuration.ClientId, out long clientConfigEtag) != null)
+                    LastClientConfigurationIndex = clientConfigEtag;
+
+                if (_engine.StateMachine.Read(context, LicenseStoargeKey, out long licenseEtag) != null)
+                    LastLicenseIndex = licenseEtag;
             }
-            
+
             Task.Run(ClusterMaintenanceSetupTask, ServerShutdown);
         }
-        
+
         private void OnStateChanged(object sender, RachisConsensus.StateTransition state)
         {
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag , GetNodesStatuses()));
+                NotificationCenter.Add(ClusterTopologyChanged.Create(GetClusterTopology(context), LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
                 // If we are in passive state, we prevent from tasks to be performed by this node.
                 if (state.From == RachisConsensus.State.Passive || state.To == RachisConsensus.State.Passive)
                 {
@@ -461,7 +475,7 @@ namespace Raven.Server.ServerWide
 
         public Dictionary<string, NodeStatus> GetNodesStatuses()
         {
-             Dictionary<string, NodeStatus> nodesStatuses = null;
+            Dictionary<string, NodeStatus> nodesStatuses = null;
 
             switch (CurrentState)
             {
@@ -479,18 +493,18 @@ namespace Raven.Server.ServerWide
                     {
                         nodesStatuses = new Dictionary<string, NodeStatus>
                         {
-                            [leaderTag] = new NodeStatus { Connected = true } 
+                            [leaderTag] = new NodeStatus { Connected = true }
                         };
                     }
                     break;
             }
 
-            return nodesStatuses?? new Dictionary<string, NodeStatus>();
+            return nodesStatuses ?? new Dictionary<string, NodeStatus>();
         }
 
         private void OnTopologyChanged(object sender, ClusterTopology topologyJson)
         {
-            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag , GetNodesStatuses()));
+            NotificationCenter.Add(ClusterTopologyChanged.Create(topologyJson, LeaderTag, NodeTag, _engine.CurrentTerm, GetNodesStatuses()));
         }
 
         private void OnDatabaseChanged(object sender, (string DatabaseName, long Index, string Type) t)
@@ -519,7 +533,11 @@ namespace Raven.Server.ServerWide
             switch (t.Type)
             {
                 case nameof(PutClientConfigurationCommand):
-                    _lastClientConfigurationIndex = t.Index;
+                    LastClientConfigurationIndex = t.Index;
+                    break;
+                case nameof(PutLicenseCommand):
+                case nameof(DeactivateLicenseCommand):
+                    LastLicenseIndex = t.Index;
                     break;
             }
         }
@@ -740,9 +758,9 @@ namespace Raven.Server.ServerWide
 
         public Task<(long Etag, object Result)> DeleteOngoingTask(long taskId, string taskName, OngoingTaskType taskType, string dbName)
         {
-            var deleteTaskCommand = 
-                taskType == OngoingTaskType.Subscription ? 
-                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName): 
+            var deleteTaskCommand =
+                taskType == OngoingTaskType.Subscription ?
+                    (CommandBase)new DeleteSubscriptionCommand(dbName, taskName) :
                     new DeleteOngoingTaskCommand(taskId, taskType, dbName);
 
             return SendToLeaderAsync(deleteTaskCommand);
@@ -756,6 +774,15 @@ namespace Raven.Server.ServerWide
                     new ToggleTaskStateCommand(taskId, type, disable, dbName);
 
             return SendToLeaderAsync(disableEnableCommand);
+        }
+
+        public Task<(long Etag, object Result)> PromoteDatabaseNode(string dbName, string nodeTag)
+        {
+            var promoteDatabaseNodeCommand = new PromoteDatabaseNodeCommand(dbName)
+            {
+                NodeTag = nodeTag
+            };
+            return SendToLeaderAsync(promoteDatabaseNodeCommand);
         }
 
         public Task<(long Etag, object Result)> ModifyConflictSolverAsync(string dbName, ConflictSolver solver)
@@ -873,7 +900,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(command);
         }
 
-        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName , string type)
+        public async Task<(long, object)> RemoveConnectionString(string databaseName, string connectionStringName, string type)
         {
             if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
                 throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
@@ -1076,7 +1103,7 @@ namespace Raven.Server.ServerWide
             if (_engine.CurrentState == RachisConsensus.State.Passive)
             {
                 _engine.Bootstrap(_ravenServer.ServerStore.NodeHttpServerUrl);
-                
+
                 // We put a certificate in the local state to tell the server who to trust, and this is done before
                 // the cluster exists (otherwise the server won't be able to receive initial requests). Only when we 
                 // create the cluster, we register those local certificates in the cluster.
@@ -1137,7 +1164,48 @@ namespace Raven.Server.ServerWide
                     $"Expected to get result from raft command that should generate a cluster-wide identity, but didn't. Leader is {LeaderTag}, Current node tag is {NodeTag}.");
             }
 
-            return (etag, id + result);
+            return (etag, id.Substring(0, id.Length -1) + '/' + result);
+        }
+
+        public License LoadLicense()
+        {
+            using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
+            {
+                var licenseBlittable = Cluster.Read(context, LicenseStoargeKey);
+                if (licenseBlittable == null)
+                    return null;
+
+                return JsonDeserializationServer.License(licenseBlittable);
+            }
+        }
+
+        public async Task<long> PutLicense(License license)
+        {
+            var command = new PutLicenseCommand(LicenseStoargeKey, license);
+
+            var result = await SendToLeaderAsync(command);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Updating licnese id: {license.Id}");
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
+            return result.Etag;
+        }
+
+        public async Task DeactivateLicense(License license)
+        {
+            var command = new DeactivateLicenseCommand
+            {
+                Name = LicenseStoargeKey
+            };
+
+            var result = await SendToLeaderAsync(command);
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Deactivating licnese id: {license.Id}");
+
+            await WaitForCommitIndexChange(RachisConsensus.CommitIndexModification.GreaterOrEqual, result.Etag);
         }
 
         public DatabaseRecord LoadDatabaseRecord(string databaseName, out long etag)
@@ -1223,7 +1291,7 @@ namespace Raven.Server.ServerWide
                 if (clusterTopology.Members.TryGetValue(engineLeaderTag, out string leaderUrl) == false)
                     throw new InvalidOperationException("Leader " + engineLeaderTag + " was not found in the topology members");
 
-                var command = new PutRaftCommand(context, cmdJson);
+                var command = new PutRaftCommand(cmdJson);
 
                 if (_clusterRequestExecutor == null
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
@@ -1241,17 +1309,15 @@ namespace Raven.Server.ServerWide
 
         private class PutRaftCommand : RavenCommand<PutRaftCommandResult>
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _command;
             public override bool IsReadRequest => false;
 
-            public PutRaftCommand(JsonOperationContext context, BlittableJsonReaderObject command)
+            public PutRaftCommand(BlittableJsonReaderObject command)
             {
-                _context = context;
                 _command = command;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/rachis/send";
 
@@ -1260,7 +1326,7 @@ namespace Raven.Server.ServerWide
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteObject(_command);
                         }
@@ -1303,7 +1369,7 @@ namespace Raven.Server.ServerWide
             await _engine.WaitForCommitIndexChange(modification, value);
         }
 
-        public string ClusterStatus()
+        public string LastStateChangeReason()
         {
             return _engine.CurrentState + ", " + _engine.LastStateChangeReason;
         }
@@ -1341,12 +1407,25 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        public DynamicJsonValue GetTcpInfoAndCertificates()
+        {
+            var tcpServerUrl = NodeTcpServerUrl;
+            if (tcpServerUrl.StartsWith("tcp://localhost.fiddler:", StringComparison.OrdinalIgnoreCase))
+                tcpServerUrl = tcpServerUrl.Remove(15, 8);
+
+            return new DynamicJsonValue
+            {
+                [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
+                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ServerCertificateHolder.CertificateForClients
+            };
+        }
+
         public DynamicJsonValue GetLogDetails(TransactionOperationContext context, int max = 100)
         {
             RachisConsensus.GetLastTruncated(context, out var index, out var term);
             var range = Engine.GetLogEntriesRange(context);
             var entries = new DynamicJsonArray();
-            foreach (var entry in Engine.GetLogEntries(range.min, context, max))
+            foreach (var entry in Engine.GetLogEntries(range.Min, context, max))
             {
                 entries.Add(entry.ToString());
             }
@@ -1354,23 +1433,22 @@ namespace Raven.Server.ServerWide
             var json = new DynamicJsonValue
             {
                 [nameof(LogSummary.CommitIndex)] = Engine.GetLastCommitIndex(context),
-                [nameof(LogSummary.LastTrancatedIndex)] = index,
-                [nameof(LogSummary.LastTrancatedTerm)] = term,
-                [nameof(LogSummary.FirstEntryIndex)] = range.min,
-                [nameof(LogSummary.LastLogEntryIndex)] = range.max,
+                [nameof(LogSummary.LastTruncatedIndex)] = index,
+                [nameof(LogSummary.LastTruncatedTerm)] = term,
+                [nameof(LogSummary.FirstEntryIndex)] = range.Min,
+                [nameof(LogSummary.LastLogEntryIndex)] = range.Max,
                 [nameof(LogSummary.Entries)] = entries
             };
             return json;
 
         }
-        
-        public bool HasClientConfigurationChanged(long index)
+
+        public bool HasLicenseChanged(long index)
         {
             if (index < 0)
                 return false;
 
-            return _lastClientConfigurationIndex > index;
-        }		
-
+            return LastLicenseIndex > index;
+        }
     }
 }

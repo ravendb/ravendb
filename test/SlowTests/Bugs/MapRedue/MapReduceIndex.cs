@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Xunit;
 
@@ -163,7 +164,7 @@ namespace SlowTests.Bugs.MapRedue
 
         private void RemoveAllDocuments(DocumentStore store)
         {
-            store.Operations.Send(new DeleteCollectionOperation("Documents")).WaitForCompletion(TimeSpan.FromSeconds(15));
+            store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM Documents" })).WaitForCompletion(TimeSpan.FromSeconds(15));
         }
 
         private void InserDocumentIntoDb(IDocumentSession aSession, String aDocumentId, Byte aVersionCount)

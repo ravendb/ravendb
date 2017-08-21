@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Transformers
             throw new NotSupportedException($"Transformer with name {Name} is in-memory implementation of a faulty transformer", _e);
         }
 
-        public override TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested)
+        public override TransformationScope OpenTransformationScope(BlittableJsonReaderObject parameters, IncludeDocumentsCommand include, DocumentsStorage documentsStorage, TransformerStore transformerStore, DocumentsOperationContext context, bool nested = false)
         {
             throw new NotSupportedException($"Transformer with name {Name} is in-memory implementation of a faulty transformer", _e);
         }

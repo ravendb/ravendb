@@ -22,7 +22,7 @@ namespace Raven.Client.Documents.Operations
             {
                 [nameof(Progress)] = Progress?.ToJson(),
                 [nameof(Result)] = Result?.ToJson(),
-                [nameof(Status)] = Status.ToString(),
+                [nameof(Status)] = Status.ToString()
             };
         }
     }

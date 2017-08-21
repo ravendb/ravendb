@@ -12,15 +12,13 @@ namespace Raven.Client.Documents.Commands
     public class CreateSubscriptionCommand : RavenCommand<CreateSubscriptionResult>
     {
         private readonly SubscriptionCreationOptions _options;
-        private readonly JsonOperationContext _context;
 
-        public CreateSubscriptionCommand(SubscriptionCreationOptions options, JsonOperationContext context)
+        public CreateSubscriptionCommand(SubscriptionCreationOptions options)
         {
             _options = options;
-            _context = context;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/subscriptions";
             var request = new HttpRequestMessage
@@ -28,8 +26,8 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    _context.Write(stream, 
-                        EntityToBlittable.ConvertEntityToBlittable(_options, DocumentConventions.Default, _context));
+                    ctx.Write(stream, 
+                        EntityToBlittable.ConvertEntityToBlittable(_options, DocumentConventions.Default, ctx));
                 })
             };
             return request;

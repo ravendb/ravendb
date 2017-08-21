@@ -2,10 +2,10 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Exceptions.Compilation;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions.Compilation;
+using Raven.Client.Exceptions.Documents.Compilation;
 using SlowTests.Utils;
 using Xunit;
 
@@ -43,7 +43,7 @@ namespace SlowTests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var documentSession = store.OpenSession())
                 {
@@ -94,7 +94,7 @@ namespace SlowTests.MailingList
                 // Act.
 
                 // Lets check if there are any errors.
-                TestHelper.AssertNoIndexErrors(documentStore);
+                RavenTestHelper.AssertNoIndexErrors(documentStore);
 
                 using (var documentSession = documentStore.OpenSession())
                 {

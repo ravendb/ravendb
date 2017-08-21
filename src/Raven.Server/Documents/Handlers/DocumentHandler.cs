@@ -11,20 +11,17 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Runtime.ExceptionServices;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
-using Org.BouncyCastle.Utilities.Encoders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Exceptions.Transformers;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.Rachis;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -116,7 +113,7 @@ namespace Raven.Server.Documents.Handlers
 
             // everything here operates on all docs
             var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
-            
+
             if (GetStringFromHeaders("If-None-Match") == databaseChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -215,7 +212,7 @@ namespace Raven.Server.Documents.Handlers
             includeDocs.Fill(includes);
             if (transformer != null)
             {
-                if(changeVectors == null)
+                if (changeVectors == null)
                     changeVectors = new List<string>();
                 changeVectors.Add(transformer.Definition.TransformResults);
             }
@@ -238,22 +235,19 @@ namespace Raven.Server.Documents.Handlers
             }
             else
             {
-                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includeDocs, includes, out numberOfResults);
+                WriteDocumentsJson(context, metadataOnly, documentsToWrite, includes, out numberOfResults);
             }
 
             AddPagingPerformanceHint(PagingOperationType.Documents, nameof(GetDocumentsById), HttpContext, numberOfResults, documents.Count, sw.Elapsed);
         }
 
-        private void WriteDocumentsJson(DocumentsOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite,
-            IncludeDocumentsCommand includeDocs, List<Document> includes, out int numberOfResults)
+        private void WriteDocumentsJson(JsonOperationContext context, bool metadataOnly, IEnumerable<Document> documentsToWrite, List<Document> includes, out int numberOfResults)
         {
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
                 writer.WritePropertyName("Results");
                 writer.WriteDocuments(context, documentsToWrite, metadataOnly, out numberOfResults);
-
-                includeDocs.Fill(includes);
 
                 writer.WriteComma();
                 writer.WritePropertyName("Includes");
@@ -348,7 +342,7 @@ namespace Raven.Server.Documents.Handlers
                     HashChangeVector(state, additionalChangeVectors[i]);
                 }
             }
-           
+
             byte* final = stackalloc byte[(int)size];
             if (Sodium.crypto_generichash_final(state, final, size) != 0)
                 ThrowFailedToFinalizeHash();
@@ -375,7 +369,8 @@ namespace Raven.Server.Documents.Handlers
                 if (Sodium.crypto_generichash_update(state, null, 0) != 0)
                     ThrowFailedToUpdateHash();
             }
-            else HashChangeVector(state, document.ChangeVector);
+            else
+                HashChangeVector(state, document.ChangeVector);
         }
 
         private static unsafe void HashChangeVector(byte* state, string changeVector)
@@ -427,7 +422,7 @@ namespace Raven.Server.Documents.Handlers
 
                 var doc = context.ReadForDiskAsync(RequestBodyStream(), id).ConfigureAwait(false);
 
-                if (id[id.Length-1] == '/')
+                if (id[id.Length - 1] == '/')
                 {
                     var (_, clusterId) = await ServerStore.GenerateClusterIdentityAsync(id, Database.Name);
                     id = clusterId;

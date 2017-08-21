@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Indexes;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Transformers;
@@ -115,8 +115,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.IsStale = false;
             resultToFill.LastQueryTime = DateTime.MinValue;
             resultToFill.IndexTimestamp = DateTime.MinValue;
+            resultToFill.IncludedPaths = query.Metadata.Includes;
 
-            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Includes);
+            var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
 
             Transformer transformer = null;
             if (string.IsNullOrEmpty(query.Transformer) == false)
@@ -166,24 +167,31 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 buffer[0] = DocumentsStorage.ReadLastDocumentEtag(_context.Transaction.InnerTransaction);
                 buffer[1] = DocumentsStorage.ReadLastTombstoneEtag(_context.Transaction.InnerTransaction);
                 buffer[2] = numberOfDocuments;
-                resultToFill.TotalResults = (int) numberOfDocuments;
+                resultToFill.TotalResults = (int)numberOfDocuments;
             }
             else
             {
                 var collectionStats = _documents.GetCollection(collection, _context);
-                resultToFill.TotalResults = (int) collectionStats.Count;
+                resultToFill.TotalResults = (int)collectionStats.Count;
 
                 buffer[0] = _documents.GetLastDocumentEtag(_context, collection);
                 buffer[1] = _documents.GetLastTombstoneEtag(_context, collection);
                 buffer[2] = collectionStats.Count;
             }
 
-            resultToFill.ResultEtag = (long) Hashing.XXHash64.Calculate((byte*) buffer, sizeof(long) * 3);
+            resultToFill.ResultEtag = (long)Hashing.XXHash64.Calculate((byte*)buffer, sizeof(long) * 3);
         }
 
         private async Task<(Index Index, string Collection)> MatchIndex(IndexQueryServerSide query, bool createAutoIndexIfNoMatchIsFound)
         {
             var collection = query.Metadata.CollectionName;
+
+            if (query.Metadata.DynamicIndexName != null)
+            {
+                var previousIndex = _indexStore.GetIndex(query.Metadata.DynamicIndexName);
+                if (previousIndex != null)
+                    return (previousIndex, collection);
+            }
 
             var map = DynamicQueryMapping.Create(query);
 
@@ -210,7 +218,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                             if (_indexStore.Logger.IsInfoEnabled)
                             {
-                                _indexStore.Logger.Info($"Failed to delete superceded indexes for index " + index.Name);
+                                _indexStore.Logger.Info("Failed to delete superceded indexes for index " + index.Name);
                             }
                         }
                     });

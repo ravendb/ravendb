@@ -435,7 +435,7 @@ namespace Raven.Server.Smuggler.Documents
             return result.Documents;
         }
 
-        private void SkipDocument(DocumentItem item, SmugglerResult result)
+        private static void SkipDocument(DocumentItem item, SmugglerResult result)
         {
             result.Documents.SkippedCount++;
 

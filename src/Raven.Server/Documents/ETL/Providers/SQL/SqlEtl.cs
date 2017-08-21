@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Data.Common;
 using System.Linq;
-using Raven.Client.Server.ETL;
+using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.ETL.Providers.SQL.Enumerators;
 using Raven.Server.Documents.ETL.Providers.SQL.Metrics;
 using Raven.Server.Documents.ETL.Providers.SQL.RelationalWriters;
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                         CommandText = x
                     }).ToArray();
 
-                    summaries.Add(new TableQuerySummary()
+                    summaries.Add(new TableQuerySummary
                     {
                         TableName = records.TableName,
                         Commands = commands

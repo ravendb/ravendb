@@ -200,19 +200,12 @@ namespace Voron
 
         internal void AssertNoCatastrophicFailure()
         {
-            if (_catastrophicFailure == null)
-                return;
-
-            _catastrophicFailure.Throw(); // force re-throw of error
+            _catastrophicFailure?.Throw(); // force re-throw of error
         }
 
         public static StorageEnvironmentOptions CreateMemoryOnly(string name, string tempPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
-            if (tempPath == null)
-                tempPath = Path.GetTempPath();
-
-            var tempPathSetting = new VoronPathSetting(tempPath);
-
+            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath());
             return new PureMemoryStorageEnvironmentOptions(name, tempPathSetting, ioChangesNotifications, catastrophicFailureNotification);
         }
 
@@ -224,7 +217,7 @@ namespace Voron
         public static StorageEnvironmentOptions ForPath(string path, string tempPath, string journalPath, IoChangesNotifications ioChangesNotifications, CatastrophicFailureNotification catastrophicFailureNotification)
         {
             var pathSetting = new VoronPathSetting(path);
-            var tempPathSetting = tempPath != null ? new VoronPathSetting(tempPath) : null;
+            var tempPathSetting = new VoronPathSetting(tempPath ?? GetTempPath(path));
             var journalPathSetting = journalPath != null ? new VoronPathSetting(journalPath) : null;
 
             return new DirectoryStorageEnvironmentOptions(pathSetting, tempPathSetting, journalPathSetting, ioChangesNotifications, catastrophicFailureNotification);
@@ -233,6 +226,44 @@ namespace Voron
         public static StorageEnvironmentOptions ForPath(string path)
         {
             return ForPath(path, null, null, null, null);
+        }
+
+        private static string GetTempPath(string basePath = null)
+        {
+            bool useSystemTemp = false;
+            // We need to use a Temp directory for storage. There's two ways to do this: either the user provides a full path
+            // to use as base (because they expect all temporary files to be stored under it too), or we use the current
+            // running directory.
+            string tempPath = Path.Combine(basePath ?? Directory.GetCurrentDirectory(), "Temp");
+            try
+            {
+                Directory.CreateDirectory(tempPath);
+            }
+            catch (UnauthorizedAccessException)
+            {
+                useSystemTemp = true;
+            }
+
+            if (!useSystemTemp)
+            {
+                // Effective permissions are hard to compute, so we try to create a file and write to it as a check.
+                try
+                {
+                    var tempFilePath = Path.Combine(tempPath, Guid.NewGuid().ToString());
+                    File.Create(tempFilePath, 1024).Dispose();
+                    File.Delete(tempFilePath);
+                }
+                catch (Exception)
+                {
+                    useSystemTemp = true;
+                }
+
+            }
+
+            if (useSystemTemp)
+                tempPath = Path.GetTempPath();
+
+            return tempPath;
         }
 
         public class DirectoryStorageEnvironmentOptions : StorageEnvironmentOptions
@@ -695,6 +726,9 @@ namespace Voron
                 var filename = $"ravendb-{Process.GetCurrentProcess().Id}-{_instanceId}-data.pager-{guid}";
 
                 WinOpenFlags = Win32NativeFileAttributes.Temporary | Win32NativeFileAttributes.DeleteOnClose;
+
+                if (Directory.Exists(tempPath.FullPath) == false)
+                    Directory.CreateDirectory(tempPath.FullPath);
 
                 _dataPager = new Lazy<AbstractPager>(() => GetTempMemoryMapPager(this, TempPath.Combine(filename), InitialFileSize,
                     Win32NativeFileAttributes.RandomAccess | Win32NativeFileAttributes.DeleteOnClose | Win32NativeFileAttributes.Temporary), true);

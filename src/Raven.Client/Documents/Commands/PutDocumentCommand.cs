@@ -13,17 +13,15 @@ namespace Raven.Client.Documents.Commands
         private readonly string _id;
         private readonly string _changeVector;
         private readonly BlittableJsonReaderObject _document;
-        private readonly JsonOperationContext _context;
 
-        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document, JsonOperationContext context)
+        public PutDocumentCommand(string id, string changeVector, BlittableJsonReaderObject document)
         {
             _id = id ?? throw new ArgumentNullException(nameof(id));
             _changeVector = changeVector;
             _document = document ?? throw new ArgumentNullException(nameof(document));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/docs?id={UrlEncode(_id)}";
 
@@ -32,8 +30,8 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Put,
                 Content = new BlittableJsonContent(stream =>
                 {
-                    _context.Write(stream, _document);
-                }),
+                    ctx.Write(stream, _document);
+                })
             };
             AddChangeVectorIfNotNull(_changeVector, request);
             return request;

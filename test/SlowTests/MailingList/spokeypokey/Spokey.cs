@@ -41,7 +41,7 @@ namespace SlowTests.MailingList.spokeypokey
                                   where u.ZipCodes2.Count == 0
                                   select u).ToArray();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, result.Length);
                 }
             }
@@ -68,7 +68,7 @@ namespace SlowTests.MailingList.spokeypokey
                                   where u.ZipCodes.Length == 0
                                   select u).ToArray();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, result.Count());
                 }
             }

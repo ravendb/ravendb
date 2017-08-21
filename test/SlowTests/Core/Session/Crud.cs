@@ -9,7 +9,7 @@ using System.Dynamic;
 using System.Threading.Tasks;
 
 using FastTests;
-using Raven.Client.Documents.Exceptions.Session;
+using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
 using SlowTests.Core.Utils.Transformers;
 
@@ -130,7 +130,8 @@ namespace SlowTests.Core.Session
 
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2", "users/3" });
 
-                    users.ForEach(kvp => Assert.Null(kvp.Value));
+                    foreach (var user in users)
+                        Assert.Null(user.Value);
                 }
             }
         }

@@ -6,8 +6,8 @@ using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents;
@@ -73,8 +73,10 @@ namespace FastTests
             {
                 store.Initialize();
 
-                var doc = MultiDatabase.CreateDatabaseDocument(name);
-                doc.Settings = configuration;
+                var doc = new DatabaseRecord(name)
+                {
+                    Settings = configuration
+                };
 
                 var result = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor: 1));
 
@@ -123,7 +125,7 @@ namespace FastTests
                         {
                             try
                             {
-                                await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNodes: new[]{Server.ServerStore.NodeTag});
+                                await Server.ServerStore.DeleteDatabaseAsync(database, hardDelete: true, fromNodes: new[] { Server.ServerStore.NodeTag });
                             }
                             catch (DatabaseDoesNotExistException)
                             {

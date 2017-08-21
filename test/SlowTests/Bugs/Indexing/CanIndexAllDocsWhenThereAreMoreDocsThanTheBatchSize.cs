@@ -4,7 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Xunit;
 

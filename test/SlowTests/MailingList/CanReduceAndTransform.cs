@@ -100,7 +100,7 @@ namespace SlowTests.MailingList
                                                                        .TransformWith<PersonnelTransformer, PersonnelTransformer.Result>()
                                                                        .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal("Ayende", results.First().FullName);
                 }
             }

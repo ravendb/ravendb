@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Patch
             {
                 [nameof(DeleteDocument)] = DeleteDocument,
                 [nameof(PutDocument)] = PutDocument,
-                [nameof(LoadDocument)] = LoadDocument,
+                [nameof(LoadDocument)] = LoadDocument
             };
         }
     }

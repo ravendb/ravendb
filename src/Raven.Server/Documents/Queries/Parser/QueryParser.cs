@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
@@ -33,19 +34,37 @@ namespace Raven.Server.Documents.Queries.Parser
                 QueryText = Scanner.Input
             };
 
+            while (Scanner.TryScan("DECLARE"))
+            {
+                var (name, func) = DeclaredFunction();
+                if (q.DeclaredFunctions == null)
+                    q.DeclaredFunctions = new Dictionary<StringSegment, ValueToken>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+
+                if (q.DeclaredFunctions.TryAdd(name, func) == false)
+                    ThrowParseException(name + " function was declared multiple times");
+            }
+
             if (Scanner.TryScan("SELECT"))
                 q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
 
+            q.From = FromClause();
+
             if (Scanner.TryScan("WITH"))
                 q.With = SelectOrWithClause("WITH", out _);
-
-            q.From = FromClause();
 
             if (Scanner.TryScan("GROUP BY"))
                 q.GroupBy = GroupBy();
 
             if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                 ThrowParseException("Unable to parse WHERE clause");
+
+            if (Scanner.TryScan("SELECT"))
+            {
+                if(q.Select!= null)
+                    ThrowParseException("Only a single SELECT clause is allowed, but got two");
+
+                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
+            }
 
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
@@ -54,6 +73,45 @@ namespace Raven.Server.Documents.Queries.Parser
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private (StringSegment Name, ValueToken FunctionText) DeclaredFunction()
+        {
+            // becuase of how we are processing them, we don't actually care for
+            // parsing the function directly. We have implemented a minimal parser
+            // here that find the _boundary_ of the function call, and then we hand
+            // all of that code directly to the js code. 
+
+            var functionStart = Scanner.Position;
+
+            if (Scanner.TryScan("function") == false)
+                ThrowParseException("DECLARE clause found but missing 'function' keyword");
+
+            if (Scanner.Identifier() == false)
+                ThrowParseException("DECLARE functions require a name and cannot be anonymous");
+
+            var name = new StringSegment(Scanner.Input, Scanner.TokenStart, Scanner.TokenLength);
+
+            // this reads the signature of the method: (a,b,c), etc.
+            // we are technically allow more complex stuff there that isn't
+            // allowed by JS, but that is fine, since the JS parser will break 
+            // when it try it, so we are good with false positives here
+
+            if (Scanner.TryScan('(') == false)
+                ThrowParseException("Unable to parse function " + name + " signature");
+
+            if (Method(null, out _) == false)
+                ThrowParseException("Unable to parse function " + name + " signature");
+
+            if(Scanner.FunctionBody() == false)
+                ThrowParseException("Unable to get function body for " + name);
+
+            return (name, new ValueToken
+            {
+                Type = ValueTokenType.String,
+                TokenStart = functionStart,
+                TokenLength = Scanner.Position - functionStart
+            });
         }
 
         private List<FieldToken> GroupBy()
@@ -143,33 +201,54 @@ namespace Raven.Server.Documents.Queries.Parser
 
             do
             {
-                if (Field(out var field) == false)
-                    ThrowParseException("Unable to get field for " + clause);
-
                 QueryExpression expr;
-
-                if (Scanner.TryScan('('))
+                if (Field(out var field))
                 {
-                    if (Method(field, op: out expr) == false)
-                        ThrowParseException("Expected method call in " + clause);
+                    if (Scanner.TryScan('('))
+                    {
+                        if (Method(field, op: out expr) == false)
+                            ThrowParseException("Expected method call in " + clause);
+                    }
+                    else
+                    {
+                        expr = new QueryExpression
+                        {
+                            Field = field,
+                            Type = OperatorType.Field
+                        };
+                    }
                 }
-                else
+                else if (Value(out var v))
                 {
                     expr = new QueryExpression
                     {
-                        Field = field,
-                        Type = OperatorType.Field
+                        Value = v,
+                        Type = OperatorType.Value
                     };
                 }
+                else
+                {
+                    ThrowParseException("Unable to get field for " + clause);
+                    return null;// never callsed
+                }
 
-                Alias(out var alias);
+                if (Alias(out var alias) == false && expr.Type == OperatorType.Value)
+                {
+                    alias = new FieldToken
+                    {
+                        EscapeChars = expr.Value.EscapeChars,
+                        IsQuoted = expr.Value.Type == ValueTokenType.String,
+                        TokenStart = expr.Value.TokenStart,
+                        TokenLength = expr.Value.TokenLength
+                    };
+                }
 
                 select.Add((expr, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return @select;
+            return select;
         }
 
         private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()
@@ -260,7 +339,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("AS") == false)
             {
                 alias = null;
-                return true;
+                return false;
             }
 
             if (Field(out alias) == false)
@@ -313,7 +392,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     break;
                 case NextTokenOptions.BinaryOp:
                     _state = NextTokenOptions.Parenthesis;
-                    if (Operator(out op) == false)
+                    if (Operator(true, out op) == false)
                         return false;
                     break;
                 default:
@@ -366,7 +445,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 }
             }
 
-            
+
             op = new QueryExpression
             {
                 Type = type,
@@ -393,23 +472,30 @@ namespace Raven.Server.Documents.Queries.Parser
             return true;
         }
 
-        private bool Operator(out QueryExpression op)
+        private bool Operator(bool fieldRequired, out QueryExpression op)
         {
             OperatorType type;
             FieldToken field = null;
-            
+
             if (Scanner.TryScan("true"))
                 type = OperatorType.True;
             else
             {
-                if (Field(out field) == false)
+                if (fieldRequired && Field(out field) == false)
                 {
                     op = null;
                     return false;
                 }
 
                 if (Scanner.TryScan(OperatorStartMatches, out var match) == false)
+                {
+                    if (fieldRequired == false)
+                    {
+                        op = null;
+                        return false;
+                    }
                     ThrowParseException("Invalid operator expected any of (In, Between, =, <, >, <=, >=)");
+                }
 
                 switch (match)
                 {
@@ -456,8 +542,18 @@ namespace Raven.Server.Documents.Queries.Parser
                     };
                     return true;
                 case OperatorType.Method:
-                    return Method(field, op: out op);
+                    var method = Method(field, op: out op);
 
+                    if (method && Operator(false, out var methodOperator))
+                    {
+                        if (op.Arguments == null)
+                            op.Arguments = new List<object>();
+
+                        op.Arguments.Add(methodOperator);
+                        return true;
+                    }
+
+                    return method;
                 case OperatorType.Between:
                     if (Value(out var fst) == false)
                         ThrowParseException("parsing Between, expected value (1st)");
@@ -638,7 +734,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 val = new ValueToken
                 {
                     TokenStart = Scanner.TokenStart,
-                    TokenLength = Scanner.TokenLength,
+                    TokenLength = Scanner.TokenLength
                 };
                 switch (match)
                 {

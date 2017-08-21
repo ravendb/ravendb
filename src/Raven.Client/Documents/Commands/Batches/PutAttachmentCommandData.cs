@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(Name)] = Name,
                 [nameof(ContentType)] = ContentType,
                 [nameof(ChangeVector)] = ChangeVector,
-                [nameof(Type)] = Type.ToString(),
+                [nameof(Type)] = Type.ToString()
             };
         }
     }

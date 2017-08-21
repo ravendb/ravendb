@@ -164,7 +164,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (_indexSearcher != null)
                 {
                     using (_indexSearcher)
-                    using (_indexSearcher.IndexReader) { }
+                    using (_indexSearcher.IndexReader)
+                    { }
                 }
 
                 GC.SuppressFinalize(this);
@@ -183,7 +184,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     return new StringCollectionValue((from field in fields
                                                       from fld in doc.GetFields(field.Name)
                                                       where fld.StringValue(state) != null
-                                                      select fld.StringValue(state)).ToList(), context);
+                                                      select fld.StringValue(state)).ToList());
                 });
             }
         }
@@ -199,10 +200,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public override bool Equals(object obj)
             {
-                if (ReferenceEquals(null, obj)) return false;
-                if (ReferenceEquals(this, obj)) return true;
+                if (ReferenceEquals(null, obj))
+                    return false;
+                if (ReferenceEquals(this, obj))
+                    return true;
                 var other = obj as StringCollectionValue;
-                if (other == null) return false;
+                if (other == null)
+                    return false;
 
                 return _hash == other._hash;
             }
@@ -212,7 +216,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 return _hashCode;
             }
 
-            public unsafe StringCollectionValue(List<string> values, JsonOperationContext context)
+            public unsafe StringCollectionValue(List<string> values)
             {
 #if DEBUG
                 _values = values;

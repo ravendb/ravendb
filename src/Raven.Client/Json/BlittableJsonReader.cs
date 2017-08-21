@@ -33,7 +33,7 @@ namespace Raven.Client.Json
 
             _items.Push(new CurrentItem
             {
-                Object = root,
+                Object = root
             });
         }
 
@@ -141,7 +141,7 @@ namespace Raven.Client.Json
                 case BlittableJsonToken.StartArray:
                     var newArray = new CurrentItem
                     {
-                        Array = (BlittableJsonReaderArray)value,
+                        Array = (BlittableJsonReaderArray)value
                     };
                     _items.Push(newArray);
                     SetToken(JsonToken.StartArray);

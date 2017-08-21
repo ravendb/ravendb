@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
-using System.Text.RegularExpressions;
 using Raven.Client.Documents.Commands;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -18,14 +17,12 @@ namespace Raven.Client.Documents.Session.Operations
     {
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly string _indexName;
-        private readonly string _collectionName;
         private readonly IndexQuery _indexQuery;
         private readonly bool _waitForNonStaleResults;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
         private readonly TimeSpan? _timeout;
         private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> _transformResults;
-        private readonly HashSet<string> _includes;
         private QueryResult _currentQueryResults;
         private readonly string[] _projectionFields;
         private Stopwatch _sp;
@@ -33,19 +30,17 @@ namespace Raven.Client.Documents.Session.Operations
 
         public QueryResult CurrentQueryResults => _currentQueryResults;
 
-        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, string collectionName, IndexQuery indexQuery,
+        public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
                               string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
                               Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
-                              HashSet<string> includes, bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
+                              bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _session = session;
             _indexName = indexName;
-            _collectionName = collectionName;
             _indexQuery = indexQuery;
             _waitForNonStaleResults = waitForNonStaleResults;
             _timeout = timeout;
             _transformResults = transformResults;
-            _includes = includes;
             _projectionFields = projectionFields;
             DisableEntitiesTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
@@ -59,7 +54,7 @@ namespace Raven.Client.Documents.Session.Operations
             _session.IncrementRequestCount();
             LogQuery();
 
-            return new QueryCommand(_session.Conventions, _session.Context, _indexQuery, _metadataOnly, _indexEntriesOnly);
+            return new QueryCommand(_session.Conventions, _indexQuery, _metadataOnly, _indexEntriesOnly);
         }
 
         public void SetResult(QueryResult queryResult)
@@ -132,7 +127,7 @@ namespace Raven.Client.Documents.Session.Operations
             }
 
             if (DisableEntitiesTracking == false)
-                _session.RegisterMissingIncludes(queryResult.Results, _includes);
+                _session.RegisterMissingIncludes(queryResult.Results, queryResult.IncludedPaths);
 
             if (_transformResults == null)
                 return list;

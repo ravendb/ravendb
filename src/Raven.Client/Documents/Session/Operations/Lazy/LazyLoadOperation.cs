@@ -16,7 +16,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         private readonly InMemoryDocumentSessionOperations _session;
         private readonly LoadOperation _loadOperation;
         private string[] _ids;
-        private string _transformer;
         private string[] _includes;
 
         public LazyLoadOperation(
@@ -34,9 +33,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
             var queryBuilder = new StringBuilder("?");
             _includes.ApplyIfNotNull(include => queryBuilder.AppendFormat("&include={0}", include));
             idsToCheckOnServer.ApplyIfNotNull(id => queryBuilder.AppendFormat("&id={0}", Uri.EscapeDataString(id)));
-
-            if (string.IsNullOrEmpty(_transformer) == false)
-                queryBuilder.AppendFormat("&transformer={0}", _transformer);
 
             return new GetRequest
             {
@@ -66,12 +62,6 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
         public LazyLoadOperation<T> WithIncludes(string[] includes)
         {
             _includes = includes;
-            return this;
-        }
-
-        public LazyLoadOperation<T> WithTransformer(string transformer)
-        {
-            _transformer = transformer;
             return this;
         }
 

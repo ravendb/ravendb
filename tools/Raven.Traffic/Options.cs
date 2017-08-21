@@ -1179,7 +1179,7 @@ namespace NDesk.Options
             var memberInfo = typeInfo.GetMember(enumerationValue.ToString());
             if (memberInfo.Length > 0)
             {
-                var attributes = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false);
+                var attributes = memberInfo[0].GetCustomAttributes(typeof(DescriptionAttribute), false).Cast<Attribute>();
 
                 var enumerable = attributes as IList<Attribute> ?? attributes.ToList();
                 if (enumerable.Any())

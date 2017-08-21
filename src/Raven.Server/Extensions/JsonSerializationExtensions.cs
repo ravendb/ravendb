@@ -55,6 +55,12 @@ namespace Raven.Server.Extensions
 
             result[nameof(IndexDefinition.Configuration)] = settings;
 
+            var additionalSources = new DynamicJsonValue();
+            foreach (var kvp in definition.AdditionalSources)
+                additionalSources[kvp.Key] = kvp.Value;
+
+            result[nameof(IndexDefinition.AdditionalSources)] = additionalSources;
+
             return result;
         }
     }

@@ -4,7 +4,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Extensions
 {
-    public static class JsonSerializationExtensions
+    internal static class JsonSerializationExtensions
     {
         public static DynamicJsonValue ToJson<TValue>(this Dictionary<string, TValue> dic)
             where TValue : struct

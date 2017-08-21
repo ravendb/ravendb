@@ -294,13 +294,14 @@ interface pagedResultWithAvailableColumns<T> extends pagedResult<T> {
 interface clusterTopologyDto {
     Topology: Raven.Client.Http.ClusterTopology;
     Leader: string;
+    CurrentTerm: number;
     NodeTag: string;
     Status: { [key: string]: Raven.Client.Http.NodeStatus; };
 }
 
 type clusterNodeType = "Member" | "Promotable" | "Watcher";
-type databaseGroupNodeType = "Member" | "Promotable" | "Watcher" | "Rehab";
-type patchOption = "Document" | "Collection" | "Index";
+type databaseGroupNodeType = "Member" | "Promotable" | "Rehab";
+type patchOption = "Document" | "Query";
 type subscriptionStartType = 'Beginning of Time' | 'Latest Document' | 'Change Vector';
 
 interface patchDto extends documentDto {
@@ -334,3 +335,13 @@ interface layoutable {
     x: number;
     y: number;
 }
+
+
+interface autoCompleteWordList {
+    caption: string; 
+    value: string; 
+    score: number; 
+    meta: string 
+}
+
+type autoCompleteCompleter = (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => void;

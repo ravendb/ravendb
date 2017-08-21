@@ -8,14 +8,15 @@
                     </button>
                 </div>
                 <div class="flex-separator"></div>
+                <!-- TODO
                 <div class="btn-group-label" data-label="Selection">
-                    <button class="btn btn-default btn-upcoming disabled">
+                    <button class="btn btn-default disabled">
                         <i class="icon-import"></i><span>Import</span>
                     </button>
-                    <button class="btn btn-default btn-upcoming disabled">
+                    <button class="btn btn-default disabled">
                         <i class="icon-export"></i><span>Export</span>
                     </button>
-                </div>
+                </div>-->
             </div>
             <div class="flex-horizontal">
                 <div class="checkbox checkbox-primary checkbox-inline align-checkboxes">
@@ -52,8 +53,9 @@
                         </ul>
                     </div>
                 </div>
-                <div class="flex-grow"><input type="text" class="form-control input-sm btn-upcoming" placeholder="Filter"></div>
-                <div><button class="btn btn-sm btn-default btn-upcoming disabled" type="button"><i class="icon-search"></i></button></div>
+                <!-- TODO
+                <div class="flex-grow"><input type="text" class="form-control input-sm" placeholder="Filter"></div>
+                <div><button class="btn btn-sm btn-default disabled" type="button"><i class="icon-search"></i></button></div>-->
             </div>
 
             <div class="scroll flex-grow">
@@ -77,7 +79,6 @@
                             <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                             <div class="padding padding-sm destination-info flex-vertical">
                                 <div class="flex-horizontal">
-
                                     <div class="checkbox panel-checkbox">
                                         <input type="checkbox" class="styled">
                                         <label></label>
@@ -86,7 +87,7 @@
                                         <div class="flex-horizontal">
                                             <div class="panel-name flex-grow">
                                                 <h3>
-                                                    <a href="#" data-bind="click: editTask" title="Edit task">
+                                                    <a href="#" data-bind="click: editTask" title="External Replication task name - Click to edit">
                                                         <span data-bind="text: taskName"></span>
                                                     </a>
                                                 </h3>
@@ -137,6 +138,7 @@
                             </div>
                         </div>
                     </div>-->
+               
                 <!-- sql -->
                 <!-- TODO... -->
                 <!--<div data-bind="if: sqlTasks().length > 0 && (selectedTaskType() === 'SQL ETL' || selectedTaskType() === 'All tasks' )">
@@ -167,14 +169,15 @@
                             </div>
                         </div>
                     </div>-->
+               
                 <!-- backup -->
+            
                 <div data-bind="if: backupTasks().length > 0 && (selectedTaskType() === 'Backup' || selectedTaskType() === 'All tasks' )">
                         <div class="hr-title">
                             <h5>BACKUP</h5><hr>
                         </div>
                         <div data-bind="foreach: backupTasks">
                             <div class="panel destination-item periodic-backup">
-                                <!--<div data-bind="text: !taskName ? ('Backup Task #' + taskId) : taskName"></div>-->
                                 <div data-bind="attr: { 'data-state-text': badgeText, class: 'state ' + badgeClass() }"></div>
                                 <div class="padding padding-sm destination-info">
                                     <div class="info-container flex-horizontal flex-grow">
@@ -185,7 +188,9 @@
                                         <div class="destination flex-grow">
                                             <h5>DESTINATION</h5>
                                             <h4>
-                                                <a title="Backup destinations" class="destination-name"><i class="icon-backup"></i><span data-bind="text: backupDestinations"></span></a>
+                                                <a title="Backup destinations" class="destination-name">
+                                                    <i class="icon-backup"></i><span data-bind="text: taskName"></span>
+                                                </a>
                                             </h4>
                                             <div data-bind="visible: lastFullBackup">
                                                 Last full backup: <strong data-bind="text: lastFullBackup"></strong>
@@ -205,6 +210,7 @@
                             </div>
                         </div>
                     </div>
+            
                 <!-- subscription -->
 
                 <div data-bind="if: subscriptionTasks().length > 0 && (selectedTaskType() === 'Subscription' || selectedTaskType() === 'All tasks')">
@@ -222,7 +228,9 @@
                                     </div>
                                     <div class="panel-name flex-grow">
                                         <h3>
-                                            <span title="Subscription task name" class="location" data-bind="text: taskName"></span>
+                                            <a href="#" data-bind="click: editTask" title="Subscription task name">
+                                                <span data-bind="text: taskName"></span>
+                                            </a>
                                         </h3>
                                     </div>
                                     <div class="node" data-bind="template: { name: 'responsible-node-template' }"></div>
@@ -241,9 +249,10 @@
                                             <li><span>Collection:</span><strong data-bind="text: collection"></strong></li>
                                             <li>
                                                 <span>Last Client Activity:</span><strong data-bind="text: timeOfLastClientActivity"></strong>
-                                                <button class="btn btn-xs btn-upcoming" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
+                                                <!-- TODO
+                                                <button class="btn btn-xs" data-bind="click: $root.disconnectClientFromSubscription" title="Disconnect client from this subscription (unsubscribe client)">
                                                     <i class="icon-disconnected"></i><span>Disconnect</span>
-                                                </button>
+                                                </button>-->
                                             </li>
                                         </ul>
                                     </div>
@@ -260,19 +269,29 @@
 
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-horizontal flex-header">
-                <div></div><h3>Topology <i class="icon-info text-info"></i></h3>
+                <h3>Database group topology</h3>
                 <div class="flex-separator"></div>
+                <button data-bind="click: graph.enterFullScreen" class="btn btn-default">
+                    <i class="icon-fullscreen"></i>
+                    <span>Full screen mode</span>
+                </button>
+                <!-- TODO
                 <div class="btn-group dropdown-right">
-                    <button class="btn btn-default dropdown-toggle btn-upcoming disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+                    <button class="btn btn-default dropdown-toggle disabled" type="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
                         <i class="icon-export"></i><span>Download topology</span>
                         <span class="caret"></span>
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="dropdownMenu1">
                         <li><a href="#">.zip</a></li>
                     </ul>
-                </div>
+                </div>-->
             </div>
             <div class="panel flex-grow" id="databaseGroupGraphContainer">
+                <h3>Database group topology</h3>
+                <button class="btn btn-default exit-button" data-bind="click: graph.exitFullScreen">
+                    <i class="icon-exit-fullscreen"></i>
+                    <span>Exit full screen</span>
+                </button>
             </div>
             <div class="legend">
                 <div class="row">

@@ -7,13 +7,13 @@ class getDatabaseCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.DatabaseInfo> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.DatabaseInfo> {
         const url = endpoints.global.databases.databases;
         const args = {
             name: this.dbName
         };
 
-        return this.query<Raven.Client.Server.Operations.DatabaseInfo>(url, args);
+        return this.query<Raven.Client.ServerWide.Operations.DatabaseInfo>(url, args);
     }
 }
 

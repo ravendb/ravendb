@@ -2,12 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
-using Raven.Server.Documents.Indexes.MapReduce.Static;
-using Raven.Server.Documents.Queries.Sorting;
 
 namespace Raven.Server.Documents.Queries.Dynamic
 {
@@ -58,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => x.Type.IsAuto() && (query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap()))
+                .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
                 .Select(x => x.Definition)
                 .ToList();
 
@@ -122,7 +119,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             var state = index.State;
             var stats = index.GetStats();
 
-            if (state == IndexState.Error || state == IndexState.Disabled|| stats.IsInvalidIndex)
+            if (state == IndexState.Error || state == IndexState.Disabled || stats.IsInvalidIndex)
             {
                 explanations?.Add(new Explanation(indexName, $"Cannot do dynamic queries on disabled index or index with errors (index name = {indexName})"));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
@@ -159,7 +156,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match"));
             }
 
-            if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
+            if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)
             {
                 if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations) == false)
                 {
@@ -177,7 +174,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             };
         }
 
-        private bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, List<Explanation> explanations)
+        private static bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, List<Explanation> explanations)
         {
             var indexName = definition.Name;
 
@@ -203,6 +200,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
+                    if (groupByField.IsSpecifiedInWhere == false)
+                        continue;
+
                     if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
@@ -220,9 +220,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (explanations != null)
                     {
                         var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x.Name) == false);
-                        explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
+                        explanations.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
                     }
-                    
+
                     return false;
                 }
             }
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (explanations != null)
                 {
                     var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Name).Contains(x.Key) == false);
-                    explanations?.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
+                    explanations.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 
                 return false;

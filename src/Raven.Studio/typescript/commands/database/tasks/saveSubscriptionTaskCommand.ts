@@ -4,11 +4,11 @@ import endpoints = require("endpoints");
 
 class saveSubscriptionTaskCommand extends commandBase {
 
-    constructor(private db: database, private subscriptionSettings: subscriptionDataFromUI, private taskId?: number, private disabled?: Raven.Client.Server.Operations.OngoingTaskState) {
+    constructor(private db: database, private subscriptionSettings: subscriptionDataFromUI, private taskId?: number, private disabled?: Raven.Client.ServerWide.Operations.OngoingTaskState) {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+    execute(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         return this.updateSubscription()
             .fail((response: JQueryXHR) => {
                 if (this.taskId) {
@@ -30,7 +30,7 @@ class saveSubscriptionTaskCommand extends commandBase {
             });
     }
 
-    private updateSubscription(): JQueryPromise<Raven.Client.Server.Operations.ModifyOngoingTaskResult> {
+    private updateSubscription(): JQueryPromise<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult> {
         let args: any;
 
         if (this.taskId) { 
@@ -44,10 +44,10 @@ class saveSubscriptionTaskCommand extends commandBase {
         
         const url = endpoints.databases.subscriptions.subscriptions + this.urlEncodeArgs(args);
 
-        const saveTask = $.Deferred<Raven.Client.Server.Operations.ModifyOngoingTaskResult>();
+        const saveTask = $.Deferred<Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult>();
 
         const subscriptionToSend: Raven.Client.Documents.Subscriptions.SubscriptionCreationOptions = {
-            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,
+            ChangeVector: this.subscriptionSettings.ChangeVectorEntry,  // TODO: send 'null | DoNotChange' | spcific ch. vector - See issues: 7551 + 7384
             Name: this.subscriptionSettings.TaskName,
             Criteria: {
                 Collection: this.subscriptionSettings.Collection,
@@ -57,7 +57,7 @@ class saveSubscriptionTaskCommand extends commandBase {
         };
 
         this.put(url, JSON.stringify(subscriptionToSend), this.db)
-            .done((results: Raven.Client.Server.Operations.ModifyOngoingTaskResult) => { 
+            .done((results: Raven.Client.ServerWide.Operations.ModifyOngoingTaskResult) => { 
                 saveTask.resolve(results);
             })
             .fail(response => saveTask.reject(response));

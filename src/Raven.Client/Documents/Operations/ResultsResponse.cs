@@ -1,6 +1,6 @@
 ﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.Certificates;
 
 namespace Raven.Client.Documents.Operations
 {

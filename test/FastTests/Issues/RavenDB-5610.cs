@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
@@ -22,35 +21,33 @@ namespace FastTests.Issues
 
                 var index = database.IndexStore.GetIndex(etag);
 
-                var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
+                var options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
                 Assert.Equal(IndexCreationOptions.Noop, options);
 
                 indexDefinition = CreateIndexDefinition();
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
+                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
                 Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "10";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
-                Assert.Equal(IndexCreationOptions.Update, options);
+                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
 
                 indexDefinition = CreateIndexDefinition();
-                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.StoragePath)] = "somePath";
+                indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.TimeToWaitBeforeMarkingAutoIndexAsIdle)] = "20";
                 indexDefinition.Configuration[RavenConfiguration.GetKey(x => x.Indexing.MapTimeout)] = "30";
 
-                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index);
-                Assert.Equal(IndexCreationOptions.Update, options);
+                options = database.IndexStore.GetIndexCreationOptions(indexDefinition, index, out var _);
+                Assert.Equal(IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex, options);
             }
         }
 
         [Fact]
         public async Task WillUpdate()
         {
-
-
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
             {
                 var indexDefinition = CreateIndexDefinition();

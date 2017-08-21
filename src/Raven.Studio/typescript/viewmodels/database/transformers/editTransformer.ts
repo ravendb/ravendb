@@ -97,6 +97,8 @@ class editTransformer extends viewModelBase {
     }
 
     private initValidation() {
+        
+        //TODO: aceValidation for code
         const rg1 = /^[^\\]*$/; // forbidden character - backslash
         this.editedTransformer().name.extend({
             required: true,

@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Queries.Facets
     public enum FacetMode
     {
         Default,
-        Ranges,
+        Ranges
     }
 
     [Flags]

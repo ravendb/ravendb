@@ -30,10 +30,11 @@ namespace Voron.Data.Fixed
         private readonly Tree _parent;
         private Slice _treeName;
         private readonly ushort _valSize;
-        private readonly NewPageAllocator _newPageAllocator;
+        private readonly bool _isIndexTree;
         private readonly int _entrySize;
         private readonly int _maxEmbeddedEntries;
 
+        private NewPageAllocator _newPageAllocator;
         private RootObjectType? _type;
         private FastStack<FixedSizeTreePage> _cursor;
         private int _changes;
@@ -41,6 +42,9 @@ namespace Voron.Data.Fixed
         public LowLevelTransaction Llt => _tx;
 
         internal RootObjectType? Type => _type;
+
+        public bool HasNewPageAllocator => _newPageAllocator != null;
+
         public static ushort GetValueSize(LowLevelTransaction tx, Tree parent, Slice treeName)
         {
             var header = (FixedSizeTreeHeader.Embedded*)parent.DirectRead(treeName);
@@ -146,12 +150,15 @@ namespace Voron.Data.Fixed
                                                   header->RootObjectType);
         }
 
-        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, NewPageAllocator newPageAllocator = null, PageLocator pageLocator = null)
+        public FixedSizeTree(LowLevelTransaction tx, Tree parent, Slice treeName, ushort valSize, bool clone = true, bool isIndexTree = false, NewPageAllocator newPageAllocator = null)
         {
             _tx = tx;
             _parent = parent;
             _valSize = valSize;
-            _newPageAllocator = newPageAllocator;
+            _isIndexTree = isIndexTree;
+
+            if (newPageAllocator != null)
+                SetNewPageAllocator(newPageAllocator);
 
             _entrySize = sizeof(long) + _valSize;
             _maxEmbeddedEntries = (Constants.Storage.PageSize / 8) / _entrySize;
@@ -418,9 +425,19 @@ namespace Voron.Data.Fixed
             {
 
                 if (_newPageAllocator != null)
+                {
+                    if (_isIndexTree == false)
+                        Tree.ThrowAttemptToFreePageToNewPageAllocator(Name, pageNumber);
+
                     _newPageAllocator.FreePage(pageNumber);
+                }
                 else
+                {
+                    if (_isIndexTree)
+                        Tree.ThrowAttemptToFreeIndexPageToFreeSpaceHandling(Name, pageNumber);
+
                     _tx.FreePage(pageNumber);
+                }
             }
         }
 
@@ -1613,6 +1630,13 @@ namespace Voron.Data.Fixed
             }
 
             throw new InvalidOperationException("Should not happen!");
+        }
+
+        internal void SetNewPageAllocator(NewPageAllocator newPageAllocator)
+        {
+            System.Diagnostics.Debug.Assert(newPageAllocator != null);
+
+            _newPageAllocator = newPageAllocator;
         }
     }
 }

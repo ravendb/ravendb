@@ -9,6 +9,9 @@ import changesContext = require("common/changesContext");
 import clusterNode = require("models/database/cluster/clusterNode");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 import appUrl = require("common/appUrl");
+import app = require("durandal/app");
+import showDataDialog = require("viewmodels/common/showDataDialog");
+
 import router = require("plugins/router");
 import clusterGraph = require("models/database/cluster/clusterGraph");
 
@@ -30,11 +33,11 @@ class cluster extends viewModelBase {
         promote: ko.observableArray<string>([]),
         demote: ko.observableArray<string>([]),
         forceTimeout: ko.observable<boolean>(false)
-    }
+    };
 
     constructor() {
         super();
-        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote", "forceTimeout");
+        this.bindToCurrentInstance("deleteNode", "stepDown", "promote", "demote", "forceTimeout", "showErrorDetails");
 
         this.initObservables();
     }
@@ -63,7 +66,13 @@ class cluster extends viewModelBase {
                 return "";
             }
 
-            const serverUrl = topology.nodes().find(x => x.tag() === topology.leader()).serverUrl();
+            const leaderNode = topology.nodes().find(x => x.tag() === topology.leader());
+            
+            if (!leaderNode) {
+                return "";
+            }
+            
+            const serverUrl = leaderNode.serverUrl();
             const localPart = appUrl.forCluster();
 
             return appUrl.toExternalUrl(serverUrl, localPart);
@@ -146,6 +155,12 @@ class cluster extends viewModelBase {
 
     private refresh() {
         this.graph.draw(this.topology().nodes(), this.topology().leader());
+    }
+
+    showErrorDetails(tag: string) {
+        const node = this.topology().nodes().find(x => x.tag() === tag);
+
+        app.showBootstrapDialog(new showDataDialog("Error details. Node: " + tag, node.errorDetails(), "plain"));
     }
 }
 

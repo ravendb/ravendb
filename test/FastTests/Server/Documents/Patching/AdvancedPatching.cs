@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Patching;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Documents.Patching;
 //using Raven.Server.Documents.Patch;
 using Sparrow.Json;
 using Xunit;
@@ -822,7 +822,7 @@ this.Value = another.Value;
                         .ToListAsync();
                 }
 
-                var operation = await store.Operations.SendAsync(new PatchByIndexOperation(
+                var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Value = 1" },
                     new PatchRequest { Script = @"PutDocument('NewItem/3', {'CopiedValue': this.Value });" }),
                     CancellationToken.None);
@@ -942,7 +942,7 @@ this.Value = another.Value;
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByIndexOperation(
+                var operation = store.Operations.Send(new PatchByQueryOperation(
                     new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Owner = 'Bob'" },
                     new PatchRequest { Script = SampleScript }));
 

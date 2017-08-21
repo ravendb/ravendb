@@ -1,10 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Extensions;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -40,9 +37,6 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
             
-            if (subscription.LastEtagReachedInServer == null)
-                subscription.LastEtagReachedInServer = new Dictionary<string, long>();
-            subscription.LastEtagReachedInServer[DbId.ToString()] = LastDocumentEtagAckedInNode;
             subscription.ChangeVector = ChangeVector;
             subscription.TimeOfLastClientActivity = DateTime.UtcNow;
 

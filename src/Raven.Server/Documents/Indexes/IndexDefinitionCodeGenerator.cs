@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Indexes
                         Token(TriviaList(), SyntaxKind.OverrideKeyword, TriviaList(Space))))
                     .WithExpressionBody(ArrowExpressionClause(
                             LiteralExpression(SyntaxKind.StringLiteralExpression,
-                                SyntaxFactory.Literal($"{indexName}")))
+                                Literal($"{indexName}")))
                         .WithArrowToken(Token(TriviaList(), SyntaxKind.EqualsGreaterThanToken, TriviaList(Space))))
                     .WithSemicolonToken(Token(TriviaList(), SyntaxKind.SemicolonToken, TriviaList(LineFeed, LineFeed)));
 
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static IEnumerable<SyntaxNodeOrToken> ParsingIndexDefinitionFields(IndexDefinition indexDefinition)
         {
-            var SyntaxNodeOrToken = new List<SyntaxNodeOrToken>();
+            var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
 
             var maps = AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
                 IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), "Maps", TriviaList(Space))),
@@ -102,17 +102,17 @@ namespace Raven.Server.Documents.Indexes
                     .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(LineFeed)));
 
             if (maps != null)
-                SyntaxNodeOrToken.Add(maps);
+                syntaxNodeOrToken.Add(maps);
 
             if (indexDefinition.Reduce != null)
             {
-                SyntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
-                SyntaxNodeOrToken.Add(GetLiteral("Reduce", indexDefinition.Reduce));
+                syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                syntaxNodeOrToken.Add(GetLiteral("Reduce", indexDefinition.Reduce));
             }
 
             if (indexDefinition.Fields.Count > 0)
             {
-                SyntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
+                syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));
                 var fields = AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
                         IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), "Fields", TriviaList(Space))),
                         InitializerExpression(SyntaxKind.CollectionInitializerExpression,
@@ -121,11 +121,11 @@ namespace Raven.Server.Documents.Indexes
                             .WithCloseBraceToken(Token(TriviaList(LineFeed, Tab, Tab, Tab), SyntaxKind.CloseBraceToken, TriviaList())))
                     .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(LineFeed)));
 
-                SyntaxNodeOrToken.Add(fields);
+                syntaxNodeOrToken.Add(fields);
 
             }
 
-            return SyntaxNodeOrToken;
+            return syntaxNodeOrToken;
         }
 
         private static AssignmentExpressionSyntax GetLiteral(string fieldName, string field)
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes
             return AssignmentExpression(SyntaxKind.SimpleAssignmentExpression,
                     IdentifierName(Identifier(TriviaList(Tab, Tab, Tab), fieldName, TriviaList(Space))),
                     LiteralExpression(SyntaxKind.StringLiteralExpression,
-                        SyntaxFactory.Literal(TriviaList(), $"@\"{field}\"", field, TriviaList())))
+                        Literal(TriviaList(), $"@\"{field}\"", field, TriviaList())))
                 .WithOperatorToken(Token(TriviaList(), SyntaxKind.EqualsToken, TriviaList(Space)));
         }
 
@@ -174,34 +174,34 @@ namespace Raven.Server.Documents.Indexes
             var syntaxNodeOrToken = new List<SyntaxNodeOrToken>();
             if (options.Indexing != null)
             {
-                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(ParseEnum(options.Indexing, nameof(options.Indexing)));
             }
             if (options.Storage != null)
             {
-                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(ParseEnum(options.Storage, nameof(options.Storage)));
             }
             if (options.TermVector != null)
             {
-                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(ParseEnum(options.TermVector, nameof(options.TermVector)));
             }
             if (!string.IsNullOrEmpty(options.Analyzer))
             {
-                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(GetLiteral(nameof(options.Analyzer), options.Analyzer));
             }
             if (options.Suggestions != null)
             {
-                addCommaTokenIfNecessary(syntaxNodeOrToken);
+                AddCommaTokenIfNecessary(syntaxNodeOrToken);
                 syntaxNodeOrToken.Add(ParseBool((bool)options.Suggestions, nameof(options.Suggestions)));
             }
 
             return syntaxNodeOrToken;
         }
 
-        private static void addCommaTokenIfNecessary(ICollection<SyntaxNodeOrToken> syntaxNodeOrToken)
+        private static void AddCommaTokenIfNecessary(ICollection<SyntaxNodeOrToken> syntaxNodeOrToken)
         {
             if (syntaxNodeOrToken.Count > 0)
                 syntaxNodeOrToken.Add(Token(TriviaList(), SyntaxKind.CommaToken, TriviaList(LineFeed)));

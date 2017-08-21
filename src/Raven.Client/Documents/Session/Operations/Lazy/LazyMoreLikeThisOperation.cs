@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Session.Operations.Lazy
     {
         private readonly MoreLikeThisQuery _query;
         private readonly MoreLikeThisOperation _operation;
-        private DocumentConventions _conventions;
+        private readonly DocumentConventions _conventions;
 
         public LazyMoreLikeThisOperation(InMemoryDocumentSessionOperations session, MoreLikeThisQuery query)
         {

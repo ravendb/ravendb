@@ -5,15 +5,15 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Exceptions;
-using Raven.Client.Documents.Exceptions.Compilation;
+using Raven.Client.Exceptions.Documents;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
 using Raven.Client.Json.Converters;
 using Sparrow.Json;
 
 namespace Raven.Client.Exceptions
 {
-    public static class ExceptionDispatcher
+    internal static class ExceptionDispatcher
     {
         public class ExceptionSchema
         {

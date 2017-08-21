@@ -20,7 +20,7 @@ class saveIndexDefinitionCommand extends commandBase {
     }
 
     private saveDefinition(): JQueryPromise<Raven.Client.Documents.Indexes.PutIndexResult> {
-        const url = endpoints.databases.index.indexes;
+        const url = endpoints.databases.index.adminIndexes;
         const saveTask = $.Deferred<Raven.Client.Documents.Indexes.PutIndexResult>();
 
         const payload = {

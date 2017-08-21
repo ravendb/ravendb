@@ -1,10 +1,8 @@
-﻿using System;
-using System.Threading.Tasks;
-using Microsoft.AspNetCore.Http.Features.Authentication;
+﻿using System.Threading.Tasks;
 using Raven.Server.Commercial;
-using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
@@ -41,7 +39,7 @@ namespace Raven.Server.Web.Studio
         }
 
         [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ServerAdmin)]
-        public Task Activate()
+        public async Task Activate()
         {
             License license;
 
@@ -51,9 +49,17 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
 
-            return NoContent();
+            NoContentStatus();
+        }
+
+        [RavenAction("/admin/license/deactivate", "POST", AuthorizationStatus.ServerAdmin)]
+        public async Task Deactivate()
+        {
+            await ServerStore.LicenseManager.DeactivateLicense();
+
+            NoContentStatus();
         }
     }
 }

@@ -177,6 +177,10 @@ namespace FastTests.Client.Indexing
                 Assert.True(stats.Memory.ThreadAllocations.SizeInBytes >= 0);
                 Assert.NotNull(stats.Memory.ThreadAllocations.HumaneSize);
 
+                Assert.NotNull(stats.LastBatchStats.AllocatedBytes);
+                Assert.True(stats.LastBatchStats.AllocatedBytes.SizeInBytes > 0);
+                Assert.NotNull(stats.LastBatchStats.AllocatedBytes.HumaneSize);
+
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
                 Assert.Equal(IndexLockMode.Unlock, stats.LockMode);
@@ -506,7 +510,7 @@ namespace FastTests.Client.Indexing
 
                 using (var commands = store.Commands())
                 {
-                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, new IndexQuery { Query = "FROM Users" });
+                    var command = new ExplainQueryCommand(store.Conventions, new IndexQuery { Query = "FROM Users" });
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 

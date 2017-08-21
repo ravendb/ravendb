@@ -6,8 +6,7 @@
 
 using System;
 using System.Collections.Generic;
-using Raven.Client.Server;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
@@ -20,7 +19,6 @@ namespace Raven.Client.Documents.Subscriptions
         public string SubscriptionName { get; set; }
         public DateTime TimeOfLastClientActivity { get; set; }
         public bool Disabled { get; set; }
-        public Dictionary<string, long> LastEtagReachedInServer { get; set; }
 
         public ulong GetTaskKey()
         {
@@ -32,7 +30,7 @@ namespace Raven.Client.Documents.Subscriptions
         {
             return new DynamicJsonValue
             {
-                [nameof(this.Criteria)] = new DynamicJsonValue
+                [nameof(Criteria)] = new DynamicJsonValue
                 {
                     [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                     [nameof(SubscriptionCriteria.Script)] = Criteria.Script,

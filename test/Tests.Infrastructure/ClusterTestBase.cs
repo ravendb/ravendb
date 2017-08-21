@@ -10,12 +10,10 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
-using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Server;
-using Raven.Client.Server.Commands;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Certificates;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Commands;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -69,11 +67,8 @@ namespace Tests.Infrastructure
 
         protected static DatabasePutResult CreateClusterDatabase(string databaseName, IDocumentStore store, int replicationFactor = 2)
         {
-            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            var databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(doc, replicationFactor));
-            return databaseResult;
+            return store.Admin.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName), replicationFactor));
         }
-
 
         protected async Task<bool> WaitUntilDatabaseHasState(DocumentStore store, TimeSpan timeout, bool isLoaded)
         {
@@ -103,7 +98,7 @@ namespace Tests.Infrastructure
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 
@@ -371,7 +366,7 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             Assert.True(await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
             return leader;
         }
 
@@ -428,6 +423,77 @@ namespace Tests.Infrastructure
             return leader;
         }
 
+        protected async Task<(RavenServer, Dictionary<RavenServer, ProxyServer>)> CreateRaftClusterWithProxiesAndGetLeader(int numberOfNodes, bool shouldRunInMemory = true, int? leaderIndex = null, bool useSsl = false, int delay = 0)
+        {
+            leaderIndex = leaderIndex ?? _random.Next(0, numberOfNodes);
+            RavenServer leader = null;
+            var serversToPorts = new Dictionary<RavenServer, string>();
+            var serversToProxies = new Dictionary<RavenServer, ProxyServer>();
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                string serverUrl;
+                int port = GetPort();
+                var customSettings = GetServerSettingsForPort(useSsl, out serverUrl, port);
+
+                int proxyPort = 10000;
+                ProxyServer proxy;
+                proxy = new ProxyServer(ref proxyPort, port, delay);
+                var server = GetNewServer(customSettings, runInMemory: shouldRunInMemory);
+                serversToProxies.Add(server, proxy);
+
+                if (Servers.Any(s => s.WebUrls[0].Equals(server.WebUrls[0], StringComparison.OrdinalIgnoreCase)) == false)
+                {
+                    Servers.Add(server);
+                }
+
+                serversToPorts.Add(server, serverUrl);
+                if (i == leaderIndex)
+                {
+                    server.ServerStore.EnsureNotPassive();
+                    leader = server;
+                }
+            }
+            for (var i = 0; i < numberOfNodes; i++)
+            {
+                if (i == leaderIndex)
+                {
+                    continue;
+                }
+                var follower = Servers[i];
+                // ReSharper disable once PossibleNullReferenceException
+                await leader.ServerStore.AddNodeToClusterAsync(serversToPorts[follower]);
+                await follower.ServerStore.WaitForTopology(Leader.TopologyModification.Voter);
+            }
+            // ReSharper disable once PossibleNullReferenceException
+            var condition = await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs * 5);
+            var states = string.Empty;
+            if (condition == false)
+            {
+                states = GetLastStatesFromAllServersOrderedByTime();
+            }
+            Assert.True(condition, "The leader has changed while waiting for cluster to become stable. All nodes status: " + states);
+            return (leader, serversToProxies);
+        }
+
+
+        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, int? port = null)
+        {
+            var customSettings = new Dictionary<string, string>();
+
+            port = port ?? GetPort();
+            if (useSsl)
+            {
+                serverUrl = UseFiddler($"https://127.0.0.1:{port}");
+                SetupServerAuthentication(customSettings, serverUrl, doNotReuseServer: false);
+            }
+            else
+            {
+                serverUrl = UseFiddler($"http://127.0.0.1:{port}");
+                customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = serverUrl;
+            }
+            return customSettings;
+        }
+
         public async Task WaitForLeader(TimeSpan timeout)
         {
             var tasks = Servers
@@ -460,11 +526,13 @@ namespace Tests.Infrastructure
             {
                 databaseResult = store.Admin.Server.Send(new CreateDatabaseOperation(record, replicationFactor));
             }
+
             int numberOfInstances = 0;
             foreach (var server in Servers)
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
+
             foreach (var server in Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(record.DatabaseName);
@@ -476,10 +544,9 @@ namespace Tests.Infrastructure
                 Servers.Where(s => databaseResult.Topology.RelevantFor(s.ServerStore.NodeTag)).ToList());
         }
 
-        public async Task<(long, List<RavenServer>)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
+        public Task<(long Index, List<RavenServer> Servers)> CreateDatabaseInCluster(string databaseName, int replicationFactor, string leadersUrl)
         {
-            var doc = MultiDatabase.CreateDatabaseDocument(databaseName);
-            return await CreateDatabaseInCluster(doc, replicationFactor, leadersUrl);
+            return CreateDatabaseInCluster(new DatabaseRecord(databaseName), replicationFactor, leadersUrl);
         }
 
         public override void Dispose()

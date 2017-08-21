@@ -5,7 +5,6 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
-using Raven.Client.Server.Tcp;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Rachis
@@ -32,9 +31,8 @@ namespace Raven.Server.Rachis
             _tag = tag;
             _url = url;
             _certificate = certificate;
-            Status = "Started";
+            Status = $"Started Candidate Ambasaddor for {_engine.Tag} > {_tag}";
         }
-
 
         public void Start()
         {
@@ -88,7 +86,7 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            Status = "Failed - " + e.Message;
+                            Status = $"Failed to connect with {_tag}.{Environment.NewLine} " + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to connect to remote peer: " + _url, e);
@@ -97,7 +95,7 @@ namespace Raven.Server.Rachis
                             _candidate.WaitForChangeInState();
                             continue; // we'll retry connecting
                         }
-                        Status = "Connected";
+                        Status = $"Connected to {_tag}";
                         using (var connection = new RemoteConnection(_tag, _engine.Tag, _conenctToPeer))
                         {
                             try
@@ -130,7 +128,7 @@ namespace Raven.Server.Rachis
                                         TopologyId = topology.TopologyId,
                                         DebugSourceIdentifier = _engine.Tag,
                                         DebugDestinationIdentifier = _tag,
-                                        InitialMessageType = InitialMessageType.RequestVote,
+                                        InitialMessageType = InitialMessageType.RequestVote
                                     });
 
                                     RequestVoteResponse rvr;
@@ -226,7 +224,7 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        Status = "Failed - " + e.Message;
+                        Status = $"Failed to get vote from {_tag}.{Environment.NewLine}" + e.Message;
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info($"CandidateAmbassador {_engine.Tag}: Failed to get vote from remote peer url={_url} tag={_tag}", e);
@@ -236,7 +234,6 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         _conenctToPeer?.Dispose();
-                        Status = "Disconnected";
                     }
                 }
             }
@@ -255,7 +252,7 @@ namespace Raven.Server.Rachis
             }
             catch (Exception e)
             {
-                Status = "Failed - " + e.Message;
+                Status = $"Failed to talk to {_url}.{Environment.NewLine}" + e;
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote peer: " + _url, e);

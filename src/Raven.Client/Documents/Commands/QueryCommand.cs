@@ -14,15 +14,13 @@ namespace Raven.Client.Documents.Commands
     public class QueryCommand : RavenCommand<QueryResult>
     {
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly IndexQuery _indexQuery;
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
 
-        public QueryCommand(DocumentConventions conventions, JsonOperationContext context, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
+        public QueryCommand(DocumentConventions conventions, IndexQuery indexQuery, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _indexQuery = indexQuery ?? throw new ArgumentNullException(nameof(indexQuery));
             _metadataOnly = metadataOnly;
             _indexEntriesOnly = indexEntriesOnly;
@@ -31,8 +29,11 @@ namespace Raven.Client.Documents.Commands
                 Timeout = indexQuery.WaitForNonStaleResultsTimeout.Value.Add(TimeSpan.FromSeconds(10)); // giving the server an opportunity to finish the response
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            // we won't allow aggresive caching of queries with WaitForNonStaleResults
+            AggressiveCacheAllowed = _indexQuery.WaitForNonStaleResults == false;
+
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
@@ -40,7 +41,7 @@ namespace Raven.Client.Documents.Commands
                 // we need to add a query hash because we are using POST queries
                 // so we need to unique parameter per query so the query cache will
                 // work properly
-                .Append(_indexQuery.GetQueryHash(_context));
+                .Append(_indexQuery.GetQueryHash(ctx));
 
             if (_metadataOnly)
                 path.Append("&metadata-only=true");
@@ -55,9 +56,9 @@ namespace Raven.Client.Documents.Commands
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteIndexQuery(_conventions, _context, _indexQuery);
+                            writer.WriteIndexQuery(_conventions, ctx, _indexQuery);
                         }
                     }
                 )

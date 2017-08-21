@@ -43,12 +43,12 @@ namespace Raven.Client.Documents.Operations
                 _changeVector = changeVector;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/attachments?id={Uri.EscapeDataString(_documentId)}&name={Uri.EscapeDataString(_name)}";
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethods.Delete,
+                    Method = HttpMethods.Delete
                 };
                 AddChangeVectorIfNotNull(_changeVector, request);
                 return request;

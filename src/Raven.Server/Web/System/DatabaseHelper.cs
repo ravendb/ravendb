@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Reflection;
-using Raven.Client.Documents;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
-using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 

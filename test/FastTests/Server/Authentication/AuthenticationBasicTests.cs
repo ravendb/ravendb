@@ -14,11 +14,11 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Security;
-using Raven.Client.Server;
-using Raven.Client.Server.ETL;
-using Raven.Client.Server.Operations;
-using Raven.Client.Server.Operations.Certificates;
-using Raven.Client.Server.Operations.ConnectionStrings;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.ETL;
+using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
@@ -86,7 +86,7 @@ namespace FastTests.Server.Authentication
             
             using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName:(s => dbName)))
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("WhateverDB");
+                var doc = new DatabaseRecord("WhateverDB");
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation
             }
         }
@@ -104,7 +104,7 @@ namespace FastTests.Server.Authentication
 
             using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate: userCert, modifyName: (s => dbName)))
             {
-                var doc = MultiDatabase.CreateDatabaseDocument("WhateverDB");
+                var doc = new DatabaseRecord("WhateverDB");
                 Assert.Throws<AuthorizationException>(() =>
                 {
                     store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation

@@ -210,7 +210,6 @@ class databaseCreationModel {
 
         this.name.extend({
             required: true,
-            maxLength: 230,
             validDatabaseName: true,
 
             validation: [
@@ -258,10 +257,10 @@ class databaseCreationModel {
         });
     }
 
-    private topologyToDto(): Raven.Client.Server.DatabaseTopology {
+    private topologyToDto(): Raven.Client.ServerWide.DatabaseTopology {
         const topology = {
             DynamicNodesDistribution: this.replication.dynamicMode()
-        } as Raven.Client.Server.DatabaseTopology;
+        } as Raven.Client.ServerWide.DatabaseTopology;
 
         if (this.replication.manualMode()) {
             const nodes = this.replication.nodes();
@@ -276,7 +275,7 @@ class databaseCreationModel {
         this.lastFileNameToRestore(restorePoint.Details.FileName);
     }
 
-    toDto(): Raven.Client.Server.DatabaseRecord {
+    toDto(): Raven.Client.ServerWide.DatabaseRecord {
         const settings: dictionary<string> = {};
         const securedSettings: dictionary<string> = {};
 
@@ -289,10 +288,10 @@ class databaseCreationModel {
             Disabled: false,
             Encrypted: this.getEncryptionConfigSection().enabled(),
             Topology: this.topologyToDto()
-        } as Raven.Client.Server.DatabaseRecord;
+        } as Raven.Client.ServerWide.DatabaseRecord;
     }
 
-    toRestoreDocumentDto(): Raven.Client.Server.PeriodicBackup.RestoreBackupConfiguration {
+    toRestoreDocumentDto(): Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration {
         const dataDirectory = _.trim(this.path.dataPath()) || null;
 
         return {
@@ -301,7 +300,7 @@ class databaseCreationModel {
             LastFileNameToRestore: this.lastFileNameToRestore(),
             DataDirectory: dataDirectory,
             EncryptionKey: this.getEncryptionConfigSection().enabled() ? this.encryption.key() : null
-        } as Raven.Client.Server.PeriodicBackup.RestoreBackupConfiguration;
+        } as Raven.Client.ServerWide.PeriodicBackup.RestoreBackupConfiguration;
     }
 }
 

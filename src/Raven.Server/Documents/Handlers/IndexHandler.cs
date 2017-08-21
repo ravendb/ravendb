@@ -6,9 +6,9 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
 using Raven.Client;
-using Raven.Client.Documents.Exceptions.Indexes;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
 
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["Error"] = $"{index.Name} is not map-reduce index",
+                            ["Error"] = $"{index.Name} is not map-reduce index"
                         });
 
                         return Task.CompletedTask;

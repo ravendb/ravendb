@@ -1,7 +1,7 @@
 ﻿using System.Linq;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Server;
+using Raven.Client.ServerWide;
 using Xunit;
 
 namespace SlowTests.Issues

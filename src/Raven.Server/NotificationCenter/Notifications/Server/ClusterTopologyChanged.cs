@@ -19,6 +19,8 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
         public string Leader { get; private set; }
 
         public string NodeTag { get; private set; }
+        
+        public long CurrentTerm { get; private set; }
 
         public override DynamicJsonValue ToJson()
         {
@@ -28,18 +30,20 @@ namespace Raven.Server.NotificationCenter.Notifications.Server
             json[nameof(Leader)] = Leader;
             json[nameof(NodeTag)] = NodeTag;
             json[nameof(Status)] = DynamicJsonValue.Convert(Status);
+            json[nameof(CurrentTerm)] = CurrentTerm;
 
             return json;
         }
 
-        public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, string leaderTag, string nodeTag , Dictionary<string, NodeStatus> status)
+        public static ClusterTopologyChanged Create(ClusterTopology clusterTopology, string leaderTag, string nodeTag, long term, Dictionary<string, NodeStatus> status)
         {
             return new ClusterTopologyChanged
             {
                 Topology = clusterTopology,
                 Leader = leaderTag,
                 NodeTag = nodeTag,
-                Status = status
+                Status = status,
+                CurrentTerm = term
             };
         }
     }

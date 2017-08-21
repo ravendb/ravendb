@@ -27,7 +27,7 @@ class editPeriodicBackupTask extends viewModelBase {
             // editing an existing task
             new getPeriodicBackupConfigurationCommand(this.activeDatabase(), args.taskId)
                 .execute()
-                .done((configuration: Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration) => {
+                .done((configuration: Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration) => {
                     this.configuration(new periodicBackupConfiguration(configuration));
                     deferred.resolve();
                 })
@@ -123,6 +123,14 @@ class editPeriodicBackupTask extends viewModelBase {
             {
                 content: this.textForPopover("Vault")   
             });
+
+        popoverUtils.longWithHover($("#ftp-host-info"),
+            {
+                content:
+                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
+                    "If no protocol is specified the default one (ftp://) will be used.<br>" +
+                    "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
+            });
     }
 
     private textForPopover(storageName: string): string {
@@ -177,6 +185,9 @@ class editPeriodicBackupTask extends viewModelBase {
             valid = false;
 
         if (!this.isValid(this.configuration().glacierSettings().validationGroup))
+            valid = false;
+
+        if (!this.isValid(this.configuration().ftpSettings().validationGroup))
             valid = false;
 
         return valid;

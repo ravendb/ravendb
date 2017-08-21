@@ -11,8 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Exceptions.Revisions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Exceptions.Documents.Revisions;
 using Raven.Client.Http;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
@@ -507,7 +507,7 @@ namespace FastTests.Server.Documents.Revisions
                     _ids = ids;
                 }
 
-                public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
                 {
                     var sb = new StringBuilder($"{node.Url}/databases/{node.Database}/admin/revisions?");
 

@@ -24,11 +24,13 @@ namespace Raven.Server.Web.System
                 var res = await ServerStore.PutValueInClusterAsync(new PutClientConfigurationCommand(clientConfiguration));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
+                NoContentStatus();
+                
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }
 
-        [RavenAction("/admin/configuration/client", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/configuration/client", "GET", AuthorizationStatus.ValidUser)]
         public Task GetClientConfiguration()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))

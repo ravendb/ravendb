@@ -7,7 +7,7 @@ using Sparrow.Json;
 using Voron;
 using Raven.Server.Documents.Includes;
 using System.Linq;
-using Raven.Client.Documents.Exceptions.Transformers;
+using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json.Parsing;

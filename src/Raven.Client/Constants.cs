@@ -102,6 +102,13 @@ namespace Raven.Client
 
             public const int MaxDatabaseNameLength = 128;
 
+            public enum SubscriptionChagneVectorSpecialStates
+            {
+                DoNotChange,
+                LastDocument,
+                BeginningOfTime
+            }
+
             public class Metadata
             {
                 private Metadata()

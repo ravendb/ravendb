@@ -4,7 +4,7 @@ class s3Settings extends amazonSettings {
     bucketName = ko.observable<string>();
     remoteFolderName = ko.observable<string>();
 
-    constructor(dto: Raven.Client.Server.PeriodicBackup.S3Settings) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.S3Settings) {
         super(dto);
 
         this.bucketName(dto.BucketName);
@@ -74,8 +74,8 @@ class s3Settings extends amazonSettings {
         });
     }
 
-    toDto(): Raven.Client.Server.PeriodicBackup.S3Settings {
-        const dto = super.toDto() as Raven.Client.Server.PeriodicBackup.S3Settings;
+    toDto(): Raven.Client.ServerWide.PeriodicBackup.S3Settings {
+        const dto = super.toDto() as Raven.Client.ServerWide.PeriodicBackup.S3Settings;
         dto.BucketName = this.bucketName();
         dto.RemoteFolderName = this.remoteFolderName();
         return dto;

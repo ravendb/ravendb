@@ -1,9 +1,9 @@
-﻿using Raven.Client.Documents.Exceptions.Indexes;
-using Raven.Client.Documents.Indexes;
+﻿using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Operations.Transformers;
 using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents.Indexes;
 using Xunit;
 
 namespace FastTests.Server.Documents.Indexing.Debugging

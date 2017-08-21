@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
-using Raven.Client.Server.PeriodicBackup;
+using Raven.Client.ServerWide.PeriodicBackup;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
@@ -71,9 +71,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                 Metadata = metadata;
             }
 
-            public Stream Data { get; private set; }
+            public Stream Data { get; }
 
-            public Dictionary<string, string> Metadata { get; private set; }
+            public Dictionary<string, string> Metadata { get; }
         }
     }
 }

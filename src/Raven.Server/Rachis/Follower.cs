@@ -6,7 +6,6 @@ using System.Threading;
 using Raven.Client.Http;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Logging;
 using Voron;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -47,7 +46,7 @@ namespace Raven.Server.Rachis
                         {
                             CurrentTerm = _engine.CurrentTerm,
                             Message = "The current term that I have " + _engine.CurrentTerm + " doesn't match " + appendEntries.Term,
-                            Success = false,
+                            Success = false
                         });
                         if (_engine.Log.IsInfoEnabled && entries.Count > 0)
                         {
@@ -56,8 +55,8 @@ namespace Raven.Server.Rachis
 
                         return;
                     }
-                    
-                    
+
+
                     _engine.Timeout.Defer(_connection.Source);
                     var sp = Stopwatch.StartNew();
                     if (appendEntries.EntriesCount != 0)
@@ -155,7 +154,7 @@ namespace Raven.Server.Rachis
                         {
                             if (_engine.Log.IsInfoEnabled)
                             {
-                                _engine.Log.Info($"Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
+                                _engine.Log.Info("Was notified that I was removed from the node topoloyg, will be moving to passive mode now.");
                             }
                             _engine.SetNewState(RachisConsensus.State.Passive, null, appendEntries.Term,
                                                "I was kicked out of the cluster and moved to passive mode");
@@ -233,7 +232,7 @@ namespace Raven.Server.Rachis
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info($"Follower {_engine.Tag}: Got a negotiation request with PrevLogTerm={negotiation.PrevLogTerm} while our PrevLogTerm={prevTerm}" +
-                                     $" will negotiate to find next matched index");
+                                     " will negotiate to find next matched index");
                 }
                 // we now have a mismatch with the log position, and need to negotiate it with 
                 // the leader
@@ -304,7 +303,7 @@ namespace Raven.Server.Rachis
                 // snapshot always has the latest topology
                 if (snapshot.Topology == null)
                 {
-                    var message = "Expected to get topology on snapshot";
+                    const string message = "Expected to get topology on snapshot";
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Follower {_engine.Tag}: {message}");
@@ -335,7 +334,7 @@ namespace Raven.Server.Rachis
             });
 
             _engine.Timeout.Defer(_connection.Source);
-            
+
             // notify the state machine
             _engine.SnapshotInstalled(context, snapshot.LastIncludedIndex);
 
@@ -483,7 +482,7 @@ namespace Raven.Server.Rachis
                         entries = reader.ReadInt64();
                         for (long i = 0; i < entries; i++)
                         {
-                            MaybeNotifyLeaderThatWeAreSillAlive(context,  sp);
+                            MaybeNotifyLeaderThatWeAreSillAlive(context, sp);
 
                             size = reader.ReadInt32();
                             reader.ReadExactly(size);
@@ -565,7 +564,7 @@ namespace Raven.Server.Rachis
                 });
 
                 var response = connection.Read<LogLengthNegotiation>(context);
-                
+
                 _engine.Timeout.Defer(_connection.Source);
                 if (response.Truncated)
                 {
@@ -576,7 +575,7 @@ namespace Raven.Server.Rachis
                     connection.Send(context, new LogLengthNegotiationResponse
                     {
                         Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
-                        Message = $"We have entries that are already truncated at the leader, will ask for full snapshot",
+                        Message = "We have entries that are already truncated at the leader, will ask for full snapshot",
                         CurrentTerm = _engine.CurrentTerm,
                         LastLogIndex = 0
                     });
@@ -601,7 +600,7 @@ namespace Raven.Server.Rachis
             {
                 _engine.Log.Info($"Follower {_engine.Tag}: agreed upon last matched index = {midpointIndex} on term = {_engine.CurrentTerm}");
             }
-            connection.Send(context, new LogLengthNegotiationResponse()
+            connection.Send(context, new LogLengthNegotiationResponse
             {
                 Status = LogLengthNegotiationResponse.ResponseStatus.Acceptable,
                 Message = $"Found a log index / term match at {midpointIndex} with term {midpointTerm}",

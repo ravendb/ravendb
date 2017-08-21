@@ -16,7 +16,7 @@ namespace Raven.Server.Documents
         private int _depth;
         private State _state = State.None;
         private bool _verifyStartArray;
-        
+
         public BlittableMetadataModifier(JsonOperationContext context)
         {
             _ctx = context;
@@ -34,7 +34,7 @@ namespace Raven.Server.Documents
 
         private const string LegacyRevisionState = "Historical";
         private const string LegacyHasRevisionsDocumentState = "Current";
-        
+
         private DocumentFlags ReadFlags(JsonParserState state)
         {
             var str = CreateLazyStringValueFromParserState(state);
@@ -204,29 +204,29 @@ namespace Raven.Server.Documents
         private unsafe bool AboutToReadPropertyNameInMetadataUnlikely(IJsonParser reader, JsonParserState state, out bool aboutToReadPropertyName)
         {
             aboutToReadPropertyName = true;
-            
+
             switch (state.StringSize)
             {
                 default: // accept this property
-                {
-                    return true;
-                }
+                    {
+                        return true;
+                    }
 
                 case -1: // IgnoreProperty
-                {
-                    if (reader.Read() == false)
                     {
-                        _state = State.IgnoreProperty;
+                        if (reader.Read() == false)
                         {
-                            aboutToReadPropertyName = false;
-                            return true;
+                            _state = State.IgnoreProperty;
+                            {
+                                aboutToReadPropertyName = false;
+                                return true;
+                            }
                         }
+                        if (state.CurrentTokenType == JsonParserToken.StartArray ||
+                            state.CurrentTokenType == JsonParserToken.StartObject)
+                            ThrowInvalidMetadataProperty(state);
+                        break;
                     }
-                    if (state.CurrentTokenType == JsonParserToken.StartArray ||
-                        state.CurrentTokenType == JsonParserToken.StartObject)
-                        ThrowInvalidMetadataProperty(state);
-                    break;
-                }
 
                 case 3: // @id
                     if (state.StringBuffer[0] != (byte)'@' ||
@@ -323,10 +323,10 @@ namespace Raven.Server.Documents
                         }
                     }
 
-                {
-                    aboutToReadPropertyName = true;
-                    return true;
-                }
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
                 case 15: //Raven-Read-Only
                     if (*(long*)state.StringBuffer != 7300947898092904786 ||
                         *(int*)(state.StringBuffer + sizeof(long)) != 1328374881 ||
@@ -351,10 +351,10 @@ namespace Raven.Server.Documents
                     var collection = _metadataCollections;
                     state.StringBuffer = collection.AllocatedMemoryData.Address;
                     state.StringSize = collection.Size;
-                {
-                    aboutToReadPropertyName = true;
-                    return true;
-                }
+                    {
+                        aboutToReadPropertyName = true;
+                        return true;
+                    }
                 case 19: //Raven-Last-Modified
                     if (*(long*)state.StringBuffer != 7011028672080929106 ||
                         *(long*)(state.StringBuffer + sizeof(long)) != 7379539893622240371 ||

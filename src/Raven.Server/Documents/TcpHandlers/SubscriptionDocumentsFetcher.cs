@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Net;
-using Raven.Client.Documents.Exceptions.Subscriptions;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Util;
+using Raven.Client.Exceptions.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -216,7 +215,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 var docToProccess = new Document
                 {
                     Data = revision,
-                    Id = item.Id,
+                    Id = item.Id
                 };
 
                 return patch.MatchCriteria(dbContext, docToProccess, out transformResult);

@@ -17,7 +17,15 @@ namespace Sparrow.Json
         private const byte Comma = (byte)',';
         private const byte Quote = (byte)'"';
         private const byte Colon = (byte)':';
-        public static readonly byte[] NaNBuffer = { (byte)'"',(byte)'N', (byte)'a', (byte)'N',(byte)'"' };
+        public static readonly byte[] NaNBuffer = { (byte)'"', (byte)'N', (byte)'a', (byte)'N', (byte)'"' };
+        public static readonly byte[] PositiveInfinityBuffer =
+        {
+            (byte)'"', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
+        };
+        public static readonly byte[] NegativeInfinityBuffer =
+        {
+            (byte)'"', (byte)'-', (byte)'I', (byte)'n', (byte)'f', (byte)'i', (byte)'n', (byte)'i', (byte)'t', (byte)'y', (byte)'"'
+        };
         public static readonly byte[] NullBuffer = { (byte)'n', (byte)'u', (byte)'l', (byte)'l', };
         public static readonly byte[] TrueBuffer = { (byte)'t', (byte)'r', (byte)'u', (byte)'e', };
         public static readonly byte[] FalseBuffer = { (byte)'f', (byte)'a', (byte)'l', (byte)'s', (byte)'e', };
@@ -85,7 +93,7 @@ namespace Sparrow.Json
                 obj.GetPropertyByIndex(i, ref prop);
                 WritePropertyName(prop.Name);
 
-                WriteValue(prop.Token & BlittableJsonReaderObject.TypesMask, prop.Value, originalPropertyOrder: false);
+                WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value, originalPropertyOrder: false);
             }
 
             WriteEndObject();
@@ -471,7 +479,19 @@ namespace Sparrow.Json
         {
             if (val.IsNaN())
             {
-                WriteNaN();
+                WriteBufferFor(NaNBuffer);
+                return;
+            }
+
+            if (val.IsPositiveInfinity())
+            {
+                WriteBufferFor(PositiveInfinityBuffer);
+                return;
+            }
+
+            if (val.IsNegativeInfinity())
+            {
+                WriteBufferFor(NegativeInfinityBuffer);
                 return;
             }
 
@@ -479,10 +499,9 @@ namespace Sparrow.Json
             WriteRawString(lazyStringValue.Buffer, lazyStringValue.Size);
         }
 
-        public void WriteNaN()
+        public void WriteBufferFor(byte[] buffer)
         {
-            EnsureBuffer(5);
-            var buffer = NaNBuffer;
+            EnsureBuffer(buffer.Length);
             for (int i = 0; i < buffer.Length; i++)
             {
                 _buffer[_pos++] = buffer[i];
@@ -493,7 +512,19 @@ namespace Sparrow.Json
         {
             if (double.IsNaN(val))
             {
-                WriteNaN();
+                WriteBufferFor(NaNBuffer);
+                return;
+            }
+
+            if (double.IsPositiveInfinity(val))
+            {
+                WriteBufferFor(PositiveInfinityBuffer);
+                return;
+            }
+
+            if (double.IsNegativeInfinity(val))
+            {
+                WriteBufferFor(NegativeInfinityBuffer);
                 return;
             }
 

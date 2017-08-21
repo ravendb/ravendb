@@ -29,6 +29,7 @@ class appUrl {
 
         databases: ko.pureComputed(() => appUrl.forDatabases()),
         manageDatabaseGroup: ko.pureComputed(() => appUrl.forManageDatabaseGroup(appUrl.currentDatabase())),
+        clientConfiguration: ko.pureComputed(() => appUrl.forClientConfiguration(appUrl.currentDatabase())),
         documents: ko.pureComputed(() => appUrl.forDocuments(null, appUrl.currentDatabase())),
         revisionsBin: ko.pureComputed(() => appUrl.forRevisionsBin(appUrl.currentDatabase())),
         conflicts: ko.pureComputed(() => appUrl.forConflicts(appUrl.currentDatabase())),
@@ -42,6 +43,7 @@ class appUrl {
         editExternalReplication: (taskId?: number) => ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase(), taskId)),
         editPeriodicBackupTask: (taskId?: number) => ko.pureComputed(() => appUrl.forEditPeriodicBackupTask(appUrl.currentDatabase(), taskId)),
         editSubscription: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase(), taskId, taskName)),
+        editRavenEtl: (taskId?: number, taskName?: string) => ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase(), taskId, taskName)),
         newTransformer: ko.pureComputed(() => appUrl.forNewTransformer(appUrl.currentDatabase())),
         editTransformer: (transformerName?: string) => ko.pureComputed(() => appUrl.forEditTransformer(transformerName, appUrl.currentDatabase())),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
@@ -55,10 +57,9 @@ class appUrl {
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editSubscriptionTaskUrl: ko.pureComputed(() => appUrl.forEditSubscription(appUrl.currentDatabase())),
+        editRavenEtlTaskUrl: ko.pureComputed(() => appUrl.forEditRavenEtl(appUrl.currentDatabase())),
         csvImportUrl: ko.pureComputed(() => appUrl.forCsvImport(appUrl.currentDatabase())),
         status: ko.pureComputed(() => appUrl.forStatus(appUrl.currentDatabase())),
-        replicationPerfStats: ko.pureComputed(() => appUrl.forReplicationPerfStats(appUrl.currentDatabase())),
-        sqlReplicationPerfStats: ko.pureComputed(() => appUrl.forSqlReplicationPerfStats(appUrl.currentDatabase())),
 
         ioStats: ko.pureComputed(() => appUrl.forIoStats(appUrl.currentDatabase())),
 
@@ -78,13 +79,8 @@ class appUrl {
         visualizer: ko.pureComputed(() => appUrl.forVisualizer(appUrl.currentDatabase())),
         databaseRecord: ko.pureComputed(() => appUrl.forDatabaseRecord(appUrl.currentDatabase())),
         quotas: ko.pureComputed(() => appUrl.forQuotas(appUrl.currentDatabase())),
-        replications: ko.pureComputed(() => appUrl.forReplications(appUrl.currentDatabase())),
-        etl: ko.pureComputed(() => appUrl.forEtl(appUrl.currentDatabase())),
-        hotSpare: ko.pureComputed(() => appUrl.forHotSpare()),
         revisions: ko.pureComputed(() => appUrl.forRevisions(appUrl.currentDatabase())),
-        sqlReplications: ko.pureComputed(() => appUrl.forSqlReplications(appUrl.currentDatabase())),
-        editSqlReplication: ko.pureComputed(() => appUrl.forEditSqlReplication(undefined, appUrl.currentDatabase())),
-        sqlReplicationsConnections: ko.pureComputed(() => appUrl.forSqlReplicationConnections(appUrl.currentDatabase())),
+        connectionStrings: ko.pureComputed(() => appUrl.forConnectionStrings(appUrl.currentDatabase())),
         databaseStudioConfig: ko.pureComputed(() => appUrl.forDatabaseStudioConfig(appUrl.currentDatabase())),
 
         statusDebug: ko.pureComputed(() => appUrl.forStatusDebug(appUrl.currentDatabase())),
@@ -98,11 +94,9 @@ class appUrl {
         statusDebugTasks: ko.pureComputed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
 
         statusDebugRoutes: ko.pureComputed(() => appUrl.forStatusDebugRoutes(appUrl.currentDatabase())),
-        statusDebugSqlReplication: ko.pureComputed(() => appUrl.forStatusDebugSqlReplication(appUrl.currentDatabase())),
         statusDebugIndexFields: ko.pureComputed(() => appUrl.forStatusDebugIndexFields(appUrl.currentDatabase())),
         statusDebugIdentities: ko.pureComputed(() => appUrl.forStatusDebugIdentities(appUrl.currentDatabase())),
         statusDebugWebSocket: ko.pureComputed(() => appUrl.forStatusDebugWebSocket(appUrl.currentDatabase())),
-        statusDebugExplainReplication: ko.pureComputed(() => appUrl.forStatusDebugExplainReplication(appUrl.currentDatabase())),
         infoPackage: ko.pureComputed(() => appUrl.forInfoPackage(appUrl.currentDatabase())),
 
         subscriptions: ko.pureComputed(() => appUrl.forSubscriptions(appUrl.currentDatabase())),
@@ -137,20 +131,8 @@ class appUrl {
         return "#admin/settings/addClusterNode";
     }
 
-    static forBackup(): string {
-        return "#admin/settings/backup";
-    }
-
-    static forHotSpare(): string {
-        return "#admin/settings/hotSpare";
-    }
-
     static forCompact(): string {
         return "#admin/settings/compact";
-    }
-
-    static forRestore(): string {
-        return "#admin/settings/restore";
     }
 
     static forAdminLogs(): string {
@@ -183,6 +165,10 @@ class appUrl {
 
     static forAdminJsConsole(): string {
         return "#admin/settings/adminJsConsole";
+    }
+    
+    static forGlobalClientConfiguration(): string {
+        return "#admin/settings/clientConfiguration";
     }
 
     static forStudioConfig(): string {
@@ -248,14 +234,6 @@ class appUrl {
         return "#databases/status?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forReplicationPerfStats(db: database | databaseInfo): string {
-        return "#databases/status/replicationPerfStats?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forSqlReplicationPerfStats(db: database | databaseInfo): string {
-        return "#databases/status/sqlReplicationPerfStats?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forIoStats(db: database | databaseInfo): string {
         return "#databases/status/ioStats?" + appUrl.getEncodedDbPart(db);
     }
@@ -312,10 +290,6 @@ class appUrl {
         return "#databases/status/requests/tracking?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forStatusDebugSqlReplication(db: database | databaseInfo): string {
-        return "#databases/status/debug/sqlReplication?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forStatusDebugIndexFields(db: database | databaseInfo): string {
         return "#databases/status/debug/indexFields?" + appUrl.getEncodedDbPart(db);
     }
@@ -326,10 +300,6 @@ class appUrl {
 
     static forStatusDebugWebSocket(db: database | databaseInfo): string {
         return "#databases/status/debug/webSocket?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forStatusDebugExplainReplication(db: database | databaseInfo): string {
-        return "#databases/status/debug/explainReplication?" + appUrl.getEncodedDbPart(db);
     }
 
     static forInfoPackage(db: database | databaseInfo): string {
@@ -388,29 +358,12 @@ class appUrl {
         return "#databases/settings/quotas?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forReplications(db: database | databaseInfo): string {
-        return "#databases/settings/replication?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forEtl(db: database | databaseInfo): string {
-        return "#databases/settings/etl?" + appUrl.getEncodedDbPart(db);
-    }
-
     static forRevisions(db: database | databaseInfo): string {
         return "#databases/settings/revisions?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forSqlReplications(db: database | databaseInfo): string {
-        return "#databases/settings/sqlReplication?" + appUrl.getEncodedDbPart(db);
-    }
-
-    static forEditSqlReplication(sqlReplicationName: string, db: database | databaseInfo):string {
-        const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/settings/editSqlReplication/" + encodeURIComponent(sqlReplicationName) + "?" + databasePart;
-    }
-
-    static forSqlReplicationConnections(db: database | databaseInfo): string {
-        return "#databases/settings/sqlReplicationConnectionStringsManagement?" + appUrl.getEncodedDbPart(db);
+    static forConnectionStrings(db: database | databaseInfo): string {
+        return "#databases/settings/connectionStrings?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDatabaseStudioConfig(db: database | databaseInfo): string {
@@ -419,6 +372,10 @@ class appUrl {
 
     static forManageDatabaseGroup(db: database | databaseInfo): string {
         return "#databases/manageDatabaseGroup?" + appUrl.getEncodedDbPart(db);
+    }
+    
+    static forClientConfiguration(db: database | databaseInfo): string {
+        return "#databases/settings/clientConfiguration?" + appUrl.getEncodedDbPart(db);
     }
 
     static forDocuments(collectionName: string, db: database | databaseInfo): string {
@@ -583,6 +540,13 @@ class appUrl {
         const taskPart = taskId ? "&taskId=" + taskId : "";
         const taskNamePart = taskName ? "&taskName=" + taskName : ""; 
         return "#databases/tasks/editSubscriptionTask?" + databasePart + taskPart + taskNamePart;
+    }
+
+    static forEditRavenEtl(db: database | databaseInfo, taskId?: number, taskName?: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const taskPart = taskId ? "&taskId=" + taskId : "";
+        const taskNamePart = taskName ? "&taskName=" + taskName : "";
+        return "#databases/tasks/editRavenEtlTask?" + databasePart + taskPart + taskNamePart;
     }
 
     static forSampleData(db: database | databaseInfo): string {

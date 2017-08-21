@@ -4,7 +4,6 @@ using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Transformers;
-using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -29,12 +28,12 @@ namespace Raven.Server.Documents.Queries
 
         public IndexQueryServerSide(string query, BlittableJsonReaderObject queryParameters = null)
         {
-            Query = EscapingHelper.UnescapeLongDataString(query);
+            Query = Uri.UnescapeDataString(query);
             QueryParameters = queryParameters;
-            Metadata = new QueryMetadata(Query, queryParameters);
+            Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(BlittableJsonReaderObject json)
+        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context, QueryMetadataCache cache)
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
@@ -44,7 +43,10 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters);
+            result.Metadata = cache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
+                ? metadata
+                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
+
             return result;
         }
 
@@ -53,16 +55,15 @@ namespace Raven.Server.Documents.Queries
             if (httpContext.Request.Query.TryGetValue("query", out var query) == false || query.Count == 0 || string.IsNullOrWhiteSpace(query[0]))
                 throw new InvalidOperationException("Missing mandatory query string parameter 'query'.");
 
-            var result = new IndexQueryServerSide()
+            var result = new IndexQueryServerSide
             {
-                Query = EscapingHelper.UnescapeLongDataString(query[0]),
+                Query = Uri.UnescapeDataString(query[0]),
                 // all defaults which need to have custom value
                 Start = start,
                 PageSize = pageSize
             };
 
             DynamicJsonValue transformerParameters = null;
-            HashSet<string> includes = null;
             foreach (var item in httpContext.Request.Query)
             {
                 try
@@ -82,12 +83,6 @@ namespace Raven.Server.Documents.Queries
                             break;
                         case "waitForNonStaleResultsTimeout":
                             result.WaitForNonStaleResultsTimeout = TimeSpan.Parse(item.Value[0]);
-                            break;
-                        case "include":
-                            if (includes == null)
-                                includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-                            includes.Add(item.Value[0]);
                             break;
                         case "transformer":
                             result.Transformer = item.Value[0];
@@ -118,13 +113,10 @@ namespace Raven.Server.Documents.Queries
                 }
             }
 
-            if (includes != null)
-                result.Includes = includes.ToArray();
-
             if (transformerParameters != null)
                 result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
-            result.Metadata = new QueryMetadata(result.Query, null);
+            result.Metadata = new QueryMetadata(result.Query, null, 0);
             return result;
         }
     }

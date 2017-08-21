@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Queries
 
                 _sort = ExtractSortFromQuery(query);
 
-                _resultsRetriever = new MapQueryResultRetriever(documents, context, fieldsToFetch);
+                _resultsRetriever = new MapQueryResultRetriever(query, documents, context, fieldsToFetch);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)

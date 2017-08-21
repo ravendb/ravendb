@@ -5,17 +5,17 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
-using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
-using Raven.Client.Server.Operations;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -31,13 +31,14 @@ namespace Raven.Server.Commercial
         private readonly LicenseStatus _licenseStatus = new LicenseStatus();
         private readonly BuildNumber _buildInfo;
         private Timer _leaseLicenseTimer;
+        private long _lastSavedLicenseIndex;
         private RSAParameters? _rsaParameters;
-        private readonly NotificationCenter.NotificationCenter _notificationCenter;
-        private readonly SemaphoreSlim semaphoreSlim = new SemaphoreSlim(1);
+        private readonly ServerStore _serverStore;
+        private readonly SemaphoreSlim _semaphoreSlim = new SemaphoreSlim(1);
 
-        public LicenseManager(NotificationCenter.NotificationCenter notificationCenter)
+        public LicenseManager(ServerStore serverStore)
         {
-            _notificationCenter = notificationCenter;
+            _serverStore = serverStore;
 
             _buildInfo = new BuildNumber
             {
@@ -89,7 +90,7 @@ namespace Raven.Server.Commercial
 
                 _licenseStatus.FirstServerStartDate = firstServerStartDate.Value;
 
-                var license = _licenseStorage.LoadLicense();
+                var license = _serverStore.LoadLicense();
                 if (license == null)
                     return;
 
@@ -116,13 +117,45 @@ namespace Raven.Server.Commercial
                     NotificationSeverity.Warning,
                     details: new ExceptionDetails(e));
 
-                _notificationCenter.Add(alert);
+                _serverStore.NotificationCenter.Add(alert);
             }
         }
 
         public LicenseStatus GetLicenseStatus()
         {
+            var lastLicenseIndex = _serverStore.LastLicenseIndex;
+            if (lastLicenseIndex > _lastSavedLicenseIndex)
+            {
+                _lastSavedLicenseIndex = lastLicenseIndex;
+                ReloadLicense();
+            }
+
             return _licenseStatus;
+        }
+
+        private void ReloadLicense()
+        {
+            var license = _serverStore.LoadLicense();
+            if (license == null)
+            {
+                _licenseStatus.Attributes = null;
+                _licenseStatus.Error = false;
+                _licenseStatus.Message = null;
+                return;
+            }
+
+            try
+            {
+                _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
+                _licenseStatus.Error = false;
+                _licenseStatus.Message = null;
+            }
+            catch (Exception e)
+            {
+                _licenseStatus.Attributes = null;
+                _licenseStatus.Error = true;
+                _licenseStatus.Message = e.Message;
+            }
         }
 
         public async Task RegisterForFreeLicense(UserRegistrationInfo userInfo)
@@ -141,17 +174,39 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public void Activate(License license, bool skipLeaseLicense)
+        public async Task Activate(License license, bool skipLeaseLicense)
         {
+            if (_serverStore.CurrentState == RachisConsensus.State.Passive)
+                throw new InvalidOperationException(
+                    "Couldn't activate license because this node is passive" +
+                    "Passive nodes aren't members of a cluster and require admin action (such as creating a db) " +
+                    "to indicate that this node should create its own cluster");
+
             try
             {
                 _licenseStatus.Attributes = LicenseValidator.Validate(license, RSAParameters);
+                var licenseExpiration = _licenseStatus.Expiration;
+
+                if (licenseExpiration.HasValue == false)
+                {
+                    _licenseStatus.Attributes = null;
+                    throw new LicenseExpiredException(@"License doesn't have an expirtaion date!");
+                }
+
+                if (licenseExpiration < DateTime.UtcNow)
+                {
+                    _licenseStatus.Attributes = null;
+                    throw new LicenseExpiredException($"License already expired on: {licenseExpiration}");
+                }
+
                 _licenseStatus.Error = false;
                 _licenseStatus.Message = null;
 
-                _licenseStorage.SaveLicense(license);
+                _lastSavedLicenseIndex = await _serverStore.PutLicense(license);
                 if (skipLeaseLicense == false)
+#pragma warning disable 4014
                     Task.Run(LeaseLicense);
+#pragma warning restore 4014
             }
             catch (Exception e)
             {
@@ -171,14 +226,29 @@ namespace Raven.Server.Commercial
             }
         }
 
+        public async Task DeactivateLicense()
+        {
+            var license = _serverStore.LoadLicense();
+            if (license == null)
+                return;
+
+            await _serverStore.DeactivateLicense(license);
+        }
+
         private async Task LeaseLicense()
         {
-            if (semaphoreSlim.Wait(0) == false)
+            if (_serverStore.CurrentState != RachisConsensus.State.Leader)
+            {
+                // only the leader is in charge of updating the license
+                return;
+            }
+
+            if (_semaphoreSlim.Wait(0) == false)
                 return;
 
             try
             {
-                var license = _licenseStorage.LoadLicense();
+                var license = _serverStore.LoadLicense();
                 if (license == null)
                     return;
 
@@ -207,7 +277,7 @@ namespace Raven.Server.Commercial
                         newLicense.Keys.SequenceEqual(license.Keys))
                         return;
 
-                    Activate(newLicense, skipLeaseLicense: true);
+                    await Activate(newLicense, skipLeaseLicense: true);
                 }
 
                 var message = "License was updated";
@@ -223,7 +293,7 @@ namespace Raven.Server.Commercial
                     AlertType.LicenseManager_LicenseUpdated,
                     NotificationSeverity.Info);
 
-                _notificationCenter.Add(alert);
+                _serverStore.NotificationCenter.Add(alert);
             }
             catch (Exception e)
             {
@@ -237,11 +307,11 @@ namespace Raven.Server.Commercial
                     NotificationSeverity.Warning,
                     details: new ExceptionDetails(e));
 
-                _notificationCenter.Add(alert);
+                _serverStore.NotificationCenter.Add(alert);
             }
             finally
             {
-                semaphoreSlim.Release();
+                _semaphoreSlim.Release();
             }
         }
 
@@ -264,7 +334,7 @@ namespace Raven.Server.Commercial
                 details: new ExceptionDetails(
                     new InvalidOperationException($"Status code: {response.StatusCode}, response: {responseString}")));
 
-            _notificationCenter.Add(alert);
+            _serverStore.NotificationCenter.Add(alert);
         }
 
         public void Dispose()

@@ -239,6 +239,11 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
+
+            writer.WriteArray(nameof(result.IncludedPaths),
+                result.IncludedPaths);
+            writer.WriteComma();
+
             writer.WriteQueryResult(context, result, metadataOnly, out numberOfResults, partial: true);
 
             writer.WriteEndObject();
@@ -599,7 +604,7 @@ namespace Raven.Server.Json
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
-            writer.WriteString(statistics.DatabaseId.ToString());
+            writer.WriteString(statistics.DatabaseId);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Is64Bit));
@@ -737,6 +742,22 @@ namespace Raven.Server.Json
             writer.WriteStartObject();
             var isFirstInternal = true;
             foreach (var kvp in indexDefinition.Configuration)
+            {
+                if (isFirstInternal == false)
+                    writer.WriteComma();
+
+                isFirstInternal = false;
+
+                writer.WritePropertyName(kvp.Key);
+                writer.WriteString(kvp.Value);
+            }
+            writer.WriteEndObject();
+            writer.WriteComma();
+
+            writer.WritePropertyName(nameof(indexDefinition.AdditionalSources));
+            writer.WriteStartObject();
+            isFirstInternal = true;
+            foreach (var kvp in indexDefinition.AdditionalSources)
             {
                 if (isFirstInternal == false)
                     writer.WriteComma();

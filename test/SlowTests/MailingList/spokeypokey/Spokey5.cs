@@ -131,7 +131,7 @@ namespace SlowTests.MailingList.spokeypokey
                         .Customize(x => x.WaitForNonStaleResults())
                         .FirstOrDefault(p => p.Name == provider1.Name);
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.NotNull(result);
                     Assert.Equal(provider1.Name, result.Name);

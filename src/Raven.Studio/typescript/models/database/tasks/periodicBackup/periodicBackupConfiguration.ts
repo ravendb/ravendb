@@ -3,19 +3,21 @@ import localSettings = require("models/database/tasks/periodicBackup/localSettin
 import s3Settings = require("models/database/tasks/periodicBackup/s3Settings");
 import glacierSettings = require("models/database/tasks/periodicBackup/glacierSettings");
 import azureSettings = require("models/database/tasks/periodicBackup/azureSettings");
+import ftpSettings = require("models/database/tasks/periodicBackup/ftpSettings");
 import getNextBackupOccurrenceCommand = require("commands/database/tasks/getNextBackupOccurrenceCommand");
 
 class periodicBackupConfiguration {
     taskId = ko.observable<number>();
     disabled = ko.observable<boolean>();
     name = ko.observable<string>();
-    backupType = ko.observable<Raven.Client.Server.PeriodicBackup.BackupType>();
+    backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
     fullBackupFrequency = ko.observable<string>();
     incrementalBackupFrequency = ko.observable<string>();
     localSettings = ko.observable<localSettings>();
     s3Settings = ko.observable<s3Settings>();
     glacierSettings = ko.observable<glacierSettings>();
     azureSettings = ko.observable<azureSettings>();
+    ftpSettings = ko.observable<ftpSettings>();
 
     fullBackupHumanReadable: KnockoutComputed<string>;
     fullBackupParsingError = ko.observable<string>();
@@ -38,7 +40,7 @@ class periodicBackupConfiguration {
         { label: "At 15 minutes past the hour, every 3 hours", value: "15 */3 * * *", full: false, incremental: true }
     ];
 
-    constructor(dto: Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration) {
+    constructor(dto: Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration) {
         this.taskId(dto.TaskId);
         this.disabled(dto.Disabled);
         this.name(dto.Name);
@@ -49,6 +51,7 @@ class periodicBackupConfiguration {
         this.s3Settings(!dto.S3Settings ? s3Settings.empty() : new s3Settings(dto.S3Settings));
         this.glacierSettings(!dto.GlacierSettings ? glacierSettings.empty() : new glacierSettings(dto.GlacierSettings));
         this.azureSettings(!dto.AzureSettings ? azureSettings.empty() : new azureSettings(dto.AzureSettings));
+        this.ftpSettings(!dto.FtpSettings ? ftpSettings.empty() : new ftpSettings(dto.FtpSettings));
 
         this.fullBackupHumanReadable = ko.pureComputed(() => {
             return periodicBackupConfiguration.getHumanReadable(
@@ -182,7 +185,7 @@ class periodicBackupConfiguration {
         return false;
     }
 
-    useBackupType(backupType: Raven.Client.Server.PeriodicBackup.BackupType) {
+    useBackupType(backupType: Raven.Client.ServerWide.PeriodicBackup.BackupType) {
         this.backupType(backupType);
     }
 
@@ -233,7 +236,7 @@ class periodicBackupConfiguration {
             });
     }
 
-    toDto(): Raven.Client.Server.PeriodicBackup.PeriodicBackupConfiguration {
+    toDto(): Raven.Client.ServerWide.PeriodicBackup.PeriodicBackupConfiguration {
         return {
             TaskId: this.taskId(),
             Disabled: this.disabled(),
@@ -244,7 +247,8 @@ class periodicBackupConfiguration {
             LocalSettings: this.localSettings().toDto(),
             S3Settings: this.s3Settings().toDto(),
             GlacierSettings: this.glacierSettings().toDto(),
-            AzureSettings: this.azureSettings().toDto()
+            AzureSettings: this.azureSettings().toDto(),
+            FtpSettings: this.ftpSettings().toDto()
         };
     }
 
@@ -259,7 +263,8 @@ class periodicBackupConfiguration {
             LocalSettings: localSettings.empty().toDto(),
             S3Settings: s3Settings.empty().toDto(),
             GlacierSettings: glacierSettings.empty().toDto(),
-            AzureSettings: azureSettings.empty().toDto()
+            AzureSettings: azureSettings.empty().toDto(),
+            FtpSettings: ftpSettings.empty().toDto()
         });
     }
 }

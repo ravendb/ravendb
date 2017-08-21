@@ -1,6 +1,6 @@
-﻿using Raven.Client.Documents.Conventions;
+﻿using System;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
-using System;
 
 namespace Raven.Client.Documents.Session
 {
@@ -12,7 +12,7 @@ namespace Raven.Client.Documents.Session
         AlphaNumeric
     }
 
-    public static class OrderingUtil
+    internal static class OrderingUtil
     {
         public static OrderingType GetOrderingOfType(Type fieldType)
         {

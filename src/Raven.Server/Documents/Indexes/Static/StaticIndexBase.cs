@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public delegate IEnumerable IndexingFunc(IEnumerable<dynamic> items); 
+    public delegate IEnumerable IndexingFunc(IEnumerable<dynamic> items);
 
     public abstract class StaticIndexBase
     {
@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Indexes.Static
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void Add(AbstractField field)
             {
-                _fields.Add(field);                
+                _fields.Add(field);
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

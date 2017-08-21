@@ -113,13 +113,6 @@ namespace Raven.Client.Documents.Indexes
             return count;
         }
 
-        internal string MemberBindingToString(MemberBinding node)
-        {
-            var builder = new ExpressionStringBuilder(_convention, _translateIdentityProperty, _queryRoot, _queryRootName);
-            builder.VisitMemberBinding(node);
-            return builder.ToString();
-        }
-
         private void Out(char c)
         {
             _out.Append(c);
@@ -261,13 +254,6 @@ namespace Raven.Client.Documents.Indexes
             if (prop != null)
                 return prop.PropertyType;
             return ((FieldInfo)member).FieldType;
-        }
-
-        internal string SwitchCaseToString(SwitchCase node)
-        {
-            var builder = new ExpressionStringBuilder(_convention, _translateIdentityProperty, _queryRoot, _queryRootName);
-            builder.VisitSwitchCase(node);
-            return builder.ToString();
         }
 
         /// <summary>

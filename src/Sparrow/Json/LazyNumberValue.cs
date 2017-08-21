@@ -8,6 +8,7 @@ namespace Sparrow.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
+        private float? _floatVal;
         private decimal? _decimalVal;
         private long? _longVal;
         private ulong? _ulongVal;
@@ -50,6 +51,16 @@ namespace Sparrow.Json
         public static implicit operator string(LazyNumberValue self)
         {
             return self.Inner;
+        }
+
+        public static implicit operator float(LazyNumberValue self)
+        {
+            if (self._floatVal != null)
+                return (float)self._floatVal;
+
+            var val = float.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            self._floatVal = val;
+            return val;
         }
 
         public static implicit operator decimal(LazyNumberValue self)
@@ -179,7 +190,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return this.Inner.ToString();
+            return Inner.ToString();
         }
 
         public string ToString(string format)
@@ -194,6 +205,22 @@ namespace Sparrow.Json
                 return true;
 
             return Inner.Equals("NaN");
+        }
+
+        public bool IsPositiveInfinity()
+        {
+            if (_val.HasValue && double.IsPositiveInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("Infinity");
+        }
+
+        public bool IsNegativeInfinity()
+        {
+            if (_val.HasValue && double.IsNegativeInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("-Infinity");
         }
 
         public TypeCode GetTypeCode()

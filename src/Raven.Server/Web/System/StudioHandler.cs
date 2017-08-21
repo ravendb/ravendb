@@ -17,7 +17,6 @@ using System.Linq;
 using System.Net.Http.Headers;
 using Microsoft.Extensions.Primitives;
 using Raven.Client;
-using Raven.Client.Extensions;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
 using StringSegment = Sparrow.StringSegment;
@@ -126,8 +125,7 @@ namespace Raven.Server.Web.System
         public async Task GetStudioFile()
         {
             var fileName = new StringSegment(
-                RouteMatch.Url,
-                RouteMatch.Url.Length - RouteMatch.MatchLength, RouteMatch.MatchLength);
+                RouteMatch.Url, RouteMatch.MatchLength, RouteMatch.Url.Length - RouteMatch.MatchLength);
 
             var env = (IHostingEnvironment)HttpContext.RequestServices.GetService(typeof(IHostingEnvironment));
 

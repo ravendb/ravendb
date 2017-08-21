@@ -1,6 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Replication.Messages;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -31,7 +29,7 @@ namespace Raven.Server.Documents
         {
             Document = 1,
             Attachment = 2,
-            Revision = 3,
+            Revision = 3
         }
 
         public DynamicJsonValue ToJson()
