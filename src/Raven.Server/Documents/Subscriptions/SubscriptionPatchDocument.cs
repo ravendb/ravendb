@@ -7,50 +7,44 @@ using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScrip
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionPatchDocument : DocumentPatcherBase
+    public class SubscriptionPatchDocument
     {
         public readonly string FilterJavaScript;
         private readonly PatchRequest _patchRequest;
 
-        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) : base(database)
+        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) 
         {
             FilterJavaScript = filterJavaScript;
-            _patchRequest = new PatchRequest
-            {
-                Script = filterJavaScript
-            };
+            _patchRequest = new PatchRequest(filterJavaScript);
         }
 
-        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
-        {
-
-        }
 
         public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;
+            return false;
 
-            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
-            {
-                ApplySingleScript(context, document.Id, document, _patchRequest, scope);
+            //using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
+            //{
+            //    ApplySingleScript(context, document.Id, document, _patchRequest, scope);
 
-                var result = scope.ActualPatchResult;
+            //    var result = scope.ActualPatchResult;
 
-                if (result is bool)
-                    return (bool)result;
+            //    if (result is bool)
+            //        return (bool)result;
 
-                if (result is ObjectInstance)
-                {
-                    var transformedDynamic = scope.ToBlittable(result as ObjectInstance);
-                    transformResult = context.ReadObject(transformedDynamic, document.Id);
-                    return true;
-                }
+            //    if (result is ObjectInstance)
+            //    {
+            //        var transformedDynamic = scope.ToBlittable(result as ObjectInstance);
+            //        transformResult = context.ReadObject(transformedDynamic, document.Id);
+            //        return true;
+            //    }
 
-                if (result == Null.Value || result == Undefined.Value)
-                    return false; // todo: check if that is the value that we want here
+            //    if (result == Null.Value || result == Undefined.Value)
+            //        return false; // todo: check if that is the value that we want here
 
-                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return type is {result?.GetType()}, instead of bool, object, undefined or null");
-            }
+            //    throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return type is {result?.GetType()}, instead of bool, object, undefined or null");
+            //}
         }
     }
 }

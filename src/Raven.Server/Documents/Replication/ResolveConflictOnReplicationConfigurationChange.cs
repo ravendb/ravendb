@@ -341,10 +341,7 @@ namespace Raven.Server.Documents.Replication
 
             var patch = new PatchConflict(_database, conflicts);
             var updatedConflict = conflicts[0];
-            var patchRequest = new PatchRequest
-            {
-                Script = scriptResolver.Script
-            };
+            var patchRequest = new PatchRequest(scriptResolver.Script);
             if (patch.TryResolveConflict(context, patchRequest, out BlittableJsonReaderObject resolved) == false)
             {
                 return false;

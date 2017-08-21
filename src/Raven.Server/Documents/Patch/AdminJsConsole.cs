@@ -11,13 +11,13 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class AdminJsConsole : DocumentPatcherBase
+    public class AdminJsConsole
     {
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("AdminJsConsole");
         private readonly RavenServer _server;
         private Stopwatch _sw;
 
-        public AdminJsConsole(DocumentDatabase database) : base(database)
+        public AdminJsConsole(DocumentDatabase database)
         {
             if (Log.IsOperationsEnabled)
             {
@@ -34,95 +34,93 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
-        {
-        }
-
         private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
         private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
         public object ApplyScript(AdminJsScript script)
         {
-            _sw = Stopwatch.StartNew();
-            ScriptEngine scriptEngint;
-            if (Log.IsOperationsEnabled)
-            {
-                Log.Operations($"Script : \"{script.Script}\"");
-            }
-            try
-            {
-                scriptEngint = GetEngine(script, ExecutionStr);
-            }
-            catch (Exception e)
-            {
-                if (Log.IsOperationsEnabled)
-                {
-                    Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
-                }
-                throw;
-            }
-            object jsVal;
-            try
-            {
-                jsVal = scriptEngint.CallGlobalFunction("ExecuteAdminScript", Database);
-            }
-            catch (Exception e)
-            {
-                if (Log.IsOperationsEnabled)
-                {
-                    Log.Operations("An Exception was thrown while executing the script: ", e);
-                }
-                throw;
-            }
+            return null;
+            //_sw = Stopwatch.StartNew();
+            //ScriptEngine scriptEngint;
+            //if (Log.IsOperationsEnabled)
+            //{
+            //    Log.Operations($"Script : \"{script.Script}\"");
+            //}
+            //try
+            //{
+            //    scriptEngint = GetEngine(script, ExecutionStr);
+            //}
+            //catch (Exception e)
+            //{
+            //    if (Log.IsOperationsEnabled)
+            //    {
+            //        Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
+            //    }
+            //    throw;
+            //}
+            //object jsVal;
+            //try
+            //{
+            //    jsVal = scriptEngint.CallGlobalFunction("ExecuteAdminScript", Database);
+            //}
+            //catch (Exception e)
+            //{
+            //    if (Log.IsOperationsEnabled)
+            //    {
+            //        Log.Operations("An Exception was thrown while executing the script: ", e);
+            //    }
+            //    throw;
+            //}
 
-            if (Log.IsOperationsEnabled)
-            {
-                Log.Operations($"Finished executing database script. Total time: {_sw.Elapsed} ");
-            }
-            return ConvertResults(jsVal, Database);
+            //if (Log.IsOperationsEnabled)
+            //{
+            //    Log.Operations($"Finished executing database script. Total time: {_sw.Elapsed} ");
+            //}
+            //return ConvertResults(jsVal, Database);
         }
 
         public object ApplyServerScript(AdminJsScript script)
         {
-            _sw = Stopwatch.StartNew();
-            ScriptEngine jintEngine;
-            if (Log.IsOperationsEnabled)
-            {
-                Log.Operations($"Script : \"{script.Script}\"");
-            }
-            try
-            {
-                jintEngine = GetEngine(script, ServerExecutionStr);
-            }
-            catch (Exception e)
-            {
-                if (Log.IsOperationsEnabled)
-                {
-                    Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
-                }
-                throw;
-            }
+            return null;
+            //_sw = Stopwatch.StartNew();
+            //ScriptEngine jintEngine;
+            //if (Log.IsOperationsEnabled)
+            //{
+            //    Log.Operations($"Script : \"{script.Script}\"");
+            //}
+            //try
+            //{
+            //    jintEngine = GetEngine(script, ServerExecutionStr);
+            //}
+            //catch (Exception e)
+            //{
+            //    if (Log.IsOperationsEnabled)
+            //    {
+            //        Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
+            //    }
+            //    throw;
+            //}
 
-            object jsVal;
-            try
-            {
-                jsVal = jintEngine.CallGlobalFunction("ExecuteAdminScript", _server);
-            }
-            catch (Exception e)
-            {
-                if (Log.IsOperationsEnabled)
-                {
-                    Log.Operations("An Exception was thrown while executing the script: ", e);
-                }
-                throw;
-            }
+            //object jsVal;
+            //try
+            //{
+            //    jsVal = jintEngine.CallGlobalFunction("ExecuteAdminScript", _server);
+            //}
+            //catch (Exception e)
+            //{
+            //    if (Log.IsOperationsEnabled)
+            //    {
+            //        Log.Operations("An Exception was thrown while executing the script: ", e);
+            //    }
+            //    throw;
+            //}
 
-            if (Log.IsOperationsEnabled)
-            {
-                Log.Operations($"Finished executing server script. Total time: {_sw.Elapsed} ");
-            }
+            //if (Log.IsOperationsEnabled)
+            //{
+            //    Log.Operations($"Finished executing server script. Total time: {_sw.Elapsed} ");
+            //}
 
-            return ConvertResults(jsVal, Database);
+            //return ConvertResults(jsVal, Database);
         }
 
         private object ConvertResults(object jsVal, DocumentDatabase database = null)
