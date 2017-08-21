@@ -224,7 +224,6 @@ namespace Raven.Server.ServerWide
         public async Task RemoveFromClusterAsync(string nodeTag)
         {
             await _engine.RemoveFromClusterAsync(nodeTag).WithCancellation(_shutdownNotification.Token);
-            await _engine.EnsureNodeRemovalOnDeletion(nodeTag);
         }
 
         public void Initialize()
