@@ -51,7 +51,6 @@ namespace SlowTests.Bugs.LiveProjections
                     var rep = session.Advanced.DocumentQuery<ProductDetailsReport>()
                         .WaitForNonStaleResultsAsOfNow()
                         .RawQuery(@"
-
 declare function mapVariants(v) {
     v.Name = v.Name.toUpperCase();
     v.IsInStock = v.QuantityInWarehouse > 0;
