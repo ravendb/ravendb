@@ -193,7 +193,7 @@ namespace Sparrow
 
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public bool EndssWith(string postfix)
+        public bool EndsWith(string postfix)
         {
             if (postfix.Length > Length)
                 return false;
