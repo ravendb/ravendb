@@ -8,6 +8,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -88,6 +89,10 @@ namespace Raven.Server.Documents.Handlers
                     catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        context.Write(writer, json: new DynamicJsonValue
+                        {
+                            ["Error"] = "Index " + query.Metadata.IndexName + " does not exists"
+                        });
                     }
                 }
             }
