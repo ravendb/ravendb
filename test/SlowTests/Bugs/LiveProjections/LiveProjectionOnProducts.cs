@@ -45,24 +45,22 @@ namespace SlowTests.Bugs.LiveProjections
                     session.Store(product);
                     session.SaveChanges();
                 }
-
+                WaitForUserToContinueTheTest(documentStore);
                 using (var session = documentStore.OpenSession())
                 {
                     var rep = session.Advanced.DocumentQuery<ProductDetailsReport>()
                         .WaitForNonStaleResultsAsOfNow()
                         .RawQuery(@"
+
 declare function mapVariants(v) {
-    for(var i = 0; i< v.length; i++)
-    {
-        v.IsInStock = v.QuantityInWarehouse > 0
-    }
+    v.Name = v.Name.toUpperCase();
+    v.IsInStock = v.QuantityInWarehouse > 0;
     return v;
 }
 from index 'ProductDetailsReport/ByProductId' as p
-with load(p.Variants) as v[]
 select {
     Name: p.Name,
-    Variants: 
+    Variants: p.Variants.map(mapVariants)
 }
 ")
                         .ToList();
@@ -71,7 +69,7 @@ select {
 
                     Assert.Equal(first.Name, "product 1");
                     Assert.Equal(first.Id, "products/1-A");
-                    Assert.Equal(first.Variants[0].Name, "variant 1");
+                    Assert.Equal(first.Variants[0].Name, "VARIANT 1");
                 }
             }
         }
