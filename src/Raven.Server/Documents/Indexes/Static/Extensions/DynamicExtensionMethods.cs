@@ -7,23 +7,6 @@ namespace Raven.Server.Documents.Indexes.Static.Extensions
 {
     public static class DynamicExtensionMethods
     {
-        public static dynamic StripHtml(dynamic o)
-        {
-            if (o == null)
-                return DynamicNullObject.Null;
-
-            if (TryGetString(o, out string value) == false)
-                return DynamicNullObject.Null;
-
-            if (value == string.Empty)
-                return value;
-
-            var document = new HtmlDocument();
-            document.LoadHtml(value);
-
-            return document.DocumentNode.InnerText.Trim();
-        }
-
         public static BoostedValue Boost(dynamic o, object value)
         {
             return new BoostedValue
