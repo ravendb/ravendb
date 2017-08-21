@@ -605,11 +605,6 @@ namespace Raven.Client.Http
                     sp.Stop();
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
                     {
-                        if (command.GetType() == typeof(GetNodeInfoCommand))
-                        {
-                            throw new InvalidOperationException($"Tried to send GetNodeInfoCommand request to {chosenNode.Url} and failed. A connection with {chosenNode.Url} could not be established", e);
-                        }
-
                         throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, e);
                     }
 
@@ -642,11 +637,6 @@ namespace Raven.Client.Http
                                 var name = databaseMissing.FirstOrDefault();
                                 if (name != null)
                                     throw new DatabaseDoesNotExistException(name);
-                            }
-
-                            if (command.GetType() == typeof(GetNodeInfoCommand))
-                            {
-                                throw new InvalidOperationException($"Tried to send GetNodeInfoCommand request to {chosenNode.Url} and received unsuccessful response. Response status code was {response.StatusCode}");
                             }
 
                             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
