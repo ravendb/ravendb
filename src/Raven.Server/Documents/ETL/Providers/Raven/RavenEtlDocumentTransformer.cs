@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint.Native;
+using Jurassic.Library;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -27,14 +27,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string collectionName, JsValue document, PatcherOperationScope scope)
+        protected override void LoadToFunction(string collectionName, object document, PatcherOperationScope scope)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
             if (document == null)
                 ThrowLoadParameterIsMandatory(nameof(document));
 
-            var transformed = scope.ToBlittable(document.AsObject());
+            var transformed = scope.ToBlittable(document as ObjectInstance);
 
             string id;
 

@@ -1,8 +1,9 @@
-﻿using Jint;
-using Raven.Client.Exceptions.Documents.Patching;
+﻿using Jurassic;
+using Jurassic.Library;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Subscriptions
 {
@@ -20,12 +21,12 @@ namespace Raven.Server.Documents.Subscriptions
             };
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
 
         }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
             
         }
@@ -40,20 +41,20 @@ namespace Raven.Server.Documents.Subscriptions
 
                 var result = scope.ActualPatchResult;
 
-                if (result.IsBoolean())
-                    return result.AsBoolean();
+                if (result is bool)
+                    return (bool)result;
 
-                if (result.IsObject())
+                if (result is ObjectInstance)
                 {
-                    var transformedDynamic = scope.ToBlittable(result.AsObject());
+                    var transformedDynamic = scope.ToBlittable(result as ObjectInstance);
                     transformResult = context.ReadObject(transformedDynamic, document.Id);
                     return true;
                 }
 
-                if (result.IsNull() || result.IsUndefined())
+                if (result == Null.Value || result == Undefined.Value)
                     return false; // todo: check if that is the value that we want here
 
-                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object, undefined or null");
+                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return type is {result?.GetType()}, instead of bool, object, undefined or null");
             }
         }
     }
