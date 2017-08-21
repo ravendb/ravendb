@@ -44,7 +44,12 @@ namespace Raven.Client.Documents.Conventions
                 if (key == Constants.Documents.Metadata.Key && value is JObject json)
                 {
                     if (json.TryGetValue(Constants.Documents.Metadata.Id, out var id))
+                    {
+                        if (_generateEntityIdOnTheClient.TryGetIdFromInstance(o, out var existing) &&
+                            existing != null)
+                            return;
                         _generateEntityIdOnTheClient.TrySetIdentity(o, id.Value<string>());
+                    }
                 }
             }))
             {
