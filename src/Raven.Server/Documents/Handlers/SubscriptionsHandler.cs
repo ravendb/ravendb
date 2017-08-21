@@ -62,13 +62,11 @@ namespace Raven.Server.Documents.Handlers
                     switch (changeVectorSpecialValue)
                     {
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.BeginningOfTime:
+                        case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
                             state.ChangeVectorForNextBatchStartingPoint= null;
                             break;
                         case Constants.Documents.SubscriptionChangeVectorSpecialStates.LastDocument:
                             state.ChangeVectorForNextBatchStartingPoint = Database.DocumentsStorage.GetLastDocumentChangeVector(context, state.Criteria.Collection);
-                            break;
-                        case Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange:
-                            state.ChangeVectorForNextBatchStartingPoint = null;
                             break;
                     }
                 }
@@ -162,7 +160,7 @@ namespace Raven.Server.Documents.Handlers
             await NoContent();
         }
 
-        [RavenAction("/databases/*/subscriptions/SubscriptionState", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/state", "GET", AuthorizationStatus.ValidUser)]
         public Task GetSubscriptionState()
         {
             var subscriptionName = GetStringQueryString("name", false);
@@ -194,7 +192,7 @@ namespace Raven.Server.Documents.Handlers
             }
         }
         
-        [RavenAction("/databases/*/subscriptions/SubscriptionConnectionDetails", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/subscriptions/connection-details", "GET", AuthorizationStatus.ValidUser)]
         public Task GetSubscriptionConnectionDetails()
         {
             SetupCORSHeaders();

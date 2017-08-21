@@ -42,7 +42,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
         this.startingPointType("Beginning of Time");
 
         this.startingPointChangeVector = ko.pureComputed(() => {
-            return this.startingPointType() === "Change-Vector";
+            return this.startingPointType() === "Change Vector";
         });
 
         this.startingPointLatestDocument = ko.pureComputed(() => {
@@ -77,7 +77,7 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
                     changeVector = "LastDocument";
                 };
                 break;
-            case "Change-Vector":
+            case "Change Vector":
                 {
                     changeVector = this.startingChangeVector();
                 };
@@ -120,12 +120,12 @@ class ongoingTaskSubscriptionEditModel extends ongoingTaskSubscriptionModel {
             validation: [
                 {
                     validator: () => {
-                        const goodState1 = this.setStartingPoint() && this.startingPointType() === 'Change-Vector' && this.startingChangeVector();
-                        const goodState2 = this.setStartingPoint() && this.startingPointType() !== 'Change-Vector';
+                        const goodState1 = this.setStartingPoint() && this.startingPointType() === 'Change Vector' && this.startingChangeVector();
+                        const goodState2 = this.setStartingPoint() && this.startingPointType() !== 'Change Vector';
                         const goodState3 = !this.setStartingPoint();
                         return goodState1 || goodState2 || goodState3;
                     },
-                    message: "Please enter change-vector"
+                    message: "Please enter change vector"
                 }]
         });
 

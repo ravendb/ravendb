@@ -261,7 +261,7 @@
                                                 </span>
                                             </li>
                                             <!-- ko if: clientDetailsIssue -->
-                                            <li><span>Status:</span><strong data-bind="text: clientDetailsIssue"></strong></li>
+                                            <li><span>Status:</span><span data-bind="text: clientDetailsIssue, attr: { class: 'text-' + textClass() }"></span></li>
                                             <!-- /ko -->
                                         </ul>
                                     </div>

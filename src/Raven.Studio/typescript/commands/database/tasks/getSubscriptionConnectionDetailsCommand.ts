@@ -17,7 +17,7 @@ class getSubscriptionConnectionDetailsCommand extends commandBase {
 
     private getConnectionDetails(): JQueryPromise<Raven.Server.Documents.TcpHandlers.SubscriptionConnectionDetails> {
 
-        const url = endpoints.databases.subscriptions.subscriptionsSubscriptionConnectionDetails;
+        const url = endpoints.databases.subscriptions.subscriptionsConnectionDetails;
         const args = { id: this.taskId, name: this.taskName };
 
         // Note: The 'relative url' has to be prefixed with the 'base url' 
