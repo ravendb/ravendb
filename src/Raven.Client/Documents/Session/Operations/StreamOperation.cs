@@ -28,16 +28,13 @@ namespace Raven.Client.Documents.Session.Operations
             _statistics = statistics;
         }
 
-        public QueryStreamCommand CreateRequest(string indexName, IndexQuery query)
+        public QueryStreamCommand CreateRequest(IndexQuery query)
         {
             _isQueryStream = true;
 
             if (query.WaitForNonStaleResults || query.WaitForNonStaleResultsAsOfNow)
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
-
-            if (string.IsNullOrEmpty(indexName))
-                throw new ArgumentException("Key cannot be null or empty index");
 
             _session.IncrementRequestCount();
 
@@ -76,6 +73,9 @@ namespace Raven.Client.Documents.Session.Operations
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
+            if(response == null)
+                throw new InvalidOperationException("The index does not exists, failed to stream results");
+
             var state = new JsonParserState();
             JsonOperationContext.ManagedPinnedBuffer buffer;
 
