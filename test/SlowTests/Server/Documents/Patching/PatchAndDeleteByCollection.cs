@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.Patching
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users"},  new PatchRequest
                 {
-                    Script = "this.Name = __document_id"
+                    Script = "this.Name = this(id)"
                 }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 

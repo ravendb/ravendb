@@ -122,7 +122,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            var loaded = load(this.AttachmentIds[0]);
                             this.Title = loaded.Title;
                         "
                         }));
@@ -138,7 +138,7 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            var loaded = LoadDocument(this.AttachmentIds[0]);
+                            var loaded = load(this.AttachmentIds[0]);
                             this.Title = loaded.Title;
                             output(this.Title); 
                         "
