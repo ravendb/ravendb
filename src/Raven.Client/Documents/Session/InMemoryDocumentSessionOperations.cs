@@ -797,10 +797,14 @@ more responsive application.
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
-                var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
-                OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
-                if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
-                    document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                var onOnBeforeStore = OnBeforeStore;
+                if (onOnBeforeStore != null)
+                {
+                    onOnBeforeStore(this, new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key));
+                    UpdateMetadataModifications(entity.Value);
+                    if (EntityChanged(document, entity.Value, null))
+                        document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                }
 
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);
