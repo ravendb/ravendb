@@ -45,6 +45,8 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public override void Initalize()
         {
             base.Initalize();
+            if (SingleRun == null)
+                return;
             SingleRun.ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
             SingleRun.ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToNVarchar);
             SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);

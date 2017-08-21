@@ -89,6 +89,10 @@ namespace Raven.Server.Documents.Patch
             {
                 WriteInstance(obj, recursiveCall);
             }
+            else if (v is ConcatenatedString cs)
+            {
+                _writer.WriteValue(cs.ToString());
+            }
             else
             {
                 throw new NotSupportedException(v.GetType().ToString());
