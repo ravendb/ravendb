@@ -60,7 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
-    <PackageReference Include="HtmlAgilityPack.NetCore" Version="1.5.0.1" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
     <PackageReference Include="Jint" Version="2.10.100" />
     <PackageReference Include="Lucene.Net" Version="3.0.10" />
