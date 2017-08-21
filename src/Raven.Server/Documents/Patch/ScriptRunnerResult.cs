@@ -13,6 +13,8 @@ namespace Raven.Server.Documents.Patch
             _instance = instance;
         }
 
+        public object Value => _instance;
+
         public T TranslateFromJurrasic<T>(JsonOperationContext context, 
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {

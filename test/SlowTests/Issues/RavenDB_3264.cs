@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                                 output({'a': 'c', 'f': { 'x' : 2}});"
                     ;
 
-                var patch = new PatchRequest(script);
+                var patch = new PatchRequest(script, PatchRequestType.None);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {

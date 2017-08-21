@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         {
             _transformation = transformation;
             _config = config;
-            _patchRequest = new PatchRequest(transformation.Script);
+            _patchRequest = new PatchRequest(transformation.Script, PatchRequestType.SqlEtl);
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
 
             var tables = new string[config.SqlTables.Count];

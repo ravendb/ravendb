@@ -12,39 +12,23 @@ namespace Raven.Server.Documents.Subscriptions
         public readonly string FilterJavaScript;
         private readonly PatchRequest _patchRequest;
 
+        public ScriptRunnerCache.Key Key => _patchRequest;
+
         public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) 
         {
             FilterJavaScript = filterJavaScript;
-            _patchRequest = new PatchRequest(filterJavaScript);
+            _patchRequest = new PatchRequest(filterJavaScript, PatchRequestType.Subscription);
         }
 
-
-        public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;
-            return false;
 
-            //using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
-            //{
-            //    ApplySingleScript(context, document.Id, document, _patchRequest, scope);
-
-            //    var result = scope.ActualPatchResult;
-
-            //    if (result is bool)
-            //        return (bool)result;
-
-            //    if (result is ObjectInstance)
-            //    {
-            //        var transformedDynamic = scope.ToBlittable(result as ObjectInstance);
-            //        transformResult = context.ReadObject(transformedDynamic, document.Id);
-            //        return true;
-            //    }
-
-            //    if (result == Null.Value || result == Undefined.Value)
-            //        return false; // todo: check if that is the value that we want here
-
-            //    throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return type is {result?.GetType()}, instead of bool, object, undefined or null");
-            //}
+            var result = run.Run(context, "execute", new object[] { document });
+            if (result.Value is bool b)
+                return b;
+            transformResult = result.TranslateFromJurrasic<BlittableJsonReaderObject>(context);
+            return transformResult != null;
         }
     }
 }
