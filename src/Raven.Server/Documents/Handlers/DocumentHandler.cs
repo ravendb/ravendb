@@ -429,11 +429,12 @@ namespace Raven.Server.Documents.Handlers
                 if (request.TryGet("Patch", out BlittableJsonReaderObject patchCmd) == false || patchCmd == null)
                     throw new ArgumentException("The 'Patch' field in the body request is mandatory");
 
-                var patch = PatchRequest.Parse(patchCmd);
+                var patch = PatchRequest.Parse(patchCmd, out var patchArgs);
 
                 PatchRequest patchIfMissing = null;
+                BlittableJsonReaderObject patchIfMissingArgs = null;
                 if (request.TryGet("PatchIfMissing", out BlittableJsonReaderObject patchIfMissingCmd) && patchIfMissingCmd != null)
-                    patchIfMissing = PatchRequest.Parse(patchIfMissingCmd);
+                    patchIfMissing = PatchRequest.Parse(patchIfMissingCmd, out patchIfMissingArgs);
 
                 var changeVector = context.GetLazyString(GetStringFromHeaders("If-Match"));
 
@@ -441,8 +442,8 @@ namespace Raven.Server.Documents.Handlers
                     id,
                     changeVector,
                     skipPatchIfChangeVectorMismatch,
-                    patch,
-                    patchIfMissing,
+                    (patch, patchArgs),
+                    (patchIfMissing, patchIfMissingArgs),
                     Database,
                     isTest
                 ))

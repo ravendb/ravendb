@@ -23,7 +23,9 @@ namespace Raven.Server.Documents.Handlers
             public string Id;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
+            public BlittableJsonReaderObject PatchArgs;
             public PatchRequest PatchIfMissing;
+            public BlittableJsonReaderObject PatchIfMissingArgs;
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
 
@@ -112,8 +114,8 @@ namespace Raven.Server.Documents.Handlers
                         commandData.PatchCommand =
                             new PatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector,
                                 false,
-                                commandData.Patch,
-                                commandData.PatchIfMissing,
+                                (commandData.Patch, commandData.PatchArgs),
+                                (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
                                 database,
                                 false
                             );
@@ -292,13 +294,13 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.Patch = PatchRequest.Parse(patch);
+                        commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
                     case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
