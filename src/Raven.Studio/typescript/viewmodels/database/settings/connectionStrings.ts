@@ -9,6 +9,7 @@ import getConnectionStringsCommand = require("commands/database/settings/getConn
 import getConnectionStringInfoCommand = require("commands/database/settings/getConnectionStringInfoCommand");
 import deleteConnectionStringCommand = require("commands/database/settings/deleteConnectionStringCommand");
 import eventsCollector = require("common/eventsCollector");
+import generalUtils = require("common/generalUtils");
 
 class connectionStrings extends viewModelBase {
 
@@ -20,12 +21,27 @@ class connectionStrings extends viewModelBase {
 
     testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
     spinners = { test: ko.observable<boolean>(false) };
+    fullErrorDetailsVisible = ko.observable<boolean>(false);
+
+    shortErrorText: KnockoutObservable<string>;
 
     constructor() {
         super();
 
+        this.initObservables();
+        
         this.bindToCurrentInstance("onEditSqlEtl", "onEditRavenEtl", "confirmDeleteRavenEtl", "confirmDeleteSqlEtl");
         this.dirtyFlag = new ko.DirtyFlag([this.editedRavenEtlConnectionString, this.editedSqlEtlConnectionString], false); 
+    }
+    
+    private initObservables() {
+        this.shortErrorText = ko.pureComputed(() => {
+            const result = this.testConnectionResult();
+            if (!result || result.Success) {
+                return "";
+            }
+            return generalUtils.trimMessage(result.Error);
+        });
     }
 
     activate(args: any) {
@@ -81,6 +97,7 @@ class connectionStrings extends viewModelBase {
         this.editedRavenEtlConnectionString().url.subscribe(() => this.clearTestResult());
 
         this.editedSqlEtlConnectionString(null);
+        this.clearTestResult();
     }
 
     onAddSqlEtl() {
@@ -88,9 +105,12 @@ class connectionStrings extends viewModelBase {
         this.editedSqlEtlConnectionString().connectionString.subscribe(() => this.clearTestResult());
 
         this.editedRavenEtlConnectionString(null);
+        this.clearTestResult();
     }
 
     onEditRavenEtl(connectionStringName: string) {
+        this.clearTestResult();
+        
         return getConnectionStringInfoCommand.forRavenEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.RavenConnectionString) => {
@@ -101,6 +121,8 @@ class connectionStrings extends viewModelBase {
     }
 
     onEditSqlEtl(connectionStringName: string) {
+        this.clearTestResult();
+        
         return getConnectionStringInfoCommand.forSqlEtl(this.activeDatabase(), connectionStringName)
             .execute()
             .done((result: Raven.Client.ServerWide.ETL.SqlConnectionString) => {
@@ -112,7 +134,7 @@ class connectionStrings extends viewModelBase {
     
     onTestConnection() {
         if (this.editedRavenEtlConnectionString()) {
-            if (this.isValid(this.editedRavenEtlConnectionString().url)) {
+            if (this.isValid(this.editedRavenEtlConnectionString().testConnectionValidationGroup)) {
                 eventsCollector.default.reportEvent("ravenDB-ETL-connection-string", "test-connection");
 
                 this.spinners.test(true);
@@ -133,23 +155,23 @@ class connectionStrings extends viewModelBase {
     }
 
     onOk() {
-        let type: Raven.Client.ServerWide.ConnectionStringType;
+        let model: connectionStringRavenEtlModel | connectionStringSqlEtlModel;
 
         // 1. Validate model
         if (this.editedRavenEtlConnectionString()) {
-            type = "Raven";
             if (!this.isValid(this.editedRavenEtlConnectionString().validationGroup)) { 
                 return;
             }
+            model = this.editedRavenEtlConnectionString();
         } else {
-            type = "Sql";
             if (!this.isValid(this.editedSqlEtlConnectionString().validationGroup)) {
                 return;
             }
+            model = this.editedSqlEtlConnectionString();
         }
 
         // 2. Create/add the new connection string
-        new saveConnectionStringCommand(this.activeDatabase(), type, this.editedRavenEtlConnectionString(), this.editedSqlEtlConnectionString())
+        new saveConnectionStringCommand(this.activeDatabase(), model)
             .execute()
             .done(() => {
                 // 3. Refresh list view....
