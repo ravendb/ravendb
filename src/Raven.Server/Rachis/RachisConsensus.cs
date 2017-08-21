@@ -1360,17 +1360,20 @@ namespace Raven.Server.Rachis
           
         }
 
-        public Task<(long Etag, object Result)> EnsureNodeRemovalOnDeletion(string nodeTag)
+        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
         {
-            var remove = new RemoveNodeFromClusterCommand
+            var djv = new RemoveNodeFromClusterCommand
             {
                 RemovedNode = nodeTag
+            }.ToJson(context);
+            var index = InsertToLeaderLog(context, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
+                {
+                    _currentLeader.AddToEntries(index);
+                }
             };
-            var leader = _currentLeader;
-            if (leader == null)
-                throw new NotLeadingException("There is no leader, cannot accept commands. " + _lastStateChangeReason);
-
-            return leader.PutAsync(remove);
         }
 
         private volatile string _leaderTag;
