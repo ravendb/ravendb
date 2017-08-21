@@ -33,6 +33,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 DynamicInvocationExpressionsRewriter.Instance,
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,
+                TransformNullCoalescingOperatorTransformer.Instance,
                 RecurseRewriter.Instance
             })
             {
