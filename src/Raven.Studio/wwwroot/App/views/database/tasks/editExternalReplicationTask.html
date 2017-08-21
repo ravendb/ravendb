@@ -29,13 +29,7 @@
                             </div>
                         </div>
                         <div class="flex-horizontal">
-                            <div class="flex-grow" data-bind="with: $root.testConnectionResult">
-                                <div class="text-success" data-bind="visible: Success">
-                                    Successfully connected to node
-                                </div>
-                                <div class="text-danger" data-bind="visible: !Success">
-                                    Connection test failed: <span data-bind="text: Error"></span>
-                                </div>
+                            <div class="flex-grow">
                             </div>
                             <div>
                                 <button type="submit" class="btn btn-default btn-info"
@@ -47,6 +41,18 @@
                         </div>
                     </div>
                 </form>
+                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div>Successfully connected to node</div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success">
+                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+
+                        <div>
+                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

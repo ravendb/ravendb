@@ -6,8 +6,7 @@ import connectionStringSqlEtlModel = require("models/database/settings/connectio
 
 class saveConnectionStringCommand extends commandBase {
 
-    constructor(private db: database, private connectionStringType: Raven.Client.ServerWide.ConnectionStringType,
-        private ravenEtlConnectionString: connectionStringRavenEtlModel, private sqlEtlConnectionString: connectionStringSqlEtlModel) {
+    constructor(private db: database, private connectionString: connectionStringRavenEtlModel | connectionStringSqlEtlModel) {
         super();
     }
  
@@ -24,18 +23,7 @@ class saveConnectionStringCommand extends commandBase {
         
         const saveConnectionStringTask = $.Deferred<void>();
         
-        const payload = this.connectionStringType === "Raven" ?
-            {
-                Type: "Raven",
-                Name: this.ravenEtlConnectionString.connectionStringName(),
-                Url: this.ravenEtlConnectionString.url(),
-                Database: this.ravenEtlConnectionString.database()
-            } :
-            {
-                Type: "Sql",
-                Name: this.sqlEtlConnectionString.connectionStringName(),
-                ConnectionString: this.sqlEtlConnectionString.connectionString()
-            };
+        const payload = this.connectionString.toDto();
 
         this.put(url, JSON.stringify(payload))
             .done(() => saveConnectionStringTask.resolve())

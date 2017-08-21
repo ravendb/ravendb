@@ -38,7 +38,7 @@ class addClusterNode extends viewModelBase {
                 return "";
             } 
             return generalUtils.trimMessage(result.Error);
-        })
+        });
     }
 
     save() {
