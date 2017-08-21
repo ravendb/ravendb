@@ -30,7 +30,7 @@ namespace Raven.Client.Documents.Session
         public IEnumerator<StreamResult<T>> Stream<T>(IDocumentQuery<T> query)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+            var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))
@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Session
         {
             var stats = new StreamQueryStatistics();
             var streamOperation = new StreamOperation(this, stats);
-            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+            var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
             using (var result = streamOperation.SetResult(command.Result))
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents.Session
         public void StreamInto<T>(IDocumentQuery<T> query, Stream output)
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+            var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             RequestExecutor.Execute(command, Context, sessionId: _clientSessionId);
 

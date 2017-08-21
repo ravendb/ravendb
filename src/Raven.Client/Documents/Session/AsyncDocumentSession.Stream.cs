@@ -82,7 +82,7 @@ namespace Raven.Client.Documents.Session
             var indexQuery = query.GetIndexQuery();
 
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.IndexName, indexQuery);
+            var command = streamOperation.CreateRequest(indexQuery);
             await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
             var result = streamOperation.SetResultAsync(command.Result);
 
@@ -111,7 +111,7 @@ namespace Raven.Client.Documents.Session
         public async Task StreamIntoAsync<T>(IAsyncDocumentQuery<T> query, Stream output, CancellationToken token = default(CancellationToken))
         {
             var streamOperation = new StreamOperation(this);
-            var command = streamOperation.CreateRequest(query.IndexName, query.GetIndexQuery());
+            var command = streamOperation.CreateRequest(query.GetIndexQuery());
 
             await RequestExecutor.ExecuteAsync(command, Context, token, sessionId: _clientSessionId).ConfigureAwait(false);
 
