@@ -315,7 +315,6 @@ a {
         align-self: flex-end;
     }
 
-
     hr.hr-vertical {
         @media (min-width: @screen-sm) {
             width: 0px;
@@ -750,6 +749,22 @@ input[type=file] + .form-control {
 
 .margin-none {
     margin: 0;
+}
+
+.margin-left {
+    margin-left: @grid-gutter-width / 2;
+
+    &.margin-left-sm {
+        margin-left: @grid-gutter-width / 4;
+    }
+}
+
+.margin-right {
+    margin-right: @grid-gutter-width / 2;
+
+    &.margin-right-sm {
+        margin-right: @grid-gutter-width / 4;
+    }
 }
 
 .margin-bottom {
@@ -1712,3 +1727,4 @@ ul.properties {
 @import "pages/indexes-maintenance.less";
 @import "pages/database-group-graph.less";
 @import "pages/edit-backup.less";
+@import "pages/certificates.less";
