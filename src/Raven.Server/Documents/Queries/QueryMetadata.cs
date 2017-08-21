@@ -116,10 +116,10 @@ namespace Raven.Server.Documents.Queries
             }
 
             if (Query.With != null)
-                HandleWithClause();
+                HandleWithClause(parameters);
 
             if (Query.SelectFunctionBody != null)
-                HandleSelectFunctionBody();
+                HandleSelectFunctionBody(parameters);
             else if (Query.Select != null)
                 FillSelectFields(parameters);
 
@@ -131,18 +131,18 @@ namespace Raven.Server.Documents.Queries
 
         }
 
-        private void HandleSelectFunctionBody()
+        private void HandleSelectFunctionBody(BlittableJsonReaderObject parameters)
         {
             if (Query.Select != null && Query.Select.Count > 0)
-                ThrowInvalidFunctionSelectWithMoreFields();
+                ThrowInvalidFunctionSelectWithMoreFields(parameters);
 
             if (RootAliasPaths.Count == 0)
-                ThrowMissingAliasOnSelectFunctionBody();
+                ThrowMissingAliasOnSelectFunctionBody(parameters);
 
             var name = "__selectOutput";
             if (Query.DeclaredFunctions != null &&
                 Query.DeclaredFunctions.ContainsKey(name))
-                ThrowUseOfReserveFunctionBodyMethodName();
+                ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
             var sb = new StringBuilder();
 
@@ -166,20 +166,23 @@ namespace Raven.Server.Documents.Queries
             sb.AppendLine(";").AppendLine("}");
 
             if (Query.TryAddFunction(name, sb.ToString()) == false)
-                ThrowUseOfReserveFunctionBodyMethodName();
+                ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
 
             SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
         }
 
-        private static void ThrowUseOfReserveFunctionBodyMethodName()
+        private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("When using select function body, the '__selectOutput' function is reserved");
+            throw new InvalidQueryException("When using select function body, the '__selectOutput' function is reserved",
+                QueryText,parameters);
         }
 
-        private static void ThrowMissingAliasOnSelectFunctionBody()
+        private void ThrowMissingAliasOnSelectFunctionBody(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("Use of select function body requires that aliases will be defined, but none had");
+            throw new InvalidQueryException("Use of select function body requires that aliases will be defined, but none had",
+                QueryText,
+                parameters);
         }
 
         private void HandleOrderByClause(BlittableJsonReaderObject parameters)
@@ -206,27 +209,27 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void HandleWithClause()
+        private void HandleWithClause(BlittableJsonReaderObject parameters)
         {
             List<string> includes = null;
             foreach (var with in Query.With)
             {
                 if (with.Expression.Type != OperatorType.Method)
-                    ThrowInvalidWith(with.Expression, "WITH clause support only method calls, but got: ");
+                    ThrowInvalidWith(with.Expression, "WITH clause support only method calls, but got: ",parameters);
                 var methodName = QueryExpression.Extract(QueryText, with.Expression.Field);
                 if (Enum.TryParse(methodName, true, out WithMethods method) == false)
                 {
-                    ThrowInvalidWith(with.Expression, $"WITH clause had an invalid method call ({string.Join(", ", Enum.GetNames(typeof(WithMethods)))} are allowed), got: ");
+                    ThrowInvalidWith(with.Expression, $"WITH clause had an invalid method call ({string.Join(", ", Enum.GetNames(typeof(WithMethods)))} are allowed), got: ",parameters);
                 }
                 switch (method)
                 {
                     case WithMethods.Load:
                         if (with.Alias == null)
-                            ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ");
+                            ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ", parameters);
 
                         var alias = QueryExpression.Extract(QueryText, with.Alias);
 
-                        var path = GetWithClausePropertyPath(with.Expression, "include");
+                        var path = GetWithClausePropertyPath(with.Expression, "include",parameters);
                         var array = false;
                         if (alias.EndsWith("[]"))
                         {
@@ -235,18 +238,18 @@ namespace Raven.Server.Documents.Queries
                         }
                         if (RootAliasPaths.TryAdd(alias, (path, array)) == false)
                         {
-                            ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ");
+                            ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ",parameters);
                         }
                         break;
                     case WithMethods.Include:
                         if (with.Alias != null)
-                            ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ");
+                            ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ",parameters);
                         if (includes == null)
                             includes = new List<string>();
-                        includes.Add(GetWithClausePropertyPath(with.Expression, "include"));
+                        includes.Add(GetWithClausePropertyPath(with.Expression, "include",parameters));
                         break;
                     default:
-                        ThrowInvalidWith(with.Expression, "WITH clause used an unfamiliar method: " + method);
+                        ThrowInvalidWith(with.Expression, "WITH clause used an unfamiliar method: " + method,parameters);
                         break;
                 }
             }
@@ -254,7 +257,7 @@ namespace Raven.Server.Documents.Queries
                 Includes = includes.ToArray();
         }
 
-        private string GetWithClausePropertyPath(QueryExpression method, string methodName)
+        private string GetWithClausePropertyPath(QueryExpression method, string methodName, BlittableJsonReaderObject parameters)
         {
             string ParseIncludePath(string path)
             {
@@ -262,35 +265,35 @@ namespace Raven.Server.Documents.Queries
                 if (indexOf == -1)
                     return path;
                 if (Query.From.Alias == null)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias but the from clause hasn't specified one: ");
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
                 Debug.Assert(Query.From.Alias != null);
                 if (Query.From.Alias.TokenLength != indexOf)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ",parameters);
                 var compare = string.Compare(
                     QueryText, Query.From.Alias.TokenStart,
                     path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
                 if (compare != 0)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ");
+                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ",parameters);
                 return path.Substring(indexOf + 1);
             }
 
             if (method.Arguments.Count != 1)
-                ThrowInvalidWith(method, $"WITH clause '{methodName}' call must have a single parameter, but got: ");
+                ThrowInvalidWith(method, $"WITH clause '{methodName}' call must have a single parameter, but got: ", parameters);
 
             if (method.Arguments[0] is FieldToken f)
                 return ParseIncludePath(QueryExpression.Extract(QueryText, f));
             if (method.Arguments[0] is ValueToken v)
                 return ParseIncludePath(QueryExpression.Extract(QueryText, v, stripQuotes: true));
-            ThrowInvalidWith(method, "WITH clause 'include' method argument is unknown, expected field or value but got:");
+            ThrowInvalidWith(method, "WITH clause 'include' method argument is unknown, expected field or value but got:", parameters);
             return null;// never hit
         }
 
-        private void ThrowInvalidWith(QueryExpression expr, string msg)
+        private void ThrowInvalidWith(QueryExpression expr, string msg, BlittableJsonReaderObject parameters)
         {
             var writer = new StringWriter();
             writer.Write(msg);
             expr.ToString(QueryText, writer);
-            throw new InvalidQueryException(writer.GetStringBuilder().ToString());
+            throw new InvalidQueryException(writer.GetStringBuilder().ToString(), QueryText, parameters);
         }
 
         private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod(
@@ -425,7 +428,7 @@ namespace Raven.Server.Documents.Queries
                     if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                     {
                         if (Query.DeclaredFunctions != null &&
-                            Query.DeclaredFunctions.TryGetValue(methodName, out var funcToken))
+                            Query.DeclaredFunctions.TryGetValue(methodName, out _))
                         {
                             var args = new SelectField[expression.Arguments.Count];
                             for (int i = 0; i < expression.Arguments.Count; i++)
@@ -437,7 +440,7 @@ namespace Raven.Server.Documents.Queries
                                 else if (expression.Arguments[i] is FieldToken ft)
                                     args[i] = GetSelectValue(null, ft);
                                 else
-                                    ThrowInvalidMethodArgument();
+                                    ThrowInvalidMethodArgument(parameters);
                             }
 
                             return SelectField.CreateMethodCall(methodName, alias, args);
@@ -487,9 +490,9 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private void ThrowInvalidMethodArgument()
+        private void ThrowInvalidMethodArgument(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("Invalid method parameter, don't know how to handle it");
+            throw new InvalidQueryException("Invalid method parameter, don't know how to handle it", QueryText, parameters);
         }
 
         private SelectField GetSelectValue(string alias, FieldToken expressionField)
@@ -527,9 +530,9 @@ namespace Raven.Server.Documents.Queries
             return SelectField.CreateValue(val, alias, expressionValue.Type);
         }
 
-        private static void ThrowInvalidFunctionSelectWithMoreFields()
+        private void ThrowInvalidFunctionSelectWithMoreFields(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("A query can contain a single select function body without extra fields");
+            throw new InvalidQueryException("A query can contain a single select function body without extra fields",QueryText, parameters);
         }
 
 
@@ -681,7 +684,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.EndsWith:
                     case MethodType.Search:
                     case MethodType.Lucene:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName,parameters);
 
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
@@ -699,7 +702,7 @@ namespace Raven.Server.Documents.Queries
                             _metadata.AddWhereField(fieldName, valueType);
                         break;
                     case MethodType.Exists:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName,parameters);
                         _metadata.AddExistField(fieldName);
                         break;
                     case MethodType.Boost:
@@ -765,12 +768,12 @@ namespace Raven.Server.Documents.Queries
                 Visit(sumExpression, parameters);
             }
 
-            private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName)
+            private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName, BlittableJsonReaderObject parameters)
             {
                 var fieldArgument = arguments[0] as FieldToken;
 
                 if (fieldArgument == null)
-                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument");
+                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
                 return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
             }
