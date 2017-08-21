@@ -1,5 +1,4 @@
 ﻿using System;
-using HtmlAgilityPack;
 using Raven.Client.Documents.Indexes;
 using Sparrow.Json;
 

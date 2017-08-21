@@ -69,7 +69,7 @@ namespace SlowTests.Core.Indexing
                     Assert.Equal(5, javascriptPostsQuery.ToList().Count);
 
 
-                    var companies = session.Advanced.DocumentQuery<Companies_WithReferencedEmployees.CompanyEmployees>(companiesWithEmployees.IndexName)
+                    var companies = session.Advanced.DocumentQuery<Company>(companiesWithEmployees.IndexName)
                         .ToArray();
 
                     Assert.Equal(1, companies.Length);
