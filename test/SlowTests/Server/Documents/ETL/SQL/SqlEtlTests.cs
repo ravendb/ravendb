@@ -92,7 +92,7 @@ namespace SlowTests.Server.Documents.ETL.SQL
 
         protected const string defaultScript = @"
 var orderData = {
-    Id: __document_id,
+    Id: id(this),
     OrderLinesCount: this.OrderLines.length,
     TotalCost: 0
 };
@@ -101,7 +101,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     var line = this.OrderLines[i];
     orderData.TotalCost += line.Cost;
     loadToOrderLines({
-        OrderId: __document_id,
+        OrderId: id(this),
         Qty: line.Quantity,
         Product: line.Product,
         Cost: line.Cost
@@ -287,7 +287,7 @@ CREATE DATABASE [SqlReplication-{store.Database}]
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: __document_id,
+    Id: id(this),
     OrderLinesCount: this.OrderLines_Missing.length,
     TotalCost: 0
 };
@@ -336,7 +336,7 @@ loadToOrders(orderData);");
                 var etlDone = WaitForEtl(store, (n, statistics) => statistics.LoadSuccesses != 0);
 
                 SetupSqlEtl(store, @"var orderData = {
-    Id: __document_id,
+    Id: id(this),
     City: this.Address.City,
     TotalCost: 0
 };
@@ -693,7 +693,7 @@ CREATE TABLE [dbo].[Orders]
 
                 SetupSqlEtl(store, @"
 var orderData = {
-    Id: __document_id,
+    Id: id(this),
     Name: this['@metadata']['@attachments'][0].Name,
     Pic: loadAttachment(this['@metadata']['@attachments'][0].Name)
 };
@@ -779,7 +779,7 @@ var attachments = this['@metadata']['@attachments'];
 for (var i = 0; i < attachments.length; i++)
 {
     var attachment = {
-        UserId: __document_id,
+        UserId: id(this),
         AttachmentName: attachments[i].Name,
         Data: loadAttachment(attachments[i].Name)
     };
@@ -834,7 +834,7 @@ CREATE TABLE [dbo].[Orders]
 
                 SetupSqlEtl(store, @"
 var orderData = {
-    Id: __document_id,
+    Id: id(this),
     Pic: loadAttachment('non-existing')
 };
 

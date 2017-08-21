@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Patch
         private void WriteJsonValue(object current, object value, bool recursiveCall)
         {
             var recursive = current == value;
-            if (recursiveCall && recursive)
+            if (recursiveCall && recursive || value is NullObjectInstance)
             {
                 _writer.WriteValueNull();
                 return;
@@ -60,6 +60,8 @@ namespace Raven.Server.Documents.Patch
                 _writer.WriteValue(by);
             else if (v is int i)
                 _writer.WriteValue(i);
+            else if (v is uint ui)
+                _writer.WriteValue(ui);
             else if (v is long l)
                 _writer.WriteValue(l);
             else if (v is double d)

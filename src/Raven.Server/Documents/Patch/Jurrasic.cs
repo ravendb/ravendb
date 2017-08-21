@@ -155,7 +155,9 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine = new ScriptEngine
                 {
                     RecursionDepthLimit = 64,
-                    OnLoopIterationCall = OnStateLoopIteration
+                    OnLoopIterationCall = OnStateLoopIteration,
+                    EnableDebugging = true,
+                    EnableExposedClrTypes = false,
                 };
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
@@ -181,7 +183,7 @@ namespace Raven.Server.Documents.Patch
             private string GetDocumentId(object arg)
             {
                 if (arg is BlittableObjectInstance doc)
-                    return doc.Document?.Id;
+                    return doc.Document?.Id.ToString();
                 return null;
             }
 

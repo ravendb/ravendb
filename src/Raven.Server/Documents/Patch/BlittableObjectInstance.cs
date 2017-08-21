@@ -7,6 +7,17 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
+    public class NullObjectInstance : ObjectInstance
+    {
+        public NullObjectInstance(ObjectInstance prototype) : base(prototype)
+        {
+        }
+
+        protected override object GetMissingPropertyValue(object key)
+        {
+            return new NullObjectInstance(Prototype);
+        }
+    }
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly BlittableJsonReaderObject Blittable;
@@ -35,7 +46,7 @@ namespace Raven.Server.Documents.Patch
             int propertyIndex = Blittable.GetPropertyIndex(keyAsString);
             if (propertyIndex == -1)
             {
-                return base.GetMissingPropertyValue(key);
+                return new NullObjectInstance(Prototype);
             }
 
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
@@ -46,13 +57,19 @@ namespace Raven.Server.Documents.Patch
             switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
             {
                 case BlittableJsonToken.Null:
-                    returnedValue = Null.Value;
+                    returnedValue = new NullObjectInstance(Prototype);
                     break;
                 case BlittableJsonToken.Boolean:
                     returnedValue = (bool)propertyDetails.Value;
                     break;
                 case BlittableJsonToken.Integer:
-                    returnedValue = (long)propertyDetails.Value;
+                    var value = (long)propertyDetails.Value;
+                    // TODO: Maxim fix me, Jurrasic doesn't support longs
+                    // TODO: RavenDB-8263
+                    if (value < int.MaxValue)
+                        returnedValue = (int)value;
+                    else
+                        returnedValue = (double)value;
                     break;
                 case BlittableJsonToken.LazyNumber:
                     returnedValue = (double)(LazyNumberValue)propertyDetails.Value;
