@@ -5,9 +5,10 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Jint;
+using Jurassic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
 using Sparrow.Json;
 
@@ -92,12 +93,11 @@ namespace Raven.Server.Web.Studio
 
         private static void ValidateCustomFunctions(BlittableJsonReaderObject document)
         {
-            var engine = new Engine(cfg =>
-            {
-                cfg.AllowDebuggerStatement();
-                cfg.MaxStatements(1000);
-                cfg.NullPropagation();
-            });
+            var engine = new ScriptEngine();
+            //                cfg.NullPropagation();
+            engine.EnableDebugging = true;
+            engine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(1000).OnLoopIteration;
+
 
             engine.Execute(string.Format(@"
                         var customFunctions = function() {{ 

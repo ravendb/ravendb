@@ -10,7 +10,9 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
-using Jint;
+using System.Text;
+using Jurassic;
+using Jurassic.Library;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Patch;
@@ -362,12 +364,12 @@ namespace Raven.Server.Documents.Queries.Results
             // We'll need to handle caching of the function, and proper error handling / parsing
             // of the function code / errors during their execution. For example, we must get the
             // document id / reduce key of the document that generated the error. 
-            var jintEngine = new Engine(cfg =>
-            {
-                cfg.LimitRecursion(100);
-                cfg.NullPropagation();
-                cfg.MaxStatements(10 * 1000);
-            });
+            var jintEngine = new ScriptEngine();
+
+            jintEngine.RecursionDepthLimit = 100;
+            //    cfg.NullPropagation();
+            jintEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(10_000).OnLoopIteration;
+
 
             if (query.DeclaredFunctions != null)
             {
@@ -407,21 +409,37 @@ namespace Raven.Server.Documents.Queries.Results
                 args[i] = Translate(args[i]);
             }
 
-            var result = jintEngine.Invoke(methodName, args);
-            if(result.IsObject())
-                return PatcherOperationScope.ToBlittable2(result.AsObject());
-            if(result.IsArray())
-                return PatcherOperationScope.ToBlittable2(result.AsArray());
-            if (result.IsBoolean())
-                return result.AsBoolean();
-            if (result.IsString())
-                return result.AsString();
-            if (result.IsDate())
-                return result.AsDate();
-            if (result.IsNull() || result.IsUndefined())
+            var result = jintEngine.CallGlobalFunction(methodName, args);
+            if (result is ArrayInstance)
+                return PatcherOperationScope.ToBlittable2(result as ArrayInstance);
+            if (result is ObjectInstance)
+                return PatcherOperationScope.ToBlittable2(result as ObjectInstance);
+            if (result == Null.Value || result== Undefined.Value)
                 return null;
-            if (result.IsNumber())
-                return result.AsNumber();
+
+            var typeCode = Type.GetTypeCode(result.GetType());
+            switch (typeCode)
+            {
+                case TypeCode.Boolean:
+                    return (bool)result;
+                case TypeCode.String:
+                    return result;
+                case TypeCode.Byte:
+                case TypeCode.SByte:
+                case TypeCode.UInt16:
+                case TypeCode.UInt32:
+                case TypeCode.Int16:
+                case TypeCode.Int32:
+                case TypeCode.UInt64:
+                case TypeCode.Int64:
+                case TypeCode.Decimal:
+                case TypeCode.Double:
+                case TypeCode.Single:
+                    return result;
+                case TypeCode.DateTime:
+                    return result;
+            }
+            
             throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " + result);
         }
 

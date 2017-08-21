@@ -1,8 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Jint;
-using Jint.Parser;
+using Jurassic;
 using Raven.Client.Util;
 
 namespace Raven.Server.Documents.Patch
@@ -14,7 +13,7 @@ namespace Raven.Server.Documents.Patch
         {
             public int Usage;
             public DateTime Timestamp;
-            public Engine Engine;
+            public ScriptEngine Engine;
         }
 
         private const int CacheMaxSize = 512;
@@ -55,7 +54,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public Engine GetEngine(Func<PatchRequest, Engine> createEngine, PatchRequest request, string customFunctions)
+        public ScriptEngine GetEngine(Func<PatchRequest, ScriptEngine> createEngine, PatchRequest request, string customFunctions)
         {
             var patchRequestAndCustomFunctionsTuple = new ScriptedPatchRequestAndCustomFunctionsToken(request, customFunctions);
             if (_cache.TryGetValue(patchRequestAndCustomFunctionsTuple, out CachedResult value))
@@ -72,7 +71,7 @@ namespace Raven.Server.Documents.Patch
                         }}();
                         for(var customFunction in customFunctions) {{
                             this[customFunction] = customFunctions[customFunction];
-                        }};", customFunctions), new ParserOptions { Source = "customFunctions.js" });
+                        }};", customFunctions));
             var cachedResult = new CachedResult
             {
                 Usage = 1,

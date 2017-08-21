@@ -14,7 +14,7 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Jint;
+using Jurassic;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
@@ -22,6 +22,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Operations;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
@@ -57,14 +58,14 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 try
                 {
-                    var jint = new Engine(cfg =>
-                    {
-                        cfg.AllowDebuggerStatement(false);
-                        cfg.MaxStatements(options.MaxStepsForTransformScript);
-                        cfg.NullPropagation();
-                    });
+                    var scriptEngine = new ScriptEngine();
 
-                    jint.Execute(string.Format(@"
+                    scriptEngine.EnableDebugging = false;
+                    scriptEngine.OnLoopIterationCall = new DocumentPatcherBase.EngineLoopIterationKeeper(options.MaxStepsForTransformScript).OnLoopIteration;
+
+                    //cfg.NullPropagation();
+
+                    scriptEngine.Execute(string.Format(@"
                     function Transform(docInner){{
                         return ({0}).apply(this, [docInner]);
                     }};", options.TransformScript));

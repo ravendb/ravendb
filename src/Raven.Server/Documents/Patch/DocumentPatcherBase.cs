@@ -2,10 +2,9 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
-using Jint;
-using Jint.Native;
-using Jint.Parser;
-using Jint.Runtime;
+using Jurassic;
+using Jurassic.Compiler;
+using Jurassic.Library;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.Config;
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.Patch
 {
     public abstract class DocumentPatcherBase
     {
-        private const int MaxRecursionDepth = 128;
+        public const int MaxRecursionDepth = 128;
 
         private readonly int _maxSteps;
         protected readonly int _additionalStepsPerSize;
@@ -61,7 +60,7 @@ namespace Raven.Server.Documents.Patch
             {
                 ApplySingleScript(context, document.Id, document, patch, scope);
 
-                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject.AsObject()), document.Id, mode, modifier);
+                var modifiedDocument = context.ReadObject(scope.ToBlittable(scope.PatchObject), document.Id, mode, modifier);
 
                 var result = new PatchResult
                 {
@@ -95,7 +94,7 @@ namespace Raven.Server.Documents.Patch
                 run.Prepare(document?.Data?.Size ?? 0);
                 run.SetDocumentId(document?.Id ?? documentId);
 
-                scope.PatchObject = scope.ToJsObject(run.JintEngine, document);
+                scope.PatchObject = scope.ToJsObject(run.JSEngine, document);
 
                 run.Execute();
             }
@@ -106,7 +105,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        internal void CleanupEngine(PatchRequest patch, Engine engine, PatcherOperationScope scope)
+        internal void CleanupEngine(PatchRequest patch, ScriptEngine engine, PatcherOperationScope scope)
         {
             if (patch.Values != null)
             {
@@ -118,27 +117,55 @@ namespace Raven.Server.Documents.Patch
             RemoveEngineCustomizations(engine, scope);
         }
 
-        private void PrepareEngine(PatchRequest patch, PatcherOperationScope scope, Engine jintEngine, int documentSize)
+        public class EngineLoopIterationKeeper
         {
-            scope.TotalScriptSteps = 0;
+            public EngineLoopIterationKeeper(long maxLoopIterations)
+            {
+                MaxLoopIterations = maxLoopIterations;
+            }
+            public int LoopIterations = 0;
+            public long MaxLoopIterations;
+
+            public void OnLoopIteration()
+            {
+                LoopIterations++;
+                if (LoopIterations == MaxLoopIterations)
+                    ThrowExceededLoopIterations();
+            }
+
+            private void ThrowExceededLoopIterations()
+            {
+                throw new InvalidOperationException($"Javascript code exceeded a total of {MaxLoopIterations}");
+            }
+        }
+
+        private void PrepareEngine(PatchRequest patch, PatcherOperationScope scope, ScriptEngine jsEngine, int documentSize)
+        {
+            var maxStepsSize = 1;
             if (documentSize > 0)
-                SetMaxStatements(scope, jintEngine, documentSize);
+                maxStepsSize = GetMaxStatements(scope, jsEngine, documentSize);
 
-            jintEngine.Global.Delete("LoadDocument", false);
-            jintEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
+            jsEngine.Global.Delete("LoadDocument", false);
+            jsEngine.Global.Delete("IncreaseNumberOfAllowedStepsBy", false);
 
-            CustomizeEngine(jintEngine, scope);
+            CustomizeEngine(jsEngine, scope);
 
-            jintEngine.SetValue("LoadDocument", (Func<string, JsValue>)(key => scope.LoadDocument(key, jintEngine, ref scope.TotalScriptSteps)));
+            if (jsEngine.OnLoopIterationCall == null)
+                jsEngine.OnLoopIterationCall = new EngineLoopIterationKeeper(maxStepsSize).OnLoopIteration;
+            
+            jsEngine.SetGlobalFunction("LoadDocument", (Func<string, object>)(key => scope.LoadDocument(key, jsEngine)));
 
-            jintEngine.SetValue("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
+            jsEngine.SetGlobalFunction("IncreaseNumberOfAllowedStepsBy", (Action<int>)(number =>
             {
                 if (_allowScriptsToAdjustNumberOfSteps == false)
                     throw new InvalidOperationException($"Cannot use 'IncreaseNumberOfAllowedStepsBy' method, because `{RavenConfiguration.GetKey(x => x.Patching.AllowScriptsToAdjustNumberOfSteps)}` is set to false.");
 
-                scope.MaxSteps += number;
-                scope.TotalScriptSteps += number;
-                jintEngine.Options.MaxStatements(scope.TotalScriptSteps);
+                var keeper = jsEngine.OnLoopIterationCallTarget as EngineLoopIterationKeeper;
+
+                if (keeper != null)
+                {
+                    keeper.MaxLoopIterations += number;
+                }
             }));
 
             if (patch.Values != null)
@@ -148,111 +175,87 @@ namespace Raven.Server.Documents.Patch
                 for (int i = 0; i < patch.Values.Count; i++)
                 {
                     patch.Values.GetPropertyByIndex(i, ref prop);
-                    jintEngine.SetValue(prop.Name, scope.ToJsValue(jintEngine, prop));
+                    jsEngine.SetGlobalValue(prop.Name, scope.ToJsValue(jsEngine, prop));
                 }
             }
 
-            jintEngine.ResetStatementsCount();
+            var loopKeeper = jsEngine.OnLoopIterationCallTarget as EngineLoopIterationKeeper;
+            if (loopKeeper != null) loopKeeper.MaxLoopIterations = maxStepsSize;
         }
 
-        internal void SetMaxStatements(PatcherOperationScope scope, Engine jintEngine, int documentSize)
+        internal int GetMaxStatements(PatcherOperationScope scope, ScriptEngine jsEngine, int documentSize)
         {
-            scope.TotalScriptSteps = _maxSteps + (documentSize * _additionalStepsPerSize);
-            jintEngine.Options.MaxStatements(scope.TotalScriptSteps);
+            return _maxSteps + (documentSize * _additionalStepsPerSize);
         }
 
         protected string ExecutionString = @"function ExecutePatchScript(docInner){{ return (function(doc){{ {0} }}).apply(docInner); }};";
 
-        private Engine CreateEngine(PatchRequest patch)
+        private ScriptEngine CreateEngine(PatchRequest patch)
         {
             return CreateEngine(patch.Script, ExecutionString);
         }
 
-        protected Engine CreateEngine(string script, string executionString)
+        protected ScriptEngine CreateEngine(string script, string executionString)
         {
             var scriptWithProperLines = script.NormalizeLineEnding();
             // NOTE: we merged few first lines of wrapping script to make sure {0} is at line 0.
             // This will all us to show proper line number using user lines locations.
             var wrapperScript = string.Format(executionString, scriptWithProperLines);
 
-            var jintEngine = new Engine(cfg =>
-            {
+            var jsEngine = new ScriptEngine();
+
 #if DEBUG
-                cfg.AllowDebuggerStatement();
-#else
-                cfg.AllowDebuggerStatement(false);
+            jsEngine.EnableDebugging = true;
 #endif
-                cfg.LimitRecursion(MaxRecursionDepth);
-                cfg.NullPropagation();
-                cfg.MaxStatements(int.MaxValue); // allow lodash to load
-            });
 
-            AddScript(jintEngine, "Raven.Server.Documents.Patch.lodash.js");
-            AddScript(jintEngine, "Raven.Server.Documents.Patch.ToJson.js");
-            AddScript(jintEngine, "Raven.Server.Documents.Patch.RavenDB.js");
+            jsEngine.RecursionDepthLimit = MaxRecursionDepth;
+            // jsEngine.NullPropagation(); todo: note that we don't have this anymore
+            //AddScript(jsEngine, "Raven.Server.Documents.Patch.lodash.js");
+            AddScript(jsEngine, "Raven.Server.Documents.Patch.ToJson.js");
+            AddScript(jsEngine, "Raven.Server.Documents.Patch.RavenDB.js");
+            
 
-            jintEngine.Options.MaxStatements(_maxSteps);
+            jsEngine.Execute(wrapperScript);
 
-            jintEngine.Execute(wrapperScript, new ParserOptions
-            {
-                Source = "main.js"
-            });
-
-            return jintEngine;
+            return jsEngine;
         }
 
-        private static void AddScript(Engine jintEngine, string ravenDatabaseJsonMapJs)
+        private static void AddScript(ScriptEngine scriptEngine, string ravenDatabaseJsonMapJs)
         {
-            jintEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs), new ParserOptions
-            {
-                Source = ravenDatabaseJsonMapJs
-            });
+            
+            scriptEngine.Execute(GetFromResources(ravenDatabaseJsonMapJs));
         }
 
-        protected abstract void CustomizeEngine(Engine engine, PatcherOperationScope scope);
+        protected abstract void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope);
 
-        protected abstract void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope);
+        protected abstract void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope);
 
-        private static void OutputLog(Engine engine, PatcherOperationScope scope)
+        private static void OutputLog(ScriptEngine engine, PatcherOperationScope scope)
         {
-            var numberOfOutputs = (int)engine.GetValue("number_of_outputs").AsNumber();
+            var numberOfOutputs = (int)engine.GetGlobalValue("number_of_outputs");
             if (numberOfOutputs == 0)
                 return;
 
-            var arr = engine.GetValue("debug_outputs").AsArray();
+            var arr = engine.GetGlobalValue("debug_outputs") as ArrayInstance;
 
-            foreach (var property in arr.GetOwnProperties())
+            foreach (var property in arr.Properties)
             {
-                if (property.Key == "length")
+                var propertyKey = property.Key.ToString();
+                if (propertyKey == "length")
                     continue;
 
-                var value = property.Value.Value;
+                var value = property.Value;
                 if (value == null)
                     continue;
-
+                
                 string output = null;
-                switch (value.Type)
-                {
-                    case Types.Boolean:
-                        output = value.AsBoolean().ToString();
-                        break;
-                    case Types.Null:
-                    case Types.Undefined:
-                        output = value.ToString();
-                        break;
-                    case Types.Number:
-                        output = value.AsNumber().ToString(CultureInfo.InvariantCulture);
-                        break;
-                    case Types.String:
-                        output = value.AsString();
-                        break;
-                }
+
+                output = value.ToString();
 
                 if (output != null)
                     scope.DebugInfo.Add(output);
             }
-
-            engine.Invoke("clear_debug_outputs");
+            engine.CallGlobalFunction("clear_debug_outputs");
         }
 
         private static string GetFromResources(string resourceName)
@@ -280,7 +283,7 @@ namespace Raven.Server.Documents.Patch
 
         public struct SingleScriptRun
         {
-            public Engine JintEngine;
+            public ScriptEngine JSEngine;
 
             private readonly DocumentPatcherBase _parent;
             private readonly PatchRequest _patch;
@@ -294,15 +297,15 @@ namespace Raven.Server.Documents.Patch
 
                 try
                 {
-                    JintEngine = ScriptsCache.GetEngine(parent.CreateEngine, patch, _scope.CustomFunctions);
+                    JSEngine = ScriptsCache.GetEngine(parent.CreateEngine, patch, _scope.CustomFunctions);
                 }
                 catch (NotSupportedException e)
                 {
-                    throw new JavaScriptParseException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script " + Environment.NewLine + patch.Script, e);
                 }
-                catch (Jint.Runtime.JavaScriptException e)
+                catch (SyntaxErrorException e)
                 {
-                    throw new JavaScriptParseException("Could not parse script", e);
+                    throw new JavaScriptParseException("Could not parse script " + Environment.NewLine + patch.Script, e);
                 }
                 catch (Exception e)
                 {
@@ -312,18 +315,21 @@ namespace Raven.Server.Documents.Patch
 
             public void Prepare(int size)
             {
-                _parent.PrepareEngine(_patch, _scope, JintEngine, size);
+                _parent.PrepareEngine(_patch, _scope, JSEngine, size);
             }
 
             public void Execute()
             {
-                _scope.ActualPatchResult = JintEngine.Invoke("ExecutePatchScript", _scope.PatchObject);
+                _scope.ActualPatchResult = JSEngine.CallGlobalFunction("ExecutePatchScript", _scope.PatchObject);
 
-                _parent.CleanupEngine(_patch, JintEngine, _scope);
+                _parent.CleanupEngine(_patch, JSEngine, _scope);
 
-                OutputLog(JintEngine, _scope);
+                OutputLog(JSEngine, _scope);
                 if (_scope.DebugMode)
-                    _scope.DebugInfo.Add(string.Format("Statements executed: {0}", JintEngine.StatementsCount));
+                {
+                    var keeper = JSEngine.OnLoopIterationCallTarget as EngineLoopIterationKeeper;
+                    _scope.DebugInfo.Add($"Exceution finished, loop iterations procceesed: {keeper?.LoopIterations}");
+                }
             }
 
             public void HandleError(Exception errorEx)
@@ -331,25 +337,29 @@ namespace Raven.Server.Documents.Patch
                 if (errorEx is ConcurrencyException)
                     return;
 
-                JintEngine.ResetStatementsCount();
-
-                OutputLog(JintEngine, _scope);
+                var keeper = JSEngine.OnLoopIterationCallTarget as EngineLoopIterationKeeper;
+                if (keeper != null)
+                {
+                    keeper.LoopIterations = 0;
+                }
+                OutputLog(JSEngine, _scope);
                 var errorMsg = "Unable to execute JavaScript: " + Environment.NewLine + _patch.Script + Environment.NewLine;
-                var error = errorEx as Jint.Runtime.JavaScriptException;
+
+                var error = errorEx as JavaScriptException;
                 if (error != null)
-                    errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Error);
+                    errorMsg += Environment.NewLine + "Error: " + Environment.NewLine + string.Join(Environment.NewLine, error.Message);
                 if (_scope.DebugInfo.Items.Count != 0)
                     errorMsg += Environment.NewLine + "Debug information: " + Environment.NewLine +
                                 string.Join(Environment.NewLine, _scope.DebugInfo.Items);
 
                 if (error != null)
-                    errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.CallStack;
+                    errorMsg += Environment.NewLine + "Stacktrace:" + Environment.NewLine + error.StackTrace;
 
                 var targetEx = errorEx as TargetInvocationException;
                 if (targetEx?.InnerException != null)
                     throw new JavaScriptException(errorMsg, targetEx.InnerException);
 
-                var recursionEx = errorEx as RecursionDepthOverflowException;
+                var recursionEx = errorEx as StackOverflowException;
                 if (recursionEx != null)
                     errorMsg += Environment.NewLine + "Max recursion depth is limited to: " + MaxRecursionDepth;
 
@@ -358,7 +368,7 @@ namespace Raven.Server.Documents.Patch
 
             public void SetDocumentId(string documentId)
             {
-                JintEngine.SetValue("__document_id", documentId);
+                JSEngine.SetGlobalValue("__document_id", documentId);
             }
         }
 

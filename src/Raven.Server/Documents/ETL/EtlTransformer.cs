@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
+using Jurassic;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -21,7 +20,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract string[] LoadToDestinations { get; }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        protected override void RemoveEngineCustomizations(ScriptEngine engine, PatcherOperationScope scope)
         {
             engine.Global.Delete(Transformation.LoadTo, true);
 
@@ -32,22 +31,22 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
+        protected override void CustomizeEngine(ScriptEngine engine, PatcherOperationScope scope)
         {
-            engine.SetValue(Transformation.LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
+            engine.SetGlobalFunction(Transformation.LoadTo, new Action<string, object>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                engine.SetValue(Transformation.LoadTo + collection, (Action<JsValue>)(cols =>
+                engine.SetGlobalFunction(Transformation.LoadTo + collection, (Action<object>)(cols =>
                 {
                     LoadToFunction(collection, cols, scope);
                 }));
             }
         }
 
-        protected abstract void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope);
+        protected abstract void LoadToFunction(string tableName, object colsAsObject, PatcherOperationScope scope);
 
         public abstract IEnumerable<TTransformed> GetTransformedResults();
 
