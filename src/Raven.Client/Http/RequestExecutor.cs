@@ -578,7 +578,7 @@ namespace Raven.Client.Http
 
                                     sp.Stop();
                                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
-                                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
+                                        throw new AllTopologyNodesDownException($"Tried to send '{command.GetType().Name}' via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
 
                                     return;
                                 }
