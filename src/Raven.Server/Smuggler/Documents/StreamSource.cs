@@ -79,16 +79,13 @@ namespace Raven.Server.Smuggler.Documents
             if (type == null)
                 return DatabaseItemType.None;
 
-            if (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase) ||
+            while (type.Equals("Attachments", StringComparison.OrdinalIgnoreCase) ||
                 type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
             {
                 SkipArray();
                 type = ReadType();
-            }
-            if (type.Equals("Transformers", StringComparison.OrdinalIgnoreCase))
-            {
-                SkipArray();
-                type = ReadType();
+                if (type == null)
+                    break;
             }
 
 
