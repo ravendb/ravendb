@@ -941,19 +941,18 @@ namespace Raven.Server.Web.System
                 }
 
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(content);
-                object result;
+                string result;
 
                 if (isServerScript)
                 {
-                    var console = new AdminJsConsole(Server);
+                    var console = new AdminJsConsole(Server, null);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
 
-                    result = console.ApplyServerScript(adminJsScript);
+                    result = console.ApplyScript(adminJsScript);
                 }
-
                 else if (string.IsNullOrWhiteSpace(name) == false)
                 {
                     //database script
@@ -963,7 +962,7 @@ namespace Raven.Server.Web.System
                         DatabaseDoesNotExistException.Throw(name);
                     }
 
-                    var console = new AdminJsConsole(database);
+                    var console = new AdminJsConsole(Server, database);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
@@ -977,36 +976,10 @@ namespace Raven.Server.Web.System
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                if (result == null || result is DynamicJsonValue)
+                using (var textWriter = new StreamWriter(ResponseBodyStream()))
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
-
-                        if (result != null)
-                        {
-                            context.Write(writer, result as DynamicJsonValue);
-                        }
-                        else
-                        {
-                            writer.WriteNull();
-                        }
-
-                        writer.WriteEndObject();
-                        writer.Flush();
-                    }
-                }
-
-                else
-                {
-                    using (var textWriter = new StreamWriter(ResponseBodyStream()))
-                    {
-                        textWriter.Write(result.ToString());
-                        await textWriter.FlushAsync();
-                    }
+                    textWriter.Write(result);
+                    await textWriter.FlushAsync();
                 }
             }
         }

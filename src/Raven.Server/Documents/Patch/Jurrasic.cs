@@ -22,6 +22,7 @@ namespace Raven.Server.Documents.Patch
             new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
         private int _numberOfCachedScripts;
         private SpinLock _cleaning = new SpinLock();
+        public bool EnableClr;
 
         public ScriptRunnerCache(DocumentDatabase database)
         {
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Patch
         {
             var value = new Lazy<ScriptRunner>(() =>
             {
-                var runner = new ScriptRunner(_database);
+                var runner = new ScriptRunner(_database, EnableClr);
                 runner.AddScript(script.GenerateScript());
                 return runner;
             });
@@ -121,6 +122,7 @@ namespace Raven.Server.Documents.Patch
     public class ScriptRunner
     {
         private readonly DocumentDatabase _db;
+        private readonly bool _enableClr;
         private readonly List<CompiledScript> _scripts = new List<CompiledScript>();
         public readonly List<string> ScriptsSource = new List<string>();
 
@@ -156,28 +158,57 @@ namespace Raven.Server.Documents.Patch
                 {
                     RecursionDepthLimit = 64,
                     OnLoopIterationCall = OnStateLoopIteration,
-                    EnableDebugging = true,
-                    EnableExposedClrTypes = false,
+                    EnableExposedClrTypes = runner._enableClr
                 };
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
-                ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
-                ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+                ScriptEngine.SetGlobalFunction("del",  (Func<string, string, bool>)DeleteDocument);
+                ScriptEngine.SetGlobalFunction("id",   (Func<object, string>)GetDocumentId);
+                ScriptEngine.SetGlobalFunction("put",  (Func<string, object, string, string>)PutDocument);
             }
 
             public string PutDocument(string id, object document, string changeVector)
             {
+                AssertValidDatabaseContext();
+                AssertNotReadOnly();
                 var objectInstance = document as ObjectInstance;
                 if (document == null)
                 {
-                    throw new InvalidOperationException(
-                        $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
+                    AssertValidDocumentObject(id);
+                    return null;//never hit
                 }
-
-                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance, BlittableJsonDocumentBuilder.UsageMode.None))
+                AssertValidDatabaseContext();
+                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
                     return put.Id;
                 }
+            }
+
+            public bool DeleteDocument(string id, string changeVector)
+            {
+                AssertValidDatabaseContext();
+                AssertNotReadOnly();
+                var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
+                return result != null;
+
+            }
+
+            private void AssertNotReadOnly()
+            {
+                if (ReadOnly)
+                    throw new InvalidOperationException("Cannot make modifications in readonly context");
+            }
+
+            private static void AssertValidDocumentObject(string id)
+            {
+                throw new InvalidOperationException(
+                    $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
+            }
+
+            private void AssertValidDatabaseContext()
+            {
+                if (_context == null)
+                    throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
             }
 
             private string GetDocumentId(object arg)
@@ -189,12 +220,15 @@ namespace Raven.Server.Documents.Patch
 
             private object LoadDocument(string id)
             {
+                AssertValidDatabaseContext();
+
                 var document = _database.DocumentsStorage.Get(_context, id);
                 if (document == null)
                     return Null.Value;
                 return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id);
             }
 
+            public bool ReadOnly;
             private readonly DocumentDatabase _database;
             private readonly ScriptRunner _runner;
             private DocumentsOperationContext _context;
@@ -215,7 +249,7 @@ namespace Raven.Server.Documents.Patch
                 ThrowTooManyLoopIterations();
             }
 
-            public ScriptRunnerResult Run(DocumentsOperationContext ctx ,string method, object[] args)
+            public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
                 _context = ctx;
                 CurrentSteps = 0;
@@ -273,9 +307,10 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public ScriptRunner(DocumentDatabase db)
+        public ScriptRunner(DocumentDatabase db, bool enableClr)
         {
             _db = db;
+            _enableClr = enableClr;
         }
 
         private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
@@ -309,6 +344,7 @@ namespace Raven.Server.Documents.Patch
 
             public void Dispose()
             {
+                _run.ReadOnly = false;
                 _parent?._cache.Enqueue(_run);
             }
         }
