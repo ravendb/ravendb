@@ -12,7 +12,7 @@ class generateCertificateCommand extends commandBase {
         const url = endpoints.global.adminCertificates.adminCertificates;
         
         const payload = this.model.toGenerateCertificateDto();
-        return this.post(url, JSON.stringify(payload), null)
+        return this.post(url, JSON.stringify(payload), null, { dataType: undefined })
             .fail((response: JQueryXHR) => this.reportError("Unable to generate certificate", response.responseText, response.statusText));
     }
 }
