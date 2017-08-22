@@ -49,6 +49,15 @@ namespace Raven.Server.Documents.Patch
                 return new NullObjectInstance(Prototype);
             }
 
+            var value = GetMissingPropertyValue(propertyIndex);
+
+            this[key] = value;
+
+            return value;
+        }
+
+        private object GetMissingPropertyValue(int propertyIndex)
+        {
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
             Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);

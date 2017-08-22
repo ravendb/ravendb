@@ -254,18 +254,22 @@ namespace Raven.Server.Documents.Queries
 
         public Task<IOperationResult> ExecutePatchQuery(IndexQueryServerSide query, QueryOperationOptions options, PatchRequest patch, BlittableJsonReaderObject patchArgs, DocumentsOperationContext context, Action<DeterminateProgress> onProgress, OperationCancelToken token)
         {
-            return ExecuteOperation<BulkOperationCommand<PatchDocumentCommand>>(query, options, context, onProgress, (key, retrieveDetails) =>
+            return ExecuteOperation(query, options, context, onProgress, (key, retrieveDetails) =>
             {
-                throw new NotImplementedException();
+                var command = new PatchDocumentCommand(context, key, 
+                    expectedChangeVector: null, 
+                    skipPatchIfChangeVectorMismatch:false, 
+                    patch:(patch, patchArgs), 
+                    patchIfMissing:(null, null), 
+                    database:_database, 
+                    isTest: false);
 
-                //var command = _database.Patcher.GetPatchDocumentCommand(context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false, debugMode: false);
-
-                //return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
-                //{
-                //    Id = key,
-                //    ChangeVector = x.PatchResult.ChangeVector,
-                //    Status = x.PatchResult.Status
-                //});
+                return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails
+                {
+                    Id = key,
+                    ChangeVector = x.PatchResult.ChangeVector,
+                    Status = x.PatchResult.Status
+                });
             }, token);
         }
 

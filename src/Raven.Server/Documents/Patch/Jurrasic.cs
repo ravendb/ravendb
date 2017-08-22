@@ -9,6 +9,7 @@ using Jurassic;
 using Jurassic.Compiler;
 using Jurassic.Library;
 using Org.BouncyCastle.Crypto.Digests;
+using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -128,12 +129,19 @@ namespace Raven.Server.Documents.Patch
 
         public void AddScript(string script)
         {
-            var compiledScript = CompiledScript.Compile(new StringScriptSource(script),
-                new CompilerOptions
-                {
-                    EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
-                });
-
+            CompiledScript compiledScript;
+            try
+            {
+                compiledScript = CompiledScript.Compile(new StringScriptSource(script),
+                    new CompilerOptions
+                    {
+                        EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
+                    });
+            }
+            catch (Exception e)
+            {
+                throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
+            }
             ScriptsSource.Add(script);
             _scripts.Add(compiledScript);
         }
@@ -164,12 +172,12 @@ namespace Raven.Server.Documents.Patch
                 {
                     RecursionDepthLimit = 64,
                     OnLoopIterationCall = OnStateLoopIteration,
-                    EnableExposedClrTypes = runner._enableClr 
+                    EnableExposedClrTypes = runner._enableClr
                 };
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
-                ScriptEngine.SetGlobalFunction("del",  (Func<string, string, bool>)DeleteDocument);
-                ScriptEngine.SetGlobalFunction("id",   (Func<object, string>)GetDocumentId);
-                ScriptEngine.SetGlobalFunction("put",  (Func<string, object, string, string>)PutDocument);
+                ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
+                ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
+                ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
             }
 
             public string PutDocument(string id, object document, string changeVector)
@@ -177,12 +185,15 @@ namespace Raven.Server.Documents.Patch
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 var objectInstance = document as ObjectInstance;
-                if (document == null)
+                if (objectInstance == null)
                 {
                     AssertValidDocumentObject(id);
                     return null;//never hit
                 }
                 AssertValidDatabaseContext();
+                if (changeVector == "undefined")
+                    changeVector = null;
+
                 using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
@@ -307,6 +318,10 @@ namespace Raven.Server.Documents.Patch
                     AssertAdminScriptInstance();
                     return engine.Object.Construct(o);
                 }
+                if (o is ObjectInstance)
+                {
+                    return o;
+                }
 #if DEBUG
                 Debug.Assert(ExpectedTypes.Contains(o.GetType()));
 #endif
@@ -356,8 +371,8 @@ namespace Raven.Server.Documents.Patch
 
         public struct ReturnRun : IDisposable
         {
-            private readonly ScriptRunner _parent;
-            private readonly SingleRun _run;
+            private ScriptRunner _parent;
+            private SingleRun _run;
 
             public ReturnRun(ScriptRunner parent, SingleRun run)
             {
@@ -367,8 +382,12 @@ namespace Raven.Server.Documents.Patch
 
             public void Dispose()
             {
+                if (_run == null)
+                    return;
                 _run.ReadOnly = false;
-                _parent?._cache.Enqueue(_run);
+                _parent._cache.Enqueue(_run);
+                _run = null;
+                _parent = null;
             }
         }
     }
