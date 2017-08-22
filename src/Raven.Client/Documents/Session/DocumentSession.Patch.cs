@@ -60,6 +60,7 @@ namespace Raven.Client.Documents.Session
                     var name = $"arg_{Parameters.Count}_{Suffix}";
                     if (i != 0)
                         javascriptWriter.Write(", ");
+                    javascriptWriter.Write("args.");
                     javascriptWriter.Write(name);
                     object val;
                     if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
@@ -97,7 +98,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} += val_{_valsCount};",
+                Script = $"this.{pathScript} += args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = valToAdd} 
             };
 
@@ -122,7 +123,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} = val_{_valsCount};",
+                Script = $"this.{pathScript} = args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = value}
             };
 

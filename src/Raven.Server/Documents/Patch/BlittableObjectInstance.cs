@@ -72,13 +72,7 @@ namespace Raven.Server.Documents.Patch
                     returnedValue = (bool)propertyDetails.Value;
                     break;
                 case BlittableJsonToken.Integer:
-                    var value = (long)propertyDetails.Value;
-                    // TODO: Maxim fix me, Jurrasic doesn't support longs
-                    // TODO: RavenDB-8263
-                    if (value < int.MaxValue)
-                        returnedValue = (int)value;
-                    else
-                        returnedValue = (double)value;
+                    returnedValue = GetInterger(propertyDetails.Value);
                     break;
                 case BlittableJsonToken.LazyNumber:
                     returnedValue = (double)(LazyNumberValue)propertyDetails.Value;
@@ -102,6 +96,16 @@ namespace Raven.Server.Documents.Patch
             return returnedValue;
         }
 
+        private static object GetInterger(object val)
+        {
+            var value = (long)val;
+            // TODO: Maxim fix me, Jurrasic doesn't support longs
+            // TODO: RavenDB-8263
+            if (value < int.MaxValue)
+                return (int)value;
+            return (double)value;
+        }
+
         public static ArrayInstance CreateArrayInstanceBasedOnBlittableArray(ScriptEngine engine, BlittableJsonReaderArray blittableArray)
         {
             var returnedValue = engine.Array.Construct();
@@ -119,7 +123,7 @@ namespace Raven.Server.Documents.Patch
                         arrayValue = (bool)valueTuple.Item1;
                         break;
                     case BlittableJsonToken.Integer:
-                        arrayValue = (long)valueTuple.Item1;
+                        arrayValue = GetInterger(valueTuple.Item1);
                         break;
                     case BlittableJsonToken.LazyNumber:
                         arrayValue = (double)(LazyNumberValue)valueTuple.Item1;
