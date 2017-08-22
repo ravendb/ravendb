@@ -43,7 +43,6 @@ namespace Raven.Server.Documents.Patch
             switch (Type)
             {
                 case PatchRequestType.None:
-                case PatchRequestType.Conflict:
                 case PatchRequestType.SqlEtl:
                 case PatchRequestType.RavenEtl:
                     // modify and return the document
@@ -73,6 +72,13 @@ function execute(doc){{
 
     }};
     return actual.call(doc);
+}}";
+                case PatchRequestType.Conflict:
+                    return $@"
+function resolve(docs, hasTombstone, resolveToTombstone){{ 
+
+{Script}
+
 }}";
                 default:
                     throw new ArgumentOutOfRangeException();

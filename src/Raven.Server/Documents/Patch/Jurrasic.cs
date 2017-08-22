@@ -183,7 +183,7 @@ namespace Raven.Server.Documents.Patch
             private string GetDocumentId(object arg)
             {
                 if (arg is BlittableObjectInstance doc)
-                    return doc.Document?.Id.ToString();
+                    return doc.DocumentId;
                 return null;
             }
 
@@ -192,7 +192,7 @@ namespace Raven.Server.Documents.Patch
                 var document = _database.DocumentsStorage.Get(_context, id);
                 if (document == null)
                     return Null.Value;
-                return new BlittableObjectInstance(ScriptEngine, document.Data, document);
+                return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id);
             }
 
             private readonly DocumentDatabase _database;
@@ -243,13 +243,24 @@ namespace Raven.Server.Documents.Patch
             private object TranslateToJurrasic(ScriptEngine engine, object o)
             {
                 if (o is Document d)
-                    return new BlittableObjectInstance(engine, d.Data, d);
+                    return new BlittableObjectInstance(engine, d.Data, d.Id);
+                if (o is DocumentConflict dc)
+                    return new BlittableObjectInstance(engine, dc.Doc, dc.Id);
                 if (o is BlittableJsonReaderObject json)
                     return new BlittableObjectInstance(engine, json, null);
                 if (o is BlittableJsonReaderArray array)
                     return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)
                     return Null.Value;
+                if (o is List<object> l)
+                {
+                    var list = engine.Array.Construct();
+                    for (int i = 0; i < l.Count; i++)
+                    {
+                        list.Push(TranslateToJurrasic(ScriptEngine, l[i]));
+                    }
+                    return list;
+                }
 #if DEBUG
                 Debug.Assert(ExpectedTypes.Contains(o.GetType()));
 #endif
