@@ -200,7 +200,11 @@ namespace Raven.Server.Documents.Patch
                     var stringified = (string)globalValue.CallMemberFunction("stringify", json);
                     DebugOutput.Add(stringified);
                 }
-                else if (obj == null || obj == Null.Value || obj == Undefined.Value)
+                else if (obj == Undefined.Value)
+                {
+                    DebugOutput.Add("undefined");
+                }
+                else if (obj == null || obj == Null.Value)
                 {
                     DebugOutput.Add("null");
                 }
