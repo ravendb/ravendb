@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Jurassic;
@@ -12,45 +13,42 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
 
+        [ThreadStatic]
+        private static HashSet<object> _recursive;
+
         public JurrasicBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer)
         {
             _writer = writer;
         }
 
-
-        public void WriteInstance(
-            ObjectInstance jsObject,
-            bool recursiveCall = false)
+        public void WriteInstance(ObjectInstance jsObject)
         {
             _writer.StartWriteObject();
-            WriteRawObjectProperties(jsObject, recursiveCall);
+            WriteRawObjectProperties(jsObject);
             _writer.WriteObjectEnd();
         }
 
-        private void WriteRawObjectProperties(
-            ObjectInstance jsObject,
-            bool recursiveCall = false)
+        private void WriteRawObjectProperties(ObjectInstance jsObject)
         {
             var blittableObjectInstance = jsObject as BlittableObjectInstance;
 
             if (blittableObjectInstance != null)
-                WriteBlittableInstance(blittableObjectInstance, recursiveCall);
+                WriteBlittableInstance(blittableObjectInstance);
             else
-                WriteJurrasicInstance(jsObject, recursiveCall);
+                WriteJurrasicInstance(jsObject);
         }
 
-        private void WriteJsonValue(object current, object value, bool recursiveCall)
+        private void WriteJsonValue(object value)
         {
-            var recursive = current == value;
-            if (recursiveCall && recursive || value is NullObjectInstance)
+            if (value is NullObjectInstance)
             {
                 _writer.WriteValueNull();
                 return;
             }
-            WriteValue(value, recursive);
+            WriteValue(value);
         }
 
-        private void WriteValue(object v, bool recursiveCall)
+        private void WriteValue(object v)
         {
             if (v is bool b)
                 _writer.WriteValue(b);
@@ -73,11 +71,9 @@ namespace Raven.Server.Documents.Patch
                 _writer.StartWriteArray();
                 foreach (var property in jsArray.Properties)
                 {
-                    var jsInstance = property.Value;
-                    if (jsInstance == null)
+                    if((property.Attributes & PropertyAttributes.IsLengthProperty)==PropertyAttributes.IsLengthProperty)
                         continue;
-
-                    WriteValue(jsInstance, recursiveCall);
+                    WriteValue(property.Value);
                 }
                 _writer.WriteArrayEnd();
             }
@@ -87,7 +83,19 @@ namespace Raven.Server.Documents.Patch
             }
             else if (v is ObjectInstance obj)
             {
-                WriteInstance(obj, recursiveCall);
+                if (_recursive == null)
+                    _recursive = new HashSet<object>();
+                try
+                {
+                    if(_recursive.Add(obj))
+                        WriteInstance(obj);
+                    else
+                        _writer.WriteValueNull();
+                }
+                finally
+                {
+                    _recursive.Remove(obj);
+                }
             }
             else if (v is ConcatenatedString cs)
             {
@@ -111,7 +119,7 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteJurrasicInstance(ObjectInstance jsObject, bool recursiveCall)
+        private void WriteJurrasicInstance(ObjectInstance jsObject)
         {
             foreach (var property in jsObject.Properties)
             {
@@ -127,11 +135,11 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 _writer.WritePropertyName(propertyName);
-                WriteJsonValue(jsObject, value, recursiveCall);
+                WriteJsonValue(value);
             }
         }
 
-        private void WriteBlittableInstance(BlittableObjectInstance blittableObjectInstance, bool recursiveCall)
+        private void WriteBlittableInstance(BlittableObjectInstance blittableObjectInstance)
         {
             var properties = blittableObjectInstance.Properties.ToDictionary(x => x.Key.ToString(), x => x.Value);
             foreach (var propertyIndex in blittableObjectInstance.Blittable.GetPropertiesByInsertionOrder())
@@ -146,7 +154,7 @@ namespace Raven.Server.Documents.Patch
                 _writer.WritePropertyName(prop.Name);
 
                 if (properties.Remove(prop.Name, out var modifiedValue))
-                    WriteJsonValue(prop.Name, modifiedValue, recursiveCall);
+                    WriteJsonValue(modifiedValue);
                 else
                     _writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
             }
@@ -154,7 +162,7 @@ namespace Raven.Server.Documents.Patch
             foreach (var modificationKvp in properties)
             {
                 _writer.WritePropertyName(modificationKvp.Key);
-                WriteJsonValue(modificationKvp.Key, modificationKvp.Value, recursiveCall);
+                WriteJsonValue(modificationKvp.Value);
             }
         }
 
@@ -173,6 +181,9 @@ namespace Raven.Server.Documents.Patch
         public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance, 
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
+            if (objectInstance == null)
+                return null;
+
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {
                 writer.Reset(usageMode);
