@@ -161,6 +161,7 @@ namespace FastTests.Client.Lazy.Async
                 session.Advanced.GetMetadataFor(contact)["Val"] = "hello";
                 session.SaveChanges();
             }
+            WaitForIndexing(store);
             using (var session = store.OpenAsyncSession())
             {
                 var contactViewModel =
@@ -170,7 +171,7 @@ from Contacts as contact
 with load(contact.DetailIds) as details[]
 where contact.__document_id = :id
 select {
-    ContactId: contact['@metadata']['@id'],
+    ContactId: id(contact),
     ContactName: contact.Name,
     ContactDetails: details	
 }

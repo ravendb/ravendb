@@ -354,6 +354,8 @@ namespace Raven.Server.Documents.Patch
                     return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)
                     return Null.Value;
+                if (o is long)
+                    return BlittableObjectInstance.GetJurrasicNumber_TEMPORARY(o);
                 if (o is List<object> l)
                 {
                     var list = engine.Array.Construct();
