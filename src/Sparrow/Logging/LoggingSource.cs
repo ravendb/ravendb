@@ -14,7 +14,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Logging
 {
-    public class LoggingSource
+    public sealed class LoggingSource
     {
         private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
@@ -36,7 +36,7 @@ namespace Sparrow.Logging
         public bool IsOperationsEnabled;
         private Stream _additionalOutput;
 
-        public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
+        public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
 
         private static byte[] _headerRow = Encodings.Utf8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");

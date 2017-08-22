@@ -5,9 +5,9 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Converters
 {
-    internal class JsonDateTimeISO8601Converter : RavenJsonConverter
+    internal sealed class JsonDateTimeISO8601Converter : RavenJsonConverter
     {
-        public static JsonDateTimeISO8601Converter Instance = new JsonDateTimeISO8601Converter();
+        public static readonly JsonDateTimeISO8601Converter Instance = new JsonDateTimeISO8601Converter();
 
         private JsonDateTimeISO8601Converter()
         {

@@ -6,9 +6,9 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 
 namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 {
-    public class MethodDynamicParametersRewriter : CSharpSyntaxRewriter
+    public sealed class MethodDynamicParametersRewriter : CSharpSyntaxRewriter
     {
-        public static MethodDynamicParametersRewriter Instance = new MethodDynamicParametersRewriter();
+        public static readonly MethodDynamicParametersRewriter Instance = new MethodDynamicParametersRewriter();
 
         private MethodDynamicParametersRewriter()
         {
