@@ -17,6 +17,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Client.ServerWide.Revisions;
@@ -274,6 +275,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(SqlConnectionString)); 
             scripter.AddType(typeof(ConnectionStringType)); 
             scripter.AddType(typeof(GetConnectionStringsResult)); 
+            
+            // certificates
+            scripter.AddType(typeof(CertificateDefinition));
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
