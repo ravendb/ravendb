@@ -30,7 +30,8 @@ namespace Raven.Server.Smuggler.Documents
                 document.Data.Dispose();
                 return null;
             }
-            var newDoc = result.Translate<BlittableJsonReaderObject>(context);
+            var newDoc = result.Translate<BlittableJsonReaderObject>(context,
+                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             document.Data.Dispose();
             return new Document
             {
