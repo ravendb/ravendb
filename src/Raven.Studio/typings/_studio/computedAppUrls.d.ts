@@ -50,7 +50,6 @@ interface computedAppUrls {
     connectionStrings: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
-    customFunctionsEditor: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
     statusDebugMetrics: KnockoutComputed<string>;
     statusDebugConfig: KnockoutComputed<string>;

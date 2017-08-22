@@ -180,9 +180,6 @@ namespace TypingsGenerator
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
 
-            // custom functions
-            scripter.AddType(typeof(CustomFunctions));
-
             // storage report
             scripter.AddType(typeof(StorageReport));
             scripter.AddType(typeof(DetailedStorageReport));

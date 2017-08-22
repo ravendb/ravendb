@@ -86,7 +86,6 @@ class appUrl {
         statusDebugConfig: ko.pureComputed(() => appUrl.forStatusDebugConfig(appUrl.currentDatabase())),
         statusDebugDocrefs: ko.pureComputed(() => appUrl.forStatusDebugDocrefs(appUrl.currentDatabase())),
         statusDebugCurrentlyIndexing: ko.pureComputed(() => appUrl.forStatusDebugCurrentlyIndexing(appUrl.currentDatabase())),
-        customFunctionsEditor: ko.pureComputed(() => appUrl.forCustomFunctionsEditor(appUrl.currentDatabase())),
         statusDebugQueries: ko.pureComputed(() => appUrl.forStatusDebugQueries(appUrl.currentDatabase())),
         statusDebugTasks: ko.pureComputed(() => appUrl.forStatusDebugTasks(appUrl.currentDatabase())),
 
@@ -494,10 +493,6 @@ class appUrl {
 
         //TODO: we don't have Raven/DocumentsByEntityName anymore
         return appUrl.forDatabaseQuery(db) + "/streams/query/Raven/DocumentsByEntityName" + appUrl.urlEncodeArgs(args);
-    }
-
-    static forCustomFunctionsEditor(db: database | databaseInfo): string {
-        return "#databases/settings/customFunctionsEditor?" + appUrl.getEncodedDbPart(db);
     }
 
     static forOngoingTasks(db: database | databaseInfo): string {

@@ -29,9 +29,6 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import popoverUtils = require("common/popoverUtils");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
-import customFunctions = require("models/database/documents/customFunctions");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
 type filterType = "in" | "string" | "range";
 
@@ -91,8 +88,6 @@ class query extends viewModelBase {
     queriedIndex: KnockoutComputed<string>;
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
-
-    private customFunctionsContext: object;
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -265,7 +260,7 @@ class query extends viewModelBase {
         
         const db = this.activeDatabase();
 
-        return $.when<any>(this.fetchAllIndexes(db), this.fetchCustomFunctions(db))
+        return this.fetchAllIndexes(db)
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
     }
 
@@ -294,7 +289,6 @@ class query extends viewModelBase {
         this.setupDisableReasons();
 
         const grid = this.gridController();
-        grid.withEvaluationContext(this.customFunctionsContext);
 
         const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true
@@ -331,14 +325,6 @@ class query extends viewModelBase {
     private loadRecentQueries() {
         recentQueriesStorage.getRecentQueriesWithIndexNameCheck(this.activeDatabase())
             .done(queries => this.recentQueries(queries));
-    }
-
-    private fetchCustomFunctions(db: database): JQueryPromise<customFunctions> {
-        return new getCustomFunctionsCommand(db)
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
     }
 
     private fetchAllIndexes(db: database): JQueryPromise<any> {

@@ -12,7 +12,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
@@ -33,8 +32,6 @@ import patchDocumentCommand = require("commands/database/documents/patchDocument
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import generalUtils = require("common/generalUtils");
-import customFunctions = require("models/database/documents/customFunctions");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
 import defaultAceCompleter = require("common/defaultAceCompleter");
@@ -294,7 +291,6 @@ class patch extends viewModelBase {
     private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
-    private customFunctionsContext: object;
     private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
@@ -435,7 +431,7 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.fetchCustomFunctions(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
@@ -477,7 +473,6 @@ class patch extends viewModelBase {
         super.compositionComplete();
 
         const grid = this.gridController();
-        grid.withEvaluationContext(this.customFunctionsContext);
         this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
@@ -709,14 +704,6 @@ class patch extends viewModelBase {
             });
     }
     
-    private fetchCustomFunctions(): JQueryPromise<customFunctions> {
-        return new getCustomFunctionsCommand(this.activeDatabase())
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
-    }
-
     previewDocument() {
         this.spinners.preview(true);
 

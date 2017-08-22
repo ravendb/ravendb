@@ -28,7 +28,6 @@ class editSubscriptionTask extends viewModelBase {
     testResultsLimit = ko.observable<number>(10);
 
     private gridController = ko.observable<virtualGridController<any>>();
-    private customFunctionsContext: object;
     columnsSelector = new columnsSelector<documentObject>();
     fetcher = ko.observable<fetcherType>();
     private columnPreview = new columnPreviewPlugin<documentObject>();
@@ -167,11 +166,6 @@ class editSubscriptionTask extends viewModelBase {
 
         const fetcherMethod = (s: number, t: number) => this.fetchTestDocuments(s, t);
         this.fetcher(fetcherMethod);
-
-        if (this.isFirstRun) {
-            const grid = this.gridController();
-            grid.withEvaluationContext(this.customFunctionsContext);
-        }
 
         if (this.isFirstRun) {
             const extraClassProvider = (item: documentObject | Raven.Server.Documents.Handlers.DocumentWithException) => {
