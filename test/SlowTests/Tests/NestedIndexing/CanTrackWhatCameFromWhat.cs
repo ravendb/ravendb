@@ -34,7 +34,7 @@ namespace SlowTests.Tests.NestedIndexing
 from i in docs.Items
 select new
 {
-    RefName = load(i.Ref, ""Items"").Name,
+    RefName = LoadDocument(i.Ref, ""Items"").Name,
     Name = i.Name
 }"
                 },

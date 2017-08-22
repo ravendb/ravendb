@@ -49,7 +49,7 @@ namespace SlowTests.Server.Documents.Patching
                     }
                     x.SaveChanges();
                 }
-
+                
                 var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users"},  new PatchRequest
                 {
                     Script = "this.Name = id(this)"
