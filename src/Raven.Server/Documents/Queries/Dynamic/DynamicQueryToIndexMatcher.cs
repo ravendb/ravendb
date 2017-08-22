@@ -115,7 +115,9 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             var index = _indexStore.GetIndex(definition.Name);
-
+            if(index == null)
+                return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure)
+                    ;
             var state = index.State;
             var stats = index.GetStats();
 
