@@ -39,7 +39,12 @@ namespace Raven.Server.Documents.Patch
             return string.Equals(Script, other.Script) && Type == other.Type;
         }
 
-        public override string GenerateScript()
+        public override void GenerateScript(ScriptRunner runner)
+        {
+            runner.AddScript(GenerateScript());
+        }
+
+        private string GenerateScript()
         {
             switch (Type)
             {

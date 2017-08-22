@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Patch
         {
             public string ScriptKey;
 
-            public abstract string GenerateScript();
+            public abstract void GenerateScript(ScriptRunner runner);
 
             public abstract override bool Equals(object obj);
 
@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Patch
             var value = new Lazy<ScriptRunner>(() =>
             {
                 var runner = new ScriptRunner(_database, EnableClr);
-                runner.AddScript(script.GenerateScript());
+                script.GenerateScript(runner);
                 return runner;
             });
             var lazy = _cache.GetOrAdd(script, value);

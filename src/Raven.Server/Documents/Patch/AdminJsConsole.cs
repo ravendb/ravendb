@@ -91,13 +91,13 @@ namespace Raven.Server.Documents.Patch
 
         public string Script => _script;
 
-        public override string GenerateScript()
+        public override void GenerateScript(ScriptRunner runner)
         {
-            return $@"function execute(server, database){{ 
+            runner.AddScript($@"function execute(server, database){{ 
 
 {_script}
 
-}};";
+}};");
         }
 
         protected bool Equals(AdminJsScriptKey other)
