@@ -63,7 +63,17 @@ namespace Raven.Server.Documents.Patch
             else if (v is long l)
                 _writer.WriteValue(l);
             else if (v is double d)
-                _writer.WriteValue(d);
+            {
+                if (Math.Abs(Math.Round(d, 0) - d) < double.Epsilon)
+                {
+                    _writer.WriteValue((long)d);
+
+                }
+                else
+                {
+                    _writer.WriteValue(d);
+                }
+            }
             else if (v == Null.Value || v == Undefined.Value)
                 _writer.WriteValueNull();
             else if (v is ArrayInstance jsArray)
