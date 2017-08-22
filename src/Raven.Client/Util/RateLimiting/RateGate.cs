@@ -90,7 +90,14 @@ namespace Raven.Client.Util.RateLimiting
             while (_exitTimes.TryPeek(out exitTime)
                     && unchecked(exitTime - Environment.TickCount) <= 0)
             {
-                _semaphore.Release();
+                try
+                {
+                    _semaphore.Release();
+                }
+                catch (ObjectDisposedException)
+                {
+                    return;
+                }
                 _exitTimes.TryDequeue(out exitTime);
             }
 
@@ -105,7 +112,13 @@ namespace Raven.Client.Util.RateLimiting
                 timeUntilNextCheck = TimeUnitMilliseconds;
 
             // Set the timer.
-            _exitTimer.Change(timeUntilNextCheck, -1);
+            try
+            {
+                _exitTimer.Change(timeUntilNextCheck, -1);
+            }
+            catch (ObjectDisposedException)
+            {
+            }
         }
 
         /// <summary>
