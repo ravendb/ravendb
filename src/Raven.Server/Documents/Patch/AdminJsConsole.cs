@@ -1,194 +1,115 @@
 using System;
 using System.Diagnostics;
-using System.Dynamic;
-using Jurassic;
-using Jurassic.Library;
-using Raven.Client.Exceptions.Documents.Patching;
-using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
     public class AdminJsConsole
     {
+        private readonly DocumentDatabase _database;
         public readonly Logger Log = LoggingSource.Instance.GetLogger<AdminJsConsole>("AdminJsConsole");
         private readonly RavenServer _server;
-        private Stopwatch _sw;
 
-        public AdminJsConsole(DocumentDatabase database)
-        {
-            if (Log.IsOperationsEnabled)
-            {
-                Log.Operations($"AdminJSConsole : Prepering to execute database script for \"{database.Name}\"");
-            }
-        }
-
-        public AdminJsConsole(RavenServer server)
+        public AdminJsConsole(RavenServer server, DocumentDatabase database)
         {
             _server = server;
+            _database = database;
             if (Log.IsOperationsEnabled)
             {
-                Log.Operations("AdminJSConsole : Prepering to execute server script");
+                if (database != null)
+                    Log.Operations($"AdminJSConsole : Prepering to execute database script for \"{database.Name}\"");
+                else
+                    Log.Operations("AdminJSConsole : Prepering to execute server script");
+
             }
         }
 
-        private const string ExecutionStr = "function ExecuteAdminScript(databaseInner){{ return (function(database){{ {0} }}).apply(this, [databaseInner]); }};";
-        private const string ServerExecutionStr = "function ExecuteAdminScript(serverInner){{ return (function(server){{ {0} }}).apply(this, [serverInner]); }};";
 
-        public object ApplyScript(AdminJsScript script)
+        public string ApplyScript(AdminJsScript script)
         {
-            return null;
-            //_sw = Stopwatch.StartNew();
-            //ScriptEngine scriptEngint;
-            //if (Log.IsOperationsEnabled)
-            //{
-            //    Log.Operations($"Script : \"{script.Script}\"");
-            //}
-            //try
-            //{
-            //    scriptEngint = GetEngine(script, ExecutionStr);
-            //}
-            //catch (Exception e)
-            //{
-            //    if (Log.IsOperationsEnabled)
-            //    {
-            //        Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
-            //    }
-            //    throw;
-            //}
-            //object jsVal;
-            //try
-            //{
-            //    jsVal = scriptEngint.CallGlobalFunction("ExecuteAdminScript", Database);
-            //}
-            //catch (Exception e)
-            //{
-            //    if (Log.IsOperationsEnabled)
-            //    {
-            //        Log.Operations("An Exception was thrown while executing the script: ", e);
-            //    }
-            //    throw;
-            //}
-
-            //if (Log.IsOperationsEnabled)
-            //{
-            //    Log.Operations($"Finished executing database script. Total time: {_sw.Elapsed} ");
-            //}
-            //return ConvertResults(jsVal, Database);
-        }
-
-        public object ApplyServerScript(AdminJsScript script)
-        {
-            return null;
-            //_sw = Stopwatch.StartNew();
-            //ScriptEngine jintEngine;
-            //if (Log.IsOperationsEnabled)
-            //{
-            //    Log.Operations($"Script : \"{script.Script}\"");
-            //}
-            //try
-            //{
-            //    jintEngine = GetEngine(script, ServerExecutionStr);
-            //}
-            //catch (Exception e)
-            //{
-            //    if (Log.IsOperationsEnabled)
-            //    {
-            //        Log.Operations("An Exception was thrown while preparing the Jint Engine: ", e);
-            //    }
-            //    throw;
-            //}
-
-            //object jsVal;
-            //try
-            //{
-            //    jsVal = jintEngine.CallGlobalFunction("ExecuteAdminScript", _server);
-            //}
-            //catch (Exception e)
-            //{
-            //    if (Log.IsOperationsEnabled)
-            //    {
-            //        Log.Operations("An Exception was thrown while executing the script: ", e);
-            //    }
-            //    throw;
-            //}
-
-            //if (Log.IsOperationsEnabled)
-            //{
-            //    Log.Operations($"Finished executing server script. Total time: {_sw.Elapsed} ");
-            //}
-
-            //return ConvertResults(jsVal, Database);
-        }
-
-        private object ConvertResults(object jsVal, DocumentDatabase database = null)
-        {
-            if (jsVal == Undefined.Value || jsVal == Null.Value)
-                return null;
-
-            if (jsVal is ObjectInstance && (jsVal is ArrayInstance) == false)
+            var sw = Stopwatch.StartNew();
+            if (Log.IsOperationsEnabled)
             {
-                var obj = jsVal as ObjectInstance;
-                if (obj is ExpandoObject == false)
-                {
-                    if (Log.IsOperationsEnabled)
-                    {
-                        Log.Operations($"Output: {obj}");
-                    }
-                    return obj;
-                }
+                Log.Operations($"Script : \"{script.Script}\"");
             }
 
-            object result;
-            using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
-            using (var scope = new PatcherOperationScope(database).Initialize(context))
-            {
-                result = scope.ToBlittableValue(jsVal, string.Empty, false);
-                if (Log.IsOperationsEnabled)
-                {
-                    //need to create a clone here because JsonOperationContex.Write() modifies the object 
-                    var clone = scope.ToBlittableValue(jsVal, string.Empty, false);
-                    Log.Operations($"Output: {RavenCli.ConvertResultToString(context, clone)}");
-                }
-            }
-
-            return result;
-        }
-
-        public ScriptEngine GetEngine(AdminJsScript script, string executionString)
-        {
-            ScriptEngine jintEngine;
             try
             {
-                throw new NotImplementedException();
+                using (_server.AdminScripts.GetScriptRunner(script, out var run))
+                {
+                    var result = run.Run(null, "execute", new object[] { _server, _database });
 
-                //jintEngine = CreateEngine(script.Script, executionString);
-            }
-            catch (NotSupportedException e)
-            {
-                throw new JavaScriptParseException("Could not parse script", e);
-            }
-            catch (Jurassic.JavaScriptException e)
-            {
-                throw new JavaScriptParseException("Could not parse script", e);
+                    var toJson = RavenCli.ConvertResultToString(result);
+
+                    if (Log.IsOperationsEnabled)
+                    {
+                        Log.Operations($"Output: {toJson}");
+                    }
+
+                    if (Log.IsOperationsEnabled)
+                    {
+                        Log.Operations($"Finished executing database script. Total time: {sw.Elapsed} ");
+                    }
+                    return toJson;
+                }
             }
             catch (Exception e)
             {
-                throw new JavaScriptParseException("Could not parse: " + Environment.NewLine + script.Script, e);
+                if (Log.IsOperationsEnabled)
+                {
+                    Log.Operations("An Exception was thrown while executing the script: ", e);
+                }
+                throw;
             }
-            return jintEngine;
+
         }
     }
 
-    public class AdminJsScript
+    public class AdminJsScript : ScriptRunnerCache.Key
     {
-        public string Script { get; set; }
-    }
+        private readonly string _script;
 
-    public class AdminJsScriptResult
-    {
-        public DynamicJsonValue Result { get; set; }
+        public AdminJsScript(string script)
+        {
+            _script = script;
+        }
+
+        public string Script => _script;
+
+        public override string GenerateScript()
+        {
+            return $@"function execute(server, database){{ 
+
+{_script}
+
+}};";
+        }
+
+        protected bool Equals(AdminJsScript other)
+        {
+            return string.Equals(_script, other._script);
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((AdminJsScript)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                int hashCode = 0;
+                hashCode = (hashCode * 397) ^ (_script != null ? _script.GetHashCode() : 0);
+                return hashCode;
+            }
+        }
     }
 }

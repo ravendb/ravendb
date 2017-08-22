@@ -552,20 +552,13 @@ namespace Raven.Server.Utils.Cli
 
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var adminJsScript = new AdminJsScript { Script = jsCli.Script };
-                var result = isServerScript ? jsCli.AdminConsole.ApplyServerScript(adminJsScript) : jsCli.AdminConsole.ApplyScript(adminJsScript);
-
-                string str;
-                if (result == null || result is DynamicJsonValue)
-                    str = ConvertResultToString(context, result);
-                else
-                    str = result.ToString();
-                str += Environment.NewLine;
+                var adminJsScript = new AdminJsScript(jsCli.Script);
+                var result = jsCli.AdminConsole.ApplyScript(adminJsScript);
 
                 if (cli._consoleColoring)
                     Console.ForegroundColor = ConsoleColor.Magenta;
 
-                WriteText(str, TextColor, cli);
+                WriteText(result, TextColor, cli);
 
                 if (cli._consoleColoring)
                     Console.ResetColor();
@@ -573,23 +566,43 @@ namespace Raven.Server.Utils.Cli
             return true;
         }
 
-        public static string ConvertResultToString(JsonOperationContext context, object result)
+        public static string ConvertResultToString(ScriptRunnerResult result)
         {
             var ms = new MemoryStream();
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            using(var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+                writer.WritePropertyName("Result");
 
-                if (result != null)
+                if (result.IsNull)
                 {
-                    var djv = result as DynamicJsonValue;
-                    context.Write(writer, djv);
+                    writer.WriteNull();
+                }
+                else if (result.Value is bool b)
+                {
+                    writer.WriteBool(b);
+                }
+                else if (result.Value is string s)
+                {
+                    writer.WriteString(s);
+                }
+                else if (result.Value is LazyStringValue lsv)
+                {
+                    writer.WriteString(lsv);
+                }
+                else if (result.Value is LazyCompressedStringValue lcsv)
+                {
+                    writer.WriteString(lcsv);
+                }
+                else if (result.Value is LazyNumberValue lnv)
+                {
+                    writer.WriteDouble(lnv);
                 }
                 else
                 {
-                    writer.WriteNull();
+                    writer.WriteObject(result.Translate<BlittableJsonReaderObject>(ctx));
                 }
 
                 writer.WriteEndObject();
