@@ -17,6 +17,7 @@ using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Parser;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 
@@ -24,6 +25,7 @@ namespace Raven.Server.Documents.Queries.Results
 {
     public abstract class QueryResultRetrieverBase : IQueryResultRetriever
     {
+        private readonly DocumentDatabase _database;
         private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
         private readonly BlittableJsonTraverser _blittableTraverser;
@@ -34,8 +36,9 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected readonly FieldsToFetch FieldsToFetch;
 
-        protected QueryResultRetrieverBase(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
+        protected QueryResultRetrieverBase(DocumentDatabase database,IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
         {
+            _database = database;
             _query = query;
             _context = context;
             _documentsStorage = documentsStorage;
@@ -141,10 +144,11 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (TryGetValue(fieldToFetch, doc, out var fieldVal))
                 {
-                    if (fieldsToFetch.SingleFieldNoAlias && fieldVal is DynamicJsonValue nested)
+                    if (fieldsToFetch.SingleFieldNoAlias && fieldVal is BlittableJsonReaderObject nested)
                     {
-                        result = nested;
-                        break;
+                        doc.Data = nested;
+                        doc.IndexScore = score;
+                        return doc;
                     }
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
@@ -269,6 +273,7 @@ namespace Raven.Server.Documents.Queries.Results
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
                 }
                 value = InvokeFunction(
+                    
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);
@@ -355,90 +360,75 @@ namespace Raven.Server.Documents.Queries.Results
             return false;
         }
 
+        private class QueryKey : ScriptRunnerCache.Key
+        {
+            private readonly Dictionary<StringSegment, string> _functions;
+
+            private bool Equals(QueryKey other)
+            {
+                if (_functions.Count != other._functions.Count)
+                    return false;
+
+                foreach (var function in _functions)
+                {
+                    if (other._functions.TryGetValue(function.Key, out var otherVal) == false
+                        || function.Value != otherVal)
+                        return false;
+                }
+
+                return true;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj)) return false;
+                if (ReferenceEquals(this, obj)) return true;
+                if (obj.GetType() != this.GetType()) return false;
+                return Equals((QueryKey)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                unchecked
+                {
+                    int hashCode =0;
+                    foreach (var function in _functions)
+                    {
+                        hashCode = (hashCode * 397) ^ (function.Value.GetHashCode());
+                    }
+                    return hashCode;
+                }
+            }
+
+            public QueryKey(Dictionary<StringSegment, string> functions)
+            {
+                _functions = functions;
+            }
+
+            public override void GenerateScript(ScriptRunner runner)
+            {
+                foreach (var kvp in _functions)
+                {
+                    runner.AddScript(kvp.Value);
+                }
+            }
+        }
+
         private object InvokeFunction(string methodName, Query query, object[] args)
         {
-            //TODO: Maxim fixme
-            // This is intentionally written to be as simple as possible, we are going to replace
-            // this Jint impl with Jurrasic, so there is no point in doing anything fancy.
-            // 
-            // We'll need to handle caching of the function, and proper error handling / parsing
-            // of the function code / errors during their execution. For example, we must get the
-            // document id / reduce key of the document that generated the error. 
-            var jintEngine = new ScriptEngine();
+            var key = new QueryKey(query.DeclaredFunctions);
 
-            jintEngine.RecursionDepthLimit = 100;
-            //    cfg.NullPropagation();
-
-
-            if (query.DeclaredFunctions != null)
+            using (_database.Scripts.GetScriptRunner(key, out var run))
             {
-                foreach (var func in query.DeclaredFunctions.Values)
-                {
-                    jintEngine.Execute(func);
-                }
-            }
-            object Translate(object o)
-            {
-                if (o is Document doc)
-                {
-                    return new BlittableObjectInstance(jintEngine, doc.Data, doc.Id);
-                }
-                if (o is BlittableJsonReaderObject obj)
-                    return new BlittableObjectInstance(jintEngine, obj, null);
-                if (o is LazyStringValue lsv)
-                    return lsv.ToString();
-                if (o is LazyCompressedStringValue lcsv)
-                    return lcsv.ToString();
-                if (o is LazyNumberValue lnv)
-                    return lnv.ToDouble(CultureInfo.InvariantCulture);
-                if (o is List<object> l)
-                {
-                    for (int i = 0; i < l.Count; i++)
-                    {
-                        l[i] = Translate(l[i]);
-                    }
-                    return l.ToArray();
-                }
-                return o;
-            }
+                var result = run.Run(_context as DocumentsOperationContext, methodName, args);
+                if (result.IsNull)
+                    return null;
 
-            for (int i = 0; i < args.Length; i++)
-            {
-                args[i] = Translate(args[i]);
+                if (result.Value is ObjectInstance)
+                    return result.Translate<BlittableJsonReaderObject>(_context);
+
+                return result.Value;
             }
-
-            ////var result = jintEngine.CallGlobalFunction(methodName, args);
-            ////if (result is ArrayInstance)
-            ////    return PatcherOperationScope.ToBlittable2(result as ArrayInstance);
-            ////if (result is ObjectInstance)
-            ////    return PatcherOperationScope.ToBlittable2(result as ObjectInstance);
-            ////if (result == Null.Value || result== Undefined.Value)
-            ////    return null;
-
-            //var typeCode = Type.GetTypeCode(result.GetType());
-            //switch (typeCode)
-            //{
-            //    case TypeCode.Boolean:
-            //        return (bool)result;
-            //    case TypeCode.String:
-            //        return result;
-            //    case TypeCode.Byte:
-            //    case TypeCode.SByte:
-            //    case TypeCode.UInt16:
-            //    case TypeCode.UInt32:
-            //    case TypeCode.Int16:
-            //    case TypeCode.Int32:
-            //    case TypeCode.UInt64:
-            //    case TypeCode.Int64:
-            //    case TypeCode.Decimal:
-            //    case TypeCode.Double:
-            //    case TypeCode.Single:
-            //        return result;
-            //    case TypeCode.DateTime:
-            //        return result;
-            //}
-            //+ result
-            throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " );
         }
 
 
