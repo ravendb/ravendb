@@ -118,6 +118,7 @@ namespace Raven.Client.Util.RateLimiting
             }
             catch (ObjectDisposedException)
             {
+                // nothing to do here
             }
         }
 
