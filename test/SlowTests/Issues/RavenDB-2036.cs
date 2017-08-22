@@ -19,7 +19,7 @@ namespace SlowTests.Issues
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
-                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search }
                         }
                     }
                 };
@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
-                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search }
                         }
                     }
                 };
@@ -53,7 +53,7 @@ namespace SlowTests.Issues
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
-                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search }
                         }
                     }
                 };
@@ -70,7 +70,7 @@ namespace SlowTests.Issues
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
                         {
-                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed }
+                            "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search }
                         }
                     }
                 };

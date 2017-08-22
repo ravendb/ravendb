@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
                                       },
                     Indexes =
                     {
-                        {x => x.Query, FieldIndexing.Analyzed}
+                        {x => x.Query, FieldIndexing.Search}
                     },
                     Analyzers =
                     {

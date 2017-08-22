@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         { "Location", new IndexFieldOptions()
                         {
-                            Indexing = FieldIndexing.Analyzed,
+                            Indexing = FieldIndexing.Search,
                         } }
                     }
                 }, database))
@@ -95,7 +95,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         { "Hobbies", new IndexFieldOptions()
                             {
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                             }
                         }
                     }
@@ -161,12 +161,12 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         { "Location", new IndexFieldOptions()
                             {
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                             }
                         },
                         { "ResidenceAddress", new IndexFieldOptions()
                             {
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                             }
                         }
                     }
@@ -232,12 +232,12 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
                     {
                         { "Hobbies", new IndexFieldOptions()
                             {
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                             }
                         },
                         { "ResidenceAddress", new IndexFieldOptions()
                             {
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                             }
                         }
                     }

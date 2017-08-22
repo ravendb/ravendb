@@ -691,7 +691,7 @@ namespace SlowTests.Server.Replication
                                    Age = u.Age
                                };
 
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
 
                 Analyze(x => x.Name, typeof(RavenStandardAnalyzer).FullName);
 

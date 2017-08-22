@@ -240,7 +240,7 @@ namespace FastTests.Server.Documents.Indexing.Static
                             Strategy = SpatialSearchStrategy.BoundingBox,
                             MaxTreeLevel = 5
                         },
-                        Indexing = FieldIndexing.NotAnalyzed,
+                        Indexing = FieldIndexing.Exact,
                         Suggestions = false,
                         Storage = FieldStorage.No,
                         Analyzer = "a2",

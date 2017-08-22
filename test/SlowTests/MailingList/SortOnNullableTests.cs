@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                                   Num = d.Num
                               };
 
-                Index(x => x.Text, FieldIndexing.Analyzed);
+                Index(x => x.Text, FieldIndexing.Search);
                 Index(x => x.Num, FieldIndexing.Default);
 
             }

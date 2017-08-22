@@ -98,7 +98,7 @@ namespace SlowTests.MailingList.PhilJones
                                         Created = g.Max(x => (DateTime)x.Created)
                                     };
 
-                Index(x => x.Query, FieldIndexing.Analyzed);
+                Index(x => x.Query, FieldIndexing.Search);
                 Store(x => x.Query, FieldStorage.No);
             }
         }

@@ -317,7 +317,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             },
@@ -326,7 +326,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             }
@@ -410,7 +410,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             },
@@ -419,7 +419,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             }
@@ -494,7 +494,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             },
@@ -503,7 +503,7 @@ namespace SlowTests.Tests.Querying
                                 new IndexFieldOptions
                                 {
                                     Storage = FieldStorage.Yes,
-                                    Indexing = FieldIndexing.Analyzed,
+                                    Indexing = FieldIndexing.Search,
                                     TermVector = FieldTermVector.WithPositionsAndOffsets
                                 }
                             }

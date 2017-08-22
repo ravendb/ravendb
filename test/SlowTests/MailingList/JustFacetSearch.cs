@@ -61,7 +61,7 @@ namespace SlowTests.MailingList
                           article.Sections
                       };
 
-                Index(x => x.SearchField, FieldIndexing.Analyzed);
+                Index(x => x.SearchField, FieldIndexing.Search);
             }
         }
 

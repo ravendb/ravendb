@@ -642,7 +642,7 @@ namespace SlowTests.Tests.Sorting
                                   doc.Year
                               };
 
-                Index(x => x.Title, FieldIndexing.NotAnalyzed);
+                Index(x => x.Title, FieldIndexing.Exact);
             }
         }
 

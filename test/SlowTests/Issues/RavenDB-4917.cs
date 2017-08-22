@@ -57,7 +57,7 @@ namespace SlowTests.Issues
                                        DisplayName = customer.DisplayName
                                    };
 
-                Index(e => e.Id, FieldIndexing.Analyzed);
+                Index(e => e.Id, FieldIndexing.Search);
                 Index(e => e.FirstName, FieldIndexing.Default);
                 Index(e => e.LastName, FieldIndexing.Default);
                 Index(e => e.DisplayName, FieldIndexing.Default);

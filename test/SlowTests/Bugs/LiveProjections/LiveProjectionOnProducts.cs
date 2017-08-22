@@ -125,8 +125,8 @@ namespace SlowTests.Bugs.LiveProjections
 
                 Indexes = new Dictionary<Expression<Func<ProductSku, object>>, FieldIndexing>()
                     {
-                        { e=>e.ArticleNumber, FieldIndexing.Analyzed},
-                        { e=>e.Name, FieldIndexing.Analyzed}
+                        { e=>e.ArticleNumber, FieldIndexing.Search},
+                        { e=>e.Name, FieldIndexing.Search}
                     };
             }
         }

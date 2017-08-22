@@ -84,7 +84,7 @@ namespace SlowTests.MailingList
                                         PostStatus = g.SelectMany(i => i.PostStatus).Where(i => i != PostStatus.None).ToArray(),
                                     };
 
-                Index(i => i.UserName, FieldIndexing.Analyzed);
+                Index(i => i.UserName, FieldIndexing.Search);
             }
         }
 

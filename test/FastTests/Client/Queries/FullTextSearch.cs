@@ -430,7 +430,7 @@ namespace FastTests.Client.Queries
                     Maps = { "from doc in docs.Images select new { doc.Tags, doc.Users }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Suggestions = true} }
+                        { "Tags", new IndexFieldOptions { Indexing = FieldIndexing.Search, Suggestions = true} }
                     },
                     Name = "test"
                 }}));
@@ -468,7 +468,7 @@ namespace FastTests.Client.Queries
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search } }
                     },
                     Name = "test"
                 }}));
@@ -496,7 +496,7 @@ namespace FastTests.Client.Queries
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search } }
                     },
                     Name = "test"
                 }}));
@@ -528,7 +528,7 @@ namespace FastTests.Client.Queries
                     Maps = { "from doc in docs.Images select new { doc.Name }" },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                        { "Name", new IndexFieldOptions { Indexing = FieldIndexing.Search } }
                     },
                     Name = "test"
                 }}));

@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                         };
 
                         if (field.IsFullTextSearch)
-                            indexField.Indexing = FieldIndexing.Analyzed;
+                            indexField.Indexing = FieldIndexing.Search;
 
                         return indexField;
                     }
@@ -59,7 +59,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     };
 
                     if (field.IsFullTextSearch)
-                        indexField.Indexing = FieldIndexing.Analyzed;
+                        indexField.Indexing = FieldIndexing.Search;
 
                     return indexField;
                 }).ToArray(),
@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     };
 
                     if (field.IsFullTextSearch)
-                        indexField.Indexing = FieldIndexing.Analyzed;
+                        indexField.Indexing = FieldIndexing.Search;
 
                     return indexField;
                 }).ToArray());
@@ -88,7 +88,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (extendedMapFields.Any(x => x.Name.Equals(field.Name, StringComparison.Ordinal)) == false)
                 {
-                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing == FieldIndexing.Analyzed));
+                    extendedMapFields.Add(DynamicQueryMappingItem.Create(field.Name, field.Aggregation, field.Indexing == FieldIndexing.Search));
                 }
             }
 

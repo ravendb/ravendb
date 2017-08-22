@@ -46,7 +46,7 @@ namespace SlowTests.MailingList
                     book.Id
                 };
 
-                Index(x => x.Text, FieldIndexing.Analyzed);
+                Index(x => x.Text, FieldIndexing.Search);
             }
         }
 

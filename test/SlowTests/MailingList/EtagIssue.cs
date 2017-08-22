@@ -204,7 +204,7 @@ namespace SlowTests.MailingList
                         ManagedItems_RelationStatus = g.SelectMany(it => it.ManagedItems).Select(it => it.RelationStatus)
                     };
 
-                Index(r => r.Id, FieldIndexing.NotAnalyzed);
+                Index(r => r.Id, FieldIndexing.Exact);
                 Store(r => r.Id, FieldStorage.Yes);
                 Store(r => r.Slug, FieldStorage.Yes);
                 Store(r => r.DateUpdated, FieldStorage.Yes);

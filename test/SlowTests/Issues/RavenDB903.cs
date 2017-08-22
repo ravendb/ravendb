@@ -84,7 +84,7 @@ namespace SlowTests.Issues
                                       product.Description
                                   };
 
-                Index(x => x.Description, FieldIndexing.Analyzed);
+                Index(x => x.Description, FieldIndexing.Search);
             }
         }
     }

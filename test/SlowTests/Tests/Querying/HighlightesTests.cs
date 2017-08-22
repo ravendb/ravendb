@@ -47,15 +47,15 @@ namespace SlowTests.Tests.Querying
                                            select new { Slug = slug, doc.Title, doc.Content });
 
 
-                Index(x => x.Slug, FieldIndexing.Analyzed);
+                Index(x => x.Slug, FieldIndexing.Search);
                 Store(x => x.Slug, FieldStorage.Yes);
                 TermVector(x => x.Slug, FieldTermVector.WithPositionsAndOffsets);
 
-                Index(x => x.Title, FieldIndexing.Analyzed);
+                Index(x => x.Title, FieldIndexing.Search);
                 Store(x => x.Title, FieldStorage.Yes);
                 TermVector(x => x.Title, FieldTermVector.WithPositionsAndOffsets);
 
-                Index(x => x.Content, FieldIndexing.Analyzed);
+                Index(x => x.Content, FieldIndexing.Search);
                 Store(x => x.Content, FieldStorage.Yes);
                 TermVector(x => x.Content, FieldTermVector.WithPositionsAndOffsets);
             }

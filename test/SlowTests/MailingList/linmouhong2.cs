@@ -40,7 +40,7 @@ namespace SlowTests.MailingList
 
                 // Sort(x => x.Category.Id, Raven.Abstractions.Indexing.SortOptions.Int);
 
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
             }
         }
 

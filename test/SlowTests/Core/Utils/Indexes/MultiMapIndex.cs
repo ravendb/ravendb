@@ -20,7 +20,7 @@ namespace SlowTests.Core.Utils.Indexes
             AddMap<Headquater>(items => from x in items
                                   select new Result { Content = new object[] { x.Address1, x.Address2, x.Address3 } });
 
-            Index(x => x.Content, FieldIndexing.Analyzed);
+            Index(x => x.Content, FieldIndexing.Search);
         }
     }
 }

@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                                    };
 
                 Store(x => x.Query, FieldStorage.Yes);
-                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Query, FieldIndexing.Search);
             }
         }
 

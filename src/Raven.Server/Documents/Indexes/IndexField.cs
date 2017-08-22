@@ -38,7 +38,7 @@ namespace Raven.Server.Documents.Indexes
             if (options.Indexing.HasValue)
                 field.Indexing = options.Indexing.Value;
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
-                field.Indexing = FieldIndexing.Analyzed;
+                field.Indexing = FieldIndexing.Search;
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
@@ -111,9 +111,9 @@ namespace Raven.Server.Documents.Indexes
             };
         }
 
-        public static string GetAnalyzedAutoIndexFieldName(string name)
+        public static string GetSearchAutoIndexFieldName(string name)
         {
-            return $"Analyzed({name})";
+            return $"search({name})";
         }
     }
 }

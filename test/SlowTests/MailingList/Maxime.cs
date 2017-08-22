@@ -159,8 +159,8 @@ namespace SlowTests.MailingList
                           _ = SpatialGenerate(b.Latitude, b.Longitude)
                       };
 
-                Index(p => p.Name, FieldIndexing.Analyzed);
-                Index(p => p.Terms, FieldIndexing.Analyzed);
+                Index(p => p.Name, FieldIndexing.Search);
+                Index(p => p.Terms, FieldIndexing.Search);
 
             }
         }

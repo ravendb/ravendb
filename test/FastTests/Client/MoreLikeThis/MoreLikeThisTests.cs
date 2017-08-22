@@ -863,7 +863,7 @@ namespace FastTests.Client.MoreLikeThis
                                   doc.Property.Body
                               };
 
-                Index(x => x.Property.Body, FieldIndexing.Analyzed);
+                Index(x => x.Property.Body, FieldIndexing.Search);
             }
         }
     }

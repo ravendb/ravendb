@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents.Queries
             public FooByBar()
             {
                 Map = foos => from foo in foos select new { foo.Bar };
-                Index(x => x.Bar, FieldIndexing.Analyzed);
+                Index(x => x.Bar, FieldIndexing.Search);
             }
         }
 

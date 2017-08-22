@@ -27,8 +27,8 @@ namespace SlowTests.Issues
                           _ = doc.Trans.Select(x => CreateField("Trans_" + x.Key, x.Value)),
                       };
 
-                Index("Trans_en", FieldIndexing.Analyzed);
-                Index("Trans_fi", FieldIndexing.Analyzed);
+                Index("Trans_en", FieldIndexing.Search);
+                Index("Trans_fi", FieldIndexing.Search);
             }
         }
 

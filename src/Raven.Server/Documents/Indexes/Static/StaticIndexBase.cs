@@ -121,10 +121,10 @@ namespace Raven.Server.Documents.Indexes.Static
             switch (analyzed)
             {
                 case true:
-                    index = FieldIndexing.Analyzed;
+                    index = FieldIndexing.Search;
                     break;
                 case false:
-                    index = FieldIndexing.NotAnalyzed;
+                    index = FieldIndexing.Exact;
                     break;
                 default:
                     index = null;

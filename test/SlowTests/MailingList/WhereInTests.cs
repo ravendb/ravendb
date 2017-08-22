@@ -180,7 +180,7 @@ namespace SlowTests.MailingList
                 Map = organizations => from o in organizations
                                        select new { o.Name };
 
-                Indexes.Add(x => x.Name, FieldIndexing.NotAnalyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Exact);
             }
         }
 
@@ -191,7 +191,7 @@ namespace SlowTests.MailingList
                 Map = organizations => from o in organizations
                                        select new { o.Name };
 
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
             }
         }
     }

@@ -221,7 +221,7 @@ namespace SlowTests.MailingList
             {
                 Map = contacts => from c in contacts select new { c.Name };
 
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
             }
         }
 

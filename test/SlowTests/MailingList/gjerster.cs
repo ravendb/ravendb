@@ -71,7 +71,7 @@ namespace SlowTests.MailingList
                                   doc.Description
                                   }
                               };
-                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Query, FieldIndexing.Search);
             }
 
             #region Nested type: ReducedResult

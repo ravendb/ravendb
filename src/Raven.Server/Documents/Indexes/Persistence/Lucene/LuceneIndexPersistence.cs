@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                     foreach (var field in index.Definition.MapFields.Values)
                     {
-                        if (field.Indexing == FieldIndexing.Analyzed)
+                        if (field.Indexing == FieldIndexing.Search)
                             AddDefaultIndexField(field);
                     }
 
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     {
                         fields.Add(field);
 
-                        if (field.Indexing == FieldIndexing.Analyzed)
+                        if (field.Indexing == FieldIndexing.Search)
                             AddDefaultIndexField(field);
                     }
 

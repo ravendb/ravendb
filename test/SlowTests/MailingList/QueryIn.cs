@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
                     },
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {
-                        { "Text", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } }
+                        { "Text", new IndexFieldOptions { Indexing = FieldIndexing.Search } }
                     }
                 }}));
 

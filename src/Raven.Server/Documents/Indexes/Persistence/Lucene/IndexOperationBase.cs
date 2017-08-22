@@ -47,13 +47,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
                 switch (field.Value.Indexing)
                 {
-                    case FieldIndexing.NotAnalyzed:
+                    case FieldIndexing.Exact:
                         if (keywordAnalyzer == null)
                             keywordAnalyzer = new KeywordAnalyzer();
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
-                    case FieldIndexing.Analyzed:
+                    case FieldIndexing.Search:
                         var analyzer = GetAnalyzer(fieldName, field.Value, forQuerying);
                         if (analyzer != null)
                         {

@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
-                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
+                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
                         return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
@@ -199,7 +199,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (groupByField.IsSpecifiedInWhere == false)
                         continue;
 
-                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
+                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
                     {
                         explanations?.Add(new Explanation(indexName,
                             $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));

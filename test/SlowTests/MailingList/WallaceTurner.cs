@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
                                   Suburb = doc.Suburb,
                                   State = doc.State
                               };
-                Index(x => x.Address, FieldIndexing.Analyzed);
+                Index(x => x.Address, FieldIndexing.Search);
             }
         }
 

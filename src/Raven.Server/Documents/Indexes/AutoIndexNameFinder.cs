@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Indexes
 
             var reducedByFields = string.Join("And", groupBy.Select(x =>
             {
-                if (x.Indexing == FieldIndexing.Analyzed)
-                    return IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
+                if (x.Indexing == FieldIndexing.Search)
+                    return IndexField.GetSearchAutoIndexFieldName(x.Name);
 
                 return x.Name;
             }).OrderBy(x => x));
@@ -49,8 +49,8 @@ namespace Raven.Server.Documents.Indexes
             
             var combinedFields = string.Join("And", fields.Select(x =>
             {
-                if (x.Indexing == FieldIndexing.Analyzed)
-                    return IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
+                if (x.Indexing == FieldIndexing.Search)
+                    return IndexField.GetSearchAutoIndexFieldName(x.Name);
 
                 return x.Name;
             }).OrderBy(x => x));

@@ -19,7 +19,7 @@ namespace SlowTests.Core.Utils.Indexes
                                    Query = AsJson(company).Select(x => x.Value)
                                };
 
-            Index(x => x.Query, FieldIndexing.Analyzed);
+            Index(x => x.Query, FieldIndexing.Search);
         }
     }
 }

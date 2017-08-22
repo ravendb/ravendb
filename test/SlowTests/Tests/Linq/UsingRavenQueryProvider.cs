@@ -141,7 +141,7 @@ namespace SlowTests.Tests.Linq
                         {
                             Map = docs => from doc in docs
                                 select new {doc.Name, doc.Age},
-                            Indexes = {{x => x.Name, FieldIndexing.Analyzed}}
+                            Indexes = {{x => x.Name, FieldIndexing.Search}}
                         }
                         .ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
@@ -193,7 +193,7 @@ namespace SlowTests.Tests.Linq
                                 doc.Info,
                                 doc.Active
                             },
-                        Indexes = {{x => x.Name, FieldIndexing.Analyzed}}
+                        Indexes = {{x => x.Name, FieldIndexing.Search}}
                     }.ToIndexDefinition(store.Conventions);
                     indexDefinition.Name = indexName;
                     store.Admin.Send(new PutIndexesOperation(new[] {indexDefinition}));
