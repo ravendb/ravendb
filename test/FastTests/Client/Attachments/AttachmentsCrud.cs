@@ -470,7 +470,7 @@ namespace FastTests.Client.Attachments
 
                 await store.Operations.SendAsync(new PatchOperation("users/1", null, new PatchRequest
                 {
-                    Script = "this.LastName = newUser.LastName;",
+                    Script = "this.LastName = args.newUser.LastName;",
                     Values =
                     {
                         {"newUser", new {LastName = "Yitzchaki"}}
