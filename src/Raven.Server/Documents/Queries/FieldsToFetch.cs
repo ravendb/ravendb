@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Queries
 
         public readonly bool AnyExtractableFromIndex;
 
-        public readonly bool SingleFieldNoAlias;
+        public readonly bool SingleBodyOrMethodWithNoAlias;
 
         public readonly bool IsProjection;
 
@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Queries
 
         public FieldsToFetch(SelectField[] fieldsToFetch, IndexDefinitionBase indexDefinition)
         {
-            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleFieldNoAlias);
+            Fields = GetFieldsToFetch(fieldsToFetch, indexDefinition, out AnyExtractableFromIndex, out bool extractAllStoredFields, out SingleBodyOrMethodWithNoAlias);
             IsProjection = Fields != null && Fields.Count > 0;
             IsDistinct = false;
 
@@ -159,7 +159,9 @@ namespace Raven.Server.Documents.Queries
                 return null;
 
             var result = new Dictionary<string, FieldToFetch>(StringComparer.OrdinalIgnoreCase);
-            singleFieldNoAlias = selectFields.Length == 1 && selectFields[0].Alias == null;
+            singleFieldNoAlias = selectFields.Length == 1 &&
+                                 selectFields[0].Alias == null &&
+                                 selectFields[0].Function != null;
             for (var i = 0; i < selectFields.Length; i++)
             {
                 var selectField = selectFields[i];

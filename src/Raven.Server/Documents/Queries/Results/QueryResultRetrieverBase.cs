@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (TryGetValue(fieldToFetch, doc, out var fieldVal))
                 {
-                    if (fieldsToFetch.SingleFieldNoAlias && fieldVal is BlittableJsonReaderObject nested)
+                    if (fieldsToFetch.SingleBodyOrMethodWithNoAlias && fieldVal is BlittableJsonReaderObject nested)
                     {
                         doc.Data = nested;
                         doc.IndexScore = score;
