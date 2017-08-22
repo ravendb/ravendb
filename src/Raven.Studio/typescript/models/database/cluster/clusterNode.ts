@@ -73,7 +73,7 @@ class clusterNode {
                 } else if (this.tag() === "?") {
                     return "Passive";
                 } else {
-                    return "Voting";
+                    return this.connected() ? "Voting" : "Error";
                 }
             }
 
@@ -89,7 +89,11 @@ class clusterNode {
         return ko.pureComputed(() => {
             const topology = topologyProvider();
             if (!topology.leader()) {
-                return this.type() === "Watcher" ? "state-default" : "state-info";
+                if (this.type() === "Watcher") {
+                    return "state-default";
+                }
+                
+                return this.connected() ? "state-info" : "state-danger";
             }
 
             if (topology.nodeTag() !== topology.leader()) {

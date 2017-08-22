@@ -1,5 +1,7 @@
 @db-group-task-node-bg: #39434f;
-@db-group-member-color: #6ebf3a;
+@db-group-member-color: #6dbe3b;
+@db-group-promotable-color: #488c5d;
+@db-group-rehab-color: #5489a8;
 @db-group-task-name-color: @gray-light;
 
 .fullscreen {
@@ -16,6 +18,12 @@
     }
     
     
+}
+
+.manage-db-group.destinations {
+    .info-container {
+        align-items: center;
+    }
 }
 
 #databaseGroupGraphContainer {
@@ -38,11 +46,17 @@
 
     .db-node {
         .node-bg {
-            fill: @db-group-member-color;
             cursor: move;
             transition: .2s fill ease-in-out;
         }
 
+        .catching-up-stroke {
+            fill: none;
+            stroke-width: 2px;
+            stroke-dasharray: 30,17;
+            opacity: 0;
+        }
+        
         .node-tag {
             font-size: 24px;
             text-anchor: middle;
@@ -57,10 +71,43 @@
             fill: white;
             pointer-events: none;
         }
+        
+        &.Member {
+            .node-bg {
+                fill: @db-group-member-color;
+            }
+        }
+
+        &.Promotable {
+            .node-bg {
+                fill: @db-group-promotable-color;
+            }
+            
+            .catching-up-stroke {
+                opacity: 1;
+                stroke: @db-group-promotable-color;
+            }
+        }
+
+        &.Rehab {
+            .node-bg {
+                fill: @db-group-rehab-color;
+            }
+
+            .catching-up-stroke {
+                opacity: 1;
+                stroke: @db-group-rehab-color;
+            }
+        }
+        
 
         &.state-danger {
             .node-bg {
                 fill: @brand-danger;
+            }
+
+            .catching-up-stroke {
+                opacity: 0;
             }
         }
 
@@ -69,6 +116,8 @@
                 fill: @brand-warning;
             }
         }
+        
+        
     }
 
     .task-node {

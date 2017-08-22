@@ -1,4 +1,4 @@
-<div class="destinations flex-vertical absolute-fill content-margin" xmlns="http://www.w3.org/1999/html">
+<div class="destinations flex-vertical absolute-fill content-margin manage-db-group">
     <div class="row flex-row flex-grow flex-stretch-items">
         <div class="col-sm-12 col-lg-6 flex-vertical">
             <div class="flex-header flex-horizontal">
@@ -39,8 +39,10 @@
                                 </h3>
                             </div>
                             <div data-bind="visible: responsibleNode">
-                                <i class="icon-cluster-node" title="Database group node that is responsible for caught up of this node"></i>
-                                <span data-bind="text: responsibleNode" title="Database group node that is responsible for caught up of this node"></span>
+                                <div class="text-center">
+                                    <i class="icon-cluster-node" title="Database group node that is responsible for caught up of this node"></i>
+                                    <span data-bind="text: responsibleNode" title="Database group node that is responsible for caught up of this node"></span>
+                                </div>
                             </div>
                             <div class="status">
                                 <!-- TODO 
