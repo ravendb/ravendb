@@ -48,7 +48,10 @@ namespace SlowTests.Core.Commands
                     store.Operations.Send(new PatchOperation("posts/2", null,
                         new PatchRequest
                         {
-                            Script = @"_.pull(this.AttachmentIds, tagToRemove)",
+                            Script = @"
+this.AttachmentIds = this.AttachmentIds.filter(function (t) { 
+    return t != args.tagToRemove
+})",
                             Values = { { "tagToRemove", "id2" } }
                         }));
 
@@ -61,9 +64,9 @@ namespace SlowTests.Core.Commands
                         new PatchRequest
                         {
                             Script = @"
-                            _.remove(this.Comments,function(comment) {
-                                return comment.Title === 'comment 1';
-                            });",
+this.Comments = this.Comments.filter(function (c) { 
+    return c.Title !== 'comment 1'
+});",
                         }));
 
                     result = commands.Get("posts/1");
