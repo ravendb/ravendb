@@ -22,11 +22,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new BasicRavenEtlTests())
+                using (var test = new SlowTests.Issues.RavenDB_2955())
                 {
                     try
                     {
-                        test.Loading_to_different_collections();
+                        test.ShouldDeleteSmallerAutoIndexes();
                     }
                     catch (Exception e)
                     {
