@@ -61,14 +61,14 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WritePropertyName(nameof(CertificateDefinition.Name));
                             writer.WriteString(_name.ToString());
                             writer.WriteComma();
-                            writer.WritePropertyName("Certificate");
+                            writer.WritePropertyName(nameof(CertificateDefinition.Certificate));
                             writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Cert)));
                             writer.WriteComma();
-                            writer.WritePropertyName("SecurityClearance");
+                            writer.WritePropertyName(nameof(CertificateDefinition.SecurityClearance));
                             writer.WriteString(_clearance.ToString());
                             writer.WriteComma();
 
-                            writer.WritePropertyName("Permissions");
+                            writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
                             writer.WriteStartObject();
                             bool first = true;
                             foreach (var kvp in _permissions)
