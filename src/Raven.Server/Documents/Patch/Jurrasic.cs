@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Patch
             var compiledScript = CompiledScript.Compile(new StringScriptSource(script),
                 new CompilerOptions
                 {
-                    EmitOnLoopIteration = new SingleRun(null, null).OnStateLoopIteration
+                    EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
                 });
 
             ScriptsSource.Add(script);
@@ -150,6 +150,12 @@ namespace Raven.Server.Documents.Patch
                 return string.Join(Environment.NewLine, _runner.ScriptsSource);
             }
 
+            private SingleRun()
+            {
+                // here just to get an instance that jurrasic
+                // can use
+            }
+
             public SingleRun(DocumentDatabase database, ScriptRunner runner)
             {
                 _database = database;
@@ -158,7 +164,7 @@ namespace Raven.Server.Documents.Patch
                 {
                     RecursionDepthLimit = 64,
                     OnLoopIterationCall = OnStateLoopIteration,
-                    EnableExposedClrTypes = runner._enableClr
+                    EnableExposedClrTypes = runner._enableClr 
                 };
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("del",  (Func<string, string, bool>)DeleteDocument);
@@ -253,7 +259,7 @@ namespace Raven.Server.Documents.Patch
             {
                 _context = ctx;
                 CurrentSteps = 0;
-                MaxSteps = 1000;
+                MaxSteps = 1000; // TODO: Maxim make me configurable
                 for (int i = 0; i < args.Length; i++)
                 {
                     args[i] = TranslateToJurrasic(ScriptEngine, args[i]);
@@ -295,15 +301,32 @@ namespace Raven.Server.Documents.Patch
                     }
                     return list;
                 }
+                // for admin
+                if (o is RavenServer || o is DocumentDatabase)
+                {
+                    AssertAdminScriptInstance();
+                    return engine.Object.Construct(o);
+                }
 #if DEBUG
                 Debug.Assert(ExpectedTypes.Contains(o.GetType()));
 #endif
                 return o;
             }
 
+            private void AssertAdminScriptInstance()
+            {
+                if (_runner._enableClr == false)
+                    throw new InvalidOperationException("Unable to run admin scripts using this instance of the script runner, the EnableClr is set to false");
+            }
+
             public object CreateEmptyObject()
             {
                 return ScriptEngine.Object.Construct();
+            }
+
+            internal static Action GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
+            {
+                return new SingleRun().OnStateLoopIteration;
             }
         }
 
