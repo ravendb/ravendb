@@ -30,7 +30,7 @@ namespace SlowTests.Server.Documents
                         Query = "FROM Orders"
                     }, new PatchRequest()
                     {
-                        Script = @"PutDocument(""orders/"", this);"
+                        Script = @"put(""orders/"", this);"
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 }
 
