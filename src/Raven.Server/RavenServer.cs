@@ -32,7 +32,6 @@ using Sparrow.Logging;
 using System.Reflection;
 using System.Security.Claims;
 using System.Runtime.InteropServices;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
@@ -163,10 +162,17 @@ namespace Raven.Server
                     }
                 }
 
+                var addresses = new List<string>();
+                var serverUri = new Uri(Configuration.Core.ServerUrl);
+                foreach (var address in GetListenIpAddresses(serverUri.DnsSafeHost).Where(a=>a.IsIPv6LinkLocal == false))
+                {
+                    addresses.Add($"{serverUri.Scheme}://{address}:{serverUri.Port}");
+                }
+
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
-                    .UseUrls(Configuration.Core.ServerUrl)
+                    .UseUrls(addresses.ToArray())
                     .UseStartup<RavenServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
