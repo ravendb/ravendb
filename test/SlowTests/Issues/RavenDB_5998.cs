@@ -29,7 +29,7 @@ namespace SlowTests.Issues
 
                     var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptions
                     {
-                        TransformScript = "this.['Test'] = 'NewValue';"
+                        TransformScript = "this['Test'] = 'NewValue';"
                     });
 
                     var result = smuggler.Execute();
