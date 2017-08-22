@@ -70,24 +70,12 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Theory]
-        [InlineData(false)]
-        public async Task CriteriaScriptWithTransformation(bool useSsl)
+        [Fact]
+        public async Task CriteriaScriptWithTransformation()
         {
             string dbName = GetDatabaseName();
-            X509Certificate2 clientCertificate = null;
-            X509Certificate2 adminCertificate = null;
-            if (useSsl)
-            {
-                var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
-                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
-                {
-                    [dbName] = DatabaseAccess.ReadWrite,
-                });
-            }
-
-            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
+          
+            using (var store = GetDocumentStore( modifyName: s => dbName))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
@@ -111,7 +99,7 @@ namespace FastTests.Client.Subscriptions
                     else if (namSuffix == 4){
                     return this;
                     }
-                    return {Name: 'foo', OtherDoc:LoadDocument('things/6-A')}",
+                    return {Name: 'foo', OtherDoc:load('things/6-A')}",
                         },
                         ChangeVector = lastChangeVector
                     };
