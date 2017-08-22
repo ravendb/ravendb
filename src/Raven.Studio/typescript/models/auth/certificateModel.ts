@@ -4,7 +4,7 @@ import certificatePermissionModel = require("models/auth/certificatePermissionMo
 
 class certificateModel {
 
-    static securityClearanceTypes: valueAndLabelItem<securityClearanceTypes,string>[] = [
+    static securityClearanceTypes: valueAndLabelItem<securityClearanceTypes, string>[] = [
         {
             label: "Cluster Administator",
             value: "ClusterAdmin"
@@ -61,7 +61,9 @@ class certificateModel {
         });
         
         this.certificateAsBase64.extend({
-            required: true //TODO: it isn't always required
+            required: {
+                onlyIf: () => this.mode() === "upload"
+            } 
         });
     }
 

@@ -5,7 +5,8 @@ import certificateModel = require("models/auth/certificateModel");
 import generateCertificateCommand = require("commands/auth/generateCertificateCommand");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
-import uploadCertificateCommand = require("../../commands/auth/uploadCertificateCommand");
+import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
+import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
 
 class certificates extends viewModelBase {
 
@@ -29,7 +30,7 @@ class certificates extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "deletePermission", "addNewPermission", "fileSelected", "useDatabase");
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "deletePermission", "addNewPermission", "fileSelected", "useDatabase", "deleteCertificate");
         this.initObservables();
         this.initValidation();
     }
@@ -57,6 +58,18 @@ class certificates extends viewModelBase {
     
     enterEditCertificateMode(itemToEdit: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.model(certificateModel.fromDto(itemToEdit));
+    }
+
+    deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
+        this.confirmationMessage("Are you sure?", "Do you want to delete certificate with thumbprint: " + certificate.Thumbprint + "", ["No", "Yes, delete"])
+            .done(result => {
+                //TODO: spinners
+                if (result.can) {
+                    new deleteCertificateCommand(certificate.Thumbprint)
+                        .execute()
+                        .always(() => this.loadCertificates());
+                }
+            });
     }
     
     enterGenerateCertificateMode() {
@@ -175,6 +188,13 @@ class certificates extends viewModelBase {
                 return dbNames;
             }
         });
+    }
+    
+    resolveDatabasesAccess(certificateDefinition: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition): Array<string> {
+        if (certificateDefinition.SecurityClearance === "ClusterAdmin" || certificateDefinition.SecurityClearance === "Operator") {
+            return ["All"];
+        }
+        return Object.keys(certificateDefinition.Permissions);
     }
 }
 
