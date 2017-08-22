@@ -484,7 +484,7 @@ namespace FastTests
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(clientCertificate, permissions, clearance)
+                    var command = new PutClientCertificateOperation("RavenTestsClient", clientCertificate, permissions, clearance)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

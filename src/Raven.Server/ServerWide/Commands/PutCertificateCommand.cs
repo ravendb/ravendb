@@ -24,7 +24,7 @@ namespace Raven.Server.ServerWide.Commands
 
         public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
         {
-            if (Value.Clearance == SecurityClearance.ClusterAdmin)
+            if (Value.SecurityClearance == SecurityClearance.ClusterAdmin)
                 AssertClusterAdmin(isClusterAdmin);
         }
     }

@@ -180,6 +180,8 @@ namespace Raven.Server
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
+
+                ClusterCertificateHolder = ClusterCertificateHolder ?? httpsCert ?? new CertificateHolder();
             }
             catch (Exception e)
             {
@@ -396,11 +398,11 @@ namespace Raven.Server
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
                         authenticationStatus.Definition = definition;
-                        if (definition.Clearance == SecurityClearance.ClusterAdmin)
+                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
                         {
                             authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
                         }
-                        else if (definition.Clearance == SecurityClearance.Operator)
+                        else if (definition.SecurityClearance == SecurityClearance.Operator)
                         {
                             authenticationStatus.Status = AuthenticationStatus.Operator;
                         }

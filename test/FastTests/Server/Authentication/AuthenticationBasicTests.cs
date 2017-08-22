@@ -44,7 +44,7 @@ namespace FastTests.Server.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(clientCertificate, permissions, clearance)
+                    var command = new PutClientCertificateOperation("expired client cert", clientCertificate, permissions, clearance)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

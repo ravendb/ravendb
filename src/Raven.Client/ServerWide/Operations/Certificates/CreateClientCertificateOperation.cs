@@ -62,22 +62,22 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                     {
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName("Name");
+                        writer.WritePropertyName(nameof(CertificateDefinition.Name));
                         writer.WriteString(_name.ToString());
                         writer.WriteComma();
-                        writer.WritePropertyName("SecurityClearance");
+                        writer.WritePropertyName(nameof(SecurityClearance));
                         writer.WriteString(_clearance.ToString());
                         writer.WriteComma();
 
                         if (_password != null)
                         {
-                            writer.WritePropertyName("Password");
+                            writer.WritePropertyName(nameof(CertificateDefinition.Password));
                             writer.WriteString(_password.ToString());
                             writer.WriteComma();
                         }
                         
-                        writer.WritePropertyName("Permissions");
-                        writer.WriteStartArray();
+                        writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
+                        writer.WriteStartObject();
                         bool first = true;
                         foreach (var kvp in _permissions)
                         {
@@ -85,15 +85,11 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                                 writer.WriteComma();
                             first = false;
 
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("Database");
                             writer.WriteString(kvp.Key);
                             writer.WriteComma();
-                            writer.WritePropertyName("Access");
                             writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
-                            writer.WriteEndObject();
                         }
-                        writer.WriteEndArray();
+                        writer.WriteEndObject();
 
                         writer.WriteEndObject();
                     }
