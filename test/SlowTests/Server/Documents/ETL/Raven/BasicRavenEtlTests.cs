@@ -4,8 +4,6 @@ using System.Linq;
 using FastTests.Server.Basic.Entities;
 using Raven.Client.Documents.Operations;
 using Raven.Client.ServerWide.ETL;
-using Raven.Server.Documents.ETL;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -131,7 +129,7 @@ else if (this.Age % 2 == 0)
 loadToUsers(
     {
         Name: this.Name + ' ' + this.LastName, 
-        Address: LoadDocument(this.AddressId)
+        Address: load(this.AddressId)
     });
 ");
                 const int count = 30;
@@ -218,7 +216,7 @@ loadToUsers(
                 AddEtl(src, dest, "users", @"
 loadToUsers(this);
 loadToPeople({Name: this.Name + ' ' + this.LastName });
-loadToAddresses(LoadDocument(this.AddressId));
+loadToAddresses(load(this.AddressId));
 ");
                 const int count = 5;
 
@@ -429,7 +427,7 @@ loadToOrders(orderData);
             using (var src = GetDocumentStore())
             using (var dest = GetDocumentStore())
             {
-                AddEtl(src, dest, "Users", "this.Name = __document_id; loadToUsers(this);");
+                AddEtl(src, dest, "Users", "this.Name = id(this); loadToUsers(this);");
 
                 var etlDone = WaitForEtl(src, (n, s) => s.LoadSuccesses > 0);
 

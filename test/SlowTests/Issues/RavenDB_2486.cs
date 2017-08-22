@@ -60,7 +60,7 @@ namespace SlowTests.Issues
             {
                 try
                 {
-                    IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new Index1(), new Index2(), new Index3() }, null, store);
+                    IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new Index1(), new Index2(), new Index3() }, store);
                 }
                 catch (IndexCompilationException e)
                 {
@@ -81,7 +81,7 @@ namespace SlowTests.Issues
             {
                 try
                 {
-                    await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new Index1(), new Index2(), new Index3() }, null, store);
+                    await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new Index1(), new Index2(), new Index3() }, store);
                 }
                 catch (AggregateException e)
                 {

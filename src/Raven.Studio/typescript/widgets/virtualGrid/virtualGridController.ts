@@ -23,10 +23,6 @@ interface virtualGridController<T> {
 
     resultEtag: () => string;
 
-    withEvaluationContext(ctx: object): void;
-
-    wrapWithEvaluationContext(innerFunction: Function): Function;
-
 }
 
 export = virtualGridController;

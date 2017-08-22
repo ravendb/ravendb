@@ -12,7 +12,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Util;
 using Sparrow.Logging;
@@ -40,20 +39,18 @@ namespace Raven.Client.Documents.Indexes
         public static Task CreateIndexesAsync(Assembly assemblyToScan, IDocumentStore store, DocumentConventions conventions = null, CancellationToken token = default(CancellationToken))
         {
             var indexes = GetAllInstancesOfType<AbstractIndexCreationTask>(assemblyToScan);
-            var transformers = GetAllInstancesOfType<AbstractTransformerCreationTask>(assemblyToScan);
 
-            return CreateIndexesAsync(indexes, transformers, store, conventions, token);
+            return CreateIndexesAsync(indexes, store, conventions, token);
         }
 
-        public static void CreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore store, DocumentConventions conventions = null)
+        public static void CreateIndexes(IEnumerable<AbstractIndexCreationTask> indexes, IDocumentStore store, DocumentConventions conventions = null)
         {
-            AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, transformers, store, conventions));
+            AsyncHelpers.RunSync(() => CreateIndexesAsync(indexes, store, conventions));
         }
 
-        public static async Task CreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes, IEnumerable<AbstractTransformerCreationTask> transformers, IDocumentStore store, DocumentConventions conventions = null, CancellationToken token = default(CancellationToken))
+        public static async Task CreateIndexesAsync(IEnumerable<AbstractIndexCreationTask> indexes,IDocumentStore store, DocumentConventions conventions = null, CancellationToken token = default(CancellationToken))
         {
             var indexesList = indexes?.ToList() ?? new List<AbstractIndexCreationTask>();
-            var transformersList = transformers?.ToList() ?? new List<AbstractTransformerCreationTask>();
 
             if (conventions == null)
                 conventions = store.Conventions;
@@ -84,9 +81,6 @@ namespace Raven.Client.Documents.Indexes
                     }
                 }
             }
-
-            foreach (var task in transformersList)
-                await task.ExecuteAsync(store, conventions, token).ConfigureAwait(false);
 
             if (indexCompilationExceptions.Any())
                 throw new AggregateException("Failed to create one or more indexes. Please see inner exceptions for more details.", indexCompilationExceptions);

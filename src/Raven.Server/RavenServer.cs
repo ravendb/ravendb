@@ -44,6 +44,7 @@ using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
@@ -723,6 +724,12 @@ namespace Raven.Server
         }
 
         private ClusterMaintenanceWorker _clusterMaintenanceWorker;
+
+        // This is used for admin scripts only
+        public ScriptRunnerCache AdminScripts = new ScriptRunnerCache(null)
+        {
+            EnableClr = true
+        };
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {

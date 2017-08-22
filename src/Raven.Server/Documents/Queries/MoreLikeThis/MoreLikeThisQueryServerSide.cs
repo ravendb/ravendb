@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries.MoreLikeThis;
-using Raven.Client.Documents.Transformers;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -44,7 +43,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                 PageSize = pageSize
             };
 
-            DynamicJsonValue transformerParameters = null;
             HashSet<string> includes = null;
             foreach (var item in httpContext.Request.Query)
             {
@@ -60,10 +58,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                             includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                         includes.Add(item.Value[0]);
-                    }
-                    else if (string.Equals(item.Key, "transformer", StringComparison.OrdinalIgnoreCase))
-                    {
-                        result.Transformer = item.Value[0];
                     }
                     else if (string.Equals(item.Key, "fields", StringComparison.OrdinalIgnoreCase))
                     {
@@ -119,14 +113,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
                     }
                     else
                     {
-                        if (item.Key.StartsWith(TransformerParameter.Prefix, StringComparison.OrdinalIgnoreCase))
-                        {
-                            if (transformerParameters == null)
-                                transformerParameters = new DynamicJsonValue();
-
-                            transformerParameters[item.Key.Substring(TransformerParameter.Prefix.Length)] = item.Value[0];
-                        }
-
                         if (item.Key.StartsWith("mgf-", StringComparison.OrdinalIgnoreCase))
                         {
                             result.MapGroupFields[item.Key.Substring(4)] = item.Value[0];
@@ -141,9 +127,6 @@ namespace Raven.Server.Documents.Queries.MoreLikeThis
 
             if (includes != null)
                 result.Includes = includes.ToArray();
-
-            if (transformerParameters != null)
-                result.TransformerParameters = context.ReadObject(transformerParameters, "transformer/parameters");
 
             result.Metadata = new QueryMetadata(result.Query, null, 0);
 

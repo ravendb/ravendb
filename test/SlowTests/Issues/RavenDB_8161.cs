@@ -25,7 +25,7 @@ namespace SlowTests.Issues
                         Query = "FROM Orders"
                     }, new PatchRequest
                     {
-                        Script = @"PutDocument(""RavenDB_8161/"", this);"
+                        Script = @"put(""orders/"", this);"
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 

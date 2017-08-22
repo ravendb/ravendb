@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Sparrow.Json;
@@ -94,7 +93,7 @@ namespace Raven.Client.Documents.Session.Operations
             return _session.DocumentStore.DisableAggressiveCaching();
         }
 
-        public IList<T> Complete<T>()
+        public List<T> Complete<T>()
         {
             var queryResult = _currentQueryResults.CreateSnapshot();
             foreach (BlittableJsonReaderObject include in queryResult.Includes)
@@ -106,24 +105,15 @@ namespace Raven.Client.Documents.Session.Operations
                 _session.IncludedDocumentsById[newDocumentInfo.Id] = newDocumentInfo;
             }
 
-            var usedTransformer = string.IsNullOrEmpty(_indexQuery.Transformer) == false;
-            List<T> list;
-            if (usedTransformer)
+            var list = new List<T>();
+            foreach (BlittableJsonReaderObject document in queryResult.Results)
             {
-                list = TransformerHelper.ParseResultsForQueryOperation<T>(_session, queryResult).ToList();
-            }
-            else
-            {
-                list = new List<T>();
-                foreach (BlittableJsonReaderObject document in queryResult.Results)
-                {
-                    var metadata = document.GetMetadata();
+                var metadata = document.GetMetadata();
 
-                    string id;
-                    metadata.TryGetId(out id);
+                string id;
+                metadata.TryGetId(out id);
 
-                    list.Add(Deserialize<T>(id, document, metadata, _projectionFields, DisableEntitiesTracking, _session));
-                }
+                list.Add(Deserialize<T>(id, document, metadata, _projectionFields, DisableEntitiesTracking, _session));
             }
 
             if (DisableEntitiesTracking == false)

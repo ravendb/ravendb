@@ -111,7 +111,7 @@ namespace FastTests.Client.Subscriptions
                     else if (namSuffix == 4){
                     return this;
                     }
-                    return {Name: 'foo', OtherDoc:LoadDocument('things/6-A')}",
+                    return {Name: 'foo', OtherDoc:load('things/6-A')}",
                         },
                         ChangeVector = lastChangeVector
                     };

@@ -37,20 +37,18 @@ namespace Raven.Server.Documents.Queries.Parser
             while (Scanner.TryScan("DECLARE"))
             {
                 var (name, func) = DeclaredFunction();
-                if (q.DeclaredFunctions == null)
-                    q.DeclaredFunctions = new Dictionary<StringSegment, ValueToken>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
-
-                if (q.DeclaredFunctions.TryAdd(name, func) == false)
+             
+                if (q.TryAddFunction(name, QueryExpression.Extract(Scanner.Input, func)) == false)
                     ThrowParseException(name + " function was declared multiple times");
             }
 
             if (Scanner.TryScan("SELECT"))
-                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
+                q.Select = SelectClause("SELECT", q);
 
             q.From = FromClause();
 
             if (Scanner.TryScan("WITH"))
-                q.With = SelectOrWithClause("WITH", out _);
+                q.With = SelectClauseExpressions("WITH");
 
             if (Scanner.TryScan("GROUP BY"))
                 q.GroupBy = GroupBy();
@@ -58,16 +56,16 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("WHERE") && Expression(out q.Where) == false)
                 ThrowParseException("Unable to parse WHERE clause");
 
+            if (Scanner.TryScan("ORDER BY"))
+                q.OrderBy = OrderBy();
+
             if (Scanner.TryScan("SELECT"))
             {
                 if(q.Select!= null)
                     ThrowParseException("Only a single SELECT clause is allowed, but got two");
 
-                q.Select = SelectOrWithClause("SELECT", out q.IsDistinct);
+                q.Select = SelectClause("SELECT", q);
             }
-
-            if (Scanner.TryScan("ORDER BY"))
-                q.OrderBy = OrderBy();
 
             if (Scanner.NextToken())
                 ThrowParseException("Expected end of query");
@@ -190,13 +188,31 @@ namespace Raven.Server.Documents.Queries.Parser
             return orderBy;
         }
 
-        private List<(QueryExpression, FieldToken)> SelectOrWithClause(string clause, out bool isDistinct)
+        private List<(QueryExpression, FieldToken)> SelectClause(string clause, Query query)
         {
-            isDistinct = Scanner.TryScan("DISTINCT");
+            query.IsDistinct = Scanner.TryScan("DISTINCT");
 
             if (Scanner.TryScan("*"))
                 return null;
 
+            var functionStart = Scanner.Position;
+            if (Scanner.FunctionBody())
+            {
+                query.SelectFunctionBody = new ValueToken
+                {
+                    Type = ValueTokenType.String,
+                    TokenStart = functionStart,
+                    TokenLength = Scanner.Position - functionStart
+                };
+
+                return new List<(QueryExpression, FieldToken)>();
+            }
+
+            return SelectClauseExpressions(clause);
+        }
+
+        private List<(QueryExpression, FieldToken)> SelectClauseExpressions(string clause)
+        {
             var select = new List<(QueryExpression Expr, FieldToken Id)>();
 
             do
@@ -229,7 +245,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 else
                 {
                     ThrowParseException("Unable to get field for " + clause);
-                    return null;// never callsed
+                    return null; // never callsed
                 }
 
                 if (Alias(out var alias) == false && expr.Type == OperatorType.Value)
@@ -243,12 +259,12 @@ namespace Raven.Server.Documents.Queries.Parser
                     };
                 }
 
-                select.Add((expr, alias));
+                @select.Add((expr, alias));
 
                 if (Scanner.TryScan(",") == false)
                     break;
             } while (true);
-            return select;
+            return @select;
         }
 
         private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()

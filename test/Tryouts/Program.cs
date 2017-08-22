@@ -9,6 +9,7 @@ using SlowTests.Cluster;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents;
 using SlowTests.Client.Subscriptions;
+using SlowTests.Server.Documents.ETL.Raven;
 using SlowTests.Tests.Linq;
 
 namespace Tryouts
@@ -21,11 +22,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationWriteAssurance())
+                using (var test = new SlowTests.Issues.RavenDB_3929())
                 {
                     try
                     {
-                        test.ServerSideWriteAssurance().Wait();
+                        test.NullPropagationShouldNotAffectOperators();
                     }
                     catch (Exception e)
                     {

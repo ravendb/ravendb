@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, null, store, _conventions);
+                IndexCreation.CreateIndexes(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, store, _conventions);
                 Assert.True(TestFailed.Value == false);
             }
         }
@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore())
             {
-                await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() }, null, store, _conventions);
+                await IndexCreation.CreateIndexesAsync(new AbstractIndexCreationTask[] { new CustomIdInIndexCreationTask() },  store, _conventions);
                 Assert.True(TestFailed.Value == false);
             }
         }

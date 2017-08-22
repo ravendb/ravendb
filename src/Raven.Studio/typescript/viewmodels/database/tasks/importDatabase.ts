@@ -87,9 +87,6 @@ class importDatabase extends viewModelBase {
                 if (model.includeIndexes()) {
                     types.push("Indexes");
                 }
-                if (model.includeTransformers()) {
-                    types.push("Transformers");
-                }
                 if (model.includeIdentities()) {
                     types.push("Identities");
                 }

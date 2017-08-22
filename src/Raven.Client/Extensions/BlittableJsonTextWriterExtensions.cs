@@ -112,20 +112,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (string.IsNullOrWhiteSpace(query.Transformer) == false)
-            {
-                writer.WritePropertyName(nameof(query.Transformer));
-                writer.WriteString(query.Transformer);
-                writer.WriteComma();
-
-                if (query.TransformerParameters != null)
-                {
-                    writer.WritePropertyName(nameof(query.TransformerParameters));
-                    writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.TransformerParameters, conventions, context));
-                    writer.WriteComma();
-                }
-            }
-
             if (query.MaximumDocumentFrequency.HasValue)
             {
                 writer.WritePropertyName(nameof(query.MaximumDocumentFrequency));
@@ -238,13 +224,6 @@ namespace Raven.Client.Extensions
                 writer.WriteComma();
             }
 
-            if (query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
-            {
-                writer.WritePropertyName(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
-                writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
-                writer.WriteComma();
-            }
-
             if (query.DisableCaching)
             {
                 writer.WritePropertyName(nameof(query.DisableCaching));
@@ -278,20 +257,6 @@ namespace Raven.Client.Extensions
                 writer.WritePropertyName(nameof(query.IsIntersect));
                 writer.WriteBool(true);
                 writer.WriteComma();
-            }
-
-            if (string.IsNullOrWhiteSpace(query.Transformer) == false)
-            {
-                writer.WritePropertyName(nameof(query.Transformer));
-                writer.WriteString(query.Transformer);
-                writer.WriteComma();
-
-                if (query.TransformerParameters != null)
-                {
-                    writer.WritePropertyName(nameof(query.TransformerParameters));
-                    writer.WriteObject(EntityToBlittable.ConvertEntityToBlittable(query.TransformerParameters, conventions, context));
-                    writer.WriteComma();
-                }
             }
 
             writer.WritePropertyName(nameof(query.QueryParameters));

@@ -429,6 +429,8 @@ namespace Raven.Server.Documents.Handlers
                 foreach (var cmd in ParsedCommands)
                 {
                     cmd.Document?.Dispose();
+                    if(cmd.PatchCommand!= null)
+                        cmd.PatchCommand.Dispose();
                 }
                 BatchRequestParser.ReturnBuffer(ParsedCommands);
                 AttachmentStreamsTempFile?.Dispose();

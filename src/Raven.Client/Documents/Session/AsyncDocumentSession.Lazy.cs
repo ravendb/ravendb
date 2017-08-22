@@ -15,7 +15,6 @@ using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Documents.Session.Loaders;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Sparrow.Utils;
 
@@ -215,51 +214,5 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation<Dictionary<string, T>>(operation, null, token);
         }
 
-        Lazy<Task<TResult>> IAsyncLazySessionOperations.LoadAsync<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure, Action<TResult> onEval,
-            CancellationToken token)
-        {
-            return Lazily.LoadAsync(id, typeof(TTransformer), configure, onEval, token);
-        }
-
-        Lazy<Task<T>> IAsyncLazySessionOperations.LoadAsync<T>(string id, Type transformerType, Action<ILoadConfiguration> configure, Action<T> onEval,
-            CancellationToken token)
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-            var ids = new[] { id };
-
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var lazyLoadOperation = new LazyTransformerLoadOperation<T>(
-                ids,
-                transformer,
-                configuration.TransformerParameters,
-                new LoadTransformerOperation(this));
-
-            return AddLazyOperation(lazyLoadOperation, onEval, token);
-        }
-
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null, CancellationToken token = new CancellationToken()) where TTransformer : AbstractTransformerCreationTask, new()
-        {
-            return Lazily.LoadAsync(ids, typeof(TTransformer), configure, onEval, token);
-        }
-
-        public Lazy<Task<Dictionary<string, TResult>>> LoadAsync<TResult>(IEnumerable<string> ids, Type transformerType, Action<ILoadConfiguration> configure = null, Action<TResult> onEval = null, CancellationToken token = new CancellationToken())
-        {
-            var transformer = ((AbstractTransformerCreationTask)Activator.CreateInstance(transformerType)).TransformerName;
-
-            var configuration = new LoadConfiguration();
-            configure?.Invoke(configuration);
-
-            var idsArray = ids.ToArray();
-
-            var lazyLoadOperation = new LazyTransformerLoadOperation<TResult>(
-                idsArray,
-                transformer,
-                configuration.TransformerParameters,
-                new LoadTransformerOperation(this));
-
-            return AddLazyOperation<Dictionary<string, TResult>>(lazyLoadOperation, null);
-        }
     }
 }

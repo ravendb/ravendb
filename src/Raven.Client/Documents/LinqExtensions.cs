@@ -589,7 +589,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
         {
             var provider = source.Provider as IRavenQueryProvider;
             if (provider == null)

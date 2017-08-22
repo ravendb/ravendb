@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Util.RateLimiting;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionCommands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -31,8 +32,8 @@ namespace Raven.Server.Documents
         public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, Context, onProgress,
-                key => Database.Patcher.GetPatchDocumentCommand(Context, key, changeVector: null, patch: patch, patchIfMissing: null, skipPatchIfChangeVectorMismatch: false,
-                    debugMode: false), token);
+                key => new PatchDocumentCommand(Context, key, null, false,(patch, null),(null,null),
+                    Database, false,false), token);
         }
 
         protected async Task<IOperationResult> ExecuteOperation(string collectionName, CollectionOperationOptions options, DocumentsOperationContext context,

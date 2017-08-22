@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Queries
     {
         public override bool Equals(IndexQuery<Parameters> other)
         {
-            return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
+            return base.Equals(other);
         }
 
         public ulong GetQueryHash(JsonOperationContext ctx)
@@ -28,7 +28,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
                 hasher.Write(DisableCaching);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
@@ -42,8 +41,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(HighlighterPostTags);
                 hasher.Write(HighlightedFields);
                 hasher.Write(QueryParameters);
-                hasher.Write(TransformerParameters);
-                hasher.Write(Transformer);
                 
                 return hasher.GetHash();
             }
@@ -52,18 +49,6 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
-        /// <summary>
-        /// Parameters that will be passed to transformer (if specified).
-        /// </summary>
-        public T TransformerParameters { get; set; }
-
-        /// <summary>
-        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
-        /// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
-        /// <para>called just once for each document in the result set</para>
-        /// </summary>
-        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
-
         /// <summary>
         /// Array of fields containing highlighting information.
         /// </summary>
@@ -83,11 +68,6 @@ namespace Raven.Client.Documents.Queries
         /// Highlighter key name.
         /// </summary>
         public string HighlighterKeyName { get; set; }
-
-        /// <summary>
-        /// Name of transformer to use on query results.
-        /// </summary>
-        public string Transformer { get; set; }
 
         /// <summary>
         /// Whether we should disable caching of query results
@@ -136,7 +116,6 @@ namespace Raven.Client.Documents.Queries
                    EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
                    EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
                    Equals(HighlighterKeyName, other.HighlighterKeyName) &&
-                   string.Equals(Transformer, other.Transformer) &&
                    ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching) &&
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
@@ -154,12 +133,10 @@ namespace Raven.Client.Documents.Queries
             unchecked
             {
                 var hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
                 hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (HighlighterKeyName?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (Transformer?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();

@@ -143,7 +143,6 @@ interface statusDebugChangesDto {
 interface statusDebugChangesDocumentStoreDto {
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
-    WatchAllTransformers: boolean;
     WatchAllReplicationConflicts: boolean;
     WatchedIndexes: Array<string>;
     WatchedDocuments: Array<string>;

@@ -6,7 +6,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 using Xunit;
 
 namespace SlowTests.SlowTests.Bugs
@@ -77,23 +76,6 @@ namespace SlowTests.SlowTests.Bugs
             }
         }
 
-        private class Answers_ByAnswerEntityTransformer : AbstractTransformerCreationTask<Answer>
-        {
-            public Answers_ByAnswerEntityTransformer()
-            {
-                TransformResults = results =>
-                    from result in results
-                    let question = LoadDocument<Question>(result.QuestionId)
-                    select new // AnswerEntity
-                    {
-                        Id = result.Id,
-                        Question = question,
-                        Content = result.Content,
-                        UserId = result.UserId
-                    };
-            }
-        }
-
         protected override void ModifyStore(DocumentStore store)
         {
             store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
@@ -105,7 +87,6 @@ namespace SlowTests.SlowTests.Bugs
             using (var store = GetDocumentStore())
             {
                 new Answers_ByAnswerEntity().Execute(store);
-                new Answers_ByAnswerEntityTransformer().Execute(store);
                 var answerId = "";
 
                 CreateEntities(store, 0);
@@ -120,7 +101,7 @@ namespace SlowTests.SlowTests.Bugs
                         .Customize(x => x.WaitForNonStaleResults())
                         .OrderBy(x => x.Content)
                         .Search(x => x.Content, (content))
-                        .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
+                        .OfType<AnswerEntity>()
                         .Skip(0).Take(1)
                         .FirstOrDefault();
 
@@ -145,9 +126,8 @@ namespace SlowTests.SlowTests.Bugs
             {
                 for (int i = 0; i < 100; i++)
                 {
-                    var answerInfo = session.Query<Answer, Answers_ByAnswerEntity>()
+                    var answerInfo = session.Query<AnswerEntity, Answers_ByAnswerEntity>()
                         .OrderBy(x => x.Content)
-                        .TransformWith<Answers_ByAnswerEntityTransformer, AnswerEntity>()
                         .Skip(0).Take(1)
                         .FirstOrDefault();
 

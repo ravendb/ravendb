@@ -23,31 +23,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             css: 'icon-plus',
             dynamicHash: appUrls.quotas
         }),*/
-        new leafMenuItem({
-            title: 'Transformers',
-            route: 'databases/transformers',
-            moduleId: 'viewmodels/database/transformers/transformers',
-            css: 'icon-etl',
-            nav: true,
-            dynamicHash: appUrls.transformers,
-        }),
-        new leafMenuItem({
-            route: 'databases/transformers/edit(/:transformerName)',
-            moduleId: 'viewmodels/database/transformers/editTransformer',
-            title: 'Edit Transformer',
-            css: 'icon-edit',
-            nav: false,
-            itemRouteToHighlight: 'databases/transformers'
-        }),
         
-        new leafMenuItem({
-            route: 'databases/settings/customFunctionsEditor',
-            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
-            title: 'Custom Functions',
-            nav: true,
-            css: 'icon-custom-functions',
-            dynamicHash: appUrls.customFunctionsEditor
-        }),
         new leafMenuItem({
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",

@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using Jint;
-using Jint.Native;
+using Jurassic;
+using Jurassic.Library;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
@@ -21,15 +21,13 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
-        private readonly PatchRequest _patchRequest;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
 
         public SqlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, SqlEtlConfiguration config)
-            : base(database, context)
+            : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.SqlEtl))
         {
             _transformation = transformation;
             _config = config;
-            _patchRequest = new PatchRequest { Script = transformation.Script };
             _tables = new Dictionary<string, SqlTableWithRecords>(_config.SqlTables.Count);
 
             var tables = new string[config.SqlTables.Count];
@@ -44,33 +42,25 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        public override void Initalize()
         {
-            base.RemoveEngineCustomizations(engine, scope);
-
-            engine.Global.Delete("varchar", true);
-            engine.Global.Delete("nVarchar", true);
-            engine.Global.Delete(Transformation.LoadAttachment, true);
+            base.Initalize();
+            if (SingleRun == null)
+                return;
+            SingleRun.ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
+            SingleRun.ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToNVarchar);
+            SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
-        {
-            base.CustomizeEngine(engine, scope);
-
-            engine.SetValue("varchar", (Func<string, double?, ValueTypeLengthTriple>)(ToVarchar));
-            engine.SetValue("nVarchar", (Func<string, double?, ValueTypeLengthTriple>)(ToNVarchar));
-            engine.SetValue(Transformation.LoadAttachment, (Func<string, string>)(LoadAttachmentFunction));
-        }
-
-        protected override void LoadToFunction(string tableName, JsValue cols, PatcherOperationScope scope)
+        protected override void LoadToFunction(string tableName, object cols)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var dynamicJsonValue = scope.ToBlittable(cols.AsObject());
-            var blittableJsonReaderObject = Context.ReadObject(dynamicJsonValue, tableName);
+            var result = new ScriptRunnerResult(cols);
+            var blittableJsonReaderObject = result.Translate<BlittableJsonReaderObject>(Context);
             var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -85,7 +75,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                     Type = prop.Token
                 };
 
-                if (_transformation.HasLoadAttachment && prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
+
+                if (_transformation.HasLoadAttachment && 
+                    prop.Token == BlittableJsonToken.String && IsLoadAttachment(prop.Value as LazyStringValue, out var attachmentName))
                 {
                     Stream attachmentStream;
                     using (Slice.From(Context.Allocator, Current.Document.ChangeVector, out var cv))
@@ -150,24 +142,25 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             return table;
         }
 
-        private static ValueTypeLengthTriple ToVarchar(string value, double? sizeAsDouble)
+        private ObjectInstance ToVarchar(string value, int size)
         {
-            return new ValueTypeLengthTriple
+            return SingleRun.ScriptEngine.Object.Construct(new
             {
                 Type = DbType.AnsiString,
                 Value = value,
-                Size = sizeAsDouble.HasValue ? (int)sizeAsDouble.Value : DefaultSize
-            };
+                Size = size == 0 ? size : DefaultSize
+            });
+
         }
 
-        private static ValueTypeLengthTriple ToNVarchar(string value, double? sizeAsDouble)
+        private ObjectInstance ToNVarchar(string value, int size)
         {
-            return new ValueTypeLengthTriple
+            return SingleRun.ScriptEngine.Object.Construct(new
             {
                 Type = DbType.String,
                 Value = value,
-                Size = sizeAsDouble.HasValue ? (int)sizeAsDouble.Value : DefaultSize
-            };
+                Size = size == 0 ? size: DefaultSize
+            });
         }
 
         public override IEnumerable<SqlTableWithRecords> GetTransformedResults()
@@ -181,7 +174,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                Apply(Context, Current.Document, _patchRequest);
+                SingleRun.Run(Context, "execute", new object[] { Current.Document });
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
@@ -196,13 +189,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
                 GetOrAdd(sqlTable.TableName).Deletes.Add(item);
             }
-        }
-
-        public class ValueTypeLengthTriple
-        {
-            public DbType Type { get; set; }
-            public object Value { get; set; }
-            public int Size { get; set; }
         }
     }
 }

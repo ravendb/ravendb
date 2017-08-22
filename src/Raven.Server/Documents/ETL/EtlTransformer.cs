@@ -1,53 +1,50 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jint;
-using Jint.Native;
+using Jurassic;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL
 {
-    public abstract class EtlTransformer<TExtracted, TTransformed> : DocumentPatcherBase where TExtracted : ExtractedItem
+    public abstract class EtlTransformer<TExtracted, TTransformed> : IDisposable  where TExtracted : ExtractedItem
     {
+        public DocumentDatabase Database { get; }
         protected readonly DocumentsOperationContext Context;
+        private readonly ScriptRunnerCache.Key _key;
+        protected ScriptRunner.SingleRun SingleRun;
 
         protected TExtracted Current;
+        private ScriptRunner.ReturnRun _returnRun;
 
-        protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context) : base(database)
+        protected EtlTransformer(DocumentDatabase database, DocumentsOperationContext context,
+            ScriptRunnerCache.Key key)
         {
+            Database = database;
             Context = context;
+            _key = key;
         }
 
-        protected abstract string[] LoadToDestinations { get; }
-
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
+        public virtual void Initalize()
         {
-            engine.Global.Delete(Transformation.LoadTo, true);
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (var i = 0; i < LoadToDestinations.Length; i++)
-            {
-                engine.Global.Delete(Transformation.LoadTo + LoadToDestinations[i], true);
-            }
-        }
-
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
-        {
-            engine.SetValue(Transformation.LoadTo, new Action<string, JsValue>((tableName, colsAsObject) => LoadToFunction(tableName, colsAsObject, scope)));
-
-            // ReSharper disable once ForCanBeConvertedToForeach
+            _returnRun = Database.Scripts.GetScriptRunner(_key, out SingleRun);
+            if (SingleRun == null)
+                return;
+            SingleRun.ReadOnly = true;
+            SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadTo, (Action<string, object>)LoadToFunction);
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                engine.SetValue(Transformation.LoadTo + collection, (Action<JsValue>)(cols =>
+                SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadTo + collection, (Action<object>)(cols =>
                 {
-                    LoadToFunction(collection, cols, scope);
+                    LoadToFunction(collection, cols);
                 }));
             }
         }
 
-        protected abstract void LoadToFunction(string tableName, JsValue colsAsObject, PatcherOperationScope scope);
+        protected abstract string[] LoadToDestinations { get; }
+
+        protected abstract void LoadToFunction(string tableName, object colsAsObject);
 
         public abstract IEnumerable<TTransformed> GetTransformedResults();
 
@@ -56,6 +53,11 @@ namespace Raven.Server.Documents.ETL
         public static void ThrowLoadParameterIsMandatory(string parameterName)
         {
             throw new ArgumentException($"{parameterName} parameter is mandatory");
+        }
+
+        public void Dispose()
+        {
+            _returnRun.Dispose();
         }
     }
 }

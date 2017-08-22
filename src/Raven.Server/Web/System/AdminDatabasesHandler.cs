@@ -677,39 +677,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.ServerAdmin)]
-        public async Task ModifyCustomFunctions()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
-                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out string functions) == false)
-                {
-                    throw new InvalidDataException("Functions property was not found.");
-                }
-
-                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(DatabasePutResult.RaftCommandIndex)] = index
-                    });
-                    writer.Flush();
-                }
-            }
-        }
-
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
         public async Task Delete()
         {
@@ -973,19 +940,18 @@ namespace Raven.Server.Web.System
                 }
 
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(content);
-                object result;
+                string result;
 
                 if (isServerScript)
                 {
-                    var console = new AdminJsConsole(Server);
+                    var console = new AdminJsConsole(Server, null);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
 
-                    result = console.ApplyServerScript(adminJsScript);
+                    result = console.ApplyScript(adminJsScript);
                 }
-
                 else if (string.IsNullOrWhiteSpace(name) == false)
                 {
                     //database script
@@ -995,7 +961,7 @@ namespace Raven.Server.Web.System
                         DatabaseDoesNotExistException.Throw(name);
                     }
 
-                    var console = new AdminJsConsole(database);
+                    var console = new AdminJsConsole(Server, database);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
@@ -1009,36 +975,10 @@ namespace Raven.Server.Web.System
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                if (result == null || result is DynamicJsonValue)
+                using (var textWriter = new StreamWriter(ResponseBodyStream()))
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
-
-                        if (result != null)
-                        {
-                            context.Write(writer, result as DynamicJsonValue);
-                        }
-                        else
-                        {
-                            writer.WriteNull();
-                        }
-
-                        writer.WriteEndObject();
-                        writer.Flush();
-                    }
-                }
-
-                else
-                {
-                    using (var textWriter = new StreamWriter(ResponseBodyStream()))
-                    {
-                        textWriter.Write(result.ToString());
-                        await textWriter.FlushAsync();
-                    }
+                    textWriter.Write(result);
+                    await textWriter.FlushAsync();
                 }
             }
         }

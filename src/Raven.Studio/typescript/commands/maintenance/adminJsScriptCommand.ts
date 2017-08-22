@@ -6,7 +6,7 @@ class adminJsScriptCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Raven.Server.Documents.Patch.AdminJsScriptResult> {
+    execute(): JQueryPromise<string> {
         const args = {
             'server-script': !this.targetDatabase,
             database: this.targetDatabase

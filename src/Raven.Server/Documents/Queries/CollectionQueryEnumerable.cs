@@ -16,6 +16,7 @@ namespace Raven.Server.Documents.Queries
 {
     public class CollectionQueryEnumerable : IEnumerable<Document>
     {
+        private readonly DocumentDatabase _database;
         private readonly DocumentsStorage _documents;
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
@@ -23,8 +24,9 @@ namespace Raven.Server.Documents.Queries
         private readonly IndexQueryServerSide _query;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
+        public CollectionQueryEnumerable(DocumentDatabase database,DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
         {
+            _database = database;
             _documents = documents;
             _fieldsToFetch = fieldsToFetch;
             _collection = collection;
@@ -35,7 +37,7 @@ namespace Raven.Server.Documents.Queries
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context);
+            return new Enumerator(_database,_documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -64,7 +66,7 @@ namespace Raven.Server.Documents.Queries
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
 
-            public Enumerator(DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
+            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -83,7 +85,7 @@ namespace Raven.Server.Documents.Queries
 
                 _sort = ExtractSortFromQuery(query);
 
-                _resultsRetriever = new MapQueryResultRetriever(query, documents, context, fieldsToFetch);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)

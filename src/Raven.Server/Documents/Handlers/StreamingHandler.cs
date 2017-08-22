@@ -4,11 +4,11 @@ using System.Threading.Tasks;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Transformers;
 using Raven.Server.Documents.Queries;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -28,14 +28,6 @@ namespace Raven.Server.Documents.Handlers
             var transformerName = GetStringQueryString("transformer", required: false);
             var start = GetStart();
             var pageSize = GetPageSize();
-
-            Transformer transformer = null;
-            if (string.IsNullOrEmpty(transformerName) == false)
-            {
-                transformer = Database.TransformerStore.GetTransformer(transformerName);
-                if (transformer == null)
-                    TransformerDoesNotExistException.ThrowFor(transformerName);
-            }
 
             using (Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
@@ -61,22 +53,7 @@ namespace Raven.Server.Documents.Handlers
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
 
-                    if (transformer != null)
-                    {
-                        using (var transformerParameters = GetTransformerParameters(context))
-                        {
-                            using (var scope = transformer.OpenTransformationScope(transformerParameters, null,
-                                Database.DocumentsStorage,
-                                Database.TransformerStore, context))
-                            {
-                                writer.WriteDocuments(context, scope.Transform(documents), metadataOnly: false, numberOfResults: out int _);
-                            }
-                        }
-                    }
-                    else
-                    {
-                        writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out int _);
-                    }
+                    writer.WriteDocuments(context, documents, metadataOnly: false, numberOfResults: out int _);
 
                     writer.WriteEndObject();
                 }
@@ -112,6 +89,10 @@ namespace Raven.Server.Documents.Handlers
                     catch (IndexDoesNotExistException)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        context.Write(writer, json: new DynamicJsonValue
+                        {
+                            ["Error"] = "Index " + query.Metadata.IndexName + " does not exists"
+                        });
                     }
                 }
             }

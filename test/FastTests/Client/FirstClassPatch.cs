@@ -177,7 +177,7 @@ namespace FastTests.Client
         [Fact]
         public void CanAddToArray()
         {
-            var stuff = new Stuff[3];
+            var stuff = new Stuff[1];
             stuff[0] = new Stuff { Key = 6 };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2 } };
 
@@ -234,7 +234,7 @@ namespace FastTests.Client
         [Fact]
         public void CanRemoveFromArray()
         {
-            var stuff = new Stuff[3];
+            var stuff = new Stuff[2];
             stuff[0] = new Stuff { Key = 6 };
             stuff[1] = new Stuff { Phone = "123456" };
             var user = new User { Stuff = stuff, Numbers = new[] { 1, 2, 3 } };

@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Queries
 
         public SelectField[] FunctionArgs;
 
+        public bool HasSourceAlias;
+
         private SelectField()
         {
             
@@ -41,14 +43,15 @@ namespace Raven.Server.Documents.Queries
             };
         }
 
-        public static SelectField Create(string name, string alias, string sourceAlias, bool array)
+        public static SelectField Create(string name, string alias, string sourceAlias, bool array, bool hasSourceAlias)
         {
             return new SelectField
             {
                 Name = name,
                 Alias = alias,
                 SourceAlias = sourceAlias,
-                SourceIsArray = array
+                SourceIsArray = array,
+                HasSourceAlias = hasSourceAlias
             };
         }
 

@@ -60,7 +60,7 @@ class editPeriodicBackupTask extends viewModelBase {
                     "<ul>" +
                         "<li>Data" +
                             "<ul>" +
-                                "<li>Backup includes documents, indexes, transformers and identities <br> " +
+                                "<li>Backup includes documents, indexes and identities <br> " +
                                     "but doesn't include index data, indexes will be rebuilt after restore based on exported definitions</li>" +
                                 "<li>Snapshot contains the raw data including the indexes - definitions and data</li>" +
                             "</ul>" +

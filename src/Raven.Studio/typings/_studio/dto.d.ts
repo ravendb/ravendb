@@ -128,10 +128,6 @@ interface saveDocumentResponseDto {
     Results: Array<changedOnlyMetadataFieldsDto>;
 }
 
-interface transformerParamInfo {
-    name: string;
-    hasDefault: boolean;
-}
 interface operationIdDto {
     OperationId: number;
 }
@@ -195,19 +191,8 @@ interface workTimeUnit {
     endTime: number;
 }
 
-interface transformerQueryDto {
-    transformerName: string;
-    queryParams: Array<transformerParamDto>;
-}
-
-interface transformerParamDto {
-    name: string;
-    value: string;
-}
-
 interface queryDto {
     queryText: string;
-    transformerQuery: transformerQueryDto;
     showFields: boolean;
     indexEntries: boolean;
 }

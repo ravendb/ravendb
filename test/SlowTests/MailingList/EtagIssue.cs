@@ -290,8 +290,9 @@ namespace SlowTests.MailingList
         {
             const string patchScript = "var _this = this;" +
                                        "function addRelation(clrType, relation, thisArg) {" +
-                                       "   (thisArg || _this).Relations.push(_.extend({ '$type': clrType }, relation));" +
-                                       "}" + "addRelation(relationClrType, relation);";
+                                       " relation['$type'] = clrType; " +
+                                       "   (thisArg || _this).Relations.push(relation);" +
+                                       "}" + "addRelation(args.relationClrType, args.relation);";
 
             yield return new PatchCommandData(user.Id, null, new PatchRequest
             {

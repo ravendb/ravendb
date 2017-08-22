@@ -29,7 +29,6 @@ using Raven.Server.ServerWide.Commands.ETL;
 using Raven.Server.ServerWide.Commands.Indexes;
 using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Commands.Subscriptions;
-using Raven.Server.ServerWide.Commands.Transformers;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
@@ -143,17 +142,12 @@ namespace Raven.Server.ServerWide
                     case nameof(DeleteIndexCommand):
                     case nameof(SetIndexLockCommand):
                     case nameof(SetIndexPriorityCommand):
-                    case nameof(PutTransformerCommand):
-                    case nameof(SetTransformerLockCommand):
-                    case nameof(DeleteTransformerCommand):
-                    case nameof(RenameTransformerCommand):
                     case nameof(EditRevisionsConfigurationCommand):
                     case nameof(UpdatePeriodicBackupCommand):
                     case nameof(EditExpirationCommand):
                     case nameof(ModifyConflictSolverCommand):
                     case nameof(UpdateTopologyCommand):
                     case nameof(DeleteDatabaseCommand):
-                    case nameof(ModifyCustomFunctionsCommand):
                     case nameof(UpdateExternalReplicationCommand):
                     case nameof(PromoteDatabaseNodeCommand):                        
                     case nameof(ToggleTaskStateCommand):

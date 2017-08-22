@@ -34,14 +34,6 @@ namespace Raven.Client.Documents.Linq.Indexing
         }
 
         /// <summary>
-        /// Boost the value with the given amount
-        /// </summary>
-        public static string StripHtml(this object item)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-        /// <summary>
         /// Safely parses string value to int, when failed default(int) is returned.
         /// </summary>
         public static string ParseInt(this object item)

@@ -10,7 +10,6 @@ using System.Linq.Expressions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Linq
 {
@@ -28,16 +27,6 @@ namespace Raven.Client.Documents.Linq
         /// Customizes the query using the specified action
         /// </summary>
         IRavenQueryable<T> Customize(Action<IDocumentQueryCustomization> action);
-
-        /// <summary>
-        /// Specifies a result transformer to use on the results
-        /// </summary>
-        IRavenQueryable<TResult> TransformWith<TTransformer, TResult>() where TTransformer : AbstractTransformerCreationTask, new();
-
-        /// <summary>
-        /// Specifies a result transformer name to use on the results
-        /// </summary>
-        IRavenQueryable<TResult> TransformWith<TResult>(string transformerName);
 
         /// <summary>
         /// Inputs a key and value to the query (accessible by the transformer)

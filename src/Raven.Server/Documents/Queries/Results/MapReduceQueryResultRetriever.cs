@@ -9,8 +9,8 @@ namespace Raven.Server.Documents.Queries.Results
     {
         private readonly JsonOperationContext _context;
 
-        public MapReduceQueryResultRetriever(IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(query, fieldsToFetch, documentsStorage, context, true)
+        public MapReduceQueryResultRetriever(DocumentDatabase database,IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch)
+            : base(database, query, fieldsToFetch, documentsStorage, context, true)
         {
             _context = context;
         }
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.Queries.Results
 
         public override Document Get(Lucene.Net.Documents.Document input, float score, IState state)
         {
-            if (FieldsToFetch.IsProjection || FieldsToFetch.IsTransformation)
+            if (FieldsToFetch.IsProjection)
                 return GetProjection(input, score, null, state);
 
             return DirectGet(input, null, state);

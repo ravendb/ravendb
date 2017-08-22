@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Session.Operations
             _statistics = statistics;
         }
 
-        public QueryStreamCommand CreateRequest(string indexName, IndexQuery query)
+        public QueryStreamCommand CreateRequest(IndexQuery query)
         {
             _isQueryStream = true;
 
@@ -36,15 +36,12 @@ namespace Raven.Client.Documents.Session.Operations
                 throw new NotSupportedException(
                     "Since Stream() does not wait for indexing (by design), streaming query with WaitForNonStaleResults is not supported.");
 
-            if (string.IsNullOrEmpty(indexName))
-                throw new ArgumentException("Key cannot be null or empty index");
-
             _session.IncrementRequestCount();
 
             return new QueryStreamCommand(_session.Conventions, query);
         }
 
-        public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null)
+        public StreamCommand CreateRequest(string startsWith, string matches, int start, int pageSize, string exclude, string startAfter = null)
         {
             var sb = new StringBuilder("streams/docs?");
 
@@ -65,31 +62,20 @@ namespace Raven.Client.Documents.Session.Operations
                 sb.Append("startAfter=").Append(Uri.EscapeDataString(startAfter)).Append("&");
             }
 
-            if (string.IsNullOrEmpty(transformer) == false)
-                sb.Append("transformer=").Append(Uri.EscapeDataString(transformer)).Append("&");
-
-            if (transformerParameters != null && transformerParameters.Count > 0)
-            {
-                foreach (var pair in transformerParameters)
-                {
-                    var parameterName = pair.Key;
-                    var parameterValue = pair.Value;
-
-                    sb.AppendFormat("tp-{0}={1}", parameterName, parameterValue).Append("&");
-                }
-            }
-
             if (start != 0)
                 sb.Append("start=").Append(start).Append("&");
 
             if (pageSize != int.MaxValue)
                 sb.Append("pageSize=").Append(pageSize).Append("&");
 
-            return new StreamCommand(sb.ToString(), string.IsNullOrWhiteSpace(transformer) == false);
+            return new StreamCommand(sb.ToString());
         }
 
         public IEnumerator<BlittableJsonReaderObject> SetResult(StreamResult response)
         {
+            if(response == null)
+                throw new InvalidOperationException("The index does not exists, failed to stream results");
+
             var state = new JsonParserState();
             JsonOperationContext.ManagedPinnedBuffer buffer;
 

@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
@@ -148,7 +147,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(OperationExceptionResult));
             scripter.AddType(typeof(DocumentChange));
             scripter.AddType(typeof(IndexChange));
-            scripter.AddType(typeof(TransformerChange));
             scripter.AddType(typeof(Operations.Operation));
             scripter.AddType(typeof(NewVersionAvailableDetails));
             scripter.AddType(typeof(MessageDetails));
@@ -170,9 +168,6 @@ namespace TypingsGenerator
             scripter.AddType(typeof(QueryResult<>));
             scripter.AddType(typeof(PutResult));
 
-            // transformers
-            scripter.AddType(typeof(TransformerDefinition));
-
             // patch
             scripter.AddType(typeof(PatchRequest));
             scripter.AddType(typeof(PatchResult));
@@ -186,9 +181,6 @@ namespace TypingsGenerator
 
             // revisions
             scripter.AddType(typeof(RevisionsConfiguration));
-
-            // custom functions
-            scripter.AddType(typeof(CustomFunctions));
 
             // storage report
             scripter.AddType(typeof(StorageReport));
@@ -277,7 +269,6 @@ namespace TypingsGenerator
 
             // adminJs console
             scripter.AddType(typeof(AdminJsScript));
-            scripter.AddType(typeof(AdminJsScriptResult));
 
             scripter.AddType(typeof(NodeConnectionTestResult));
 

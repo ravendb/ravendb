@@ -21,7 +21,6 @@ import configurationItem = require("models/database/index/configurationItem");
 import getDatabaseSettingsCommand = require("commands/resources/getDatabaseSettingsCommand");
 import configuration = require("configuration");
 import getIndexNamesCommand = require("commands/database/index/getIndexNamesCommand");
-import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
 import showDataDialog = require("viewmodels/common/showDataDialog");
@@ -49,7 +48,6 @@ class editIndex extends viewModelBase {
     indexNameHasFocus = ko.observable<boolean>(false);
 
     private indexesNames = ko.observableArray<string>();
-    private transformersNames = ko.observableArray<string>();
 
     queryUrl = ko.observable<string>();
     termsUrl = ko.observable<string>();
@@ -152,7 +150,6 @@ class editIndex extends viewModelBase {
         this.indexAutoCompleter = new indexAceAutoCompleteProvider(this.activeDatabase(), this.editedIndex);
 
         this.initValidation();
-        this.fetchTransformers();
         this.fetchIndexes();
     }
 
@@ -161,27 +158,14 @@ class editIndex extends viewModelBase {
         //TODO: aceValidation: true for map and reduce
         
         this.editedIndex().name.extend({
-            validation: [{
-                validator: (val: string) => {
-                    return !_.includes(this.transformersNames(), val);
-                },
-                message: "Already being used by an existing transformer."
-                }, {
+            validation: [
+                {
                     validator: (val: string) => {
                         return val === this.originalIndexName || !_.includes(this.indexesNames(), val);
                 },
                 message: "Already being used by an existing index."
             }]
         });
-    }
-
-    private fetchTransformers() {
-        const db = this.activeDatabase();
-        return new getTransformersCommand(db)
-            .execute()
-            .done((transformers: Raven.Client.Documents.Transformers.TransformerDefinition[]) => {
-                this.transformersNames(transformers.map(t => t.Name));
-            });
     }
 
     private fetchIndexes() {

@@ -15,9 +15,10 @@ namespace Raven.Server.Documents.Queries.Parser
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> OrderBy;
         public List<FieldToken> GroupBy;
 
-        public Dictionary<StringSegment, ValueToken> DeclaredFunctions;
+        public Dictionary<StringSegment, string> DeclaredFunctions;
 
         public string QueryText;
+        public ValueToken SelectFunctionBody { get; set; }
 
         public string ToJsonAst()
         {
@@ -248,6 +249,14 @@ namespace Raven.Server.Documents.Queries.Parser
             }
 
             writer.WriteEndArray();
+        }
+
+        public bool TryAddFunction(StringSegment name, string func)
+        {
+            if (DeclaredFunctions == null)
+                DeclaredFunctions = new Dictionary<StringSegment, string>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
+
+            return DeclaredFunctions.TryAdd(name, func);
         }
     }
 }

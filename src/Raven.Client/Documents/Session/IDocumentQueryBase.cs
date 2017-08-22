@@ -374,14 +374,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
-        ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
-        ///     them)
-        ///     to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be
-        ///     called just once for each document in the result set
-        /// </summary>
-        TSelf SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
-        /// <summary>
         ///     Sets the tags to highlight matches with.
         /// </summary>
         /// <param name="preTag">Prefix tag.</param>
@@ -394,12 +386,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="preTags">Prefix tags.</param>
         /// <param name="postTags">Postfix tags.</param>
         TSelf SetHighlighterTags(string[] preTags, string[] postTags);
-
-        /// <summary>
-        ///     Sets a transformer to use after executing a query
-        /// </summary>
-        /// <param name="transformer"></param>
-        TSelf SetTransformer(string transformer);
 
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming

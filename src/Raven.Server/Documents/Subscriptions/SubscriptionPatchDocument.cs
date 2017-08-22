@@ -1,60 +1,34 @@
-﻿using Jint;
-using Raven.Client.Exceptions.Documents.Patching;
+﻿using Jurassic;
+using Jurassic.Library;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Subscriptions
 {
-    public class SubscriptionPatchDocument : DocumentPatcherBase
+    public class SubscriptionPatchDocument
     {
         public readonly string FilterJavaScript;
         private readonly PatchRequest _patchRequest;
 
-        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) : base(database)
+        public ScriptRunnerCache.Key Key => _patchRequest;
+
+        public SubscriptionPatchDocument(DocumentDatabase database, string filterJavaScript) 
         {
             FilterJavaScript = filterJavaScript;
-            _patchRequest = new PatchRequest
-            {
-                Script = filterJavaScript
-            };
+            _patchRequest = new PatchRequest(filterJavaScript, PatchRequestType.Subscription);
         }
 
-        protected override void CustomizeEngine(Engine engine, PatcherOperationScope scope)
-        {
-
-        }
-
-        protected override void RemoveEngineCustomizations(Engine engine, PatcherOperationScope scope)
-        {
-            
-        }
-
-        public bool MatchCriteria(DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
         {
             transformResult = null;
 
-            using (var scope = CreateOperationScope(debugMode: false).Initialize(context))
-            {
-                ApplySingleScript(context, document.Id, document, _patchRequest, scope);
-
-                var result = scope.ActualPatchResult;
-
-                if (result.IsBoolean())
-                    return result.AsBoolean();
-
-                if (result.IsObject())
-                {
-                    var transformedDynamic = scope.ToBlittable(result.AsObject());
-                    transformResult = context.ReadObject(transformedDynamic, document.Id);
-                    return true;
-                }
-
-                if (result.IsNull() || result.IsUndefined())
-                    return false; // todo: check if that is the value that we want here
-
-                throw new JavaScriptException($"Could not proccess script {_patchRequest.Script}. It\'s return value {result.Type}, instead of bool, object, undefined or null");
-            }
+            var result = run.Run(context, "execute", new object[] { document });
+            if (result.Value is bool b)
+                return b;
+            transformResult = result.Translate<BlittableJsonReaderObject>(context);
+            return transformResult != null;
         }
     }
 }
