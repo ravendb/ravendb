@@ -20,14 +20,16 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public const string CollectionIndexPrefix = "collection/";
 
         private readonly IndexStore _indexStore;
+        private readonly DocumentDatabase _database;
         private readonly DocumentsOperationContext _context;
         private readonly RavenConfiguration _configuration;
         private readonly DocumentsStorage _documents;
         private readonly OperationCancelToken _token;
 
-        public DynamicQueryRunner(IndexStore indexStore,  DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
+        public DynamicQueryRunner(IndexStore indexStore, DocumentDatabase database,  DocumentsStorage documents, DocumentsOperationContext context, RavenConfiguration configuration, OperationCancelToken token)
         {
             _indexStore = indexStore;
+            _database = database;
             _context = context;
             _configuration = configuration;
             _token = token;
@@ -121,7 +123,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
             {
                 var fieldsToFetch = new FieldsToFetch(query, null);
-                var documents = new CollectionQueryEnumerable(_documents, fieldsToFetch, collection, query, _context);
+                var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context);
                 var cancellationToken = _token.Token;
 
                 try

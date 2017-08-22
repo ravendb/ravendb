@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Queries
             var sw = Stopwatch.StartNew();
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore,_database.DocumentsStorage, _documentsContext, _database.Configuration, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 result = await runner.Execute(query, existingResultEtag);
                 result.DurationInMs = (long)sw.Elapsed.TotalMilliseconds;
@@ -70,7 +70,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
 
                 await runner.ExecuteStream(response, writer, query).ConfigureAwait(false);
 
@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Queries
         {
             if (query.Metadata.IsDynamic)
             {
-                var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
+                var runner = new DynamicQueryRunner(_database.IndexStore,_database, _database.DocumentsStorage, _documentsContext, _database.Configuration, token);
                 return await runner.ExecuteIndexEntries(query, existingResultEtag);
             }
 
@@ -233,7 +233,7 @@ namespace Raven.Server.Documents.Queries
             if (query.Metadata.IsDynamic == false)
                 throw new InvalidOperationException("Explain can only work on dynamic indexes");
 
-            var runner = new DynamicQueryRunner(_database.IndexStore, _database.DocumentsStorage, _documentsContext, _database.Configuration, OperationCancelToken.None);
+            var runner = new DynamicQueryRunner(_database.IndexStore, _database, _database.DocumentsStorage, _documentsContext, _database.Configuration, OperationCancelToken.None);
 
             return runner.ExplainIndexSelection(query);
         }
