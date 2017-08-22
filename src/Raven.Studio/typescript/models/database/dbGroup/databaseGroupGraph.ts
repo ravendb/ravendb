@@ -286,6 +286,11 @@ class databaseGroupGraph {
             .attr("r", databaseGroupGraph.circleRadius);
 
         enteringDbNodes
+            .append("circle")
+            .attr("class", "catching-up-stroke spin-style-noease")
+            .attr("r", databaseGroupGraph.circleRadius + 4);
+        
+        enteringDbNodes
             .append("text")
             .attr("class", "node-tag")
             .text(x => x.tag)

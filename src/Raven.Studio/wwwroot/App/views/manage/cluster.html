@@ -19,7 +19,7 @@
                                     <div class="flex-horizontal">
                                         <div>
                                             <h3>
-                                                <a class="destination-name" data-bind="attr: { href: serverUrl }, css: { 'btn-spinner' : !$root.topology().leader() && tag() !== '?' }" target="_blank">
+                                                <a class="destination-name" data-bind="attr: { href: serverUrl }" target="_blank">
                                                     <i data-bind="attr : { class: $root.topology().nodeTag() === tag() ? 'icon-home' : 'icon-cluster-node' }"></i>
                                                     <span data-bind="text: 'Node ' + tag()"></span>
                                                 </a>
