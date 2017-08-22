@@ -12,13 +12,15 @@ namespace Raven.Server.Documents.Patch
     public struct JurrasicBlittableBridge
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
+        private readonly BlittableJsonDocumentBuilder.UsageMode _usageMode;
 
         [ThreadStatic]
         private static HashSet<object> _recursive;
 
-        public JurrasicBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer)
+        public JurrasicBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode)
         {
             _writer = writer;
+            _usageMode = usageMode;
         }
 
         public void WriteInstance(ObjectInstance jsObject)
@@ -151,7 +153,8 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteBlittableInstance(BlittableObjectInstance obj)
         {
-            if (obj.DocumentId != null)
+            if (obj.DocumentId != null && 
+                _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var metadata = ((ObjectInstance)obj[Constants.Documents.Metadata.Key]);
                 metadata[Constants.Documents.Metadata.Id] = obj.DocumentId;
@@ -204,7 +207,8 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 
-                new JurrasicBlittableBridge(writer).WriteInstance(objectInstance);
+                var jurrasicBlittableBridge = new JurrasicBlittableBridge(writer, usageMode);
+                jurrasicBlittableBridge.WriteInstance(objectInstance);
 
                 writer.FinalizeDocument();
                 return writer.CreateReader();
