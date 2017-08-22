@@ -172,13 +172,21 @@ namespace Raven.Server.Documents.Patch
                 _writer.WritePropertyName(prop.Name);
 
                 if (properties.Remove(prop.Name, out var modifiedValue))
-                    WriteJsonValue(modifiedValue);
+                {
+                    if (modifiedValue is FunctionInstance == false)
+                        WriteJsonValue(modifiedValue);
+                }
                 else
+                {
                     _writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                }
             }
 
             foreach (var modificationKvp in properties)
             {
+                if(modificationKvp.Value is FunctionInstance)
+                    continue;
+
                 _writer.WritePropertyName(modificationKvp.Key);
                 WriteJsonValue(modificationKvp.Value);
             }
