@@ -116,7 +116,7 @@ namespace Raven.Server
 
             try
             {
-                ClusterCertificateHolder = LoadCertificate(
+                var  clusterCert = LoadCertificate(
                     Configuration.Security.ClusterCertificateExec,
                     Configuration.Security.ClusterCertificateExecArguments,
                     Configuration.Security.ClusterCertificatePath,
@@ -128,11 +128,13 @@ namespace Raven.Server
                     Configuration.Security.CertificatePath,
                     Configuration.Security.CertificatePassword);
 
+                ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
+
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestBodySize = null;
 
-                    var actualCert = (ClusterCertificateHolder ?? httpsCert);
+                    var actualCert = httpsCert ?? clusterCert;
                     if (actualCert != null)
                     {
                         var adapterOptions = new HttpsConnectionAdapterOptions
@@ -432,7 +434,7 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        internal CertificateHolder ClusterCertificateHolder = new CertificateHolder();
+        internal CertificateHolder ClusterCertificateHolder;
 
         public class CertificateHolder
         {
