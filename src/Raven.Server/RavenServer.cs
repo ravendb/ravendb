@@ -116,17 +116,28 @@ namespace Raven.Server
 
             try
             {
-                var certificateLoaded = LoadCertificate();
+                ClusterCertificateHolder = LoadCertificate(
+                    Configuration.Security.ClusterCertificateExec,
+                    Configuration.Security.ClusterCertificateExecArguments,
+                    Configuration.Security.ClusterCertificatePath,
+                    Configuration.Security.ClusterCertificatePassword);
+
+                var httpsCert = LoadCertificate(
+                    Configuration.Security.CertificateExec,
+                    Configuration.Security.CertificateExecArguments,
+                    Configuration.Security.CertificatePath,
+                    Configuration.Security.CertificatePassword);
 
                 void ConfigureKestrel(KestrelServerOptions options)
                 {
                     options.Limits.MaxRequestBodySize = null;
 
-                    if (certificateLoaded)
+                    var actualCert = (ClusterCertificateHolder ?? httpsCert);
+                    if (actualCert != null)
                     {
                         var adapterOptions = new HttpsConnectionAdapterOptions
                         {
-                            ServerCertificate = ServerCertificateHolder.Certificate,
+                            ServerCertificate = actualCert.Certificate,
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
@@ -200,28 +211,21 @@ namespace Raven.Server
             }
         }
 
-        private bool LoadCertificate()
+        private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
         {
-            var certificateLoaded = false;
             try
             {
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateWithExecutable();
-                    certificateLoaded = true;
-                }
-                else if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
-                    certificateLoaded = true;
-                }
+                if (string.IsNullOrEmpty(exec) == false)
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
+                if (string.IsNullOrEmpty(path) == false)
+                    return ServerStore.Secrets.LoadCertificateFromPath(path, password);
+                return null;
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Unable to start the server due to  invalid certificate configuration! Admin assistance required.", e);
+                throw new InvalidOperationException("Unable to start the server due to invalid certificate configuration! Admin assistance required.", e);
             }
 
-            return certificateLoaded;
         }
 
         private async Task ListenToPipe()
@@ -291,7 +295,7 @@ namespace Raven.Server
                 if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
 
-                if (Status == AuthenticationStatus.ServerAdmin)
+                if (Status == AuthenticationStatus.Operator || Status == AuthenticationStatus.ClusterAdmin)
                     return true;
 
                 if (db == null)
@@ -369,9 +373,9 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
-            else if (certificate.Equals(ServerCertificateHolder.Certificate))
+            else if (certificate.Equals(ClusterCertificateHolder.Certificate))
             {
-                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
             else
             {
@@ -392,9 +396,13 @@ namespace Raven.Server
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
                         authenticationStatus.Definition = definition;
-                        if (definition.ServerAdmin)
+                        if (definition.Clearance == SecurityClearance.ClusterAdmin)
                         {
-                            authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
+                        else if (definition.Clearance == SecurityClearance.Operator)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Operator;
                         }
                         else
                         {
@@ -415,7 +423,7 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
+        internal CertificateHolder ClusterCertificateHolder = new CertificateHolder();
 
         public class CertificateHolder
         {
@@ -824,7 +832,7 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (ServerCertificateHolder.Certificate != null)
+            if (ClusterCertificateHolder.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                         // it is fine that the client doesn't have a cert, we just care that they
@@ -837,7 +845,7 @@ namespace Raven.Server
                         true);
                 stream = sslStream;
 
-                await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(ClusterCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
@@ -869,7 +877,8 @@ namespace Raven.Server
                 case AuthenticationStatus.NotYetValid:
                     msg = "The provided client certificate " + certificate.FriendlyName + " is not yet valid because it starts on " + certificate.NotBefore;
                     return false;
-                case AuthenticationStatus.ServerAdmin:
+                case AuthenticationStatus.ClusterAdmin:
+                case AuthenticationStatus.Operator:
                     msg = "Admin can do it all";
                     return true;
                 case AuthenticationStatus.Allowed:
@@ -877,7 +886,7 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ServerAdmin";
+                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ClusterAdmin/Operator";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
@@ -1039,7 +1048,8 @@ namespace Raven.Server
             NoCertificateProvided,
             UnfamiliarCertificate,
             Allowed,
-            ServerAdmin,
+            Operator,
+            ClusterAdmin,
             Expired,
             NotYetValid
         }

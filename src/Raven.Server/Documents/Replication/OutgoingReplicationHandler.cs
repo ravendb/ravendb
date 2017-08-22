@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Replication
             try
             {
                 var connectionInfo = ReplicationUtils.GetTcpInfo(Destination.Url, GetNode(), "Replication",
-                    _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                    _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
 
                 if (_log.IsInfoEnabled)
                     _log.Info($"Will replicate to {Destination.FromString()} via {connectionInfo.Url}");
@@ -143,7 +143,7 @@ namespace Raven.Server.Documents.Replication
                     TcpUtils.SetTimeouts(_tcpClient, _parent._server.Engine.TcpConnectionTimeout);
                     TcpUtils.ConnectSocketAsync(connectionInfo, _tcpClient, _log)
                         .Wait(CancellationToken);
-                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                    var wrapSsl = TcpUtils.WrapStreamWithSslAsync(_tcpClient, connectionInfo, _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
 
                     wrapSsl.Wait(CancellationToken);
 

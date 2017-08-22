@@ -7,7 +7,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     public class CertificateDefinition
     {
         public string Certificate;
-        public bool ServerAdmin;
+        public SecurityClearance Clearance;
         public string Thumbprint;
         public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
 
@@ -22,7 +22,7 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             {
                 [nameof(Certificate)] = Certificate,
                 [nameof(Thumbprint)] = Thumbprint,
-                [nameof(ServerAdmin)] = ServerAdmin,
+                [nameof(Clearance)] = Clearance,
                 [nameof(Permissions)] = permissions
             };
         }
@@ -32,6 +32,15 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         ReadWrite,
         Admin
+    }
+
+    public enum SecurityClearance
+    {
+        ClusterAdmin,
+        Operator,
+        DatabaseAdmin,
+        ValidUser,
+        UnauthenticatedClients
     }
 
     public class CertificateRawData

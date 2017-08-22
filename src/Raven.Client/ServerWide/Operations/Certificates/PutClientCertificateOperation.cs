@@ -13,31 +13,31 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         private readonly X509Certificate2 _certificate;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
-        private readonly bool _serverAdmin;
+        private readonly SecurityClearance _clearance;
 
-        public PutClientCertificateOperation(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
+        public PutClientCertificateOperation(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
         {
             _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
             _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-            _serverAdmin = serverAdmin;
+            _clearance = clearance;
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutClientCertificateCommand(_certificate, _permissions, _serverAdmin);
+            return new PutClientCertificateCommand(_certificate, _permissions, _clearance);
         }
 
         private class PutClientCertificateCommand : RavenCommand
         {
             private readonly X509Certificate2 _certificate;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
-            private readonly bool _serverAdmin;
+            private readonly SecurityClearance _clearance;
 
-            public PutClientCertificateCommand(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
+            public PutClientCertificateCommand(X509Certificate2 certificate, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance)
             {
                 _certificate = certificate ?? throw new ArgumentNullException(nameof(certificate));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-                _serverAdmin = serverAdmin;
+                _clearance = clearance;
             }
 
             public override bool IsReadRequest => false;
@@ -58,8 +58,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                             writer.WritePropertyName("Certificate");
                             writer.WriteString(Convert.ToBase64String(_certificate.Export(X509ContentType.Cert)));
                             writer.WriteComma();
-                            writer.WritePropertyName("ServerAdmin");
-                            writer.WriteBool(_serverAdmin);
+                            writer.WritePropertyName("SecurityClearance");
+                            writer.WriteString(_clearance.ToString());
                             writer.WriteComma();
 
                             writer.WritePropertyName("Permissions");

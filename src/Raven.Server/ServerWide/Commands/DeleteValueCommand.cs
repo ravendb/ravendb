@@ -1,4 +1,7 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Raven.Client;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -13,6 +16,12 @@ namespace Raven.Server.ServerWide.Commands
             djv[nameof(Name)] = Name;
 
             return djv;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            if(Name == ServerStore.LicenseStoargeKey || Name.StartsWith(Constants.Certificates.Prefix))
+                throw new InvalidOperationException("Attempted to use DeleteValueCommand to delete a certificate or license, use dedicated commands for this.");
         }
     }
 }

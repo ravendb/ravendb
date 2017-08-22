@@ -58,7 +58,7 @@ namespace Raven.Server.Rachis
             StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
-        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ServerCertificateHolder.Certificate;
+        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ClusterCertificateHolder.Certificate;
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {

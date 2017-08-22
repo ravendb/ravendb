@@ -386,7 +386,35 @@ namespace Raven.Server.Web
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
         }
 
-        protected bool TryGetServerAdmin()
+        protected bool IsClusterAdmin()
+        {
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var status = feature?.Status;
+            switch (status)
+            {
+                case null:
+                case RavenServer.AuthenticationStatus.None:
+                case RavenServer.AuthenticationStatus.NoCertificateProvided:
+                case RavenServer.AuthenticationStatus.UnfamiliarCertificate:
+                case RavenServer.AuthenticationStatus.Expired:
+                case RavenServer.AuthenticationStatus.Allowed:
+                case RavenServer.AuthenticationStatus.NotYetValid:
+                case RavenServer.AuthenticationStatus.Operator:
+                    if (Server.Configuration.Security.AuthenticationEnabled == false)
+                        return true;
+
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
+                    return false;
+                
+                case RavenServer.AuthenticationStatus.ClusterAdmin:
+                    return true;
+                default:
+                    ThrowInvalidAuthStatus(status);
+                    return false;
+            }
+        }
+
+        protected bool IsOperator()
         {
             var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
             var status = feature?.Status;
@@ -402,9 +430,10 @@ namespace Raven.Server.Web
                     if (Server.Configuration.Security.AuthenticationEnabled == false)
                         return true;
 
-                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, null);
+                    Server.Router.UnlikelyFailAuthorization(HttpContext, null, feature);
                     return false;
-                case RavenServer.AuthenticationStatus.ServerAdmin:
+                case RavenServer.AuthenticationStatus.Operator:
+                case RavenServer.AuthenticationStatus.ClusterAdmin:
                     return true;
                 default:
                     ThrowInvalidAuthStatus(status);
@@ -430,7 +459,8 @@ namespace Raven.Server.Web
 
                     Server.Router.UnlikelyFailAuthorization(HttpContext, dbName, null);
                     return false;
-                case RavenServer.AuthenticationStatus.ServerAdmin:
+                case RavenServer.AuthenticationStatus.ClusterAdmin:
+                case RavenServer.AuthenticationStatus.Operator:
                     return true;
                 case RavenServer.AuthenticationStatus.Allowed:
                     if (dbName != null && feature.CanAccess(dbName, requireAdmin) == false)

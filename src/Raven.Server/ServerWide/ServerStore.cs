@@ -58,7 +58,7 @@ namespace Raven.Server.ServerWide
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<ServerStore>(ResourceName);
 
-        private const string LicenseStoargeKey = "License/Stoarge/Key";
+        public const string LicenseStoargeKey = "License/Stoarge/Key";
 
         private readonly CancellationTokenSource _shutdownNotification = new CancellationTokenSource();
 
@@ -117,6 +117,7 @@ namespace Raven.Server.ServerWide
         }
 
         public RavenServer RavenServer => _ravenServer;
+        
 
         public DatabaseInfoCache DatabaseInfoCache { get; set; }
 
@@ -1297,7 +1298,7 @@ namespace Raven.Server.ServerWide
                     || _clusterRequestExecutor.Url.Equals(leaderUrl, StringComparison.OrdinalIgnoreCase) == false)
                 {
                     _clusterRequestExecutor?.Dispose();
-                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, RavenServer.ServerCertificateHolder.Certificate);
+                    _clusterRequestExecutor = ClusterRequestExecutor.CreateForSingleNode(leaderUrl, RavenServer.ClusterCertificateHolder.Certificate);
                     _clusterRequestExecutor.DefaultTimeout = Engine.OperationTimeout;
                 }
 
@@ -1416,7 +1417,7 @@ namespace Raven.Server.ServerWide
             return new DynamicJsonValue
             {
                 [nameof(TcpConnectionInfo.Url)] = tcpServerUrl,
-                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ServerCertificateHolder.CertificateForClients
+                [nameof(TcpConnectionInfo.Certificate)] = _ravenServer.ClusterCertificateHolder.CertificateForClients
             };
         }
 

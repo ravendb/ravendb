@@ -1,4 +1,5 @@
 using System;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -28,6 +29,20 @@ namespace Raven.Server.ServerWide.Commands
                 throw new InvalidOperationException($"There is not deserializer for '{type}' command.");
 
             return deserializer(json);
+        }
+
+        public virtual void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            // sub classes can assert what their required clearance
+            // should be to execute this command, the minimum level
+            // is operator
+        }
+
+        protected void AssertClusterAdmin(bool isClusterAdmin)
+        {
+            if (isClusterAdmin)
+                return;
+            throw new UnauthorizedAccessException("Attempted to " + GetType().Name + " but this is only available for cluster administrators");
         }
     }
 }

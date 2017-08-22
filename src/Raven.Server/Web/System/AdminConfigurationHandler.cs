@@ -11,7 +11,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminConfigurationHandler : RequestHandler
     {
-        [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/configuration/client", "PUT", AuthorizationStatus.Operator)]
         public async Task PutClientConfiguration()
         {
             ServerStore.EnsureNotPassive();

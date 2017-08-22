@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SecretKeyHandler : RequestHandler
     {
-        [RavenAction("/admin/secrets", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets", "GET", AuthorizationStatus.Operator)]
         public Task GetKeys()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.Operator)]
         public unsafe Task Generate()
         {
             HttpContext.Response.ContentType = "application/base64";
@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets", "POST", AuthorizationStatus.Operator)]
         public Task PutKey()
         {
             var name = GetStringQueryString("name");
@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.Operator)]
         public async Task DistributeKeyInCluster()
         {
             ServerStore.EnsureNotPassive();
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Handlers
 
         private static async Task SendKeyToNodeAsync(string name, string base64, JsonOperationContext ctx, ServerStore server, string node, string url)
         {
-            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.RavenServer.ServerCertificateHolder.Certificate, DocumentConventions.Default))
+            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.RavenServer.ClusterCertificateHolder.Certificate, DocumentConventions.Default))
             {
                 var command = new PutSecretKeyCommand(name, base64);
                 try

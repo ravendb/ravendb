@@ -1,4 +1,6 @@
-﻿using Sparrow.Json;
+﻿using System;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
@@ -16,6 +18,11 @@ namespace Raven.Server.ServerWide.Commands
             var json = base.ToJson(context);
             json[nameof(RemovedNode)] = RemovedNode;
             return json;
+        }
+
+        public override void VerifyCanExecuteCommand(ServerStore store, TransactionOperationContext context, bool isClusterAdmin)
+        {
+            AssertClusterAdmin(isClusterAdmin);
         }
     }
 }
