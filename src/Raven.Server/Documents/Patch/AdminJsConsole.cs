@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                using (_server.AdminScripts.GetScriptRunner(script, out var run))
+                using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), out var run))
                 {
                     var result = run.Run(null, "execute", new object[] { _server, _database });
 
@@ -66,11 +66,25 @@ namespace Raven.Server.Documents.Patch
         }
     }
 
-    public class AdminJsScript : ScriptRunnerCache.Key
+    public class AdminJsScript
+    {
+        public string Script;
+
+        public AdminJsScript(string script)
+        {
+            Script = script;
+        }
+
+        public AdminJsScript()
+        {
+            
+        }
+    }
+    public class AdminJsScriptKey : ScriptRunnerCache.Key
     {
         private readonly string _script;
 
-        public AdminJsScript(string script)
+        public AdminJsScriptKey(string script)
         {
             _script = script;
         }
@@ -86,7 +100,7 @@ namespace Raven.Server.Documents.Patch
 }};";
         }
 
-        protected bool Equals(AdminJsScript other)
+        protected bool Equals(AdminJsScriptKey other)
         {
             return string.Equals(_script, other._script);
         }
