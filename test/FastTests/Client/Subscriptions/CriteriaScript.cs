@@ -70,12 +70,24 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
-        [Fact]
-        public async Task CriteriaScriptWithTransformation()
+        [Theory]
+        [InlineData(false)]
+        public async Task CriteriaScriptWithTransformation(bool useSsl)
         {
             string dbName = GetDatabaseName();
-          
-            using (var store = GetDocumentStore( modifyName: s => dbName))
+            X509Certificate2 clientCertificate = null;
+            X509Certificate2 adminCertificate = null;
+            if (useSsl)
+            {
+                var serverCertPath = SetupServerAuthentication();
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
+                {
+                    [dbName] = DatabaseAccess.ReadWrite,
+                });
+            }
+
+            using (var store = GetDocumentStore(adminCertificate: adminCertificate, userCertificate: clientCertificate, modifyName: s => dbName))
             {
                 using (var subscriptionManager = new DocumentSubscriptions(store))
                 {
