@@ -25,14 +25,6 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
         }),*/
         
         new leafMenuItem({
-            route: 'databases/settings/customFunctionsEditor',
-            moduleId: 'viewmodels/database/settings/customFunctionsEditor',
-            title: 'Custom Functions',
-            nav: true,
-            css: 'icon-custom-functions',
-            dynamicHash: appUrls.customFunctionsEditor
-        }),
-        new leafMenuItem({
             route: 'databases/settings/connectionStrings',
             moduleId: "viewmodels/database/settings/connectionStrings",
             title: "Connection Strings",

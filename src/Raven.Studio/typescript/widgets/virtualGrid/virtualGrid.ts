@@ -10,7 +10,6 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 import virtualGridUtils = require("widgets/virtualGrid/virtualGridUtils");
 import virtualGridSelection = require("widgets/virtualGrid/virtualGridSelection");
 import shiftSelectionPreview = require("widgets/virtualGrid/shiftSelectionPreview");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 
 class virtualGrid<T> {
 
@@ -78,8 +77,6 @@ class virtualGrid<T> {
             setSelectedItems: (selection: Array<T>) => this.setSelectedItems(selection),
             dirtyResults: this.dirtyResults,
             resultEtag: () => this.previousResultsEtag(),
-            withEvaluationContext: context => this.settings.evaluationContext(context),
-            wrapWithEvaluationContext: inner => evaluationContextHelper.wrap(this.settings.evaluationContext(), inner)
         }
     }
 
