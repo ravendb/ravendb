@@ -27,6 +27,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Base64 = Sparrow.Utils.Base64;
 using ConcurrencyException = Voron.Exceptions.ConcurrencyException;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -421,6 +422,7 @@ namespace Raven.Server.Documents.Handlers
             var id = GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
 
             var isTest = GetBoolValueQueryString("test", required: false) ?? false;
+            var debugMode = GetBoolValueQueryString("debug", required: false) ?? isTest;
             var skipPatchIfChangeVectorMismatch = GetBoolValueQueryString("skipPatchIfChangeVectorMismatch", required: false) ?? false;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -445,7 +447,8 @@ namespace Raven.Server.Documents.Handlers
                     (patch, patchArgs),
                     (patchIfMissing, patchIfMissingArgs),
                     Database,
-                    isTest
+                    isTest,
+                    debugMode
                 ))
                 {
                     if (isTest == false)
@@ -491,6 +494,27 @@ namespace Raven.Server.Documents.Handlers
 
                         writer.WritePropertyName(nameof(command.PatchResult.ModifiedDocument));
                         writer.WriteObject(command.PatchResult.ModifiedDocument);
+
+                        if (debugMode)
+                        {
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(command.PatchResult.OriginalDocument));
+                            if (isTest)
+                                writer.WriteObject(command.PatchResult.OriginalDocument);
+                            else
+                                writer.WriteNull();
+
+                            writer.WriteComma();
+
+                            writer.WritePropertyName(nameof(command.PatchResult.Debug));
+
+                            context.Write(writer, new DynamicJsonValue
+                            {
+                                ["Info"] = command.DebugOutput,
+                                ["Actions"] = command.DebugActions?.GetDebugActions()
+                            });
+                        }
+
 
                         writer.WriteEndObject();
                     }

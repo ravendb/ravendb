@@ -141,6 +141,11 @@ namespace Sparrow.Json.Parsing
         {
             return GetEnumerator();
         }
+
+        public void Clear()
+        {
+            Items.Clear();
+        }
     }
 
     public unsafe class ObjectJsonParser : IJsonParser
