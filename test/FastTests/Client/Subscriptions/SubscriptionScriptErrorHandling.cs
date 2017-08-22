@@ -28,7 +28,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>()
                     {
-                        Script = "reta fsd"
+                        Script = "throw 'a party'"
                     }
                 });
 
@@ -112,7 +112,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>()
                     {
-                        Script = "reta   fsd",
+                        Script = "throw 'nice'",
                         IncludeRevisions = true
                     }
                 });
