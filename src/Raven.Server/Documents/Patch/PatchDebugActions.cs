@@ -17,5 +17,12 @@ namespace Raven.Server.Documents.Patch
                 [nameof(LoadDocument)] = LoadDocument
             };
         }
+
+        public void Clear()
+        {
+            PutDocument.Clear();
+            LoadDocument.Clear();
+            DeleteDocument.Clear();
+        }
     }
 }

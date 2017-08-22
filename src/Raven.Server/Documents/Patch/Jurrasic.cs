@@ -153,6 +153,10 @@ namespace Raven.Server.Documents.Patch
 
         public class SingleRun
         {
+            public List<string> DebugOutput;
+            public bool DebugMode;
+            public PatchDebugActions DebugActions;
+
             public override string ToString()
             {
                 return string.Join(Environment.NewLine, _runner.ScriptsSource);
@@ -174,10 +178,36 @@ namespace Raven.Server.Documents.Patch
                     OnLoopIterationCall = OnStateLoopIteration,
                     EnableExposedClrTypes = runner._enableClr
                 };
+                ScriptEngine.SetGlobalFunction("output", (Action<object>)OutputDebug);
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
                 ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
                 ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+            }
+
+            private void OutputDebug(object obj)
+            {
+                if (DebugMode == false)
+                    return;
+
+                if (obj is string str)
+                {
+                    DebugOutput.Add(str);
+                }
+                else if (obj is ObjectInstance json)
+                {
+                    var globalValue = ScriptEngine.GetGlobalValue<ObjectInstance>("JSON");
+                    var stringified = (string)globalValue.CallMemberFunction("stringify", json);
+                    DebugOutput.Add(stringified);
+                }
+                else if (obj == null || obj == Null.Value || obj == Undefined.Value)
+                {
+                    DebugOutput.Add("null");
+                }
+                else
+                {
+                    DebugOutput.Add(obj.ToString());
+                }
             }
 
             public string PutDocument(string id, object document, string changeVector)
@@ -194,6 +224,11 @@ namespace Raven.Server.Documents.Patch
                 if (changeVector == "undefined")
                     changeVector = null;
 
+                if (DebugMode)
+                {
+                    DebugActions.PutDocument.Add(id);
+                }
+
                 using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
@@ -205,6 +240,10 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
+                if (DebugMode)
+                {
+                    DebugActions.DeleteDocument.Add(id);
+                }
                 var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
                 return result != null;
 
@@ -239,6 +278,10 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext();
 
+                if (DebugMode)
+                {
+                    DebugActions.LoadDocument.Add(id);
+                }
                 var document = _database.DocumentsStorage.Get(_context, id);
                 if (document == null)
                     return Null.Value;
@@ -269,6 +312,14 @@ namespace Raven.Server.Documents.Patch
             public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
                 _context = ctx;
+                if (DebugMode)
+                {
+                    if(DebugOutput == null)
+                        DebugOutput = new List<string>();
+                    if(DebugActions == null)
+                        DebugActions = new PatchDebugActions();
+                }
+                
                 CurrentSteps = 0;
                 MaxSteps = 1000; // TODO: Maxim make me configurable
                 for (int i = 0; i < args.Length; i++)
@@ -385,6 +436,9 @@ namespace Raven.Server.Documents.Patch
                 if (_run == null)
                     return;
                 _run.ReadOnly = false;
+                _run.DebugMode = false;
+                _run.DebugOutput?.Clear();
+                _run.DebugActions?.Clear();
                 _parent._cache.Enqueue(_run);
                 _run = null;
                 _parent = null;

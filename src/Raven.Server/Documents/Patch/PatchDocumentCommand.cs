@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -16,6 +17,7 @@ namespace Raven.Server.Documents.Patch
 
         private readonly DocumentDatabase _database;
         private readonly bool _isTest;
+        private readonly bool _debugMode;
 
         private ScriptRunner.SingleRun _run;
         private readonly ScriptRunner.SingleRun _runIfMissing;
@@ -23,6 +25,10 @@ namespace Raven.Server.Documents.Patch
         private ScriptRunner.ReturnRun _returnRunIfMissing;
         private readonly BlittableJsonReaderObject _patchIfMissingArgs;
         private readonly BlittableJsonReaderObject _patchArgs;
+
+        public List<string> DebugOutput => _run.DebugOutput;
+
+        public PatchDebugActions DebugActions => _run.DebugActions;
 
         public PatchDocumentCommand(
             JsonOperationContext context, 
@@ -32,18 +38,23 @@ namespace Raven.Server.Documents.Patch
             (PatchRequest run, BlittableJsonReaderObject args) patch,
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
             DocumentDatabase database, 
-            bool isTest)
+            bool isTest, 
+            bool debugMode)
         {
             _externalContext = context;
             _patchIfMissingArgs = patchIfMissing.args;
             _patchArgs = patch.args;
             _returnRun = database.Scripts.GetScriptRunner(patch.run, out _run);
+            _run.DebugMode = debugMode;
+            if (_runIfMissing != null)
+                _runIfMissing.DebugMode = debugMode;
             _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
             _database = database;
             _isTest = isTest;
+            _debugMode = debugMode;
         }
 
         public PatchResult PatchResult { get; private set; }
@@ -51,7 +62,7 @@ namespace Raven.Server.Documents.Patch
         public override int Execute(DocumentsOperationContext context)
         {
             var originalDocument = _database.DocumentsStorage.Get(context, _id);
-
+            _run.DebugMode = _debugMode;
             if (_expectedChangeVector != null)
             {
                 if (originalDocument == null)
@@ -116,7 +127,7 @@ namespace Raven.Server.Documents.Patch
             var result = new PatchResult
             {
                 Status = PatchStatus.NotModified,
-                OriginalDocument = _isTest == false ? originalDocument?.Data : originalDocument?.Data?.Clone(_externalContext),
+                OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext),
                 ModifiedDocument = modifiedDocument
             };
 
@@ -150,6 +161,12 @@ namespace Raven.Server.Documents.Patch
             {
                 result.ChangeVector = putResult.Value.ChangeVector;
                 result.Collection = putResult.Value.Collection.Name;
+            }
+
+            if (_debugMode)
+            {
+
+                //result.Debug = 
             }
 
             PatchResult = result;
