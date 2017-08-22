@@ -63,7 +63,8 @@ namespace Raven.Server.Documents.Patch
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
                 instance[Constants.Documents.Metadata.Collection] = _fstDocumentConflict.Collection;
-                resolved = result.Translate<BlittableJsonReaderObject>(context);
+                resolved = result.Translate<BlittableJsonReaderObject>(context,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;
             }
         }
