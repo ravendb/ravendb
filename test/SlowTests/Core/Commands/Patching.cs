@@ -30,7 +30,7 @@ namespace SlowTests.Core.Commands
                     store.Operations.Send(new PatchOperation("posts/1", null,
                         new PatchRequest
                         {
-                            Script = @"this.Comments.push(comment1)",
+                            Script = @"this.Comments.push(args.comment1)",
                             Values = { { "comment1", comment } }
                         }));
 
