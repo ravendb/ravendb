@@ -155,6 +155,7 @@ namespace Raven.Server.Documents.Patch
         {
             public List<string> DebugOutput;
             public bool DebugMode;
+            public bool PutOrDeleteCalled;
             public PatchDebugActions DebugActions;
 
             public override string ToString()
@@ -216,6 +217,7 @@ namespace Raven.Server.Documents.Patch
 
             public string PutDocument(string id, object document, string changeVector)
             {
+                PutOrDeleteCalled = true;
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 var objectInstance = document as ObjectInstance;
@@ -243,6 +245,7 @@ namespace Raven.Server.Documents.Patch
 
             public bool DeleteDocument(string id, string changeVector)
             {
+                PutOrDeleteCalled = true;
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 if (DebugMode)
@@ -324,7 +327,7 @@ namespace Raven.Server.Documents.Patch
                     if(DebugActions == null)
                         DebugActions = new PatchDebugActions();
                 }
-                
+                PutOrDeleteCalled = false;
                 CurrentSteps = 0;
                 MaxSteps = 1000; // TODO: Maxim make me configurable
                 for (int i = 0; i < args.Length; i++)

@@ -40,17 +40,17 @@ namespace Raven.Server.Documents.Patch
                 WriteJurrasicInstance(jsObject);
         }
 
-        private void WriteJsonValue(object value)
+        private void WriteJsonValue(object parent, string propName, object value)
         {
             if (value is NullObjectInstance)
             {
                 _writer.WriteValueNull();
                 return;
             }
-            WriteValue(value);
+            WriteValue(parent, propName, value);
         }
 
-        private void WriteValue(object v)
+        private void WriteValue(object parent, string propName, object v)
         {
             if (v is bool b)
                 _writer.WriteValue(b);
@@ -59,22 +59,14 @@ namespace Raven.Server.Documents.Patch
             else if (v is byte by)
                 _writer.WriteValue(by);
             else if (v is int i)
-                _writer.WriteValue(i);
+                WriteNumber(parent, propName, i);
             else if (v is uint ui)
                 _writer.WriteValue(ui);
             else if (v is long l)
                 _writer.WriteValue(l);
             else if (v is double d)
             {
-                if (Math.Abs(Math.Round(d, 0) - d) < double.Epsilon)
-                {
-                    _writer.WriteValue((long)d);
-
-                }
-                else
-                {
-                    _writer.WriteValue(d);
-                }
+                WriteNumber(parent, propName, d);
             }
             else if (v == Null.Value || v == Undefined.Value)
                 _writer.WriteValueNull();
@@ -83,9 +75,9 @@ namespace Raven.Server.Documents.Patch
                 _writer.StartWriteArray();
                 foreach (var property in jsArray.Properties)
                 {
-                    if((property.Attributes & PropertyAttributes.IsLengthProperty)==PropertyAttributes.IsLengthProperty)
+                    if ((property.Attributes & PropertyAttributes.IsLengthProperty) == PropertyAttributes.IsLengthProperty)
                         continue;
-                    WriteValue(property.Value);
+                    WriteValue(jsArray, property.Key as string, property.Value);
                 }
                 _writer.WriteArrayEnd();
             }
@@ -99,7 +91,7 @@ namespace Raven.Server.Documents.Patch
                     _recursive = new HashSet<object>();
                 try
                 {
-                    if(_recursive.Add(obj))
+                    if (_recursive.Add(obj))
                         WriteInstance(obj);
                     else
                         _writer.WriteValueNull();
@@ -131,6 +123,70 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
+        private void WriteNumber(object parent, string propName, double d)
+        {
+            var writer = _writer;
+            var boi = parent as BlittableObjectInstance;
+            if (boi == null || propName == null)
+            {
+                GuessNumberType();
+                return;
+            }
+
+            if (boi.OriginalPropertiesTypes != null &&
+                boi.OriginalPropertiesTypes.TryGetValue(propName, out var numType))
+            {
+                if (WriteNumberBasedOnType(numType & BlittableJsonReaderBase.TypesMask))
+                    return;
+            }
+
+            else if(boi.Blittable != null)
+            {
+                var propIndex = boi.Blittable.GetPropertyIndex(propName);
+                if (propIndex != -1)
+                {
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+                    boi.Blittable.GetPropertyByIndex(propIndex, ref prop);
+                    if (WriteNumberBasedOnType(prop.Token & BlittableJsonReaderBase.TypesMask))
+                        return;
+                }
+            }
+
+            GuessNumberType();
+
+            bool WriteNumberBasedOnType(BlittableJsonToken type)
+            {
+                if (type == BlittableJsonToken.Integer)
+                {
+                    writer.WriteValue((long)d);
+                    return true;
+                }
+                if (type == BlittableJsonToken.LazyNumber)
+                {
+                    writer.WriteValue(d);
+                    return true;
+                }
+                return false;
+            }
+
+            void GuessNumberType()
+            {
+                if (Math.Abs(Math.Round(d, 0) - d) < double.Epsilon)
+                {
+                    writer.WriteValue((long)d);
+                }
+                else
+                {
+                    writer.WriteValue(d);
+                }
+            }
+        }
+
+        private void WriteNumberBasedOnType(BlittableJsonToken numType)
+        {
+            throw new NotImplementedException();
+        }
+
         private void WriteJurrasicInstance(ObjectInstance jsObject)
         {
             foreach (var property in jsObject.Properties)
@@ -147,13 +203,13 @@ namespace Raven.Server.Documents.Patch
                     continue;
 
                 _writer.WritePropertyName(propertyName);
-                WriteJsonValue(value);
+                WriteJsonValue(jsObject, propertyName, value);
             }
         }
 
         private void WriteBlittableInstance(BlittableObjectInstance obj)
         {
-            if (obj.DocumentId != null && 
+            if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var metadata = ((ObjectInstance)obj[Constants.Documents.Metadata.Key]);
@@ -174,7 +230,7 @@ namespace Raven.Server.Documents.Patch
                 if (properties.Remove(prop.Name, out var modifiedValue))
                 {
                     if (modifiedValue is FunctionInstance == false)
-                        WriteJsonValue(modifiedValue);
+                        WriteJsonValue(obj, prop.Name, modifiedValue);
                 }
                 else
                 {
@@ -184,11 +240,11 @@ namespace Raven.Server.Documents.Patch
 
             foreach (var modificationKvp in properties)
             {
-                if(modificationKvp.Value is FunctionInstance)
+                if (modificationKvp.Value is FunctionInstance)
                     continue;
 
                 _writer.WritePropertyName(modificationKvp.Key);
-                WriteJsonValue(modificationKvp.Value);
+                WriteJsonValue(obj, modificationKvp.Key, modificationKvp.Value);
             }
         }
 
@@ -204,7 +260,7 @@ namespace Raven.Server.Documents.Patch
                    property == Constants.Documents.Metadata.Flags;
         }
 
-        public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance, 
+        public static BlittableJsonReaderObject Translate(JsonOperationContext context, ObjectInstance objectInstance,
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (objectInstance == null)
