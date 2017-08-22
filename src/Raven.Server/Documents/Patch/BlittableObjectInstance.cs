@@ -72,7 +72,7 @@ namespace Raven.Server.Documents.Patch
                     returnedValue = (bool)propertyDetails.Value;
                     break;
                 case BlittableJsonToken.Integer:
-                    returnedValue = GetInterger(propertyDetails.Value);
+                    returnedValue = GetJurrasicNumber_TEMPORARY(propertyDetails.Value);
                     break;
                 case BlittableJsonToken.LazyNumber:
                     returnedValue = (double)(LazyNumberValue)propertyDetails.Value;
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.Patch
             return returnedValue;
         }
 
-        private static object GetInterger(object val)
+        public static object GetJurrasicNumber_TEMPORARY(object val)
         {
             var value = (long)val;
             // TODO: Maxim fix me, Jurrasic doesn't support longs
@@ -123,7 +123,7 @@ namespace Raven.Server.Documents.Patch
                         arrayValue = (bool)valueTuple.Item1;
                         break;
                     case BlittableJsonToken.Integer:
-                        arrayValue = GetInterger(valueTuple.Item1);
+                        arrayValue = GetJurrasicNumber_TEMPORARY(valueTuple.Item1);
                         break;
                     case BlittableJsonToken.LazyNumber:
                         arrayValue = (double)(LazyNumberValue)valueTuple.Item1;

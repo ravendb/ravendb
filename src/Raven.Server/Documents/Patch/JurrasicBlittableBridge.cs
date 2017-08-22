@@ -149,16 +149,21 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteBlittableInstance(BlittableObjectInstance blittableObjectInstance)
+        private void WriteBlittableInstance(BlittableObjectInstance obj)
         {
-            var properties = blittableObjectInstance.Properties.ToDictionary(x => x.Key.ToString(), x => x.Value);
-            foreach (var propertyIndex in blittableObjectInstance.Blittable.GetPropertiesByInsertionOrder())
+            if (obj.DocumentId != null)
+            {
+                var metadata = ((ObjectInstance)obj[Constants.Documents.Metadata.Key]);
+                metadata[Constants.Documents.Metadata.Id] = obj.DocumentId;
+            }
+            var properties = obj.Properties.ToDictionary(x => x.Key.ToString(), x => x.Value);
+            foreach (var propertyIndex in obj.Blittable.GetPropertiesByInsertionOrder())
             {
                 var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-                blittableObjectInstance.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
+                obj.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
 
-                if (blittableObjectInstance.Deletes?.Contains(prop.Name) == true)
+                if (obj.Deletes?.Contains(prop.Name) == true)
                     continue;
 
                 _writer.WritePropertyName(prop.Name);
