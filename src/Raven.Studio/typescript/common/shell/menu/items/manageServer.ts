@@ -53,7 +53,16 @@ function getManageServerMenuItem() {
             css: 'icon-client-configuration',
             dynamicHash: appUrl.forGlobalClientConfiguration,
             enabled: accessHelper.isGlobalAdmin
-        })
+        }),
+        new leafMenuItem({
+            route: 'admin/settings/certificates',
+            moduleId: "viewmodels/manage/certificates",
+            title: "Certificates",
+            nav: true,
+            css: 'icon-certificate',
+            dynamicHash: appUrl.forCertificates,
+            enabled: accessHelper.isGlobalAdmin
+        }),
         /* TODO
         new leafMenuItem({
             route: 'admin/settings/compact',

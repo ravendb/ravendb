@@ -170,6 +170,10 @@ class appUrl {
     static forGlobalClientConfiguration(): string {
         return "#admin/settings/clientConfiguration";
     }
+    
+    static forCertificates(): string {
+        return "#admin/settings/certificates";
+    }
 
     static forStudioConfig(): string {
         return "#admin/settings/studioConfig";
