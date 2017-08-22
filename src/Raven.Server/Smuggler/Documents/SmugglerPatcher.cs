@@ -24,7 +24,7 @@ namespace Raven.Server.Smuggler.Documents
 
         public Document Transform(Document document, JsonOperationContext context)
         {
-            var result = _run.Run(null, "transform", new object[]{document});
+            var result = _run.Run(null, "execute", new object[]{document});
             if (result.Value is ObjectInstance == false)
             {
                 document.Data.Dispose();
