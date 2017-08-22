@@ -65,8 +65,6 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Raven.TestDriver", "src\Rav
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "rvn", "tools\rvn\rvn.csproj", "{579E2927-4840-4E36-8D12-01878EFB53E4}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Jurassic", "..\jurassicFromScratch\Jurassic\Jurassic.csproj", "{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -659,30 +657,6 @@ Global
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Validate|x64.Build.0 = Debug|Any CPU
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Validate|x86.ActiveCfg = Debug|Any CPU
 		{579E2927-4840-4E36-8D12-01878EFB53E4}.Validate|x86.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|x64.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|x64.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Debug|x86.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|Any CPU.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|Any CPU.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|x64.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|x64.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|x86.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.MemGuard|x86.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|Any CPU.Build.0 = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|x64.ActiveCfg = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|x64.Build.0 = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|x86.ActiveCfg = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Release|x86.Build.0 = Release|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|Any CPU.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|Any CPU.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|x64.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|x64.Build.0 = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|x86.ActiveCfg = Debug|Any CPU
-		{36F5EE66-FB73-4174-8AC9-CBD0CF75171E}.Validate|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -27,7 +27,7 @@ namespace SlowTests.Tests.NestedIndexing
                         from i in docs.Items
                         select new
                         {
-                            RefName = load(i.Ref, ""Items"").Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
                     }, 
                     Name = "test" }
@@ -63,7 +63,7 @@ namespace SlowTests.Tests.NestedIndexing
                         from i in docs.Items
                         select new
                         {
-                            RefName = load(i.Ref, ""Items"").Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
                     },
                     Name = "test" }
@@ -107,7 +107,7 @@ namespace SlowTests.Tests.NestedIndexing
                         from i in docs.Items
                         select new
                         {
-                            RefName = load(i.Ref, ""Items"").Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
                     },
                     Name = "test" }
@@ -152,7 +152,7 @@ namespace SlowTests.Tests.NestedIndexing
                         from i in docs.Items
                         select new
                         {
-                            RefNameNotNull = load(i.Ref, ""Items"").Name != null
+                            RefNameNotNull = LoadDocument(i.Ref, ""Items"").Name != null
                         }"
                     },
                     Name = "test" }
@@ -291,7 +291,7 @@ namespace SlowTests.Tests.NestedIndexing
                         from i in docs.Items
                         select new
                         {
-                            RefName = load(i.Ref, ""Items"").Name,
+                            RefName = LoadDocument(i.Ref, ""Items"").Name,
                         }"
                     },
                     Name = "test" }
