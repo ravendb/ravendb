@@ -8,7 +8,7 @@ using System.Threading;
 using Jurassic;
 using Jurassic.Compiler;
 using Jurassic.Library;
-using Org.BouncyCastle.Crypto.Digests;
+using Sparrow.Extensions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -182,8 +182,18 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetGlobalFunction("output", (Action<object>)OutputDebug);
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
-                ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
                 ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+
+                ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
+                ScriptEngine.SetGlobalFunction("lastModified", (Func<object, string>)GetLastModified);
+            }
+
+
+            private string GetLastModified(object arg)
+            {
+                if (arg is BlittableObjectInstance doc)
+                    return doc.LastModified?.GetDefaultRavenFormat();
+                return null;
             }
 
             private void OutputDebug(object obj)
@@ -293,7 +303,7 @@ namespace Raven.Server.Documents.Patch
                 var document = _database.DocumentsStorage.Get(_context, id);
                 if (document == null)
                     return Null.Value;
-                return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id);
+                return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id, document.LastModified);
             }
 
             public bool ReadOnly;
@@ -353,11 +363,11 @@ namespace Raven.Server.Documents.Patch
             private object TranslateToJurrasic(ScriptEngine engine, object o)
             {
                 if (o is Document d)
-                    return new BlittableObjectInstance(engine, d.Data, d.Id);
+                    return new BlittableObjectInstance(engine, d.Data, d.Id, d.LastModified);
                 if (o is DocumentConflict dc)
-                    return new BlittableObjectInstance(engine, dc.Doc, dc.Id);
+                    return new BlittableObjectInstance(engine, dc.Doc, dc.Id, dc.LastModified);
                 if (o is BlittableJsonReaderObject json)
-                    return new BlittableObjectInstance(engine, json, null);
+                    return new BlittableObjectInstance(engine, json, null, null);
                 if (o is BlittableJsonReaderArray array)
                     return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)

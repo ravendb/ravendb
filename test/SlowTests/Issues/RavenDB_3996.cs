@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             {
                 var empty = context.ReadObject(new DynamicJsonValue(), "empty");
                 var engine = new ScriptEngine();
-                var jsObject = new BlittableObjectInstance(engine,empty, "n");
+                var jsObject = new BlittableObjectInstance(engine,empty, "n", null);
                 jsObject.SetPropertyValue("Test", (string)null, true);
 
                 var json = new ScriptRunnerResult(jsObject).Translate<BlittableJsonReaderObject>(context);

@@ -33,14 +33,13 @@ namespace SlowTests.Issues
 
                 store.Operations.Send(new PatchOperation("dates/1-A", null, new PatchRequest
                 {
-                    Script = "this.Date1 = this[\"@metadata\"][\"@last-modified\"]; this.Date2 = this[\"@metadata\"][\"@last-modified\"];"
+                    Script = "this.Date1 = lastModified(this);"
                 }));
 
                 using (var session = store.OpenSession())
                 {
                     var dates = session.Load<Dates>("dates/1-A");
                     Assert.NotNull(dates.Date1);
-                    Assert.NotNull(dates.Date2);
                 }
             }
         }
