@@ -22,11 +22,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.AutomaticConflictResolution())
+                using (var test = new SlowTests.Issues.RavenDB_3929())
                 {
                     try
                     {
-                        test.ScriptComplexResolution().Wait();
+                        test.NullPropagationShouldNotAffectOperators();
                     }
                     catch (Exception e)
                     {

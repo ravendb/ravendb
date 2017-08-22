@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.Patch
             using(_database.Scripts.GetScriptRunner(patch, out var run))
             {
                 run.ReadOnly = true;
-                run.ScriptEngine.SetGlobalFunction("debug", (Action<string>)Console.WriteLine);
                 var result = run.Run(context, "resolve", new object[] {_docs, _hasTombstone, TombstoneResolverValue});
                 if (result.IsNull)
                 {
