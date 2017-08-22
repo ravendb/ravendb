@@ -294,7 +294,7 @@ namespace Sparrow.Json
                     WriteValue((long)value);
                     break;
                 case BlittableJsonToken.LazyNumber:
-                    WriteValue((float)value);
+                    WriteValue((double)(LazyNumberValue)value);
                     break;
                 case BlittableJsonToken.String:
                 case BlittableJsonToken.CompressedString:
