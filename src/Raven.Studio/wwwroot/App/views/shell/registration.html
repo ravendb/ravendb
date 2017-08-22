@@ -6,7 +6,7 @@
                 <button type="button" data-bind="visible: dismissVisible" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 <h1 class="modal-title" id="myModalLabel">License request</h1>
             </div>
-            <img src="Content/img/beta-license.png" class="img-responsive" />
+            <img src="Content/img/license_multiple.png" class="img-responsive" />
             <div class="modal-body">
                 <div class="form-container row" data-bind="css: { 'enterKey': licenseKeySectionActive() }">
                     <section id="licenseRequestForm" class="col-xs-6">
@@ -80,7 +80,7 @@
                     </ul>
                 </div>
 
-                <button type="button" class="btn btn-default" data-bind="click: goToEnterLicense, visible: !licenseKeySectionActive()">
+                <button type="button" class="btn btn-info" data-bind="click: goToEnterLicense, visible: !licenseKeySectionActive()">
                     Enter license key
                 </button>
                 <button type="button" class="btn btn-default" data-bind="click: goToRegistration, visible: licenseKeySectionActive() && !justRegistered()">
