@@ -31,7 +31,7 @@ namespace SlowTests.Issues
                                 output({'a': 'c', 'f': { 'x' : 2}});"
                     ;
 
-                var patch = new PatchRequest(script, PatchRequestType.None);
+                var req = new PatchRequest(script, PatchRequestType.None);
 
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
@@ -41,11 +41,10 @@ namespace SlowTests.Issues
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 
-                    //var patcher = new DocumentPatcher(database);
-                    //var result = patcher.Apply(context, document, patch, debugMode: true);
-                    //dynamic debug = new DynamicBlittableJson(result.Debug);
-                    //dynamic array = (DynamicArray)debug.Info;
-                    dynamic array = new dynamic[0];
+                    database.Scripts.GetScriptRunner(req, out var run);
+                    run.DebugMode = true;
+                    run.Run(context, "execute", new object[] { document });
+                    var array = run.DebugOutput;
 
                     Assert.Equal(8 + 1, array.Count); // +1 because of statements executed
                     Assert.Equal("undefined", array[0]);
