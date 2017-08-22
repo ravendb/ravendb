@@ -65,7 +65,7 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
@@ -137,7 +137,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
             }
 
 
@@ -368,7 +368,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
             }
 
             using (var store = new DocumentStore()
@@ -433,7 +433,7 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
@@ -511,7 +511,7 @@ namespace RachisTests.DatabaseCluster
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin
@@ -547,7 +547,7 @@ namespace RachisTests.DatabaseCluster
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin

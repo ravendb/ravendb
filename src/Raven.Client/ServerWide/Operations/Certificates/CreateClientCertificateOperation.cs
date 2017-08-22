@@ -13,34 +13,34 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         private readonly string _name;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
-        private readonly bool _serverAdmin;
+        private readonly SecurityClearance _clearance;
         private readonly string _password;
 
-        public CreateClientCertificateOperation(string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
+        public CreateClientCertificateOperation(string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-            _serverAdmin = serverAdmin;
+            _clearance = clearance;
             _password = password;
         }
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateClientCertificateCommand( _name, _permissions, _serverAdmin, _password);
+            return new CreateClientCertificateCommand( _name, _permissions, _clearance, _password);
         }
 
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
         {
             private readonly string _name;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
-            private readonly bool _serverAdmin;
+            private readonly SecurityClearance _clearance;
             private readonly string _password;
 
-            public CreateClientCertificateCommand(string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
+            public CreateClientCertificateCommand(string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-                _serverAdmin = serverAdmin;
+                _clearance = clearance;
                 _password = password;
                 ResponseType = RavenCommandResponseType.Raw;
             }
@@ -65,8 +65,8 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                         writer.WritePropertyName("Name");
                         writer.WriteString(_name.ToString());
                         writer.WriteComma();
-                        writer.WritePropertyName("ServerAdmin");
-                        writer.WriteBool(_serverAdmin);
+                        writer.WritePropertyName("SecurityClearance");
+                        writer.WriteString(_clearance.ToString());
                         writer.WriteComma();
 
                         if (_password != null)

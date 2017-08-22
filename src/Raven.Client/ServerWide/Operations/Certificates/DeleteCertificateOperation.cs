@@ -8,30 +8,30 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 {
     public class DeleteCertificateOperation : IServerOperation
     {
-        private readonly string _name;
+        private readonly string _thumbprint;
 
-        public DeleteCertificateOperation(string name)
+        public DeleteCertificateOperation(string thumbprint)
         {
-            _name = name ?? throw new ArgumentNullException(nameof(name));
+            _thumbprint = thumbprint ?? throw new ArgumentNullException(nameof(thumbprint));
         }
 
         public RavenCommand GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new DeleteCertificateCommand(_name);
+            return new DeleteCertificateCommand(_thumbprint);
         }
 
         private class DeleteCertificateCommand : RavenCommand
         {
-            private readonly string _name;
+            private readonly string _thumbprint;
 
-            public DeleteCertificateCommand(string name)
+            public DeleteCertificateCommand(string thumbprint)
             {
-                _name = name ?? throw new ArgumentNullException(nameof(name));
+                _thumbprint = thumbprint ?? throw new ArgumentNullException(nameof(thumbprint));
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/admin/certificates?name=" + Uri.EscapeDataString(_name);
+                url = $"{node.Url}/admin/certificates?thumbprint=" + Uri.EscapeDataString(_thumbprint);
 
                 return new HttpRequestMessage
                 {

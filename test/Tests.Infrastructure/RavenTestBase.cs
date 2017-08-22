@@ -474,7 +474,7 @@ namespace FastTests
         protected X509Certificate2 CreateAndPutClientCertificate(string serverCertPath,
             RavenServer.CertificateHolder serverCertificateHolder,
             Dictionary<string, DatabaseAccess> permissions,
-            bool serverAdmin = false,
+            SecurityClearance clearance,
             RavenServer defaultServer = null)
         {
             var clientCertificate = CertificateUtils.CreateSelfSignedClientCertificate("RavenTestsClient", serverCertificateHolder);
@@ -484,7 +484,7 @@ namespace FastTests
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(clientCertificate, permissions, serverAdmin)
+                    var command = new PutClientCertificateOperation(clientCertificate, permissions, clearance)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
@@ -493,7 +493,7 @@ namespace FastTests
             return clientCertificate;
         }
 
-        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, RavenServer defaultServer = null)
+        protected X509Certificate2 AskServerForClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser, RavenServer defaultServer = null)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             X509Certificate2 clientCertificate;
@@ -503,7 +503,7 @@ namespace FastTests
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new CreateClientCertificateOperation("client certificate", permissions, serverAdmin)
+                    var command = new CreateClientCertificateOperation("client certificate", permissions, clearance)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);

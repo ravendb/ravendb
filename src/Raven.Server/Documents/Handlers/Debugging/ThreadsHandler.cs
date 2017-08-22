@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class ThreadsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/threads/runaway", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task RunawayThreads()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))

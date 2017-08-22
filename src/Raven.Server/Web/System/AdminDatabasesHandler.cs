@@ -44,7 +44,7 @@ namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        [RavenAction("/admin/databases", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -90,7 +90,7 @@ namespace Raven.Server.Web.System
         }
 
         // add database to already existing database group
-        [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.Operator)]
         public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -175,7 +175,7 @@ namespace Raven.Server.Web.System
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
         }
 
-        [RavenAction("/admin/databases", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -262,7 +262,7 @@ namespace Raven.Server.Web.System
                 foreach (var member in members)
                 {
                     var url = clusterTopology.GetUrlFromTag(member);
-                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
+                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ClusterCertificateHolder.Certificate);
                     executors.Add(requester);
                     waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
                 }
@@ -296,7 +296,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ServerCertificateHolder.Certificate))
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ClusterCertificateHolder.Certificate))
             {
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
@@ -519,7 +519,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -551,7 +551,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {
             // we don't dispose this as operation is async
@@ -677,7 +677,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.Operator)]
         public async Task ModifyCustomFunctions()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -710,7 +710,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
@@ -808,19 +808,19 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
         public async Task DisableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: true);
         }
 
-        [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.Operator)]
         public async Task EnableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: false);
         }
 
-        [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleDynamicNodeDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -913,7 +913,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/databases/promote", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/promote", "POST", AuthorizationStatus.Operator)]
         public async Task PromoteImmediately()
         {
             var name = GetStringQueryString("name");
@@ -956,7 +956,7 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
-        [RavenAction("/admin/console", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/console", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task AdminConsole()
         {
             var name = GetStringQueryString("database", false);
@@ -1223,7 +1223,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/compact", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
         public Task CompactDatabase()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
