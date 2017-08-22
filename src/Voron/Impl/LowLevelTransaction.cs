@@ -63,15 +63,15 @@ namespace Voron.Impl
             public readonly TableValueBuilder TableValueBuilder = new TableValueBuilder();
 
             public int ScratchPagesTablePoolIndex = 0;
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool1 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
-            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesTablePool2 = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesInUse = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
+            public FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer> ScratchPagesReadyForNextTx = new FastDictionary<long, PageFromScratchBuffer, NumericEqualityComparer>(new NumericEqualityComparer());
             public readonly FastDictionary<long, long, NumericEqualityComparer> DirtyOverflowPagesPool = new FastDictionary<long, long, NumericEqualityComparer>(new NumericEqualityComparer());
             public readonly HashSet<long> DirtyPagesPool = new HashSet<long>(NumericEqualityComparer.Instance);
 
             public void Reset()
             {
-                ScratchPagesTablePool2.Clear();
-                ScratchPagesTablePool1.Clear();
+                ScratchPagesReadyForNextTx.Clear();
+                ScratchPagesInUse.Clear();
                 DirtyOverflowPagesPool.Clear();
                 DirtyPagesPool.Clear();
                 TableValueBuilder.Reset();
@@ -196,7 +196,7 @@ namespace Voron.Impl
             _dirtyOverflowPages = previous._dirtyOverflowPages;
             _dirtyOverflowPages.Clear();
 
-            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool2;
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesReadyForNextTx;
 
             foreach (var kvp in previous._scratchPagesTable)
             {
@@ -204,8 +204,8 @@ namespace Voron.Impl
                     _scratchPagesTable.Add(kvp.Key, kvp.Value);
             }
             previous._scratchPagesTable.Clear();
-            _env.WriteTransactionPool.ScratchPagesTablePool1 = _scratchPagesTable;
-            _env.WriteTransactionPool.ScratchPagesTablePool2 = previous._scratchPagesTable;
+            _env.WriteTransactionPool.ScratchPagesInUse = _scratchPagesTable;
+            _env.WriteTransactionPool.ScratchPagesReadyForNextTx = previous._scratchPagesTable;
 
             _dirtyPages = previous._dirtyPages;
             _dirtyPages.Clear();
@@ -274,7 +274,7 @@ namespace Voron.Impl
             }
             _env.WriteTransactionPool.Reset();
             _dirtyOverflowPages = _env.WriteTransactionPool.DirtyOverflowPagesPool;
-            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesTablePool1;
+            _scratchPagesTable = _env.WriteTransactionPool.ScratchPagesInUse;
             _dirtyPages = _env.WriteTransactionPool.DirtyPagesPool;
             _freedPages = new HashSet<long>(NumericEqualityComparer.Instance);
             _unusedScratchPages = new List<PageFromScratchBuffer>();
@@ -730,8 +730,7 @@ namespace Voron.Impl
             _freeSpaceHandling.FreePage(this, pageNumber);
             _freedPages.Add(pageNumber);
 
-            PageFromScratchBuffer scratchPage;
-            if (_scratchPagesTable.TryGetValue(pageNumber, out scratchPage))
+            if (_scratchPagesTable.TryGetValue(pageNumber, out var scratchPage))
             {
                 if (_transactionPages.Remove(scratchPage))
                     _unusedScratchPages.Add(scratchPage);
@@ -739,10 +738,8 @@ namespace Voron.Impl
                 _scratchPagesTable.Remove(pageNumber);
             }
 
-            long numberOfOverflowPages;
-
             if (_dirtyPages.Remove(pageNumber) == false &&
-                _dirtyOverflowPages.TryGetValue(pageNumber, out numberOfOverflowPages))
+                _dirtyOverflowPages.TryGetValue(pageNumber, out long numberOfOverflowPages))
             {
                 _dirtyOverflowPages.Remove(pageNumber);
 

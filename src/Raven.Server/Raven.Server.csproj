@@ -20,6 +20,7 @@
     <GenerateAssemblyConfigurationAttribute>false</GenerateAssemblyConfigurationAttribute>
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
+    <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
   <PropertyGroup>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
@@ -107,6 +108,9 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DebugType>portable</DebugType>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Validate'">
+    <DebugType>portable</DebugType>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -119,5 +123,8 @@
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate|AnyCPU'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
 </Project>

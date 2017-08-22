@@ -23,6 +23,10 @@
     <GenerateNeutralResourcesLanguageAttribute>false</GenerateNeutralResourcesLanguageAttribute>
     <Product>RavenDB Client</Product>
     <Title>RavenDB Client</Title>
+    <Configurations>Debug;Release;Validate</Configurations>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)'=='Validate'">
+    <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
