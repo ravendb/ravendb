@@ -229,7 +229,8 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.PutDocument.Add(id);
                 }
 
-                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance))
+                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
                     return put.Id;
