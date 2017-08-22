@@ -271,11 +271,11 @@ namespace SlowTests.MailingList
                           product.Department
                       };
 
-                Index(x => x.Query, FieldIndexing.Analyzed);
-                Index(x => x.Created, FieldIndexing.NotAnalyzed);
-                Index(x => x.Name, FieldIndexing.NotAnalyzed);
-                Index(x => x.Category, FieldIndexing.NotAnalyzed);
-                Index(x => x.Department, FieldIndexing.NotAnalyzed);
+                Index(x => x.Query, FieldIndexing.Search);
+                Index(x => x.Created, FieldIndexing.Exact);
+                Index(x => x.Name, FieldIndexing.Exact);
+                Index(x => x.Category, FieldIndexing.Exact);
+                Index(x => x.Department, FieldIndexing.Exact);
 
             }
         }

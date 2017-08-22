@@ -41,7 +41,7 @@ select new {
     Lon = lng }",
                                                     Fields = new Dictionary<string, IndexFieldOptions>
                                                     {
-                                                        { "Tag", new IndexFieldOptions {Indexing = FieldIndexing.NotAnalyzed}}
+                                                        { "Tag", new IndexFieldOptions {Indexing = FieldIndexing.Exact}}
                                                     }
                                                 }}));
                 using (var session = store.OpenSession())

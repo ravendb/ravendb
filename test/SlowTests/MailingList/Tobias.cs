@@ -160,8 +160,8 @@ namespace SlowTests.MailingList
                                    Optional = i.Select(x => x.Optional).Where(x => x != -999).DefaultIfEmpty(-999).First()
                                };
 
-                Index(x => x.Text, FieldIndexing.Analyzed);
-                Index(x => x.TranslatedText, FieldIndexing.Analyzed);
+                Index(x => x.Text, FieldIndexing.Search);
+                Index(x => x.TranslatedText, FieldIndexing.Search);
 
                 Analyze(x => x.Text, typeof(SimpleAnalyzer).FullName);
                 Analyze(x => x.TranslatedText, typeof(SimpleAnalyzer).FullName);

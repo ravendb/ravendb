@@ -40,7 +40,7 @@ namespace SlowTests.Issues
                         doc.First
                     },
                 });
-                Index(org => org.Query, FieldIndexing.Analyzed);
+                Index(org => org.Query, FieldIndexing.Search);
                 Store(org => org.Query, FieldStorage.Yes);
             }
         }

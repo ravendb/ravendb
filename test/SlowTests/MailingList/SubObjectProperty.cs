@@ -98,9 +98,9 @@ namespace SlowTests.MailingList
                 Store(s => s.Admin.Name, FieldStorage.Yes);
                 Store(s => s.Admin.Status, FieldStorage.Yes);
 
-                Index(s => s.Admin.GroupName, FieldIndexing.Analyzed);
-                Index(s => s.Admin.Name, FieldIndexing.Analyzed);
-                Index(s => s.Admin.Status, FieldIndexing.NotAnalyzed);
+                Index(s => s.Admin.GroupName, FieldIndexing.Search);
+                Index(s => s.Admin.Name, FieldIndexing.Search);
+                Index(s => s.Admin.Status, FieldIndexing.Exact);
             }
         }
     }

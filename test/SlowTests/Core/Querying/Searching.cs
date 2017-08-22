@@ -35,7 +35,7 @@ namespace SlowTests.Core.Querying
                 store.Admin.Send(new PutIndexesOperation(new [] {new IndexDefinition
                 {
                     Maps = { "from post in docs.Posts select new { post.Title }" },
-                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed } } },
+                    Fields = { { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Search } } },
                     Name = "Posts/ByTitle"
                 }}));
 
@@ -92,8 +92,8 @@ namespace SlowTests.Core.Querying
                     Maps = { "from post in docs.Posts select new { post.Title, post.Desc }" },
                     Fields =
                     {
-                        { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} },
-                        { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Analyzed} }
+                        { "Title", new IndexFieldOptions { Indexing = FieldIndexing.Search} },
+                        { "Desc", new IndexFieldOptions { Indexing = FieldIndexing.Search} }
                     },
                     Name = "Posts/ByTitleAndDescription"
                 }}));

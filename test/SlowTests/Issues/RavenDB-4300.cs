@@ -74,7 +74,7 @@ namespace SlowTests.Issues
                                     v.Name,
                                 };
 
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
             }
 
             public class ReduceResult

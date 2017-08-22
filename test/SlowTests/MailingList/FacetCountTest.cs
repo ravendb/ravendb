@@ -76,8 +76,8 @@ namespace SlowTests.MailingList
                               };
 
                 Index(m => m.ExerciseList, FieldIndexing.Default);
-                Index(m => m.WodType, FieldIndexing.Analyzed);
-                Index(m => m.BenchmarkType, FieldIndexing.Analyzed);
+                Index(m => m.WodType, FieldIndexing.Search);
+                Index(m => m.BenchmarkType, FieldIndexing.Search);
             }
         }
 

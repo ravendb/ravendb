@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Queries
             var values = valueAsString.Split(' ');
 
             if (metadata.IsDynamic)
-                fieldName = IndexField.GetAnalyzedAutoIndexFieldName(fieldName);
+                fieldName = IndexField.GetSearchAutoIndexFieldName(fieldName);
 
             if (values.Length == 1)
             {

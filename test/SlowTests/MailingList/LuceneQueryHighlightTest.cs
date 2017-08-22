@@ -74,7 +74,7 @@ namespace SlowTests.MailingList
 
                 Analyze(x => x.QuestionText, typeof(NGramAnalyzer).AssemblyQualifiedName);
                 Store(x => x.QuestionText, FieldStorage.Yes);
-                Index(x => x.QuestionText, FieldIndexing.Analyzed);
+                Index(x => x.QuestionText, FieldIndexing.Search);
                 TermVector(x => x.QuestionText, FieldTermVector.WithPositionsAndOffsets);
             }
         }

@@ -113,11 +113,11 @@ namespace SlowTests.Issues
                 Analyzers.Add(c => c.StringB, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
                 Analyzers.Add(c => c.StringC, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
                 Analyzers.Add(c => c.StringD, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
-                Indexes.Add(x => x.StringA, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.StringA, FieldIndexing.Search);
 
-                Indexes.Add(x => x.StringB, FieldIndexing.Analyzed);
-                Indexes.Add(x => x.StringC, FieldIndexing.Analyzed);
-                Indexes.Add(x => x.StringD, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.StringB, FieldIndexing.Search);
+                Indexes.Add(x => x.StringC, FieldIndexing.Search);
+                Indexes.Add(x => x.StringD, FieldIndexing.Search);
             }
         }
 
@@ -160,11 +160,11 @@ namespace SlowTests.Issues
                 Analyzers.Add(c => c.StringB, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
                 Analyzers.Add(c => c.StringC, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
                 Analyzers.Add(c => c.StringD, typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).ToString());
-                Indexes.Add(x => x.StringA, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.StringA, FieldIndexing.Search);
 
-                Indexes.Add(x => x.StringB, FieldIndexing.Analyzed);
-                Indexes.Add(x => x.StringC, FieldIndexing.Analyzed);
-                Indexes.Add(x => x.StringD, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.StringB, FieldIndexing.Search);
+                Indexes.Add(x => x.StringC, FieldIndexing.Search);
+                Indexes.Add(x => x.StringD, FieldIndexing.Search);
             }
         }
 

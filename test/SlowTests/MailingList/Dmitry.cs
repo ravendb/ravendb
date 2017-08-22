@@ -96,8 +96,8 @@ namespace SlowTests.MailingList
                                      Keywords = result.Keywords.Boost(5)
                                  };
 
-                Index(field => field.Title, FieldIndexing.Analyzed);
-                Index(field => field.Album, FieldIndexing.Analyzed);
+                Index(field => field.Title, FieldIndexing.Search);
+                Index(field => field.Album, FieldIndexing.Search);
                 Index(field => field.Keywords, FieldIndexing.Default);
             }
         }

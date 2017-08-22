@@ -67,9 +67,9 @@ namespace SlowTests.Bugs.Indexing
             using (var store = GetDocumentStore())
             using (var session = store.OpenSession())
             {
-                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed };
-                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed, };
-                var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
+                var fieldOptions1 = new IndexFieldOptions { Indexing = FieldIndexing.Exact };
+                var fieldOptions2 = new IndexFieldOptions { Indexing = FieldIndexing.Exact, };
+                var fieldOptions3 = new IndexFieldOptions { Indexing = FieldIndexing.Search, Analyzer = typeof(KeywordAnalyzer).AssemblyQualifiedName };
 
                 store.Admin.Send(new PutIndexesOperation(new[] {new IndexDefinition
                 {

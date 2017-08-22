@@ -222,7 +222,7 @@ namespace SlowTests.Bugs.MultiMap
                                         PostCount = g.Sum(x => x.PostCount)
                                     };
 
-                Index(x => x.UserName, FieldIndexing.Analyzed);
+                Index(x => x.UserName, FieldIndexing.Search);
             }
         }
     }

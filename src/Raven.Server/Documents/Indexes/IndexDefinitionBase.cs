@@ -31,10 +31,10 @@ namespace Raven.Server.Documents.Indexes
 
             MapFields = mapFields.ToDictionary(x => x.Name, x =>
             {
-                if ((this is AutoMapIndexDefinition || this is AutoMapReduceIndexDefinition) && x.Indexing == FieldIndexing.Analyzed)
+                if ((this is AutoMapIndexDefinition || this is AutoMapReduceIndexDefinition) && x.Indexing == FieldIndexing.Search)
                 {
                     x.OriginalName = x.Name;
-                    x.Name = IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
+                    x.Name = IndexField.GetSearchAutoIndexFieldName(x.Name);
                 }
 
                 return x;

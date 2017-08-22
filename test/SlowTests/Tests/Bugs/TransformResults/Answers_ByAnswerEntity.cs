@@ -17,8 +17,8 @@ namespace SlowTests.Tests.Bugs.TransformResults
                               Content = doc.Content
                           };
 
-            Index(x => x.Content, FieldIndexing.Analyzed);
-            Index(x => x.UserId, FieldIndexing.NotAnalyzed); // Case-sensitive searches
+            Index(x => x.Content, FieldIndexing.Search);
+            Index(x => x.UserId, FieldIndexing.Exact); // Case-sensitive searches
         }
     }
 

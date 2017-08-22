@@ -55,7 +55,7 @@ namespace SlowTests.Issues
 
                     session.SaveChanges();
                 }
-                var opt = new IndexFieldOptions { Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Analyzed };
+                var opt = new IndexFieldOptions { Analyzer = typeof(Lucene.Net.Analysis.Standard.StandardAnalyzer).AssemblyQualifiedName, Indexing = FieldIndexing.Search };
 
                 store.Admin.Send(new PutIndexesOperation(new[] { new IndexDefinition
                 {

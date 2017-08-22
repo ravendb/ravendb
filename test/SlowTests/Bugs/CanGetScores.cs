@@ -10,7 +10,7 @@ namespace SlowTests.Bugs
 {
     public class CanGetScores : RavenTestBase
     {
-        private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Analyzed };
+        private IndexFieldOptions filedOptions = new IndexFieldOptions { Indexing = FieldIndexing.Search };
 
         [Fact]
         public void FromQuery()

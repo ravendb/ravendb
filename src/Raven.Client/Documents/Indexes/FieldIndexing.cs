@@ -17,12 +17,12 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index the tokens produced by running the field's value through an Analyzer. This is useful for common text.
         /// </summary>
-        Analyzed,
+        Search,
         /// <summary>
         /// Index the field's value without using an Analyzer, so it can be searched.  As no analyzer is used the 
         /// value will be stored as a single term. This is useful for unique Ids like product numbers.
         /// </summary>
-        NotAnalyzed,
+        Exact,
         /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>

@@ -548,14 +548,14 @@ namespace FastTests.Client.Indexing
                         {
                             Name = "Title",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
+                            Indexing = FieldIndexing.Search,
                             Storage = FieldStorage.Yes
                         },
                         new IndexField
                         {
                             Name = "Desc",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
+                            Indexing = FieldIndexing.Search,
                             Storage = FieldStorage.Yes
                         }
                     }));

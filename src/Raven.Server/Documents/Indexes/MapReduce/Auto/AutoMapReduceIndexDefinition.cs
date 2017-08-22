@@ -19,10 +19,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         {
             GroupByFields = groupByFields.ToDictionary(x => x.Name, x =>
             {
-                if (x.Indexing == FieldIndexing.Analyzed)
+                if (x.Indexing == FieldIndexing.Search)
                 {
                     x.OriginalName = x.Name;
-                    x.Name = IndexField.GetAnalyzedAutoIndexFieldName(x.Name);
+                    x.Name = IndexField.GetSearchAutoIndexFieldName(x.Name);
                 }
 
                 return x;

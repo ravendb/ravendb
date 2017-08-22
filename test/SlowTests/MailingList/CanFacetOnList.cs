@@ -75,7 +75,7 @@ namespace SlowTests.MailingList
                                    Tags = b.Tags
                                };
                 Store("Tags", FieldStorage.Yes);
-                Index("Tags", FieldIndexing.NotAnalyzed);
+                Index("Tags", FieldIndexing.Exact);
             }
         }
     }

@@ -115,7 +115,7 @@ namespace SlowTests.Issues
                           article.Sections
                       };
 
-                Index(x => x.SearchField, FieldIndexing.Analyzed);
+                Index(x => x.SearchField, FieldIndexing.Search);
             }
         }
 

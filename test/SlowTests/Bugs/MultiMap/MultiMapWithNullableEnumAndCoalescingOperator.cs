@@ -87,7 +87,7 @@ namespace SlowTests.Bugs.MultiMap
                                           MyEnumField = item.MyEnumField ?? MyEnum.Default
                                       });
 
-                Index(x => x.Content, FieldIndexing.Analyzed);
+                Index(x => x.Content, FieldIndexing.Search);
                 Index(x => x.Name, FieldIndexing.Default);
                 Index(x => x.MyEnumField, FieldIndexing.Default);
             }

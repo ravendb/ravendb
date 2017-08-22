@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
                               {
                                   doc.Name
                               };
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
             }
         }
 

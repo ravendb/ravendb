@@ -136,7 +136,7 @@ namespace SlowTests.MailingList
                                    Prices_CountryCodes = book.Prices.Select(price => price.price)
                                };
                 Analyzers.Add(book => book.Keywords, "Lucene.Net.Analysis.Standard.StandardAnalyzer");
-                Index(book => book.Keywords, FieldIndexing.Analyzed);
+                Index(book => book.Keywords, FieldIndexing.Search);
             }
 
             public class Result

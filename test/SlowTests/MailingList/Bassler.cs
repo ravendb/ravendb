@@ -154,10 +154,10 @@ namespace SlowTests.MailingList
                 Store(ir => ir.LastName, FieldStorage.Yes);
                 Store(ir => ir.GroupNumber, FieldStorage.Yes);
 
-                Indexes.Add(ir => ir.ScreeningDate, FieldIndexing.Analyzed);
-                Indexes.Add(ir => ir.ClientId, FieldIndexing.Analyzed);
-                Indexes.Add(ir => ir.LastName, FieldIndexing.Analyzed);
-                Indexes.Add(ir => ir.GroupNumber, FieldIndexing.Analyzed);
+                Indexes.Add(ir => ir.ScreeningDate, FieldIndexing.Search);
+                Indexes.Add(ir => ir.ClientId, FieldIndexing.Search);
+                Indexes.Add(ir => ir.LastName, FieldIndexing.Search);
+                Indexes.Add(ir => ir.GroupNumber, FieldIndexing.Search);
             }
         }
     }
