@@ -292,7 +292,7 @@ namespace SlowTests.MailingList
                                        "function addRelation(clrType, relation, thisArg) {" +
                                        " relation['$type'] = clrType; " +
                                        "   (thisArg || _this).Relations.push(relation);" +
-                                       "}" + "addRelation(relationClrType, relation);";
+                                       "}" + "addRelation(args.relationClrType, args.relation);";
 
             yield return new PatchCommandData(user.Id, null, new PatchRequest
             {

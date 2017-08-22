@@ -50,7 +50,7 @@ namespace SlowTests.Bugs
                     Assert.Equal(documentId, session.Advanced.GetDocumentId(d));
                 }
 
-                const string script = @"  var id = id(this); this.Name = id;";
+                const string script = @"var id = id(this); this.Name = id;";
 
                 WaitForIndexing(store);
 
