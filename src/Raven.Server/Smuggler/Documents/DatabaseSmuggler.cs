@@ -30,14 +30,7 @@ namespace Raven.Server.Smuggler.Documents
         public Action<IndexDefinitionAndType> OnIndexAction;
         public Action<KeyValuePair<string, long>> OnIdentityAction;
 
-        public DatabaseSmuggler(
-            ISmugglerSource source,
-            ISmugglerDestination destination,
-            SystemTime time,
-            DatabaseSmugglerOptions options = null,
-            SmugglerResult result = null,
-            Action<IOperationProgress> onProgress = null,
-            CancellationToken token = default(CancellationToken))
+        public DatabaseSmuggler(DocumentDatabase database, ISmugglerSource source, ISmugglerDestination destination, SystemTime time, DatabaseSmugglerOptions options = null, SmugglerResult result = null, Action<IOperationProgress> onProgress = null, CancellationToken token = default(CancellationToken))
         {
             _source = source;
             _destination = destination;
@@ -46,7 +39,7 @@ namespace Raven.Server.Smuggler.Documents
             _token = token;
 
             if (string.IsNullOrWhiteSpace(_options.TransformScript) == false)
-                _patcher = new SmugglerPatcher(_options);
+                _patcher = new SmugglerPatcher(_options, database);
 
             _time = time;
             _onProgress = onProgress ?? (progress => { });
@@ -55,7 +48,7 @@ namespace Raven.Server.Smuggler.Documents
         public SmugglerResult Execute()
         {
             var result = _result ?? new SmugglerResult();
-
+            using(_patcher?.Initialize())
             using (_source.Initialize(_options, result, out long buildVersion))
             using (_destination.Initialize(_options, result, buildVersion))
             {
