@@ -46,7 +46,7 @@ namespace SlowTests.Issues
                     run.Run(context, "execute", new object[] { document });
                     var array = run.DebugOutput;
 
-                    Assert.Equal(8 + 1, array.Count); // +1 because of statements executed
+                    Assert.Equal(8, array.Count); 
                     Assert.Equal("undefined", array[0]);
                     Assert.Equal("True", array[1]);
                     Assert.Equal("2", array[2]);
