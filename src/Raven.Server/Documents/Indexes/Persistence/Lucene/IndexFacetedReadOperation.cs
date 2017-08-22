@@ -470,7 +470,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        private class IntArraysPool : ILowMemoryHandler
+        private sealed class IntArraysPool : ILowMemoryHandler
         {
             public static readonly IntArraysPool Instance = new IntArraysPool();
 

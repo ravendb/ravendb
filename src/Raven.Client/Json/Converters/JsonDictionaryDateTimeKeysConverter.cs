@@ -7,12 +7,12 @@ using Sparrow.Extensions;
 
 namespace Raven.Client.Json.Converters
 {
-    internal class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
+    internal sealed class JsonDictionaryDateTimeKeysConverter : RavenJsonConverter
     {
         private readonly MethodInfo _genericWriteJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericWriteJson");
         private readonly MethodInfo _genericReadJsonMethodInfo = typeof(JsonDictionaryDateTimeKeysConverter).GetMethod("GenericReadJson");
 
-        public static JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
+        public static readonly JsonDictionaryDateTimeKeysConverter Instance = new JsonDictionaryDateTimeKeysConverter();
 
         private JsonDictionaryDateTimeKeysConverter()
         {

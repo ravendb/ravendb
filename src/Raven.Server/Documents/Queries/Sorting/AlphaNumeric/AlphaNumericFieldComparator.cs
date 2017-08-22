@@ -64,9 +64,9 @@ namespace Raven.Server.Documents.Queries.Sorting.AlphaNumeric
 
         public override IComparable this[int slot] => _values[slot];
 
-        internal class AlphanumComparer : IComparer<string>
+        internal sealed class AlphanumComparer : IComparer<string>
         {
-            public static AlphanumComparer Instance = new AlphanumComparer();
+            public static readonly AlphanumComparer Instance = new AlphanumComparer();
 
             private AlphanumComparer()
             {

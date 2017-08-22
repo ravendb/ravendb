@@ -3,9 +3,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents
 {
-    public class DatabaseCompactionResult : IOperationResult
+    public sealed class DatabaseCompactionResult : IOperationResult
     {
-        public static DatabaseCompactionResult Instance = new DatabaseCompactionResult();
+        public static readonly DatabaseCompactionResult Instance = new DatabaseCompactionResult();
 
         private DatabaseCompactionResult()
         {

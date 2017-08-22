@@ -2,13 +2,13 @@
 
 namespace Raven.Client.Documents.Session.Tokens
 {
-    public class CloseSubclauseToken : QueryToken
+    public sealed class CloseSubclauseToken : QueryToken
     {
         private CloseSubclauseToken()
         {
         }
 
-        public static CloseSubclauseToken Instance = new CloseSubclauseToken();
+        public static readonly CloseSubclauseToken Instance = new CloseSubclauseToken();
 
         public override void WriteTo(StringBuilder writer)
         {

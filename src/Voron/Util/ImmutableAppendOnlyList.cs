@@ -15,7 +15,7 @@ namespace Voron.Util
     /// Caution: multithreaded append operations are not safe, also not when
     /// using CAS.
     /// </summary>
-    public class ImmutableAppendOnlyList<T> : IReadOnlyList<T>
+    public sealed class ImmutableAppendOnlyList<T> : IReadOnlyList<T>
     {
         private delegate void RangeCopier(IEnumerable<T> source, T[] dest, int destOffset, int count);
         private readonly T[] _values;
