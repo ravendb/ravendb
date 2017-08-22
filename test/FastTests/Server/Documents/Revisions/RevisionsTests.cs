@@ -431,7 +431,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Theory]
+        [Theory(Skip="RavenDB-8265")]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DeleteRevisionsBeforeFromConsole(bool useConsole)
@@ -468,10 +468,8 @@ namespace FastTests.Server.Documents.Revisions
 
                 if (useConsole)
                 {
-                    new AdminJsConsole(database).ApplyScript(new AdminJsScript
-                    {
-                        Script = "database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore('Users', new Date());"
-                    });
+                    new AdminJsConsole(Server, database).ApplyScript(new AdminJsScript(
+                     "database.DocumentsStorage.RevisionsStorage.Operations.DeleteRevisionsBefore('Users', new Date());"));
                 }
                 else
                 {
