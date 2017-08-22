@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Patch
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
+        public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
 
         public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, string docId) : base(engine)
         {
@@ -49,14 +50,14 @@ namespace Raven.Server.Documents.Patch
                 return new NullObjectInstance(Prototype);
             }
 
-            var value = GetMissingPropertyValue(propertyIndex);
+            var value = GetMissingPropertyValue(keyAsString, propertyIndex);
 
             this[key] = value;
 
             return value;
         }
 
-        private object GetMissingPropertyValue(int propertyIndex)
+        private object GetMissingPropertyValue(string key, int propertyIndex)
         {
             var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -72,9 +73,11 @@ namespace Raven.Server.Documents.Patch
                     returnedValue = (bool)propertyDetails.Value;
                     break;
                 case BlittableJsonToken.Integer:
+                    RecordNumericFieldType(key, BlittableJsonToken.Integer);
                     returnedValue = GetJurrasicNumber_TEMPORARY(propertyDetails.Value);
                     break;
                 case BlittableJsonToken.LazyNumber:
+                    RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
                     returnedValue = (double)(LazyNumberValue)propertyDetails.Value;
                     break;
                 case BlittableJsonToken.String:
@@ -94,6 +97,13 @@ namespace Raven.Server.Documents.Patch
             }
 
             return returnedValue;
+        }
+
+        private void RecordNumericFieldType(string key, BlittableJsonToken type)
+        {
+            if (OriginalPropertiesTypes == null)
+                OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
+            OriginalPropertiesTypes[key] = type;
         }
 
         public static object GetJurrasicNumber_TEMPORARY(object val)
