@@ -21,13 +21,13 @@ namespace Raven.Server.Documents.Patch
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly BlittableJsonReaderObject Blittable;
-        public readonly Document Document;
+        public readonly string DocumentId;
         public HashSet<string> Deletes;
 
-        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, Document doc) : base(engine)
+        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, string docId) : base(engine)
         {
             Blittable = parent;
-            Document = doc;
+            DocumentId = docId;
         }
 
         public override bool Delete(object key, bool throwOnError)
