@@ -141,7 +141,7 @@ namespace FastTests.Server.Documents.Patching
                     }));
 
                     dynamic doc = await commands.GetAsync("doc");
-                    var age = (int)doc.Age;
+                    var age = (double)doc.Age;
 
                     Assert.Equal(1, age);
                 }
@@ -309,8 +309,7 @@ namespace FastTests.Server.Documents.Patching
                         }));
                     });
 
-                    Assert.Contains("Could not parse: " + Environment.NewLine
-                                    + "this.Id = 'Something", parseException.Message);
+                    Assert.Contains("this.Id = 'Something", parseException.Message);
                 }
             }
         }
@@ -441,7 +440,7 @@ this.DateOffsetOutput = new Date(this.DateOffset).toISOString();
                 await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                 {
                     Script = @"
-var another = load(anotherId);
+var another = load(args.anotherId);
 this.Value = another.Value;
 ",
                     Values =
@@ -582,13 +581,11 @@ this.Value = another.Value;
                 {
                     Script = @"put(
         'NewTypes/1', 
-        { 'CopiedValue':this.Value },
-        {'CreatedBy': 'JS_Script'});
+        { 'CopiedValue':this.Value, '@metadata': {'CreatedBy': 'JS_Script'}} );
 
         put(
         'NewTypes/1', 
-        { 'CopiedValue': this.Value },
-        {'CreatedBy': 'JS_Script 2'});",
+        { 'CopiedValue': this.Value, '@metadata': {'CreatedBy': 'JS_Script 2'} } );",
                 }));
 
                 using (var commands = store.Commands())
@@ -695,14 +692,14 @@ this.Value = another.Value;
                     await session.SaveChangesAsync();
                 }
 
-                var exception = await Assert.ThrowsAsync<JavaScriptException>(async () =>
+                var exception = await Assert.ThrowsAsync<ConcurrencyException>(async () =>
                 {
                     await store.Operations.SendAsync(new PatchOperation("CustomTypes/1", null, new PatchRequest
                     {
                         Script = @"put(
     'Items/1', 
     { 'Property':'Value'},
-    {}, 123456789 );",
+    123456789 );",
                     }));
                 });
 
