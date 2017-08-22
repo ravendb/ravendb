@@ -262,6 +262,7 @@ namespace Raven.Server.Documents.Queries
                     patch:(patch, patchArgs), 
                     patchIfMissing:(null, null), 
                     database:_database, 
+                    debugMode: false,
                     isTest: false);
 
                 return new BulkOperationCommand<PatchDocumentCommand>(command, retrieveDetails, x => new BulkOperationResult.PatchDetails

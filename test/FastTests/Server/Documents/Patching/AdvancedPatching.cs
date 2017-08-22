@@ -352,7 +352,7 @@ namespace FastTests.Server.Documents.Patching
                         null,
                         new PatchRequest
                         {
-                            Script = "output(__document_id)",
+                            Script = "output(id(this))",
                         },
                         patchIfMissing: null,
                         skipPatchIfChangeVectorMismatch: false,

@@ -117,6 +117,7 @@ namespace Raven.Server.Documents.Handlers
                                 (commandData.Patch, commandData.PatchArgs),
                                 (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
                                 database,
+                                false,
                                 false
                             );
                     }
