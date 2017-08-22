@@ -75,9 +75,9 @@ namespace Raven.Server.Documents.Patch
                 };
                 ScriptEngine.SetGlobalFunction("output", (Action<object>)OutputDebug);
 
-                ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
-                ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
-                ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+                ScriptEngine.SetGlobalFunction("load", (Func<object, object>)LoadDocument);
+                ScriptEngine.SetGlobalFunction("del", (Func<object, object, bool>)DeleteDocument);
+                ScriptEngine.SetGlobalFunction("put", (Func<object, object, object, string>)PutDocument);
 
                 ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
                 ScriptEngine.SetGlobalFunction("lastModified", (Func<object, string>)GetLastModified);
@@ -120,46 +120,63 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public string PutDocument(string id, object document, string changeVector)
+            private string GetStringFromObject(object o)
             {
+                if (o == null || o == Null.Value || o == Undefined.Value)
+                    return null;
+                return o.ToString();
+            }
+
+            public string PutDocument(object id, object document, object changeVector)
+            {
+                var strId = GetStringFromObject(id);
+                var strCv = GetStringFromObject(changeVector);
                 PutOrDeleteCalled = true;
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 var objectInstance = document as ObjectInstance;
                 if (objectInstance == null)
                 {
-                    AssertValidDocumentObject(id);
+                    AssertValidDocumentObject(strId);
                     return null;//never hit
                 }
                 AssertValidDatabaseContext();
-                if (changeVector == "undefined")
-                    changeVector = null;
-
+               
                 if (DebugMode)
                 {
-                    DebugActions.PutDocument.Add(id);
+                    DebugActions.PutDocument.Add(strId);
                 }
 
                 using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
-                    var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
+                    var put = _database.DocumentsStorage.Put(_context, strId, _context.GetLazyString(strCv), reader);
                     return put.Id;
                 }
             }
 
-            public bool DeleteDocument(string id, string changeVector)
+            public bool DeleteDocument(object id, object changeVector)
             {
+                var strId = GetStringFromObject(id);
+                var strCv = GetStringFromObject(changeVector);
+
                 PutOrDeleteCalled = true;
+                AssertValidId(strId);
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 if (DebugMode)
                 {
-                    DebugActions.DeleteDocument.Add(id);
+                    DebugActions.DeleteDocument.Add(strId);
                 }
-                var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
+                var result = _database.DocumentsStorage.Delete(_context, strId, strCv);
                 return result != null;
 
+            }
+
+            private void AssertValidId(string strId)
+            {
+                if(string.IsNullOrEmpty(strId))
+                    throw new InvalidOperationException("This operation required a valid document id");
             }
 
             private void AssertNotReadOnly()
@@ -187,15 +204,18 @@ namespace Raven.Server.Documents.Patch
                 return null;
             }
 
-            private object LoadDocument(string id)
+            private object LoadDocument(object id)
             {
+                var strId = GetStringFromObject(id);
+                AssertValidId(strId);
+
                 AssertValidDatabaseContext();
 
                 if (DebugMode)
                 {
-                    DebugActions.LoadDocument.Add(id);
+                    DebugActions.LoadDocument.Add(strId);
                 }
-                var document = _database.DocumentsStorage.Get(_context, id);
+                var document = _database.DocumentsStorage.Get(_context, strId);
                 if (document == null)
                     return Null.Value;
                 return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id, document.LastModified);
