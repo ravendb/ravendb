@@ -143,14 +143,15 @@ namespace Raven.Server.Documents.Patch
 
             if (originalDocument == null)
             {
-                if (_isTest == false)
+                if (_isTest == false || _run.PutOrDeleteCalled)
                     putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
 
                 result.Status = PatchStatus.Created;
             }
-            else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument, tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
+            else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument,
+                tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
             {
-                if (_isTest == false)
+                if (_isTest == false || _run.PutOrDeleteCalled)
                     putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
                         originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
 
