@@ -93,6 +93,18 @@ namespace Raven.Server.Documents.Patch
             {
                 _writer.WriteValue(cs.ToString());
             }
+            else if (v is LazyStringValue lsv)
+            {
+                _writer.WriteValue(lsv);
+            }
+            else if (v is LazyCompressedStringValue lcsv)
+            {
+                _writer.WriteValue(lcsv);
+            }
+            else if (v is LazyNumberValue lnv)
+            {
+                _writer.WriteValue(lnv);
+            }
             else
             {
                 throw new NotSupportedException(v.GetType().ToString());

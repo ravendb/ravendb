@@ -1,4 +1,5 @@
 using System;
+using Jurassic;
 using Jurassic.Library;
 using Sparrow.Json;
 
@@ -37,11 +38,12 @@ namespace Raven.Server.Documents.Patch
             throw new InvalidOperationException("Unable to get property '" + name + "' because the result is not an object but: " + _instance);
 
         public object Value => _instance;
+        public bool IsNull => _instance == null || _instance == Null.Value || _instance == Undefined.Value;
 
         public T Translate<T>(JsonOperationContext context,
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
-            if (_instance == null)
+            if (IsNull)
                 return default(T);
 
             if (_instance is ArrayInstance)

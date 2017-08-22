@@ -10,11 +10,7 @@ using System.Threading.Tasks;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Replication;
-using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
-using Raven.Client.Extensions;
-using Raven.Client.Util;
-using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -30,7 +26,7 @@ namespace SlowTests.Server.Replication
             using (var slave = GetDocumentStore())
             {
 
-                await SetScriptResolutionAsync(slave, "return ResolveToTombstone();", "Users");
+                await SetScriptResolutionAsync(slave, "return resolveToTombstone;", "Users");
                 await SetupReplicationAsync(master, slave);
 
                 using (var session = slave.OpenSession())
@@ -83,7 +79,6 @@ function onlyUnique(value, index, self) {
                 Versions:history,
                 '@metadata':docs[0]['@metadata']
             }
-output(out);
 return out;
 ", "Users");
                 await SetupReplicationAsync(master, slave);

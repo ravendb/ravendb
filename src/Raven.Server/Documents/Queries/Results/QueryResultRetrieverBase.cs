@@ -381,7 +381,7 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (o is Document doc)
                 {
-                    return new BlittableObjectInstance(jintEngine, doc.Data, doc);
+                    return new BlittableObjectInstance(jintEngine, doc.Data, doc.Id);
                 }
                 if (o is BlittableJsonReaderObject obj)
                     return new BlittableObjectInstance(jintEngine, obj, null);
