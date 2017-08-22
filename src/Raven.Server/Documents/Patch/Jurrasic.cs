@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Jurassic;
@@ -15,111 +14,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerCache
-    {
-        private readonly DocumentDatabase _database;
-
-        private readonly ConcurrentDictionary<Key, Lazy<ScriptRunner>> _cache =
-            new ConcurrentDictionary<Key, Lazy<ScriptRunner>>();
-        private int _numberOfCachedScripts;
-        private SpinLock _cleaning = new SpinLock();
-        public bool EnableClr;
-
-        public ScriptRunnerCache(DocumentDatabase database)
-        {
-            _database = database;
-        }
-
-        public abstract class Key
-        {
-            public string ScriptKey;
-
-            public abstract void GenerateScript(ScriptRunner runner);
-
-            public abstract override bool Equals(object obj);
-
-            public abstract override int GetHashCode();
-        }
-
-
-        public ScriptRunner.ReturnRun GetScriptRunner(Key key, out ScriptRunner.SingleRun patchRun)
-        {
-            if (key == null)
-            {
-                patchRun = null;
-                return new ScriptRunner.ReturnRun();
-            }
-            return GetScriptRunner(key).GetRunner(out patchRun);
-        }
-
-
-        public ScriptRunner GetScriptRunner(Key script)
-        {
-            Lazy<ScriptRunner> lazy;
-            if (_cache.TryGetValue(script, out lazy))
-                return lazy.Value;
-
-            return GetScriptRunnerUnlikely(script);
-        }
-
-        private ScriptRunner GetScriptRunnerUnlikely(Key script)
-        {
-            var value = new Lazy<ScriptRunner>(() =>
-            {
-                var runner = new ScriptRunner(_database, EnableClr);
-                script.GenerateScript(runner);
-                return runner;
-            });
-            var lazy = _cache.GetOrAdd(script, value);
-            if (value != lazy)
-                return lazy.Value;
-
-            // we were the one who added it, need to check that we are there
-            var count = Interlocked.Increment(ref _numberOfCachedScripts);
-            if (count > 2048)// TODO: Maxim make this configurable
-            {
-                bool taken = false;
-                try
-                {
-                    _cleaning.TryEnter(ref taken);
-                    if (taken)
-                    {
-                        // TODO: Alert if we are doing this cleanup too often 
-                        var numRemaining = CleanTheCache();
-                        Interlocked.Add(ref _numberOfCachedScripts, -(count - numRemaining));
-                    }
-                }
-                finally
-                {
-                    if (taken)
-                        _cleaning.Exit();
-                }
-
-            }
-            return lazy.Value;
-        }
-
-        private int CleanTheCache()
-        {
-            foreach (var pair in _cache
-                .OrderBy(x => x.Value.Value.Runs)
-                .Take(512)
-            )
-            {
-                _cache.TryRemove(pair.Key, out _);
-            }
-            int count = 0;
-            foreach (var pair in _cache)
-            {
-                count++;
-                var valueRuns = pair.Value.Value.Runs / 2;
-                Interlocked.Add(ref pair.Value.Value.Runs, -valueRuns);
-            }
-
-            return count;
-        }
-    }
-
     public class ScriptRunner
     {
         private readonly DocumentDatabase _db;
@@ -180,6 +74,7 @@ namespace Raven.Server.Documents.Patch
                     EnableExposedClrTypes = runner._enableClr
                 };
                 ScriptEngine.SetGlobalFunction("output", (Action<object>)OutputDebug);
+
                 ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
                 ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
                 ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
