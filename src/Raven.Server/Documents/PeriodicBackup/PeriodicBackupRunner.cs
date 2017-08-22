@@ -422,7 +422,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var smugglerSource = new DatabaseSource(_database, startDocumentEtag.Value);
                 var smugglerDestination = new StreamDestination(file, context, smugglerSource);
-                var smuggler = new DatabaseSmuggler(
+                var smuggler = new DatabaseSmuggler(_database, 
                     smugglerSource,
                     smugglerDestination,
                     _database.Time,

@@ -36,7 +36,7 @@ namespace Raven.Server.Web.Studio
                         var source = new StreamSource(stream, context);
                         var destination = new DatabaseDestination(Database);
 
-                        var smuggler = new DatabaseSmuggler(source, destination, Database.Time);
+                        var smuggler = new DatabaseSmuggler(Database, source, destination, Database.Time);
 
                         smuggler.Execute();
                     }

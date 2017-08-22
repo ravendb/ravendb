@@ -357,7 +357,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (var stream = new GZipStream(new BufferedStream(fileStream, 128 * Voron.Global.Constants.Size.Kilobyte), CompressionMode.Decompress))
             {
                 var source = new StreamSource(stream, context);
-                var smuggler = new Smuggler.Documents.DatabaseSmuggler(source, destination,
+                var smuggler = new Smuggler.Documents.DatabaseSmuggler(database, source, destination,
                     database.Time, options, result: restoreResult, onProgress: onProgress, token: _cancellationToken)
                 {
                     OnIndexAction = onIndexAction,

@@ -54,6 +54,7 @@ namespace Raven.Server.Documents.TcpHandlers
         {
             using (_db.Scripts.GetScriptRunner(patch?.Key, out var run))
             {
+                run.ReadOnly = true;
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                     docsContext,
                     subscription.Criteria.Collection,
@@ -107,6 +108,7 @@ namespace Raven.Server.Documents.TcpHandlers
             var collectionName = new CollectionName(subscription.Criteria.Collection);
             using (_db.Scripts.GetScriptRunner(patch?.Key, out var run))
             {
+                run.ReadOnly = true;
                 foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);
