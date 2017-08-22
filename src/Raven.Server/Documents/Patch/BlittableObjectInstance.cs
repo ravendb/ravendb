@@ -20,13 +20,15 @@ namespace Raven.Server.Documents.Patch
     }
     public class BlittableObjectInstance : ObjectInstance
     {
+        public readonly DateTime? LastModified;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
 
-        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, string docId) : base(engine)
+        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, string docId, DateTime? lastModified) : base(engine)
         {
+            LastModified = lastModified;
             Blittable = parent;
             DocumentId = docId;
         }
@@ -87,7 +89,7 @@ namespace Raven.Server.Documents.Patch
                     returnedValue = ((LazyCompressedStringValue)propertyDetails.Value).ToString();
                     break;
                 case BlittableJsonToken.StartObject:
-                    returnedValue = new BlittableObjectInstance(Engine, (BlittableJsonReaderObject)propertyDetails.Value, null);
+                    returnedValue = new BlittableObjectInstance(Engine, (BlittableJsonReaderObject)propertyDetails.Value, null, null);
                     break;
                 case BlittableJsonToken.StartArray:
                     returnedValue = CreateArrayInstanceBasedOnBlittableArray(Engine, propertyDetails.Value as BlittableJsonReaderArray);
@@ -145,7 +147,7 @@ namespace Raven.Server.Documents.Patch
                         arrayValue = ((LazyCompressedStringValue)valueTuple.Item1).ToString();
                         break;
                     case BlittableJsonToken.StartObject:
-                        arrayValue = new BlittableObjectInstance(engine, (BlittableJsonReaderObject)valueTuple.Item1, null);
+                        arrayValue = new BlittableObjectInstance(engine, (BlittableJsonReaderObject)valueTuple.Item1, null, null);
                         break;
                     case BlittableJsonToken.StartArray:
                         arrayValue = CreateArrayInstanceBasedOnBlittableArray(engine, valueTuple.Item1 as BlittableJsonReaderArray);
