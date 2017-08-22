@@ -59,10 +59,9 @@ declare function mapVariants(v) {
     return v;
 }
 from index 'ProductDetailsReport/ByProductId' as p
-with load(p.Variants) as v[]
 select {
     Name: p.Name,
-    Variants: v.map(function(n){ return {Name: n.Name.toUpperCase()}; })
+    Variants: p.Variants.map(function(n){ return {Name: n.Name.toUpperCase()}; })
 }
 ")
                         .ToList();
