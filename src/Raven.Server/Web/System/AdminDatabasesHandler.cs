@@ -677,7 +677,6 @@ namespace Raven.Server.Web.System
             }
         }
 
-        }
         [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
