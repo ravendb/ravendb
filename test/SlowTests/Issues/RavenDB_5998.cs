@@ -27,9 +27,9 @@ namespace SlowTests.Issues
                     var source = new StreamSource(stream, context);
                     var destination = new DatabaseDestination(database);
 
-                    var smuggler = new DatabaseSmuggler(source, destination, database.Time, new DatabaseSmugglerOptions
+                    var smuggler = new DatabaseSmuggler(database, source, destination, database.Time, new DatabaseSmugglerOptions
                     {
-                        TransformScript = "function(doc) { doc['Test'] = 'NewValue'; return doc; }"
+                        TransformScript = "this.['Test'] = 'NewValue';"
                     });
 
                     var result = smuggler.Execute();

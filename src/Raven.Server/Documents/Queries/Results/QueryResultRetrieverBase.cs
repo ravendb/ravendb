@@ -407,38 +407,38 @@ namespace Raven.Server.Documents.Queries.Results
                 args[i] = Translate(args[i]);
             }
 
-            var result = jintEngine.CallGlobalFunction(methodName, args);
-            if (result is ArrayInstance)
-                return PatcherOperationScope.ToBlittable2(result as ArrayInstance);
-            if (result is ObjectInstance)
-                return PatcherOperationScope.ToBlittable2(result as ObjectInstance);
-            if (result == Null.Value || result== Undefined.Value)
-                return null;
+            ////var result = jintEngine.CallGlobalFunction(methodName, args);
+            ////if (result is ArrayInstance)
+            ////    return PatcherOperationScope.ToBlittable2(result as ArrayInstance);
+            ////if (result is ObjectInstance)
+            ////    return PatcherOperationScope.ToBlittable2(result as ObjectInstance);
+            ////if (result == Null.Value || result== Undefined.Value)
+            ////    return null;
 
-            var typeCode = Type.GetTypeCode(result.GetType());
-            switch (typeCode)
-            {
-                case TypeCode.Boolean:
-                    return (bool)result;
-                case TypeCode.String:
-                    return result;
-                case TypeCode.Byte:
-                case TypeCode.SByte:
-                case TypeCode.UInt16:
-                case TypeCode.UInt32:
-                case TypeCode.Int16:
-                case TypeCode.Int32:
-                case TypeCode.UInt64:
-                case TypeCode.Int64:
-                case TypeCode.Decimal:
-                case TypeCode.Double:
-                case TypeCode.Single:
-                    return result;
-                case TypeCode.DateTime:
-                    return result;
-            }
-            
-            throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " + result);
+            //var typeCode = Type.GetTypeCode(result.GetType());
+            //switch (typeCode)
+            //{
+            //    case TypeCode.Boolean:
+            //        return (bool)result;
+            //    case TypeCode.String:
+            //        return result;
+            //    case TypeCode.Byte:
+            //    case TypeCode.SByte:
+            //    case TypeCode.UInt16:
+            //    case TypeCode.UInt32:
+            //    case TypeCode.Int16:
+            //    case TypeCode.Int32:
+            //    case TypeCode.UInt64:
+            //    case TypeCode.Int64:
+            //    case TypeCode.Decimal:
+            //    case TypeCode.Double:
+            //    case TypeCode.Single:
+            //        return result;
+            //    case TypeCode.DateTime:
+            //        return result;
+            //}
+            //+ result
+            throw new InvalidOperationException("Unknown value as a result of calling " + methodName + ": " );
         }
 
 

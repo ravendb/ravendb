@@ -12,7 +12,8 @@ namespace Raven.Server.Documents.Patch
         Conflict,
         Subscription,
         SqlEtl,
-        RavenEtl
+        RavenEtl,
+        Smuggler
     }
 
     /// <summary>
@@ -44,6 +45,7 @@ namespace Raven.Server.Documents.Patch
             {
                 case PatchRequestType.None:
                 case PatchRequestType.SqlEtl:
+                case PatchRequestType.Smuggler:
                 case PatchRequestType.RavenEtl:
                     // modify and return the document
                 case PatchRequestType.Patch:
