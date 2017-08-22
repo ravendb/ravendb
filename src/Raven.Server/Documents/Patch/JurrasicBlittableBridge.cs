@@ -212,7 +212,7 @@ namespace Raven.Server.Documents.Patch
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                var metadata = ((ObjectInstance)obj[Constants.Documents.Metadata.Key]);
+                var metadata = (ObjectInstance)obj[Constants.Documents.Metadata.Key];
                 metadata[Constants.Documents.Metadata.Id] = obj.DocumentId;
             }
             var properties = obj.Properties.ToDictionary(x => x.Key.ToString(), x => x.Value);
@@ -222,12 +222,14 @@ namespace Raven.Server.Documents.Patch
 
                 obj.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
 
-                if (obj.Deletes?.Contains(prop.Name) == true)
+                var existInObject = properties.Remove(prop.Name, out var modifiedValue);
+
+                if (existInObject == false && obj.Deletes?.Contains(prop.Name) == true)
                     continue;
 
                 _writer.WritePropertyName(prop.Name);
 
-                if (properties.Remove(prop.Name, out var modifiedValue))
+                if (existInObject)
                 {
                     if (modifiedValue is FunctionInstance == false)
                         WriteJsonValue(obj, prop.Name, modifiedValue);

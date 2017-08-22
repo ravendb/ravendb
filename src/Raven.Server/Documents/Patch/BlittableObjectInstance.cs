@@ -44,7 +44,6 @@ namespace Raven.Server.Documents.Patch
         protected override object GetMissingPropertyValue(object key)
         {
             var keyAsString = key.ToString();
-            Deletes?.Remove(keyAsString);
 
             int propertyIndex = Blittable.GetPropertyIndex(keyAsString);
             if (propertyIndex == -1)
