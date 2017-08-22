@@ -19,7 +19,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Password")]
         public string CertificatePassword { get; set; }
 
-        [Description("The path to .pfx cluster certificate file.")]
+        [Description("The path to .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.ClusterCertificate.Path")]
         public string ClusterCertificatePath { get; set; }
@@ -39,7 +39,7 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Security.Certificate.Arguments")]
         public string CertificateExecArguments { get; set; }
 
-        [Description("A command or executable providing a .pfx certificate file as a cluster certificate.")]
+        [Description("A command or executable providing a .pfx cluster certificate file. If specified, RavenDB will use this (second) certificate for communications between servers in the cluster.")]
         [DefaultValue(null)]
         [ConfigurationEntry("Security.ClusterCertificate.Exec")]
         public string ClusterCertificateExec { get; set; }

@@ -6,8 +6,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 {
     public class CertificateDefinition
     {
+        public string Name;
         public string Certificate;
-        public SecurityClearance Clearance;
+        public string Password;
+        public SecurityClearance SecurityClearance;
         public string Thumbprint;
         public Dictionary<string, DatabaseAccess> Permissions = new Dictionary<string, DatabaseAccess>(StringComparer.OrdinalIgnoreCase);
 
@@ -20,9 +22,10 @@ namespace Raven.Client.ServerWide.Operations.Certificates
             }
             return new DynamicJsonValue
             {
+                [nameof(Name)] = Name,
                 [nameof(Certificate)] = Certificate,
                 [nameof(Thumbprint)] = Thumbprint,
-                [nameof(Clearance)] = Clearance,
+                [nameof(SecurityClearance)] = SecurityClearance,
                 [nameof(Permissions)] = permissions
             };
         }
@@ -36,11 +39,11 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
     public enum SecurityClearance
     {
+        UnauthenticatedClients, //Default value
         ClusterAdmin,
         Operator,
         DatabaseAdmin,
-        ValidUser,
-        UnauthenticatedClients
+        ValidUser
     }
 
     public class CertificateRawData
