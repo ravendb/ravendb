@@ -33,6 +33,8 @@ class certificates extends viewModelBase {
     generateCertificateUrl = endpoints.global.adminCertificates.adminCertificates;
     generateCertPayload = ko.observable<string>();
 
+    clearanceLabelFor = certificateModel.clearanceLabelFor;
+    
     constructor() {
         super();
 
@@ -54,7 +56,7 @@ class certificates extends viewModelBase {
                 return false;
             }
             
-            return this.model().securityClearance() === "User";
+            return this.model().securityClearance() === "ValidUser";
         });
     }
     
@@ -131,7 +133,7 @@ class certificates extends viewModelBase {
                     this.spinners.processing(false);
                     this.loadCertificates();
                     this.onCloseEdit();
-                }, 1000);
+                }, 3000);
                 
                 break;
             case "upload":
