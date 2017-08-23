@@ -124,6 +124,9 @@ namespace Raven.Smuggler
                 if ("IndexId".Equals(x.Key, StringComparison.InvariantCultureIgnoreCase) && operateOnTypes.HasFlag(ItemType.Indexes))
                     return false;
 
+                if (Constants.RavenSubscriptionsPrefix.Equals(x.Key, StringComparison.OrdinalIgnoreCase))
+                    return false;
+
                 if (operateOnTypes.HasFlag(ItemType.Documents))
                     return true;
 
