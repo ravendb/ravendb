@@ -499,13 +499,13 @@ namespace Raven.Bundles.Replication.Tasks
                                 if (lastReplicatedDocumentOrTombstoneEtag.Count > 0)
                                 {
                                     docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationDocsTombstones,
-                                        lastReplicatedDocumentOrTombstoneEtag.Values.Min());
+                                        lastReplicatedDocumentOrTombstoneEtag.Values.Min(), timeout:TimeSpan.FromSeconds(2));
                                 }
 
                                 if (lastReplicatedAttachmentOrTombstoneEtag.Count > 0)
                                 {
                                     docDb.Maintenance.RemoveAllBefore(Constants.RavenReplicationAttachmentsTombstones,
-                                        lastReplicatedAttachmentOrTombstoneEtag.Values.Min());
+                                        lastReplicatedAttachmentOrTombstoneEtag.Values.Min(), timeout: TimeSpan.FromSeconds(2));
                                 }
                             }
                             catch (ConcurrencyException)
