@@ -12,7 +12,8 @@ class uploadCertificateCommand extends commandBase {
         const url = endpoints.global.adminCertificates.adminCertificates;
         
         const payload = this.model.toUploadCertificateDto();
-        return this.put(url, JSON.stringify(payload), null)
+        return this.put(url, JSON.stringify(payload), null, { dataType: undefined })
+            .done(() => this.reportSuccess("Certificate was saved successfully"))
             .fail((response: JQueryXHR) => this.reportError("Unable to upload certificate", response.responseText, response.statusText));
     }
 }
