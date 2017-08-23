@@ -117,7 +117,7 @@ namespace Raven.Server.Web.System
                                 {
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
-                                    [nameof(ServerNode.FailoverOnly)] = false,
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Member,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName
                                 })
                                 .Concat(dbRecord.Topology.Rehabs.Select(x => new DynamicJsonValue
@@ -125,7 +125,7 @@ namespace Raven.Server.Web.System
                                     [nameof(ServerNode.Url)] = GetUrl(x, clusterTopology),
                                     [nameof(ServerNode.ClusterTag)] = x,
                                     [nameof(ServerNode.Database)] = dbRecord.DatabaseName,
-                                    [nameof(ServerNode.FailoverOnly)] = false
+                                    [nameof(ServerNode.ServerRole)] = ServerNode.Role.Rehab
                                 })
                                 )
                             ),

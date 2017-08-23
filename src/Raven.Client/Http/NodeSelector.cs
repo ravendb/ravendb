@@ -87,13 +87,13 @@ namespace Raven.Client.Http
 
             for (int i = index; i < state.Failures.Length; i++)
             {
-                if (state.Failures[i] == 0 || state.Nodes[i].FailoverOnly == false)
+                if (state.Failures[i] == 0 && state.Nodes[i].ServerRole == ServerNode.Role.Member)
                     return (i, state.Nodes[i]);
             }
 
             for (int i = 0; i < index; i++)
             {
-                if (state.Failures[i] == 0 || state.Nodes[i].FailoverOnly == false)
+                if (state.Failures[i] == 0 && state.Nodes[i].ServerRole == ServerNode.Role.Member)
                     return (i, state.Nodes[i]);
             }
             
@@ -103,7 +103,7 @@ namespace Raven.Client.Http
         public (int Index, ServerNode Node) GetFastestNode()
         {            
             var state = _state;
-            if (state.Failures[state.Fastest] == 0)
+            if (state.Failures[state.Fastest] == 0 && state.Nodes[state.Fastest].ServerRole == ServerNode.Role.Member)
                 return (state.Fastest, state.Nodes[state.Fastest]);
             
             // if the fastest node has failures, we'll immeidately schedule
