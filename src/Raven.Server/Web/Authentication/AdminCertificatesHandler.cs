@@ -40,7 +40,7 @@ namespace Raven.Server.Web.Authentication
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                 {
                     var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                    throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' permission because the current client certificate being used has a lower permissions: {clientCert}");
+                    throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
                 }
 
                 if (Server.ClusterCertificateHolder == null)
@@ -92,7 +92,7 @@ namespace Raven.Server.Web.Authentication
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                 {
                     var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
-                    throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with 'Cluster Admin' permission because the current client certificate being used has a lower permissions: {clientCert}");
+                    throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
                 }
 
                 if (string.IsNullOrWhiteSpace(certificate.Certificate))
@@ -145,7 +145,7 @@ namespace Raven.Server.Web.Authentication
 
                     if (definition?.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                         throw new InvalidOperationException(
-                            $"Cannot delete the certificate '{definition?.Name}' with 'Cluster Admin' permission because the current client certificate being used has a lower permissions: {clientCert}");
+                            $"Cannot delete the certificate '{definition?.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
 
                     ServerStore.Cluster.DeleteLocalState(ctx, key);
                 }
@@ -217,11 +217,72 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
+        [RavenAction("/admin/edit-certificate", "Post", AuthorizationStatus.Operator)]
+        public async Task EditPermissions()
+        {
+            ServerStore.EnsureNotPassive();
+
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "edit-certificate-permissions"))
+            {
+                var newPermissions = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                ValidatePermissions(newPermissions);
+
+                var key = Constants.Certificates.Prefix + newPermissions.Thumbprint;
+
+                CertificateDefinition existingCertificate;
+                using (ctx.OpenWriteTransaction())
+                {
+                    var certificate = ServerStore.Cluster.Read(ctx, key);
+                    if (certificate == null)
+                        throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newPermissions.Thumbprint}'. It doesn't exist in the cluster.");
+
+                    existingCertificate = JsonDeserializationServer.CertificateDefinition(certificate);
+
+                    if (existingCertificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot edit the certificate '{existingCertificate.Name}'. It has 'Cluster Admin' security clearance while the current client certificate being used has a lower clearance: {clientCert}");
+
+                    if (newPermissions.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot edit security clearance to 'Cluster Admin' for certificate '{existingCertificate.Name}'. Only a 'Cluster Admin' can do that and your current client certificate has a lower clearance: {clientCert}");
+
+                    ServerStore.Cluster.DeleteLocalState(ctx, key);
+                }
+
+                var deleteResult = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
+                {
+                    Name = Constants.Certificates.Prefix + existingCertificate.Thumbprint
+                });
+                await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Etag);
+
+                var putResult = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newPermissions.Thumbprint,
+                    new CertificateDefinition
+                    {
+                        Name = existingCertificate.Name,
+                        Certificate = existingCertificate.Certificate,
+                        Permissions = newPermissions.Permissions,
+                        SecurityClearance = newPermissions.SecurityClearance,
+                        Thumbprint = existingCertificate.Thumbprint
+                    }));
+                await ServerStore.Cluster.WaitForIndexNotification(putResult.Etag);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            }
+        }
+
         private static void ValidateCertificate(CertificateDefinition certificate)
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
 
+            ValidatePermissions(certificate);
+        }
+
+        private static void ValidatePermissions(CertificateDefinition certificate)
+        {
             if (certificate.Permissions == null)
                 throw new ArgumentException($"{nameof(certificate.Permissions)} is a required field in the certificate definition");
 
