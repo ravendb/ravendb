@@ -4,13 +4,12 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
-using System.Threading.Tasks;
 using FastTests;
-using Jurassic;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.LowMemory;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -20,17 +19,23 @@ namespace SlowTests.Issues
         [Fact]
         public void NullStringPropertiesShouldBeConvertedProperly()
         {
-            using (var context = JsonOperationContext.ShortTermSingleUse())
+            using (var context = new DocumentsOperationContext(null, 1024, 1024, LowMemoryFlag.None))
             {
                 var empty = context.ReadObject(new DynamicJsonValue(), "empty");
-                var engine = new ScriptEngine();
-                var jsObject = new BlittableObjectInstance(engine,empty, "n", null);
-                jsObject.SetPropertyValue("Test", (string)null, true);
+                var scriptRunner = new ScriptRunner(null, false);
+                scriptRunner.AddScript("function ReturnSelf(me){return me;}");
+                using (scriptRunner.GetRunner(out var run))
+                {
+                    var result = run.Run(context, "ReturnSelf", new object[]{empty});
+                    var jsObject = result.Value as BlittableObjectInstance;
+                    Assert.NotNull(jsObject);
 
-                var json = new ScriptRunnerResult(null, jsObject).Translate<BlittableJsonReaderObject>(context);
-                object value;
-                Assert.True(json.TryGetMember("Test", out value));
-                Assert.Null(value);
+                    jsObject.SetPropertyValue("Test", (string)null, true);
+                    var json = new ScriptRunnerResult(null,jsObject).Translate<BlittableJsonReaderObject>(context);
+                    object value;
+                    Assert.True(json.TryGetMember("Test", out value));
+                    Assert.Null(value);
+                }
             }
         }
     }

@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using System.Data;
 using System.IO;
-using Jurassic;
-using Jurassic.Library;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
@@ -15,7 +12,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
     {
-        private const int DefaultSize = 50;
+        
 
         private const string AttachmentMarker = "$attachment/";
 
@@ -47,9 +44,9 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             base.Initalize();
             if (SingleRun == null)
                 return;
-            SingleRun.ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
-            SingleRun.ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToNVarchar);
-            SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
+            SingleRun.DefineToVarcharFunctions();
+            SingleRun.DefineToNVarcharFunctions();
+            SingleRun.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
         }
 
         protected override void LoadToFunction(string tableName, object cols)
@@ -141,27 +138,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             }
 
             return table;
-        }
-
-        private ObjectInstance ToVarchar(string value, int size)
-        {
-            return SingleRun.ScriptEngine.Object.Construct(new
-            {
-                Type = DbType.AnsiString,
-                Value = value,
-                Size = size == 0 ? size : DefaultSize
-            });
-
-        }
-
-        private ObjectInstance ToNVarchar(string value, int size)
-        {
-            return SingleRun.ScriptEngine.Object.Construct(new
-            {
-                Type = DbType.String,
-                Value = value,
-                Size = size == 0 ? size: DefaultSize
-            });
         }
 
         public override IEnumerable<SqlTableWithRecords> GetTransformedResults()

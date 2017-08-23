@@ -5,12 +5,9 @@ using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
-using Jurassic;
 using Microsoft.AspNetCore.Http;
 using Raven.Client;
-using Raven.Server.Documents.Patch;
 using Raven.Server.Routing;
-using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
 {

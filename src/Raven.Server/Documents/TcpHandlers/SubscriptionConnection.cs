@@ -482,11 +482,21 @@ namespace Raven.Server.Documents.TcpHandlers
                             });
 
                             await FlushDocsToClient(writer, docsToFlush, true);
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                            }
                         }
                     }
 
                     if (anyDocumentsSentInCurrentIteration == false)
-                    {                            
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info(
+                                $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                        }
                         await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,Options.SubscriptionName, startEtag, lastChangeVector);
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -524,7 +534,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         await SendHeartBeat();
                     }
-                        
+
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     switch (clientReply.Type)

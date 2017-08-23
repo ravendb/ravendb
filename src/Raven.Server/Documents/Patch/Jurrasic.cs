@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Data;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -20,6 +21,7 @@ namespace Raven.Server.Documents.Patch
         private readonly bool _enableClr;
         private readonly List<CompiledScript> _scripts = new List<CompiledScript>();
         public readonly List<string> ScriptsSource = new List<string>();
+        private const int DefaultStringSize = 50;
 
         public void AddScript(string script)
         {
@@ -206,7 +208,7 @@ namespace Raven.Server.Documents.Patch
 
             public int MaxSteps;
             public int CurrentSteps;
-            public readonly ScriptEngine ScriptEngine;
+            private readonly ScriptEngine ScriptEngine;
 
             private static void ThrowTooManyLoopIterations() =>
                 throw new TimeoutException("The scripts has run for too long and was aborted by the server");
@@ -340,6 +342,54 @@ namespace Raven.Server.Documents.Patch
             {
                 return new SingleRun().OnStateLoopIteration;
             }
+
+            public void DefineToVarcharFunctions()
+            {
+                ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToVarchar);
+            }
+
+            public void DefineToNVarcharFunctions()
+            {
+                ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
+            }
+
+            private ObjectInstance ToVarchar(string value, int size)
+            {
+                return ScriptEngine.Object.Construct(new
+                {
+                    Type = DbType.AnsiString,
+                    Value = value,
+                    Size = size == 0 ? size : DefaultStringSize
+                });
+            }
+
+            private ObjectInstance ToNVarchar(string value, int size)
+            {
+                return ScriptEngine.Object.Construct(new
+                {
+                    Type = DbType.String,
+                    Value = value,
+                    Size = size == 0 ? size : DefaultStringSize
+                });
+            }
+
+            public void SetGlobalFunction(string functionName, Delegate functionInstance)
+            {
+                ScriptEngine.SetGlobalFunction(functionName,functionInstance);
+            }
+
+            public void ExecuteScript(CompiledScript compiledScript)
+            {
+                compiledScript.Execute(ScriptEngine);
+            }
+
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            {
+                if (result.Value is ObjectInstance)
+                    return result.Translate<BlittableJsonReaderObject>(_context, usageMode);
+
+                return result.Value;
+            }
         }
 
         public ScriptRunner(DocumentDatabase db, bool enableClr)
@@ -359,7 +409,7 @@ namespace Raven.Server.Documents.Patch
                 run = new SingleRun(_db, this);
                 foreach (var compiledScript in _scripts)
                 {
-                    compiledScript.Execute(run.ScriptEngine);
+                    run.ExecuteScript(compiledScript);
                 }
             }
             Interlocked.Increment(ref Runs);
@@ -388,6 +438,22 @@ namespace Raven.Server.Documents.Patch
                 _parent._cache.Enqueue(_run);
                 _run = null;
                 _parent = null;
+            }
+        }
+
+        public void TryCompileScript(string script)
+        {
+            try
+            {
+                CompiledScript.Compile(new StringScriptSource(script),
+                    new CompilerOptions
+                    {
+                        EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
+                    });
+            }
+            catch (Exception e)
+            {
+                throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
             }
         }
     }

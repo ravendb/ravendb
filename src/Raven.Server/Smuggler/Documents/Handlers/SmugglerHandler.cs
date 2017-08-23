@@ -14,7 +14,6 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Jurassic;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Net.Http.Headers;
 using Raven.Client.Documents.Operations;
@@ -58,13 +57,8 @@ namespace Raven.Server.Smuggler.Documents.Handlers
 
                 try
                 {
-                    var scriptEngine = new ScriptEngine();
-
-                    scriptEngine.EnableDebugging = false;
-
-                    //cfg.NullPropagation();
-
-                    scriptEngine.Execute(string.Format(@"
+                    var scriptRunner = new ScriptRunner(Database,false);
+                    scriptRunner.TryCompileScript(string.Format(@"
                     function Transform(docInner){{
                         return ({0}).apply(this, [docInner]);
                     }};", options.TransformScript));

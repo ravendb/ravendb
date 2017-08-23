@@ -1,8 +1,8 @@
 ﻿using System;
-using Jurassic.Library;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents
@@ -23,24 +23,27 @@ namespace Raven.Server.Smuggler.Documents
 
         public Document Transform(Document document, JsonOperationContext context)
         {
+			object translatedResult;
             using (var result = _run.Run(null, "execute", new object[] {document}))
+            try
             {
-                if (result.Value is ObjectInstance == false)
-                {
-                    document.Data.Dispose();
-                    return null;
-                }
-                var newDoc = result.Translate<BlittableJsonReaderObject>(context,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                document.Data.Dispose();
-                return new Document
-                {
-                    Data = newDoc,
-                    Id = document.Id,
-                    Flags = document.Flags,
-                    NonPersistentFlags = document.NonPersistentFlags
-                };
+                translatedResult = _run.Translate(result, context, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
             }
+            finally
+            {
+                document.Data.Dispose();
+            }
+
+            if (translatedResult is  BlittableJsonReaderObject == false)
+                return null;
+            
+            return new Document
+            {
+                Data = (BlittableJsonReaderObject)translatedResult,
+                Id = document.Id,
+                Flags = document.Flags,
+                NonPersistentFlags = document.NonPersistentFlags
+            };
         }
 
         public IDisposable Initialize()

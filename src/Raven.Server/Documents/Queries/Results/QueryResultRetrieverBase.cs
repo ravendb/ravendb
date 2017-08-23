@@ -4,15 +4,10 @@ using Lucene.Net.Documents;
 using Sparrow.Json.Parsing;
 using Sparrow.Json;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Json;
 using System.IO;
-using System.Text;
-using Jurassic;
-using Jurassic.Library;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Server.Documents.Patch;
@@ -424,10 +419,8 @@ namespace Raven.Server.Documents.Queries.Results
                 if (result.IsNull)
                     return null;
 
-                if (result.Value is ObjectInstance)
-                    return result.Translate<BlittableJsonReaderObject>(_context);
-
-                return result.Value;
+                return run.Translate(result, _context);
+                
             }
         }
 
