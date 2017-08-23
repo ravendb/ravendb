@@ -149,7 +149,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 try
                 {
                     tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
-                        _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
+                        _parent._server.RavenServer.ClusterCertificateHolder?.Certificate);
                 }
                 catch (Exception e)
                 {

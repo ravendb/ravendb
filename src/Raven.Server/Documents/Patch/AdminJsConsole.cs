@@ -39,7 +39,6 @@ namespace Raven.Server.Documents.Patch
                 using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
                 using (var result = run.Run(null, "execute", new object[] { _server, _database }))
                 {
-
                     var toJson = RavenCli.ConvertResultToString(result);
 
                     if (Log.IsOperationsEnabled)
