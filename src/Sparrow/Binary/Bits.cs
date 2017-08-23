@@ -352,5 +352,11 @@ namespace Sparrow.Binary
         {
             return DeBruijnBytePos32[((uint)(value & -value) * 0x077CB531U) >> 27];
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsPowerOfTwo(int value)
+        {
+            return value != 0 && (value & (value - 1)) == 0;
+        }
     }
 }
