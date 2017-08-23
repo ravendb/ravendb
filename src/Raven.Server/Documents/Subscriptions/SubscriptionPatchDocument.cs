@@ -1,9 +1,6 @@
-﻿using Jurassic;
-using Jurassic.Library;
-using Raven.Server.Documents.Patch;
+﻿using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using JavaScriptException = Raven.Client.Exceptions.Documents.Patching.JavaScriptException;
 
 namespace Raven.Server.Documents.Subscriptions
 {

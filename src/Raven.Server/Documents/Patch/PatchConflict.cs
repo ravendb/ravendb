@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jurassic;
-using Jurassic.Library;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;

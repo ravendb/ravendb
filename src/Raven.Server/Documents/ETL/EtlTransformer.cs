@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jurassic;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -30,11 +29,11 @@ namespace Raven.Server.Documents.ETL
             _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
             if (SingleRun == null)
                 return;
-            SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadTo, (Action<string, object>)LoadToFunction);
+            SingleRun.SetGlobalFunction(Transformation.LoadTo, (Action<string, object>)LoadToFunction);
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadTo + collection, (Action<object>)(cols =>
+                SingleRun.SetGlobalFunction(Transformation.LoadTo + collection, (Action<object>)(cols =>
                 {
                     LoadToFunction(collection, cols);
                 }));
