@@ -106,6 +106,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case nameof(DeleteValueCommand):
                     case nameof(DeactivateLicenseCommand):
+                    case nameof(DeleteCertificateFromClusterCommand):
                         DeleteValue(context, type, cmd, index, leader);
                         break;
                     case nameof(IncrementClusterIdentityCommand):

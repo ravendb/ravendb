@@ -54,6 +54,7 @@ namespace Raven.Server.Web.Authentication
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
                     new CertificateDefinition
                     {
+                        Name = certificate.Name,
                         // this does not include the private key, that is only for the client
                         Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
                         Permissions = certificate.Permissions,
@@ -133,14 +134,18 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
                 var key = Constants.Certificates.Prefix + thumbprint;
-                var certificate = ServerStore.Cluster.Read(ctx, key);
+                using (ctx.OpenWriteTransaction())
+                {
+                    var certificate = ServerStore.Cluster.Read(ctx, key);
 
-                var definition = JsonDeserializationServer.CertificateDefinition(certificate);
+                    var definition = JsonDeserializationServer.CertificateDefinition(certificate);
 
-                if (definition?.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
-                    throw new InvalidOperationException($"Cannot delete the certificate '{definition?.Name}' with 'Cluster Admin' permission because the current client certificate being used has a lower permissions: {clientCert}");
+                    if (definition?.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException(
+                            $"Cannot delete the certificate '{definition?.Name}' with 'Cluster Admin' permission because the current client certificate being used has a lower permissions: {clientCert}");
 
-                ServerStore.Cluster.DeleteLocalState(ctx, key);
+                    ServerStore.Cluster.DeleteLocalState(ctx, key);
+                }
 
                 var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
                 {
