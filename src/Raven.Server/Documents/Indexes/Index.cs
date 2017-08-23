@@ -508,8 +508,6 @@ namespace Raven.Server.Documents.Indexes
                 //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
                 if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
-
-                IndexPersistence.DisposeWriters();
             }
         }
 
@@ -1155,10 +1153,11 @@ namespace Raven.Server.Documents.Indexes
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
-                    using (InitializeIndexingWork(indexContext))
+                    try
                     {
-                        try
+                        using (InitializeIndexingWork(indexContext))
                         {
+                            
                             foreach (var work in _indexWorkers)
                             {
                                 using (var scope = stats.For(work.Name))
@@ -1170,9 +1169,7 @@ namespace Raven.Server.Documents.Indexes
                                         _mre.Set();
                                 }
                             }
-                        }
-                        finally
-                        {
+
                             if (writeOperation.IsValueCreated)
                             {
                                 using (var indexWriteOperation = writeOperation.Value)
@@ -1180,33 +1177,38 @@ namespace Raven.Server.Documents.Indexes
                                     indexWriteOperation.Commit(stats);
                                 }
                             }
+
+                            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
                         }
 
-                        _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
-                    }
-
-                    using (stats.For(IndexingOperation.Storage.Commit))
-                    {
-                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
-
-                        tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                        using (stats.For(IndexingOperation.Storage.Commit))
                         {
-                            if (writeOperation.IsValueCreated)
+                            tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
+
+                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                             {
-                                using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                                if (writeOperation.IsValueCreated)
                                 {
-                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                                    // also we need this to be called when new read transaction are prevented in order to ensure
-                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
-                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                                    {
+                                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                                        // also we need this to be called when new read transaction are prevented in order to ensure
+                                        // that queries won't get the searcher having 'old' state but see 'new' changes committed here
+                                        // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                        IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    }
                                 }
-                            }
-                        };
+                            };
 
-                        tx.Commit();
+                            tx.Commit();
 
-                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
+                            stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
+                        }
+                    }
+                    catch
+                    {
+                        IndexPersistence.DisposeWriters();
+                        throw;
                     }
 
                     return mightBeMore;
