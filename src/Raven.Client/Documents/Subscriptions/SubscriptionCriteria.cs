@@ -96,6 +96,7 @@ namespace Raven.Client.Documents.Subscriptions
         private class SubscriptionCriteriaConvertor : JavascriptConversionExtension
         {
             public ParameterExpression Parameter;
+            public DateTime Utc;
 
             public override void ConvertToJavascript(JavascriptConversionContext context)
             {
@@ -119,25 +120,12 @@ namespace Raven.Client.Documents.Subscriptions
 
                 if (newExp != null && newExp.Type == typeof(DateTime))
                 {
-                    var args = newExp.Arguments;
-                    var argsStr = string.Empty;
-
-                    for (var i = 0; i < args.Count; i++)
-                    {
-                        argsStr += args[i];
-
-                        if (i < args.Count - 1)
-                        {
-                            argsStr += ", ";
-                        }
-                    }
-
                     context.PreventDefault();
                     var writer = context.GetWriter();
 
                     using (writer.Operation(newExp))
                     {
-                        writer.Write($"new Date({argsStr})");
+                        writer.Write($"new Date({string.Join(", ", newExp.Arguments)})");
                     }
 
                     return;
@@ -157,7 +145,7 @@ namespace Raven.Client.Documents.Subscriptions
                         //match DateTime expressions like call.Started, user.DateOfBirth, etc
                         if (node.Expression == Parameter)
                         {
-                            //transle it to Date.parse(this.Started)
+                            //translate it to Date.parse(this.Started)
                             javascriptWriter.Write($"Date.parse(this.{node.Member.Name})");
                             return;
 
@@ -180,8 +168,7 @@ namespace Raven.Client.Documents.Subscriptions
                                 javascriptWriter.Write("Date.now()");
                                 break;
                             case "UtcNow":
-                                var utc = DateTime.UtcNow;
-                                javascriptWriter.Write($"new Date({utc.Year},{utc.Month - 1}, {utc.Day}, {utc.Hour}, {utc.Minute}, {utc.Second}).getTime()");
+                                javascriptWriter.Write($"new Date({Utc.Year},{Utc.Month - 1}, {Utc.Day}, {Utc.Hour}, {Utc.Minute}, {Utc.Second}).getTime()");
                                 break;
                             case "Today":
                                 javascriptWriter.Write("new Date().setHours(0,0,0,0)");
@@ -232,11 +219,12 @@ namespace Raven.Client.Documents.Subscriptions
 
         public SubscriptionCriteria(Expression<Func<T, bool>> predicate)
         {
+            var utc = DateTime.UtcNow;
             var script = predicate.CompileToJavascript(
                 new JavascriptCompilationOptions(
                     JsCompilationFlags.BodyOnly,
                     new LinqMethodsSupport(),
-                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0] }
+                    new SubscriptionCriteriaConvertor { Parameter = predicate.Parameters[0], Utc = utc}
                     ));
             Script = $"return {script};";
         }
