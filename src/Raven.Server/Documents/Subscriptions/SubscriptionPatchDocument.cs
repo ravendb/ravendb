@@ -24,11 +24,13 @@ namespace Raven.Server.Documents.Subscriptions
         {
             transformResult = null;
 
-            var result = run.Run(context, "execute", new object[] { document });
-            if (result.Value is bool b)
-                return b;
-            transformResult = result.Translate<BlittableJsonReaderObject>(context);
-            return transformResult != null;
+            using (var result = run.Run(context, "execute", new object[] {document}))
+            {
+                if (result.Value is bool b)
+                    return b;
+                transformResult = result.Translate<BlittableJsonReaderObject>(context);
+                return transformResult != null;    
+            }
         }
     }
 }

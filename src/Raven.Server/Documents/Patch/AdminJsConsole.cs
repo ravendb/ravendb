@@ -36,9 +36,9 @@ namespace Raven.Server.Documents.Patch
 
             try
             {
-                using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), out var run))
+                using (_server.AdminScripts.GetScriptRunner(new AdminJsScriptKey(script.Script), false, out var run))
+                using (var result = run.Run(null, "execute", new object[] { _server, _database }))
                 {
-                    var result = run.Run(null, "execute", new object[] { _server, _database });
 
                     var toJson = RavenCli.ConvertResultToString(result);
 
@@ -77,7 +77,7 @@ namespace Raven.Server.Documents.Patch
 
         public AdminJsScript()
         {
-            
+
         }
     }
     public class AdminJsScriptKey : ScriptRunnerCache.Key

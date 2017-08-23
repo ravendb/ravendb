@@ -44,11 +44,11 @@ namespace Raven.Server.Documents.Patch
             _externalContext = context;
             _patchIfMissingArgs = patchIfMissing.args;
             _patchArgs = patch.args;
-            _returnRun = database.Scripts.GetScriptRunner(patch.run, out _run);
+            _returnRun = database.Scripts.GetScriptRunner(patch.run, false, out _run);
             _run.DebugMode = debugMode;
             if (_runIfMissing != null)
                 _runIfMissing.DebugMode = debugMode;
-            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, out _runIfMissing);
+            _returnRunIfMissing = database.Scripts.GetScriptRunner(patchIfMissing.run, false, out _runIfMissing);
             _id = id;
             _expectedChangeVector = expectedChangeVector;
             _skipPatchIfChangeVectorMismatch = skipPatchIfChangeVectorMismatch;
@@ -119,10 +119,13 @@ namespace Raven.Server.Documents.Patch
                 args = _patchIfMissingArgs;
                 documentInstance = _runIfMissing.CreateEmptyObject();
             }
-            var scriptResult = _run.Run(context, "execute", new[] {documentInstance, args});
 
-            var modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext, 
-                BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            BlittableJsonReaderObject modifiedDocument;
+            using (var scriptResult = _run.Run(context, "execute", new[] {documentInstance, args}))
+            {
+                modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+            }
 
             var result = new PatchResult
             {

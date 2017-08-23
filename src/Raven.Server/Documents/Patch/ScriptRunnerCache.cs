@@ -33,14 +33,17 @@ namespace Raven.Server.Documents.Patch
         }
 
 
-        public ScriptRunner.ReturnRun GetScriptRunner(Key key, out ScriptRunner.SingleRun patchRun)
+        public ScriptRunner.ReturnRun GetScriptRunner(Key key, bool readOnly, out ScriptRunner.SingleRun patchRun)
         {
             if (key == null)
             {
                 patchRun = null;
                 return new ScriptRunner.ReturnRun();
             }
-            return GetScriptRunner(key).GetRunner(out patchRun);
+            var scriptRunner = GetScriptRunner(key);
+            var returnRun = scriptRunner.GetRunner(out patchRun);
+            patchRun.ReadOnly = readOnly;
+            return returnRun;
         }
 
 

@@ -196,9 +196,7 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.LoadDocument.Add(id);
                 }
                 var document = _database.DocumentsStorage.Get(_context, id);
-                if (document == null)
-                    return Null.Value;
-                return new BlittableObjectInstance(ScriptEngine, document.Data, document.Id, document.LastModified);
+                return TranslateToJurrasic(ScriptEngine, document);
             }
 
             public bool ReadOnly;
@@ -222,14 +220,25 @@ namespace Raven.Server.Documents.Patch
                 ThrowTooManyLoopIterations();
             }
 
+            private readonly List<IDisposable> _disposables = new List<IDisposable>();
+
+            public void DisposeClonedDocuments()
+            {
+                foreach (var disposable in _disposables)
+                {
+                    disposable.Dispose();
+                }
+                _disposables.Clear();
+            }
+
             public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
                 _context = ctx;
                 if (DebugMode)
                 {
-                    if(DebugOutput == null)
+                    if (DebugOutput == null)
                         DebugOutput = new List<string>();
-                    if(DebugActions == null)
+                    if (DebugActions == null)
                         DebugActions = new PatchDebugActions();
                 }
                 PutOrDeleteCalled = false;
@@ -240,7 +249,7 @@ namespace Raven.Server.Documents.Patch
                     args[i] = TranslateToJurrasic(ScriptEngine, args[i]);
                 }
                 var result = ScriptEngine.CallGlobalFunction(method, args);
-                return new ScriptRunnerResult(result);
+                return new ScriptRunnerResult(this, result);
             }
 
 
@@ -257,14 +266,31 @@ namespace Raven.Server.Documents.Patch
 
             private object TranslateToJurrasic(ScriptEngine engine, object o)
             {
+                BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
+                {
+                    if (ReadOnly)
+                        return origin;
+                    
+                    // RavenDB-8286
+                    // here we need to make sure that we aren't sending a value to 
+                    // the js engine that might be modifed by the actions of the js engine
+                    // for example, calling put() mgiht cause the original data to change 
+                    // because we defrag the data that we looked at. We are handling this by
+                    // ensuring that we have our own, safe, copy.
+                    var cloned = origin.Clone(_context);
+                    _disposables.Add(cloned);
+                    return cloned;
+                }
+
                 if (o is Document d)
-                    return new BlittableObjectInstance(engine, d.Data, d.Id, d.LastModified);
+                    return new BlittableObjectInstance(engine, Clone(d.Data), d.Id, d.LastModified);
                 if (o is DocumentConflict dc)
-                    return new BlittableObjectInstance(engine, dc.Doc, dc.Id, dc.LastModified);
+                    return new BlittableObjectInstance(engine, Clone(dc.Doc), dc.Id, dc.LastModified);
                 if (o is BlittableJsonReaderObject json)
                     return new BlittableObjectInstance(engine, json, null, null);
-                if (o is BlittableJsonReaderArray array)
-                    return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
+                // Removing this for now to see what breaks
+                //if (o is BlittableJsonReaderArray array)
+                //    return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)
                     return Null.Value;
                 if (o is long)

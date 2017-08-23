@@ -41,7 +41,7 @@ namespace SlowTests.Issues
                         Data = context.ReadObject(new DynamicJsonValue(), "keys/1")
                     };
 
-                    database.Scripts.GetScriptRunner(req, out var run);
+                    database.Scripts.GetScriptRunner(req, true, out var run);
                     run.DebugMode = true;
                     run.Run(context, "execute", new object[] { document });
                     var array = run.DebugOutput;

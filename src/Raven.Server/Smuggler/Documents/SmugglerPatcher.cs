@@ -19,35 +19,34 @@ namespace Raven.Server.Smuggler.Documents
                 throw new InvalidOperationException("Cannot create a patcher with empty transform script.");
             _options = options;
             _database = database;
-
         }
 
         public Document Transform(Document document, JsonOperationContext context)
         {
-            var result = _run.Run(null, "execute", new object[]{document});
-            if (result.Value is ObjectInstance == false)
+            using (var result = _run.Run(null, "execute", new object[] {document}))
             {
+                if (result.Value is ObjectInstance == false)
+                {
+                    document.Data.Dispose();
+                    return null;
+                }
+                var newDoc = result.Translate<BlittableJsonReaderObject>(context,
+                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 document.Data.Dispose();
-                return null;
+                return new Document
+                {
+                    Data = newDoc,
+                    Id = document.Id,
+                    Flags = document.Flags,
+                    NonPersistentFlags = document.NonPersistentFlags
+                };
             }
-            var newDoc = result.Translate<BlittableJsonReaderObject>(context,
-                 BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            document.Data.Dispose();
-            return new Document
-            {
-                Data = newDoc,
-                Id = document.Id,
-                Flags = document.Flags,
-                NonPersistentFlags = document.NonPersistentFlags
-            };
         }
 
         public IDisposable Initialize()
         {
             var key = new PatchRequest(_options.TransformScript, PatchRequestType.Smuggler);
-            var scriptRunner = _database.Scripts.GetScriptRunner(key, out _run);
-            _run.ReadOnly = true;
-            return scriptRunner;
+            return _database.Scripts.GetScriptRunner(key, true, out _run);
         }
     }
 }

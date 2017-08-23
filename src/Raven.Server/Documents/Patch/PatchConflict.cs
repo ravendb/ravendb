@@ -9,7 +9,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class PatchConflict 
+    public class PatchConflict
     {
         private readonly DocumentDatabase _database;
         private readonly List<object> _docs = new List<object>();
@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Patch
         {
             _logger = LoggingSource.Instance.GetLogger<PatchConflict>(database.Name);
             _database = database;
-            
+
             foreach (var doc in docs)
             {
                 if (doc.Doc != null)
@@ -39,16 +39,16 @@ namespace Raven.Server.Documents.Patch
 
         public bool TryResolveConflict(DocumentsOperationContext context, PatchRequest patch, out BlittableJsonReaderObject resolved)
         {
-            using(_database.Scripts.GetScriptRunner(patch, out var run))
+            using (_database.Scripts.GetScriptRunner(patch, false, out var run))
+            using (var result = run.Run(context, "resolve", new object[] {_docs, _hasTombstone, TombstoneResolverValue}))
             {
-                run.ReadOnly = true;
-                var result = run.Run(context, "resolve", new object[] {_docs, _hasTombstone, TombstoneResolverValue});
                 if (result.IsNull)
                 {
                     resolved = null;
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Conflict resolution script for {_fstDocumentConflict.Collection} collection declined to resolve the conflict for {_fstDocumentConflict.LowerId}");
+                        _logger.Info(
+                            $"Conflict resolution script for {_fstDocumentConflict.Collection} collection declined to resolve the conflict for {_fstDocumentConflict.LowerId}");
                     }
                     return false;
                 }

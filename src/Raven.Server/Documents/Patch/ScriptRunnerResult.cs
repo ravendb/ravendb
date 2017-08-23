@@ -5,12 +5,14 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public class ScriptRunnerResult
+    public class ScriptRunnerResult : IDisposable
     {
+        private readonly ScriptRunner.SingleRun _parent;
         private readonly object _instance;
 
-        public ScriptRunnerResult(object instance)
+        public ScriptRunnerResult(ScriptRunner.SingleRun parent,object instance)
         {
+            _parent = parent;
             _instance = instance;
         }
 
@@ -63,5 +65,9 @@ namespace Raven.Server.Documents.Patch
         private static void ThrowInvalidArrayResult() =>
             throw new InvalidOperationException("Script cannot return an array.");
 
+        public void Dispose()
+        {
+            _parent?.DisposeClonedDocuments();
+        }
     }
 }
