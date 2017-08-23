@@ -113,8 +113,36 @@ namespace Raven.Client.Documents.Subscriptions
                     }
 
                     return;
-                }                
-                
+                }
+
+                var newExp = context.Node as NewExpression;
+
+                if (newExp != null && newExp.Type == typeof(DateTime))
+                {
+                    var args = newExp.Arguments;
+                    var argsStr = string.Empty;
+
+                    for (var i = 0; i < args.Count; i++)
+                    {
+                        argsStr += args[i];
+
+                        if (i < args.Count - 1)
+                        {
+                            argsStr += ", ";
+                        }
+                    }
+
+                    context.PreventDefault();
+                    var writer = context.GetWriter();
+
+                    using (writer.Operation(newExp))
+                    {
+                        writer.Write($"new Date({argsStr})");
+                    }
+
+                    return;
+                }
+
                 var node = context.Node as MemberExpression;
                 if (node == null )
                     return;
@@ -124,19 +152,60 @@ namespace Raven.Client.Documents.Subscriptions
 
                 using (javascriptWriter.Operation(node))
                 {
-                    if (node.Expression == Parameter)
+                    if (node.Type == typeof(DateTime))
                     {
-                        javascriptWriter.Write("this.");
-                        javascriptWriter.Write(node.Member.Name);
+                        //match DateTime expressions like call.Started, user.DateOfBirth, etc
+                        if (node.Expression == Parameter)
+                        {
+                            //transle it to Date.parse(this.Started)
+                            javascriptWriter.Write($"Date.parse(this.{node.Member.Name})");
+                            return;
+
+                        }
+
+                        //match expression where DateTime object is nested, like order.ShipmentInfo.DeliveryDate
+                        if (node.Expression != null)
+                        {
+                            
+                            javascriptWriter.Write("Date.parse("); 
+                            context.Visitor.Visit(node.Expression); //visit inner expression (i.e order.ShipmentInfo)
+                            javascriptWriter.Write($".{node.Member.Name})"); 
+                            return;
+                        }
+
+                        //match DateTime.Now , DateTime.UtcNow, DateTime.Today
+                        switch (node.Member.Name)
+                        {
+                            case "Now":
+                                javascriptWriter.Write("Date.now()");
+                                break;
+                            case "UtcNow":
+                                var utc = DateTime.UtcNow;
+                                javascriptWriter.Write($"new Date({utc.Year},{utc.Month - 1}, {utc.Day}, {utc.Hour}, {utc.Minute}, {utc.Second}).getTime()");
+                                break;
+                            case "Today":
+                                javascriptWriter.Write("new Date().setHours(0,0,0,0)");
+                                break;
+                        }
                         return;
                     }
-                    if (node.Expression is MemberExpression member)
+
+                    if (node.Expression == Parameter)
                     {
-                        context.Visitor.Visit(member);
+                        javascriptWriter.Write($"this.{node.Member.Name}");
+                        return;
                     }
-                    else
+
+                    switch (node.Expression)
                     {
-                        context.Visitor.Visit(node.Expression);
+                        case null:
+                            return;
+                        case MemberExpression member:
+                            context.Visitor.Visit(member);
+                            break;
+                        default:
+                            context.Visitor.Visit(node.Expression);
+                            break;
                     }
 
                     javascriptWriter.Write(".");
@@ -161,7 +230,6 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
-
         public SubscriptionCriteria(Expression<Func<T, bool>> predicate)
         {
             var script = predicate.CompileToJavascript(
@@ -172,7 +240,7 @@ namespace Raven.Client.Documents.Subscriptions
                     ));
             Script = $"return {script};";
         }
-        
+
         public SubscriptionCriteria()
         {
             

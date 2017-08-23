@@ -517,6 +517,316 @@ namespace FastTests.Client.Subscriptions
             }
         }
 
+        [Fact]
+        public async Task CanHandleDates_Today()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Started = new DateTime(2000, 1, 1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Started = DateTime.Now.AddYears(1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Started = new DateTime(1986, 4, 19)
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call => call.Started > DateTime.Today)
+                };
+
+                Assert.Equal("return Date.parse(this.Started)>new Date().setHours(0,0,0,0);",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Maxim", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleDates_Now()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Started = new DateTime(3000, 1, 1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Started = DateTime.Now.AddYears(1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Started = new DateTime(1986, 4, 19)
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call => call.Started < DateTime.Now)
+                };
+
+                Assert.Equal("return Date.parse(this.Started)<Date.now();",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Aviv", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleDates_UtcNow()
+        {
+            using (var store = GetDocumentStore())
+            {
+                var utcTicks = DateTime.UtcNow.Ticks;
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Started = new DateTime(utcTicks).AddMinutes(-5)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Started = new DateTime(utcTicks).AddMinutes(-10)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Started = new DateTime(utcTicks).AddMinutes(10)
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call => call.Started > DateTime.UtcNow)
+                };
+
+                Assert.True(options.Criteria.Script.StartsWith("return Date.parse(this.Started)>new Date("));
+                Assert.True(options.Criteria.Script.EndsWith(").getTime();"));
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Aviv", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleDates_New()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Started = new DateTime(2000, 1, 1)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Started = new DateTime(1983, 6, 6)
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Started = new DateTime(2017, 4, 19)
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call => call.Started < new DateTime(1990 , 1 , 1))
+                };
+
+                Assert.Equal("return Date.parse(this.Started)<new Date(1990, 1, 1);",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Maxim", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
+        [Fact]
+        public async Task CanHandleNestedDates()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Michael",
+                        Person = new Person
+                        {
+                            DateOfBirth = new DateTime(1983 , 1, 1)
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Maxim",
+                        Person = new Person
+                        {
+                            DateOfBirth = new DateTime(1985, 6, 6)
+                        }
+                    });
+
+                    await session.StoreAsync(new SupportCall
+                    {
+                        Name = "Aviv",
+                        Person = new Person
+                        {
+                            DateOfBirth = new DateTime(1986, 4, 19)
+                        }
+                    });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var options = new SubscriptionCreationOptions<SupportCall>
+                {
+                    Criteria = new SubscriptionCriteria<SupportCall>(
+                        call => call.Person.DateOfBirth < new DateTime(1984, 1, 1))
+                };
+
+                Assert.Equal("return Date.parse(this.Person.DateOfBirth)<new Date(1984, 1, 1);",
+                    options.Criteria.Script);
+
+                var id = await store.Subscriptions.CreateAsync(options);
+
+                using (
+                    var subscription =
+                        store.Subscriptions.Open<SupportCall>(new SubscriptionConnectionOptions(id)))
+                {
+                    var users = new BlockingCollection<SupportCall>();
+
+                    GC.KeepAlive(subscription.Run(supportCall =>
+                    {
+                        foreach (var item in supportCall.Items)
+                        {
+                            users.Add(item.Result);
+                        }
+                    }));
+
+                    Assert.True(users.TryTake(out SupportCall call, 5000));
+                    Assert.Equal("Michael", call.Name);
+                    Assert.False(users.TryTake(out call, 50));
+                }
+            }
+        }
+
         private class SupportCall
         {
             public string Name { get; set; }
@@ -526,7 +836,7 @@ namespace FastTests.Client.Subscriptions
             public int Votes { get; set; }
             public bool Survey { get; set; }
             public Person Person { get; set; }
-
+            public DateTime Started { get; set; }
         }
 
         private class Person
@@ -534,6 +844,7 @@ namespace FastTests.Client.Subscriptions
             public string Name { get; set; }
             public int Phone { get; set; }
             public long Count { get; set; }
+            public DateTime DateOfBirth { get; set; }
         }
     }
 }
