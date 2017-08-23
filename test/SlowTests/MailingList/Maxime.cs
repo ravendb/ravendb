@@ -2,7 +2,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq.Indexing;
 using Raven.Client.Documents.Session;
 using Xunit;
@@ -11,7 +10,7 @@ namespace SlowTests.MailingList
 {
     public class Maxime : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void WithingRadiusOf_Should_Not_Break_Relevance()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +72,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void Can_just_set_to_sort_by_relevance_without_filtering()
         {
             using (var store = GetDocumentStore())
@@ -108,10 +107,10 @@ namespace SlowTests.MailingList
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .RelatesToShape(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, "Point(45.54545 -73.63908)", SpatialRelation.Nearby)
+                    .OrderByDistance(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, 45.54545, -73.63908)
                     .OpenSubclause()
-                    .WhereLucene("Name", $"{terms}")
-                    .WhereLucene("Terms", $"{terms}")
+                    .Search("Name", terms)
+                    .Search("Terms", terms)
                     .CloseSubclause()
                     .Take(10)
                     .ToList();
@@ -161,7 +160,6 @@ namespace SlowTests.MailingList
 
                 Index(p => p.Name, FieldIndexing.Search);
                 Index(p => p.Terms, FieldIndexing.Search);
-
             }
         }
     }

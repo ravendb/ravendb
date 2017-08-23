@@ -2,14 +2,13 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
 {
     public class WhenGroupinByLocation : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanFindSale()
         {
             using (var d = GetDocumentStore())

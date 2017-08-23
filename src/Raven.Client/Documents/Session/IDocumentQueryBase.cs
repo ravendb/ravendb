@@ -347,9 +347,9 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="fieldName">Spatial field name.</param>
         /// <param name="shapeWKT">WKT formatted shape</param>
-        /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
         /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
-        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.
@@ -412,11 +412,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="count">Number of items to skip.</param>
         TSelf Skip(int count);
-
-        /// <summary>
-        ///     Sorts the query results by distance.
-        /// </summary>
-        TSelf SortByDistance();
 
         /// <summary>
         ///     Provide statistics about the query, such as total count of matching records
@@ -659,7 +654,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -669,16 +664,26 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf SortByDistance(double lat, double lng);
+        TSelf OrderByDistance(double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf SortByDistance(double lat, double lng, string fieldName);
+        TSelf OrderByDistance(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
     }
 }

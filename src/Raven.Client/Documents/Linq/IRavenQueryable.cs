@@ -43,9 +43,5 @@ namespace Raven.Client.Documents.Linq
         /// Inputs a key and value to the query (accessible by the transformer)
         /// </summary>
         IRavenQueryable<T> AddTransformerParameter(string name, object value);
-
-        IRavenQueryable<T> Spatial(Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        IRavenQueryable<T> OrderByDistance(SpatialSort sortParamsClause);
     }
 }

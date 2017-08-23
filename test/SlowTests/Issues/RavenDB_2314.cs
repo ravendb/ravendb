@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void Spatial_index_should_not_stop_indexing_after_one_bad_document()
         {
             var validPizzeriaDoc = new Pizzeria

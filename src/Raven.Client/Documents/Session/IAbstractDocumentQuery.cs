@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 
 namespace Raven.Client.Documents.Session
 {
@@ -53,13 +54,6 @@ namespace Raven.Client.Documents.Session
         /// Sort using custom sorter on the server
         /// </summary>
         void CustomSortUsing(string typeName, bool descending = false);
-
-        /// <summary>
-        ///   Adds an ordering for a specific field to the query
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///   Includes the specified path in the query, loading the document specified in that path
@@ -209,6 +203,8 @@ namespace Raven.Client.Documents.Session
         /// <param name = "fields">The fields.</param>
         void OrderBy(string field, OrderingType ordering = OrderingType.String);
 
+        void OrderByDescending(string field, OrderingType ordering = OrderingType.String);
+
         void OrderByScore();
 
         void OrderByScoreDescending();
@@ -332,5 +328,11 @@ namespace Raven.Client.Documents.Session
         void GroupByCount(string projectedName = null);
 
         void WhereTrue();
+
+        void Spatial(string fieldName, SpatialCriteria criteria);
+
+        void OrderByDistance(string fieldName, double latitude, double longitude);
+
+        void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
     }
 }

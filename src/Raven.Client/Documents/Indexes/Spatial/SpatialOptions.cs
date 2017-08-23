@@ -19,6 +19,18 @@ namespace Raven.Client.Documents.Indexes.Spatial
             Units = SpatialUnits.Kilometers;
         }
 
+        internal SpatialOptions(SpatialOptions options)
+        {
+            Type = options.Type;
+            Strategy = options.Strategy;
+            MaxTreeLevel = options.MaxTreeLevel;
+            MinX = options.MinX;
+            MaxX = options.MaxX;
+            MinY = options.MinY;
+            MaxY = options.MaxY;
+            Units = options.Units;
+        }
+
         public SpatialFieldType Type { get; set; }
         public SpatialSearchStrategy Strategy { get; set; }
         public int MaxTreeLevel { get; set; }
@@ -59,9 +71,12 @@ namespace Raven.Client.Documents.Indexes.Spatial
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((SpatialOptions)obj);
         }
 
@@ -113,24 +128,12 @@ namespace Raven.Client.Documents.Indexes.Spatial
         Within,
         Contains,
         Disjoint,
-        Intersects,
-
-        /// <summary>
-        /// Does not filter the query, merely sort by the distance
-        /// </summary>
-        Nearby
+        Intersects
     }
 
     public enum SpatialUnits
     {
         Kilometers,
         Miles
-    }
-
-    public class SpatialSort
-    {
-        public string FieldName;
-        public double Longitude;
-        public double Latitude;
     }
 }

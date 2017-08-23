@@ -7,14 +7,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Indexes
@@ -32,11 +30,6 @@ namespace Raven.Client.Documents.Indexes
         /// Creates the index definition.
         /// </summary>
         public abstract IndexDefinition CreateIndexDefinition();
-
-        protected internal virtual IEnumerable<object> ApplyReduceFunctionIfExists(IndexQuery indexQuery, IEnumerable<object> enumerable)
-        {
-            return enumerable.Take(indexQuery.PageSize);
-        }
 
         /// <summary>
         /// Gets a value indicating whether this instance is map reduce index definition
@@ -89,7 +82,7 @@ namespace Raven.Client.Documents.Indexes
         /// <param name="lat">Latitude</param>
         /// <param name="lng">Longitude</param>
         /// <returns></returns>
-        public static object SpatialGenerate(double? lat, double? lng)
+        public object SpatialGenerate(double? lat, double? lng)
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
@@ -119,7 +112,7 @@ namespace Raven.Client.Documents.Indexes
         /// <param name="lat">Latitude</param>
         /// <param name="lng">Longitude</param>
         /// <returns></returns>
-        public static object SpatialGenerate(string fieldName, double? lat, double? lng)
+        public object SpatialGenerate(string fieldName, double? lat, double? lng)
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
@@ -130,32 +123,7 @@ namespace Raven.Client.Documents.Indexes
         /// <param name="fieldName">The field name, will be used for querying</param>
         /// <param name="shapeWKT">The shape representation in the WKT format</param>
         /// <returns></returns>
-        public static object SpatialGenerate(string fieldName, string shapeWKT)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-        /// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-        /// </summary>
-        /// <param name="fieldName">The field name, will be used for querying</param>
-        /// <param name="shapeWKT">The shape representation in the WKT format</param>
-        /// <param name="strategy">The spatial strategy to use</param>
-        /// <returns></returns>
-        public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy)
-        {
-            throw new NotSupportedException("This method is provided solely to allow query translation on the server");
-        }
-
-        /// <summary>
-        /// Generates a spatial field in the index, generating a Point from the provided lat/lng coordinates
-        /// </summary>
-        /// <param name="fieldName">The field name, will be used for querying</param>
-        /// <param name="shapeWKT">The shape representation in the WKT format</param>
-        /// <param name="strategy">The spatial strategy to use</param>
-        /// <param name="maxTreeLevel">Maximum number of levels to be used in the PrefixTree, controls the precision of shape representation.</param>
-        /// <returns></returns>
-        public static object SpatialGenerate(string fieldName, string shapeWKT, SpatialSearchStrategy strategy, int maxTreeLevel)
+        public object SpatialGenerate(string fieldName, string shapeWKT)
         {
             throw new NotSupportedException("This method is provided solely to allow query translation on the server");
         }
@@ -381,6 +349,6 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Add additional sources to be copiled with the index on the server.
         /// </summary>
-        public Dictionary<string,string> AdditionalSources { get; set; }
+        public Dictionary<string, string> AdditionalSources { get; set; }
     }
 }

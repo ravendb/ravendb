@@ -8,7 +8,7 @@ namespace SlowTests.MailingList
 {
     public class Maxime2 : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {
             using (var store = GetDocumentStore())
@@ -46,8 +46,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
-                        .WhereLucene("Name", "UQAM")
-                        .WhereLucene("Description", "UQAM")
+                        .Search("Name", "UQAM")
+                        .Search("Description", "UQAM")
                         .WithinRadiusOf(500, 45.50955, -73.569133)
                         .ToList();
 

@@ -32,7 +32,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void SpatialSearchBug2()
         {
             using (var store = GetDocumentStore())

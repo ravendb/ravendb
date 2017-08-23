@@ -22,6 +22,16 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static OrderByToken ScoreDescending = new OrderByToken("score()", descending: true, ordering: OrderingType.String);
 
+        public static OrderByToken CreateDistanceAscending(string fieldName, string latitudeParameterName, string longitudeParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, :{latitudeParameterName}, :{longitudeParameterName})", false, OrderingType.String);
+        }
+
+        public static OrderByToken CreateDistanceDescending(string fieldName, string latitudeParameterName, string longitudeParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, :{latitudeParameterName}, :{longitudeParameterName})", true, OrderingType.String);
+        }
+
         public static OrderByToken CreateRandom(string seed)
         {
             if (seed == null)

@@ -36,7 +36,6 @@ namespace Raven.Client.Documents.Session
         protected QueryOperator DefaultOperator;
         protected bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer;
 
-        protected double DistanceErrorPct;
         private readonly LinqPathProvider _linqPathProvider;
         protected Action<IndexQuery> BeforeQueryExecutionAction;
 
@@ -249,141 +248,6 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <summary>
-        /// When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance()
-        {
-            OrderBy(Constants.Documents.Indexing.Fields.DistanceFieldName);
-            return this;
-        }
-
-        /// <summary>
-        /// When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng)
-        {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
-            return this;
-        }
-
-        /// <summary>
-        /// When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.SortByDistance(double lat, double lng, string sortedFieldName)
-        {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), sortedFieldName));
-            return this;
-        }
-
-        /// <summary>
-        ///   Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name = "radius">The radius.</param>
-        /// <param name = "latitude">The latitude.</param>
-        /// <param name = "longitude">The longitude.</param>
-        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent)
-        {
-            GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent)
-        {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
-            return this;
-        }
-
-        /// <summary>
-        ///   Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name = "radius">The radius.</param>
-        /// <param name = "latitude">The latitude.</param>
-        /// <param name = "longitude">The longitude.</param>
-        /// <param name = "radiusUnits">The units of the <paramref name="radius"/></param>
-        /// <param name="distErrorPercent">Gets the error distance that specifies how precise the query shape is</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
-        {
-            GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
-        {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent, radiusUnits);
-            return this;
-        }
-
-        public IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent = 0.025)
-        {
-            GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, distErrorPercent);
-            return this;
-        }
-
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.RelatesToShape(string fieldName, string shapeWkt, SpatialRelation rel, double distErrorPercent)
-        {
-            GenerateSpatialQueryData(fieldName, shapeWkt, rel, distErrorPercent);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
-        {
-            var criteria = clause(new SpatialCriteriaFactory());
-            GenerateSpatialQueryData(fieldName, criteria);
-            return this;
-        }
-
-        /// <summary>
-        ///   Filter matches to be inside the specified radius
-        /// </summary>
-        protected TSelf GenerateQueryWithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-        }
-
-        protected TSelf GenerateSpatialQueryData(string fieldName, string shapeWkt, SpatialRelation relation, double distanceErrorPct = 0.025, SpatialUnits? radiusUnits = null)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-
-            //IsSpatialQuery = true;
-            //SpatialFieldName = fieldName;
-            //QueryShape = new WktSanitizer().Sanitize(shapeWkt);
-            //SpatialRelation = relation;
-            //DistanceErrorPct = distanceErrorPct;
-            //SpatialUnits = radiusUnits;
-            //return (TSelf)this;
-        }
-
-        protected TSelf GenerateSpatialQueryData(string fieldName, SpatialCriteria criteria)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //var wkt = criteria.Shape as string;
-            //if (wkt == null && criteria.Shape != null)
-            //{
-            //    var jsonSerializer = Conventions.CreateSerializer();
-
-            //    /*using (var jsonWriter = new RavenJTokenWriter())
-            //    {
-            //        var converter = new ShapeConverter();
-            //        jsonSerializer.Serialize(jsonWriter, criteria.Shape);
-            //        if (!converter.TryConvert(jsonWriter.Token, out wkt))
-            //            throw new ArgumentException("Shape");
-            //    }*/
-            //}
-
-            //if (wkt == null)
-            //    throw new ArgumentException("Shape");
-
-            //IsSpatialQuery = true;
-            //SpatialFieldName = fieldName;
-            //QueryShape = new WktSanitizer().Sanitize(wkt);
-            //SpatialRelation = criteria.Relation;
-            //DistanceErrorPct = criteria.DistanceErrorPct;
-            //return (TSelf)this;
-        }
-
-        /// <summary>
         ///   EXPERT ONLY: Instructs the query to wait for non stale results.
         ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
         /// </summary>
@@ -504,7 +368,13 @@ namespace Raven.Client.Documents.Session
 
         public void CustomSortUsing(string typeName, bool descending)
         {
-            AddOrder(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName, descending);
+            if (descending)
+            {
+                OrderByDescending(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
+                return;
+            }
+
+            OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
         }
 
         public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
@@ -640,18 +510,6 @@ namespace Raven.Client.Documents.Session
         public void SetHighlighterTags(string preTag, string postTag)
         {
             SetHighlighterTags(new[] { preTag }, new[] { postTag });
-        }
-
-        /// <summary>
-        ///   Adds an ordering for a specific field to the query
-        /// </summary>
-        /// <param name = "fieldName">Name of the field.</param>
-        /// <param name = "descending">if set to <c>true</c> [descending].</param>
-        /// <param name = "ordering">ordering type.</param>
-        public void AddOrder(string fieldName, bool descending, OrderingType ordering = OrderingType.String)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-            OrderByTokens.AddLast(descending ? OrderByToken.CreateDescending(fieldName, ordering) : OrderByToken.CreateAscending(fieldName, ordering));
         }
 
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
@@ -1440,13 +1298,22 @@ If you really want to do in memory filtering on the data returned from the query
 
         IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending, ordering);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
         IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
+            var fieldName = GetMemberQueryPath(propertySelector.Body);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
@@ -1860,8 +1727,7 @@ If you really want to do in memory filtering on the data returned from the query
             if (result != null)
                 return result(whereParams.Value);
 
-            string strVal;
-            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out strVal))
+            if (_conventions.TryConvertValueForQuery(whereParams.FieldName, whereParams.Value, forRange, out var strVal))
                 return strVal;
 
             return whereParams.Value;
@@ -1902,6 +1768,66 @@ If you really want to do in memory filtering on the data returned from the query
                 if (replaced == false)
                     SelectTokens.AddLast(fieldsToFetch);
             }
+        }
+
+        protected void WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
+        {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
+
+            WhereTokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
+        }
+
+        protected void Spatial(string fieldName, string shapeWKT, SpatialRelation relation, double distErrorPercent)
+        {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
+
+            var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWKT));
+            QueryToken relationToken;
+            switch (relation)
+            {
+                case SpatialRelation.Within:
+                    relationToken = WhereToken.Within(fieldName, wktToken, distErrorPercent);
+                    break;
+                case SpatialRelation.Contains:
+                    relationToken = WhereToken.Contains(fieldName, wktToken, distErrorPercent);
+                    break;
+                case SpatialRelation.Disjoint:
+                    relationToken = WhereToken.Disjoint(fieldName, wktToken, distErrorPercent);
+                    break;
+                case SpatialRelation.Intersects:
+                    relationToken = WhereToken.Intersects(fieldName, wktToken, distErrorPercent);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
+            }
+
+            WhereTokens.AddLast(relationToken);
+        }
+
+        public void Spatial(string fieldName, SpatialCriteria criteria)
+        {
+            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
+
+            AppendOperatorIfNeeded(WhereTokens);
+            NegateIfNeeded(fieldName);
+
+            WhereTokens.AddLast(criteria.ToQueryToken(fieldName, AddQueryParameter));
+        }
+
+        public void OrderByDistance(string fieldName, double latitude, double longitude)
+        {
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
+        }
+
+        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        {
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
         }
     }
 }

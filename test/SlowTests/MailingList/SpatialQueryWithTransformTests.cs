@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Transformers;
 using Xunit;
@@ -11,7 +12,7 @@ namespace SlowTests.MailingList
 {
     public class SpatialQueryWithTransformTests : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanQuery()
         {
             using (var store = GetDocumentStore())
@@ -51,14 +52,14 @@ namespace SlowTests.MailingList
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
                         .AddTransformerParameter("USERID", JToken.FromObject("fake"))
-                        .Customize(x => x.WithinRadiusOf(10, 50.45010, 30.52340));
+                        .Spatial(x => x.WithinRadius(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);
                 }
             }
         }
 
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanQueryRemote()
         {
             using (var store = GetDocumentStore())
@@ -98,7 +99,7 @@ namespace SlowTests.MailingList
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
                         .AddTransformerParameter("USERID", JToken.FromObject("fake"))
-                        .Customize(x => x.WithinRadiusOf(10, 50.45010, 30.52340));
+                        .Spatial(x => x.WithinRadius(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);
                 }

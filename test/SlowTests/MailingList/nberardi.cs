@@ -7,7 +7,7 @@ namespace SlowTests.MailingList
 {
     public class Nberardi : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void Spatial_Search_Should_Integrate_Distance_As_A_Boost_Factor()
         {
             using (var store = GetDocumentStore())
@@ -40,6 +40,7 @@ namespace SlowTests.MailingList
                 {
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
                         .WithinRadiusOf(500, 45.50955, -73.569133)
+                        .OrderByDistance(45.50955, -73.569133)
                         .ToList();
 
                     Assert.Equal(results[0].Id, "se/2");

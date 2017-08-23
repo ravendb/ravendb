@@ -12,6 +12,7 @@ using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Sparrow.Extensions;
