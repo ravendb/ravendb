@@ -403,25 +403,21 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        /// <summary>
-        /// Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name="radius">The radius.</param>
-        /// <param name="latitude">The latitude.</param>
-        /// <param name="longitude">The longitude.</param>
-        /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
-            WithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
+            WithinRadiusOf(propertySelector.ToPropertyPath(), radius, latitude, longitude, radiusUnits, distanceErrorPct);
             return this;
         }
 
-        /// <summary>
-        /// Filter matches to be inside the specified radius
-        /// </summary>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
             WithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        {
+            Spatial(propertySelector.ToPropertyPath(), shapeWKT, relation, distanceErrorPct);
             return this;
         }
 
@@ -431,9 +427,9 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(double latitude, double longitude)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude)
         {
-            OrderByDistance(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            OrderByDistance(propertySelector.ToPropertyPath(), latitude, longitude);
             return this;
         }
 
@@ -443,9 +439,9 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(double latitude, double longitude)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude)
         {
-            OrderByDistanceDescending(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(), latitude, longitude);
             return this;
         }
 

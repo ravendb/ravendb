@@ -62,7 +62,7 @@ namespace SlowTests.Tests.Indexes
                     .Select(x => IndexField.Create(x, new IndexFieldOptions(), null))
                     .ToList();
 
-                var converter = new AnonymousLuceneDocumentConverter(fields, null, false);
+                var converter = new AnonymousLuceneDocumentConverter(fields, false);
                 foreach (var result in results)
                 {
                     using (var lazyStringValue = context.GetLazyString("docs/1"))

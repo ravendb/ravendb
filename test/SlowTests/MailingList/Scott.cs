@@ -34,7 +34,7 @@ let lng = g.Select(x=>x.Lon).Where(x=>x!=null).FirstOrDefault()
 select new { 
     Tag = g.Key, 
     Count = g.Sum(x => (long)x.Count), 
-    _ = SpatialGenerate(lat,lng),
+    Coordinates = CreateSpatialField(lat,lng),
     Lat = lat, 
     Lon = lng }",
                     Fields = new Dictionary<string, IndexFieldOptions>
@@ -57,7 +57,7 @@ select new {
                     session.SaveChanges();
                     var tagAndCounts = session.Advanced.DocumentQuery<TagAndCount>("TagCloud")
                         .WaitForNonStaleResults()
-                        .WithinRadiusOf(100, 38.96939, -77.386938)
+                        .WithinRadiusOf("Coordinates", 100, 38.96939, -77.386938)
                         .WaitForNonStaleResults()
                         .ToArray();
                     Assert.Equal(1, tagAndCounts.First(x => x.Tag == "C#").Count);

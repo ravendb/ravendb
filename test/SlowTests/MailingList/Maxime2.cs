@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
                         .Search("Name", "UQAM")
                         .Search("Description", "UQAM")
-                        .WithinRadiusOf(500, 45.50955, -73.569133)
+                        .WithinRadiusOf("Coordinates", 500, 45.50955, -73.569133)
                         .ToList();
 
                     Assert.Equal(results[0].Id, "se/2");
@@ -70,7 +70,7 @@ namespace SlowTests.MailingList
                     {
                         Name = e.Name.Boost(3),
                         e.Description,
-                        _ = SpatialGenerate(e.Latitude, e.Longitude)
+                        Coordinates = CreateSpatialField(e.Latitude, e.Longitude)
                     };
 
                 Index(e => e.Name, FieldIndexing.Search);

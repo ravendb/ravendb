@@ -22,12 +22,12 @@ namespace SlowTests.Issues
                     var nearbyPoints1 = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
                         .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128, SpatialUnits.Kilometers, 0.025));
                     var queryUrl1 = RavenTestHelper.GetIndexQuery(nearbyPoints1);
-                    Assert.NotNull(queryUrl1.Query.Contains($"within({Constants.Documents.Indexing.Fields.DefaultSpatialFieldName}, circle(1, 55.675285554217, 12.556675672531128))"));
+                    Assert.NotNull(queryUrl1.Query.Contains("within(Coordinates, circle(1, 55.675285554217, 12.556675672531128))"));
 
                     var nearbyPoints2 = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
                         .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128, SpatialUnits.Kilometers, 0.01));
                     var queryUrl2 = RavenTestHelper.GetIndexQuery(nearbyPoints2);
-                    Assert.NotNull(queryUrl2.Query.Contains($"within({Constants.Documents.Indexing.Fields.DefaultSpatialFieldName}, circle(1, 55.675285554217, 12.556675672531128), 0.01)"));
+                    Assert.NotNull(queryUrl2.Query.Contains("within(Coordinates, circle(1, 55.675285554217, 12.556675672531128), 0.01)"));
                 }
             }
         }

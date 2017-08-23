@@ -28,7 +28,7 @@ namespace SlowTests.MailingList
             public Foos()
             {
                 Map = foos => from foo in foos
-                              select new { foo.Id, foo.CatId, _ = SpatialGenerate("Position", foo.Lat, foo.Long) };
+                              select new { foo.Id, foo.CatId, Position = CreateSpatialField(foo.Lat, foo.Long) };
             }
         }
 

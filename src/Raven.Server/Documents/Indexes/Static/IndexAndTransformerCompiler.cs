@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
             var methods = methodDetector.Methods;
 
-            if (methods.HasCreateField || methods.HasSpatialGenerate)
+            if (methods.HasCreateField)
                 statements.Add(RoslynHelper.This(nameof(StaticIndexBase.HasDynamicFields)).Assign(SyntaxFactory.LiteralExpression(SyntaxKind.TrueLiteralExpression)).AsExpressionStatement());
 
             if (methods.HasBoost)
@@ -581,8 +581,6 @@ namespace Raven.Server.Documents.Indexes.Static
             public bool HasInclude { get; set; }
 
             public bool HasCreateField { get; set; }
-
-            public bool HasSpatialGenerate { get; set; }
 
             public bool HasBoost { get; set; }
         }

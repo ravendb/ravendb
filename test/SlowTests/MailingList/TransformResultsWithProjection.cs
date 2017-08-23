@@ -152,7 +152,7 @@ namespace SlowTests.MailingList
                                   // so we can do projection + transform + spatial query together we need these in the index + stored
                                   lead.Lat,
                                   lead.Lng,
-                                  __ = SpatialGenerate("Coordinates", lead.Lat, lead.Lng)
+                                  Coordinates = CreateSpatialField(lead.Lat, lead.Lng)
                               };
 
                 StoreAllFields(FieldStorage.Yes);

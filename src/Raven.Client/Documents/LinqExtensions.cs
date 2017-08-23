@@ -1317,11 +1317,6 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
-        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
-        {
-            return source.Spatial(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, clause);
-        }
-
         public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
             return source.Spatial(path.ToPropertyPath(), clause);

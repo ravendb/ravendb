@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
                         .AddTransformerParameter("USERID", JToken.FromObject("fake"))
-                        .Spatial(x => x.WithinRadius(10, 50.45010, 30.52340));
+                        .Spatial("Coordinates", x => x.WithinRadius(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);
                 }
@@ -99,7 +99,7 @@ namespace SlowTests.MailingList
                     var query = session.Query<VacanciesIndex.Result, VacanciesIndex>()
                         .TransformWith<ViewItemTransformer, ViewItemTransformer.View>()
                         .AddTransformerParameter("USERID", JToken.FromObject("fake"))
-                        .Spatial(x => x.WithinRadius(10, 50.45010, 30.52340));
+                        .Spatial("Coordinates", x => x.WithinRadius(10, 50.45010, 30.52340));
                     var result = query.ToList();
                     Assert.Equal(1, result.Count);
                 }
@@ -188,7 +188,7 @@ namespace SlowTests.MailingList
                             vacancy.CompanyId,
                             vacancy.Jobs
                         },
-                        _ = SpatialGenerate(location.Ltd, location.Lng)
+                        Coordinates = CreateSpatialField(location.Ltd, location.Lng)
                     };
             }
         }

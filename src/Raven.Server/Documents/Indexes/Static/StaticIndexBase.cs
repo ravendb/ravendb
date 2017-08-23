@@ -134,35 +134,25 @@ namespace Raven.Server.Documents.Indexes.Static
             return result;
         }
 
-        public IEnumerable<IFieldable> SpatialGenerate(object lat, object lng)
+        public IEnumerable<AbstractField> CreateSpatialField(string name, object lat, object lng)
         {
-            return SpatialGenerate(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, lat, lng);
+            return CreateSpatialField(name, ConvertToDouble(lat), ConvertToDouble(lng));
         }
 
-        public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
-        {
-            return SpatialGenerate(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, lat, lng);
-        }
-
-        public IEnumerable<IFieldable> SpatialGenerate(string name, object lat, object lng)
-        {
-            return SpatialGenerate(name, ConvertToDouble(lat), ConvertToDouble(lng));
-        }
-
-        public IEnumerable<IFieldable> SpatialGenerate(string name, double? lat, double? lng)
+        public IEnumerable<AbstractField> CreateSpatialField(string name, double? lat, double? lng)
         {
             var spatialField = GetOrCreateSpatialField(name);
 
             if (lng == null || double.IsNaN(lng.Value))
-                return Enumerable.Empty<IFieldable>();
+                return Enumerable.Empty<AbstractField>();
             if (lat == null || double.IsNaN(lat.Value))
-                return Enumerable.Empty<IFieldable>();
+                return Enumerable.Empty<AbstractField>();
 
             Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
             return spatialField.CreateIndexableFields(shape);
         }
 
-        public IEnumerable<IFieldable> SpatialGenerate(string name, object shapeWKT)
+        public IEnumerable<AbstractField> CreateSpatialField(string name, object shapeWKT)
         {
             var spatialField = GetOrCreateSpatialField(name);
             return spatialField.CreateIndexableFields(shapeWKT);

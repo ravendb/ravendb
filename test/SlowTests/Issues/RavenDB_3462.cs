@@ -124,7 +124,7 @@ namespace SlowTests.Issues
                 Map = entities => entities.Select(e => new
                 {
                     Id = e.Id,
-                    __ = SpatialGenerate("Coordinates", e.Geolocation.Lat, e.Geolocation.Lon)
+                    Coordinates = CreateSpatialField(e.Geolocation.Lat, e.Geolocation.Lon)
                 });
 
                 Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());

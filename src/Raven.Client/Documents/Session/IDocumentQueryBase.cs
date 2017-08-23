@@ -342,16 +342,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf CustomSortUsing(string typeName, bool descending);
 
         /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWKT will be returned
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="shapeWKT">WKT formatted shape</param>
-        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
-        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
-
-        /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.
         ///     If there is more than a single term, each of them will be checked independently.
         /// </summary>
@@ -650,11 +640,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Filter matches to be inside the specified radius
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+        TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -667,9 +658,29 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWKT will be returned
+        /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
+        /// <param name="shapeWKT">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWKT will be returned
+        /// </summary>
+        /// <param name="fieldName">Spatial field name.</param>
+        /// <param name="shapeWKT">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistance(double latitude, double longitude);
+        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
@@ -679,7 +690,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf OrderByDistanceDescending(double latitude, double longitude);
+        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
