@@ -9,10 +9,10 @@ class updateCertificatePermissionsCommand extends commandBase {
     }
     
     execute(): JQueryPromise<void> {
-        const url = endpoints.global.adminCertificates.adminCertificates; //TODO: update to new endpoint - which is not yet ready
+        const url = endpoints.global.adminCertificates.adminEditCertificate; 
         
         const payload = this.model.toUpdatePermissionsDto();
-        return this.put<void>(url, JSON.stringify(payload), null, { dataType: undefined })
+        return this.post<void>(url, JSON.stringify(payload), null, { dataType: undefined })
             .done(() => this.reportSuccess("Certificate permissions were updated successfully"))
             .fail((response: JQueryXHR) => this.reportError("Unable to update certificate permissions", response.responseText, response.statusText));
     }
