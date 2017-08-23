@@ -5,9 +5,10 @@ using System.Data;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
-using Jurassic;
-using Jurassic.Compiler;
-using Jurassic.Library;
+using Esprima;
+using Jint.Native;
+using Jint.Native.Object;
+using Jint.Runtime.Descriptors.Specialized;
 using Sparrow.Extensions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
@@ -19,32 +20,12 @@ namespace Raven.Server.Documents.Patch
     {
         private readonly DocumentDatabase _db;
         private readonly bool _enableClr;
-        private readonly List<CompiledScript> _scripts = new List<CompiledScript>();
         public readonly List<string> ScriptsSource = new List<string>();
         private const int DefaultStringSize = 50;
 
         public void AddScript(string script)
         {
-            CompiledScript compiledScript;
-            try
-            {
-                compiledScript = CompiledScript.Compile(new StringScriptSource(script),
-                    new CompilerOptions
-                    {
-                        EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
-                    });
-            }
-            catch (Exception e)
-            {
-                throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
-            }
             ScriptsSource.Add(script);
-            _scripts.Add(compiledScript);
-        }
-
-        public void AddScript(CompiledScript compiledScript)
-        {
-            _scripts.Add(compiledScript);
         }
 
         public class SingleRun
@@ -65,24 +46,30 @@ namespace Raven.Server.Documents.Patch
                 // can use
             }
 
-            public SingleRun(DocumentDatabase database, ScriptRunner runner)
+            public SingleRun(DocumentDatabase database, ScriptRunner runner, List<string> scriptsSource)
             {
                 _database = database;
                 _runner = runner;
-                ScriptEngine = new ScriptEngine
+                ScriptEngine = new Jint.Engine(options =>
                 {
-                    RecursionDepthLimit = 64,
-                    OnLoopIterationCall = OnStateLoopIteration,
-                    EnableExposedClrTypes = runner._enableClr
-                };
-                ScriptEngine.SetGlobalFunction("output", (Action<object>)OutputDebug);
+                    options.LimitRecursion(64)
+                        .MaxStatements(1000) // TODO: Maxim make this configurable
+                        .Strict();
+                });
+                //TODO: Maybe convert to ClrFunction for perf?
+                ScriptEngine.SetValue("output", (Action<object>)OutputDebug);
 
-                ScriptEngine.SetGlobalFunction("load", (Func<string, object>)LoadDocument);
-                ScriptEngine.SetGlobalFunction("del", (Func<string, string, bool>)DeleteDocument);
-                ScriptEngine.SetGlobalFunction("put", (Func<string, object, string, string>)PutDocument);
+                ScriptEngine.SetValue("load", (Func<string, object>)LoadDocument);
+                ScriptEngine.SetValue("del", (Func<string, string, bool>)DeleteDocument);
+                ScriptEngine.SetValue("put", (Func<string, object, string, string>)PutDocument);
 
-                ScriptEngine.SetGlobalFunction("id", (Func<object, string>)GetDocumentId);
-                ScriptEngine.SetGlobalFunction("lastModified", (Func<object, string>)GetLastModified);
+                ScriptEngine.SetValue("id", (Func<object, string>)GetDocumentId);
+                ScriptEngine.SetValue("lastModified", (Func<object, string>)GetLastModified);
+
+                foreach (var script in scriptsSource)
+                {
+                    ScriptEngine.Execute(script);
+                }
             }
 
 
@@ -104,15 +91,15 @@ namespace Raven.Server.Documents.Patch
                 }
                 else if (obj is ObjectInstance json)
                 {
-                    var globalValue = ScriptEngine.GetGlobalValue<ObjectInstance>("JSON");
-                    var stringified = (string)globalValue.CallMemberFunction("stringify", json);
+                    var stringified = ScriptEngine.Json.Stringify(json, Array.Empty<JsValue>())
+                        .AsString();
                     DebugOutput.Add(stringified);
                 }
-                else if (obj == Undefined.Value)
+                else if (ReferenceEquals(obj, Undefined.Instance))
                 {
                     DebugOutput.Add("undefined");
                 }
-                else if (obj == null || obj == Null.Value)
+                else if (obj == null || ReferenceEquals(obj, Null.Instance))
                 {
                     DebugOutput.Add("null");
                 }
@@ -142,7 +129,7 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.PutDocument.Add(id);
                 }
 
-                using (var reader = JurrasicBlittableBridge.Translate(_context, objectInstance,
+                using (var reader = JsBlittableBridge.Translate(_context, objectInstance,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
@@ -198,7 +185,7 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.LoadDocument.Add(id);
                 }
                 var document = _database.DocumentsStorage.Get(_context, id);
-                return TranslateToJurrasic(ScriptEngine, _context, document);
+                return TranslateToJs(ScriptEngine, _context, document);
             }
 
             public bool ReadOnly;
@@ -208,7 +195,7 @@ namespace Raven.Server.Documents.Patch
 
             public int MaxSteps;
             public int CurrentSteps;
-            private readonly ScriptEngine ScriptEngine;
+            public readonly Jint.Engine ScriptEngine;
 
             private static void ThrowTooManyLoopIterations() =>
                 throw new TimeoutException("The scripts has run for too long and was aborted by the server");
@@ -248,9 +235,9 @@ namespace Raven.Server.Documents.Patch
                 MaxSteps = 1000; // TODO: Maxim make me configurable
                 for (int i = 0; i < args.Length; i++)
                 {
-                    args[i] = TranslateToJurrasic(ScriptEngine, ctx, args[i]);
+                    args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
                 }
-                var result = ScriptEngine.CallGlobalFunction(method, args);
+                var result = ScriptEngine.Invoke(method, args);
                 return new ScriptRunnerResult(this, result);
             }
 
@@ -268,10 +255,10 @@ namespace Raven.Server.Documents.Patch
 
             public object Translate(JsonOperationContext context, object o)
             {
-                return TranslateToJurrasic(ScriptEngine, context, o);
+                return TranslateToJs(ScriptEngine, context, o);
             }
 
-            private object TranslateToJurrasic(ScriptEngine engine, JsonOperationContext context, object o)
+            private object TranslateToJs(Jint.Engine engine, JsonOperationContext context, object o)
             {
                 BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
                 {
@@ -299,23 +286,22 @@ namespace Raven.Server.Documents.Patch
                 //if (o is BlittableJsonReaderArray array)
                 //    return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)
-                    return Null.Value;
+                    return Null.Instance;
                 if (o is long)
-                    return BlittableObjectInstance.GetJurrasicNumber_TEMPORARY(o);
+                    return o;
                 if (o is List<object> l)
                 {
-                    var list = engine.Array.Construct();
                     for (int i = 0; i < l.Count; i++)
                     {
-                        list.Push(TranslateToJurrasic(ScriptEngine, context, l[i]));
+                        l[i] = TranslateToJs(ScriptEngine, context, l[i]);
                     }
-                    return list;
+                    return l;
                 }
                 // for admin
                 if (o is RavenServer || o is DocumentDatabase)
                 {
                     AssertAdminScriptInstance();
-                    return engine.Object.Construct(o);
+                    return o;
                 }
                 if (o is ObjectInstance)
                 {
@@ -335,7 +321,7 @@ namespace Raven.Server.Documents.Patch
 
             public object CreateEmptyObject()
             {
-                return ScriptEngine.Object.Construct();
+                return ScriptEngine.Object.Construct(Array.Empty<JsValue>());
             }
 
             internal static Action GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
@@ -343,50 +329,16 @@ namespace Raven.Server.Documents.Patch
                 return new SingleRun().OnStateLoopIteration;
             }
 
-            public void DefineToVarcharFunctions()
-            {
-                ScriptEngine.SetGlobalFunction("nVarchar", (Func<string, int, ObjectInstance>)ToVarchar);
-            }
-
-            public void DefineToNVarcharFunctions()
-            {
-                ScriptEngine.SetGlobalFunction("varchar", (Func<string, int, ObjectInstance>)ToVarchar);
-            }
-
-            private ObjectInstance ToVarchar(string value, int size)
-            {
-                return ScriptEngine.Object.Construct(new
-                {
-                    Type = DbType.AnsiString,
-                    Value = value,
-                    Size = size == 0 ? size : DefaultStringSize
-                });
-            }
-
-            private ObjectInstance ToNVarchar(string value, int size)
-            {
-                return ScriptEngine.Object.Construct(new
-                {
-                    Type = DbType.String,
-                    Value = value,
-                    Size = size == 0 ? size : DefaultStringSize
-                });
-            }
-
             public void SetGlobalFunction(string functionName, Delegate functionInstance)
             {
-                ScriptEngine.SetGlobalFunction(functionName,functionInstance);
+                ScriptEngine.SetValue(functionName,functionInstance);
             }
 
-            public void ExecuteScript(CompiledScript compiledScript)
-            {
-                compiledScript.Execute(ScriptEngine);
-            }
-
+            
             public object Translate(ScriptRunnerResult result, JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 if (result.Value is ObjectInstance)
-                    return result.Translate<BlittableJsonReaderObject>(_context, usageMode);
+                    return result.Translate(_context, usageMode);
 
                 return result.Value;
             }
@@ -406,11 +358,7 @@ namespace Raven.Server.Documents.Patch
         {
             if (_cache.TryDequeue(out run) == false)
             {
-                run = new SingleRun(_db, this);
-                foreach (var compiledScript in _scripts)
-                {
-                    run.ExecuteScript(compiledScript);
-                }
+                run = new SingleRun(_db, this, ScriptsSource);
             }
             Interlocked.Increment(ref Runs);
             return new ReturnRun(this, run);
@@ -445,11 +393,11 @@ namespace Raven.Server.Documents.Patch
         {
             try
             {
-                CompiledScript.Compile(new StringScriptSource(script),
-                    new CompilerOptions
-                    {
-                        EmitOnLoopIteration = SingleRun.GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
-                    });
+                var engine = new Jint.Engine(options =>
+                {
+                    options.MaxStatements(1).LimitRecursion(1);
+                });
+                engine.Execute(script);
             }
             catch (Exception e)
             {

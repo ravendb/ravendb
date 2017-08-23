@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.CompilerServices;
-using Jurassic;
-using Jurassic.Library;
+using Jint.Native;
+using Jint.Native.Array;
+using Jint.Native.Function;
+using Jint.Native.Object;
+using Jint.Native.RegExp;
 using Raven.Client;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
 {
-    public struct JurrasicBlittableBridge
+    public struct JsBlittableBridge
     {
         private readonly ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> _writer;
         private readonly BlittableJsonDocumentBuilder.UsageMode _usageMode;
@@ -17,7 +21,7 @@ namespace Raven.Server.Documents.Patch
         [ThreadStatic]
         private static HashSet<object> _recursive;
 
-        public JurrasicBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode)
+        public JsBlittableBridge(ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer> writer, BlittableJsonDocumentBuilder.UsageMode usageMode)
         {
             _writer = writer;
             _usageMode = usageMode;
@@ -37,7 +41,7 @@ namespace Raven.Server.Documents.Patch
             if (blittableObjectInstance != null)
                 WriteBlittableInstance(blittableObjectInstance);
             else
-                WriteJurrasicInstance(jsObject);
+                WriteJsInstance(jsObject);
         }
 
         private void WriteJsonValue(object parent, string propName, object value)
@@ -45,6 +49,37 @@ namespace Raven.Server.Documents.Patch
             if (value is NullObjectInstance)
             {
                 _writer.WriteValueNull();
+                return;
+            }
+            if (value is JsValue js)
+            {
+                if (js.IsBoolean())
+                    _writer.WriteValue(js.AsBoolean());
+                else if (js.IsString())
+                    _writer.WriteValue(js.AsString());
+                else if (js.IsNumber())
+                    WriteNumber(parent, propName, js.AsNumber());
+                else if (js.IsUndefined() || js.IsNull())
+                    _writer.WriteValueNull();
+                else if (js.IsArray())
+                {
+                    var arrayInstance = js.AsArray();
+                    _writer.StartWriteArray();
+                    foreach (var property in arrayInstance.GetOwnProperties())
+                    {
+                        if (property.Key == "length") continue;
+                        WriteJsonValue(arrayInstance, property.Key, property.Value.Value);
+                    }
+                    _writer.WriteArrayEnd();
+                }
+                else if (js.IsObject())
+                {
+                    WriteNestedObject(js.AsObject());
+                }
+                else
+                {
+                    throw new InvalidOperationException("Unknonw type: " + js.Type);
+                }
                 return;
             }
             WriteValue(parent, propName, value);
@@ -68,15 +103,13 @@ namespace Raven.Server.Documents.Patch
             {
                 WriteNumber(parent, propName, d);
             }
-            else if (v == Null.Value || v == Undefined.Value)
+            else if (v == null || ReferenceEquals(v, Null.Instance) || ReferenceEquals(v, Undefined.Instance))
                 _writer.WriteValueNull();
             else if (v is ArrayInstance jsArray)
             {
                 _writer.StartWriteArray();
-                foreach (var property in jsArray.Properties)
+                foreach (var property in jsArray.GetOwnProperties())
                 {
-                    if ((property.Attributes & PropertyAttributes.IsLengthProperty) == PropertyAttributes.IsLengthProperty)
-                        continue;
                     WriteValue(jsArray, property.Key as string, property.Value);
                 }
                 _writer.WriteArrayEnd();
@@ -87,23 +120,7 @@ namespace Raven.Server.Documents.Patch
             }
             else if (v is ObjectInstance obj)
             {
-                if (_recursive == null)
-                    _recursive = new HashSet<object>();
-                try
-                {
-                    if (_recursive.Add(obj))
-                        WriteInstance(obj);
-                    else
-                        _writer.WriteValueNull();
-                }
-                finally
-                {
-                    _recursive.Remove(obj);
-                }
-            }
-            else if (v is ConcatenatedString cs)
-            {
-                _writer.WriteValue(cs.ToString());
+                WriteNestedObject(obj);
             }
             else if (v is LazyStringValue lsv)
             {
@@ -120,6 +137,23 @@ namespace Raven.Server.Documents.Patch
             else
             {
                 throw new NotSupportedException(v.GetType().ToString());
+            }
+        }
+
+        private void WriteNestedObject(ObjectInstance obj)
+        {
+            if (_recursive == null)
+                _recursive = new HashSet<object>();
+            try
+            {
+                if (_recursive.Add(obj) && obj is FunctionInstance == false)
+                    WriteInstance(obj);
+                else
+                    _writer.WriteValueNull();
+            }
+            finally
+            {
+                _recursive.Remove(obj);
             }
         }
 
@@ -182,28 +216,20 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        private void WriteNumberBasedOnType(BlittableJsonToken numType)
+        private void WriteJsInstance(ObjectInstance jsObject)
         {
-            throw new NotImplementedException();
-        }
-
-        private void WriteJurrasicInstance(ObjectInstance jsObject)
-        {
-            foreach (var property in jsObject.Properties)
+            foreach (var property in jsObject.GetOwnProperties())
             {
-                var propertyName = property.Key.ToString();
+                var propertyName = property.Key;
                 if (ShouldFilterProperty(propertyName))
                     continue;
 
                 var value = property.Value;
-                if (value == null)
-                    continue;
-
-                if (value is RegExpInstance)
+                if (value == null )
                     continue;
 
                 _writer.WritePropertyName(propertyName);
-                WriteJsonValue(jsObject, propertyName, value);
+                WriteJsonValue(jsObject, propertyName, value.Value);
             }
         }
 
@@ -212,41 +238,40 @@ namespace Raven.Server.Documents.Patch
             if (obj.DocumentId != null &&
                 _usageMode == BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                var metadata = (ObjectInstance)obj[Constants.Documents.Metadata.Key];
-                metadata[Constants.Documents.Metadata.Id] = obj.DocumentId;
+                var metadata = obj.GetOrCreate(Constants.Documents.Metadata.Key);
+                metadata.Put(Constants.Documents.Metadata.Id, obj.DocumentId, false);
             }
-            var properties = obj.Properties.ToDictionary(x => x.Key.ToString(), x => x.Value);
-            foreach (var propertyIndex in obj.Blittable.GetPropertiesByInsertionOrder())
+            if (obj.Blittable != null)
             {
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                obj.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
-
-                var existInObject = properties.Remove(prop.Name, out var modifiedValue);
-
-                if (existInObject == false && obj.Deletes?.Contains(prop.Name) == true)
-                    continue;
-
-                _writer.WritePropertyName(prop.Name);
-
-                if (existInObject)
+                foreach (var propertyIndex in obj.Blittable.GetPropertiesByInsertionOrder())
                 {
-                    if (modifiedValue is FunctionInstance == false)
-                        WriteJsonValue(obj, prop.Name, modifiedValue);
-                }
-                else
-                {
-                    _writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                    var prop = new BlittableJsonReaderObject.PropertyDetails();
+
+                    obj.Blittable.GetPropertyByIndex(propertyIndex, ref prop);
+
+                    var existInObject = obj.OwnValues.Remove(prop.Name, out var modifiedValue);
+
+                    if (existInObject == false && obj.Deletes?.Contains(prop.Name) == true)
+                        continue;
+
+                    _writer.WritePropertyName(prop.Name);
+
+                    if (existInObject)
+                    {
+                        WriteJsonValue(obj, prop.Name, modifiedValue.Value);
+                    }
+                    else
+                    {
+                        _writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+                    }
                 }
             }
 
-            foreach (var modificationKvp in properties)
+            foreach (var modificationKvp in obj.OwnValues)
             {
-                if (modificationKvp.Value is FunctionInstance)
-                    continue;
-
                 _writer.WritePropertyName(modificationKvp.Key);
-                WriteJsonValue(obj, modificationKvp.Key, modificationKvp.Value);
+                var blittableObjectProperty = modificationKvp.Value;
+                WriteJsonValue(obj, modificationKvp.Key, blittableObjectProperty.Value);
             }
         }
 
@@ -273,7 +298,7 @@ namespace Raven.Server.Documents.Patch
                 writer.Reset(usageMode);
                 writer.StartWriteObjectDocument();
 
-                var jurrasicBlittableBridge = new JurrasicBlittableBridge(writer, usageMode);
+                var jurrasicBlittableBridge = new JsBlittableBridge(writer, usageMode);
                 jurrasicBlittableBridge.WriteInstance(objectInstance);
 
                 writer.FinalizeDocument();

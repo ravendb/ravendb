@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Subscriptions
             {
                 if (result.Value is bool b)
                     return b;
-                transformResult = result.Translate<BlittableJsonReaderObject>(context);
+                transformResult = result.Translate(context);
                 return transformResult != null;    
             }
         }

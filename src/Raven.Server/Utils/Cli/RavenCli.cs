@@ -602,7 +602,7 @@ namespace Raven.Server.Utils.Cli
                 }
                 else
                 {
-                    writer.WriteObject(result.Translate<BlittableJsonReaderObject>(ctx));
+                    writer.WriteObject(result.Translate(ctx));
                 }
 
                 writer.WriteEndObject();

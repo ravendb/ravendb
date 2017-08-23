@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint.Native;
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -55,12 +56,12 @@ namespace Raven.Server.Documents.Patch
                     resolved = null;
                     return true;
                 }
-                var instance = result.Get(Constants.Documents.Metadata.Key);
+                var instance = result.GetOrCreate(Constants.Documents.Metadata.Key);
                 // if user didn't specify it, we'll take it from the first doc
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
-                instance[Constants.Documents.Metadata.Collection] = _fstDocumentConflict.Collection;
-                resolved = result.Translate<BlittableJsonReaderObject>(context,
+                instance.Put(Constants.Documents.Metadata.Collection,new JsValue(_fstDocumentConflict.Collection), false);
+                resolved = result.Translate(context,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;
             }

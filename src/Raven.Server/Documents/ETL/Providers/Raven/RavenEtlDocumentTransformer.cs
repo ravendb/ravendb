@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint.Native;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -27,7 +28,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string collectionName, object document)
+        protected override void LoadToFunction(string collectionName, JsValue document)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
@@ -46,12 +47,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 {
                     id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
 
-                    var metadata = scriptRunnerResult.Get(Constants.Documents.Metadata.Key);
-                    metadata[Constants.Documents.Metadata.Collection] = collectionName;
-                    metadata[Constants.Documents.Metadata.Id] = id;
+                    var metadata = scriptRunnerResult.GetOrCreate(Constants.Documents.Metadata.Key);
+                    metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
+                    metadata.Put(Constants.Documents.Metadata.Id, id, false);
                 }
 
-                var transformed = scriptRunnerResult.Translate<BlittableJsonReaderObject>(Context);
+                var transformed = scriptRunnerResult.Translate(Context);
 
                 var transformResult = Context.ReadObject(transformed, id);
 
