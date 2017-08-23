@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -31,14 +32,14 @@ namespace Raven.Server.Documents.Patch
         public PatchDebugActions DebugActions => _run.DebugActions;
 
         public PatchDocumentCommand(
-            JsonOperationContext context, 
-            string id, 
-            LazyStringValue expectedChangeVector, 
-            bool skipPatchIfChangeVectorMismatch, 
+            JsonOperationContext context,
+            string id,
+            LazyStringValue expectedChangeVector,
+            bool skipPatchIfChangeVectorMismatch,
             (PatchRequest run, BlittableJsonReaderObject args) patch,
             (PatchRequest run, BlittableJsonReaderObject args) patchIfMissing,
-            DocumentDatabase database, 
-            bool isTest, 
+            DocumentDatabase database,
+            bool isTest,
             bool debugMode)
         {
             _externalContext = context;
@@ -120,61 +121,65 @@ namespace Raven.Server.Documents.Patch
                 documentInstance = _runIfMissing.CreateEmptyObject();
             }
 
-            BlittableJsonReaderObject modifiedDocument;
-            using (var scriptResult = _run.Run(context, "execute", new[] {documentInstance, args}))
+            // we will to acccess this value, and the original document data may be changed by
+            // the actions of the script, so we translate (which will create a clone) then use
+            // that clone later
+            var clonedDocument = (BlittableObjectInstance)_run.Translate(context, documentInstance);
+            using (var scriptResult = _run.Run(context, "execute", new object[] { clonedDocument, args }))
             {
-                modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext,
+               var  modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            }
 
-            var result = new PatchResult
-            {
-                Status = PatchStatus.NotModified,
-                OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext),
-                ModifiedDocument = modifiedDocument
-            };
+                var result = new PatchResult
+                {
+                    Status = PatchStatus.NotModified,
+                    OriginalDocument = _isTest == false ? null : clonedDocument.Blittable?.Clone(_externalContext),
+                    ModifiedDocument = modifiedDocument
+                };
 
-            if (modifiedDocument == null)
-            {
-                result.Status = PatchStatus.Skipped;
+                if (modifiedDocument == null)
+                {
+                    result.Status = PatchStatus.Skipped;
+                    PatchResult = result;
+
+                    return 1;
+                }
+
+                DocumentsStorage.PutOperationResults? putResult = null;
+
+                if (clonedDocument == null)
+                {
+                    if (_isTest == false || _run.PutOrDeleteCalled)
+                        putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
+
+                    result.Status = PatchStatus.Created;
+                }
+                else if (DocumentCompare.IsEqualTo(clonedDocument.Blittable, modifiedDocument,
+                    tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
+                {
+                    Debug.Assert(originalDocument != null);
+                    if (_isTest == false || _run.PutOrDeleteCalled)
+                        putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
+                            originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
+
+                    result.Status = PatchStatus.Patched;
+                }
+
+                if (putResult != null)
+                {
+                    result.ChangeVector = putResult.Value.ChangeVector;
+                    result.Collection = putResult.Value.Collection.Name;
+                }
+
+                if (_debugMode)
+                {
+
+                    //result.Debug = 
+                }
+
                 PatchResult = result;
-
                 return 1;
             }
-
-            DocumentsStorage.PutOperationResults? putResult = null;
-
-            if (originalDocument == null)
-            {
-                if (_isTest == false || _run.PutOrDeleteCalled)
-                    putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
-
-                result.Status = PatchStatus.Created;
-            }
-            else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument,
-                tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
-            {
-                if (_isTest == false || _run.PutOrDeleteCalled)
-                    putResult = _database.DocumentsStorage.Put(context, originalDocument.Id,
-                        originalDocument.ChangeVector, modifiedDocument, null, null, originalDocument.Flags);
-
-                result.Status = PatchStatus.Patched;
-            }
-
-            if (putResult != null)
-            {
-                result.ChangeVector = putResult.Value.ChangeVector;
-                result.Collection = putResult.Value.Collection.Name;
-            }
-
-            if (_debugMode)
-            {
-
-                //result.Debug = 
-            }
-
-            PatchResult = result;
-            return 1;
         }
 
         public void Dispose()

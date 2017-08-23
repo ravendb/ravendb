@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.LoadDocument.Add(id);
                 }
                 var document = _database.DocumentsStorage.Get(_context, id);
-                return TranslateToJurrasic(ScriptEngine, document);
+                return TranslateToJurrasic(ScriptEngine, _context, document);
             }
 
             public bool ReadOnly;
@@ -246,7 +246,7 @@ namespace Raven.Server.Documents.Patch
                 MaxSteps = 1000; // TODO: Maxim make me configurable
                 for (int i = 0; i < args.Length; i++)
                 {
-                    args[i] = TranslateToJurrasic(ScriptEngine, args[i]);
+                    args[i] = TranslateToJurrasic(ScriptEngine, ctx, args[i]);
                 }
                 var result = ScriptEngine.CallGlobalFunction(method, args);
                 return new ScriptRunnerResult(this, result);
@@ -264,7 +264,12 @@ namespace Raven.Server.Documents.Patch
             };
 #endif
 
-            private object TranslateToJurrasic(ScriptEngine engine, object o)
+            public object Translate(JsonOperationContext context, object o)
+            {
+                return TranslateToJurrasic(ScriptEngine, context, o);
+            }
+
+            private object TranslateToJurrasic(ScriptEngine engine, JsonOperationContext context, object o)
             {
                 BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
                 {
@@ -277,7 +282,7 @@ namespace Raven.Server.Documents.Patch
                     // for example, calling put() mgiht cause the original data to change 
                     // because we defrag the data that we looked at. We are handling this by
                     // ensuring that we have our own, safe, copy.
-                    var cloned = origin.Clone(_context);
+                    var cloned = origin.Clone(context);
                     _disposables.Add(cloned);
                     return cloned;
                 }
@@ -300,7 +305,7 @@ namespace Raven.Server.Documents.Patch
                     var list = engine.Array.Construct();
                     for (int i = 0; i < l.Count; i++)
                     {
-                        list.Push(TranslateToJurrasic(ScriptEngine, l[i]));
+                        list.Push(TranslateToJurrasic(ScriptEngine, context, l[i]));
                     }
                     return list;
                 }
