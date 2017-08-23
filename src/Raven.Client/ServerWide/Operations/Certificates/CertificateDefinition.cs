@@ -42,7 +42,6 @@ namespace Raven.Client.ServerWide.Operations.Certificates
         UnauthenticatedClients, //Default value
         ClusterAdmin,
         Operator,
-        DatabaseAdmin,
         ValidUser
     }
 
