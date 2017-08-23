@@ -145,16 +145,9 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                IndexStats stats = null;
+                WaitForIndexing(store);
 
-                Assert.True(SpinWait.SpinUntil(() =>
-                {
-                    stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
-                    if (stats.MapAttempts == 2)
-                        return true;
-
-                    return false;
-                }, TimeSpan.FromSeconds(5)));
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
 
                 Assert.Equal(index.Etag, stats.Etag);
                 Assert.Equal(index.Name, stats.Name);

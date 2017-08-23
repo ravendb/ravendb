@@ -166,7 +166,6 @@ namespace Voron.Data.Tables
         public long Update(long id, TableValueBuilder builder)
         {
             AssertWritableTable();
-            AssertNoReferenceToTheActiveSection(builder);
 
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
@@ -229,20 +228,20 @@ namespace Voron.Data.Tables
         }
 
         [Conditional("DEBUG")]
-        private void AssertNoReferenceToTheActiveSection(TableValueBuilder builder)
+        private void AssertNoReferenceToThisPage(TableValueBuilder builder, long id)
         {
-            if (_tx.LowLevelTransaction.Environment.Options.RunningOn32Bits)
+            if (builder == null)
                 return;
-            var page = _tx.LowLevelTransaction.GetPage(ActiveDataSmallSection.PageNumber);
-            var sectionSize = ActiveDataSmallSection.NumberOfPages * Constants.Storage.PageSize;
-            // this validation is only valid in 64 bits and assuming continious memory ranges
+
+            var pageNumber = id / Constants.Storage.PageSize;
+            var page = _tx.LowLevelTransaction.GetPage(pageNumber);
             for (int i = 0; i < builder.Count; i++)
             {
                 Slice slice;
                 using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
                 {
                     if (slice.Content.Ptr >= page.Pointer &&
-                        slice.Content.Ptr < page.Pointer + sectionSize)
+                        slice.Content.Ptr < page.Pointer + Constants.Storage.PageSize)
                     {
                         throw new InvalidOperationException(
                             "Invalid attempt to insert data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
@@ -333,7 +332,7 @@ namespace Voron.Data.Tables
             foreach (var idToMove in idsInSection)
             {
                 var pos = ActiveDataSmallSection.DirectRead(idToMove, out int itemSize);
-                var newId = AllocateFromSmallActiveSection(itemSize);
+                var newId = AllocateFromSmallActiveSection(null, itemSize);
 
                 OnDataMoved(idToMove, newId, pos, itemSize);
 
@@ -383,7 +382,6 @@ namespace Voron.Data.Tables
         public long Insert(TableValueBuilder builder)
         {
             AssertWritableTable();
-            AssertNoReferenceToTheActiveSection(builder);
 
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
@@ -396,7 +394,7 @@ namespace Voron.Data.Tables
 
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                id = AllocateFromSmallActiveSection(size);
+                id = AllocateFromSmallActiveSection(builder,size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new InvalidOperationException(
@@ -505,7 +503,7 @@ namespace Voron.Data.Tables
             long id;
             if (size + sizeof(RawDataSection.RawDataEntrySizes) < RawDataSection.MaxItemSize)
             {
-                id = AllocateFromSmallActiveSection(size);
+                id = AllocateFromSmallActiveSection(null, size);
 
                 if (ActiveDataSmallSection.TryWriteDirect(id, size, out pos) == false)
                     throw new InvalidOperationException($"After successfully allocating {size:#,#;;0} bytes, failed to write them on {Name}");
@@ -610,7 +608,7 @@ namespace Voron.Data.Tables
             return tree;
         }
 
-        private long AllocateFromSmallActiveSection(int size)
+        private long AllocateFromSmallActiveSection(TableValueBuilder builder, int size)
         {
             if (ActiveDataSmallSection.TryAllocate(size, out long id) == false)
             {
@@ -656,6 +654,7 @@ namespace Voron.Data.Tables
 
                 Debug.Assert(allocationResult);
             }
+            AssertNoReferenceToThisPage(builder, id);
             return id;
         }
 
