@@ -27,10 +27,9 @@ namespace Raven.Server.Documents.ETL
 
         public virtual void Initalize()
         {
-            _returnRun = Database.Scripts.GetScriptRunner(_key, out SingleRun);
+            _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
             if (SingleRun == null)
                 return;
-            SingleRun.ReadOnly = true;
             SingleRun.ScriptEngine.SetGlobalFunction(Transformation.LoadTo, (Action<string, object>)LoadToFunction);
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {

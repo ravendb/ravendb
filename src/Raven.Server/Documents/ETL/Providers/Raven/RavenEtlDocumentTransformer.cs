@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jurassic.Library;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -35,28 +34,29 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             if (document == null)
                 ThrowLoadParameterIsMandatory(nameof(document));
 
-            var scriptRunnerResult = new ScriptRunnerResult(document);
-
-            string id;
-
-            if (_script.IsLoadedToDefaultCollection(Current, collectionName))
+            using (var scriptRunnerResult = new ScriptRunnerResult(null, document))
             {
-                id = Current.DocumentId;
+                string id;
+
+                if (_script.IsLoadedToDefaultCollection(Current, collectionName))
+                {
+                    id = Current.DocumentId;
+                }
+                else
+                {
+                    id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
+
+                    var metadata = scriptRunnerResult.Get(Constants.Documents.Metadata.Key);
+                    metadata[Constants.Documents.Metadata.Collection] = collectionName;
+                    metadata[Constants.Documents.Metadata.Id] = id;
+                }
+
+                var transformed = scriptRunnerResult.Translate<BlittableJsonReaderObject>(Context);
+
+                var transformResult = Context.ReadObject(transformed, id);
+
+                _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));   
             }
-            else
-            {
-                id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
-
-                var metadata = scriptRunnerResult.Get(Constants.Documents.Metadata.Key);
-                metadata[Constants.Documents.Metadata.Collection] = collectionName;
-                metadata[Constants.Documents.Metadata.Id] = id;
-            }
-
-            var transformed = scriptRunnerResult.Translate<BlittableJsonReaderObject>(Context);
-
-            var transformResult = Context.ReadObject(transformed, id);
-
-            _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName, OperationType type)
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         ApplyDeleteCommands(item, OperationType.Put);
                     }
 
-                    SingleRun.Run(Context, "execute", new object[] {Current.Document});
+                    SingleRun.Run(Context, "execute", new object[] {Current.Document}).Dispose();
                 }
                 else
                     _commands.Add(new PutCommandDataWithBlittableJson(item.DocumentId, null, item.Document.Data));

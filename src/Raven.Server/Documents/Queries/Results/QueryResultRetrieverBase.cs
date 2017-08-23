@@ -418,9 +418,9 @@ namespace Raven.Server.Documents.Queries.Results
         {
             var key = new QueryKey(query.DeclaredFunctions);
 
-            using (_database.Scripts.GetScriptRunner(key, out var run))
+            using (_database.Scripts.GetScriptRunner(key, true, out var run))
+            using(var result = run.Run(_context as DocumentsOperationContext, methodName, args))
             {
-                var result = run.Run(_context as DocumentsOperationContext, methodName, args);
                 if (result.IsNull)
                     return null;
 

@@ -52,10 +52,8 @@ namespace Raven.Server.Documents.TcpHandlers
         private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription,
             long startEtag, SubscriptionPatchDocument patch)
         {
-            using (_db.Scripts.GetScriptRunner(patch?.Key, out var run))
+            using (_db.Scripts.GetScriptRunner(patch?.Key,true, out var run))
             {
-                if (run != null)
-                    run.ReadOnly = true;
                 foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
                     docsContext,
                     subscription.Criteria.Collection,
@@ -107,10 +105,8 @@ namespace Raven.Server.Documents.TcpHandlers
             long startEtag, SubscriptionPatchDocument patch)
         {
             var collectionName = new CollectionName(subscription.Criteria.Collection);
-            using (_db.Scripts.GetScriptRunner(patch?.Key, out var run))
+            using (_db.Scripts.GetScriptRunner(patch?.Key, true, out var run))
             {
-                if (run != null)
-                    run.ReadOnly = true;
                 foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
                 {
                     var item = (revisionTuple.current ?? revisionTuple.previous);

@@ -59,14 +59,15 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             if (cols == null)
                 ThrowLoadParameterIsMandatory(nameof(cols));
 
-            var result = new ScriptRunnerResult(cols);
-            var blittableJsonReaderObject = result.Translate<BlittableJsonReaderObject>(Context);
-            var columns = new List<SqlColumn>(blittableJsonReaderObject.Count);
+            BlittableJsonReaderObject result;
+            using (var scriptResult = new ScriptRunnerResult(null, cols))
+                result = scriptResult.Translate<BlittableJsonReaderObject>(Context);
+            var columns = new List<SqlColumn>(result.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
-            for (var i = 0; i < blittableJsonReaderObject.Count; i++)
+            for (var i = 0; i < result.Count; i++)
             {
-                blittableJsonReaderObject.GetPropertyByIndex(i, ref prop);
+                result.GetPropertyByIndex(i, ref prop);
 
                 var sqlColumn = new SqlColumn
                 {
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
             {
                 Current = item;
 
-                SingleRun.Run(Context, "execute", new object[] { Current.Document });
+                SingleRun.Run(Context, "execute", new object[] { Current.Document }).Dispose();
             }
 
             // ReSharper disable once ForCanBeConvertedToForeach
