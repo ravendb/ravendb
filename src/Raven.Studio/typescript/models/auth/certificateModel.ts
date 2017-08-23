@@ -4,22 +4,22 @@ import certificatePermissionModel = require("models/auth/certificatePermissionMo
 
 class certificateModel {
 
-    static securityClearanceTypes: valueAndLabelItem<securityClearanceTypes, string>[] = [
+    static securityClearanceTypes: valueAndLabelItem<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance, string>[] = [
         {
             label: "Cluster Administator",
             value: "ClusterAdmin"
         }, {
-            label: "Operations", 
-            value: "Operations"
+            label: "Operator", 
+            value: "Operator"
         }, {
             label: "User",
-            value: "User"
+            value: "ValidUser"
         }];
     
     mode = ko.observable<certificateMode>();
     
     name = ko.observable<string>();
-    securityClearance = ko.observable<securityClearanceTypes>("User");
+    securityClearance = ko.observable<Raven.Client.ServerWide.Operations.Certificates.SecurityClearance>("ValidUser");
     
     certificateAsBase64 = ko.observable<string>();
     certificatePassphrase = ko.observable<string>();
@@ -51,8 +51,12 @@ class certificateModel {
                 return "";
             }
             
-            return certificateModel.securityClearanceTypes.find(x => x.value === clearance).label;
+            return certificateModel.clearanceLabelFor(clearance);
         })
+    }
+    
+    static clearanceLabelFor(input: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
+        return certificateModel.securityClearanceTypes.find(x => x.value === input).label;
     }
 
     private initValidation() {
@@ -69,7 +73,7 @@ class certificateModel {
         });
     }
 
-    setClearanceMode(mode: securityClearanceTypes) {
+    setClearanceMode(mode: Raven.Client.ServerWide.Operations.Certificates.SecurityClearance) {
         this.securityClearance(mode);
     }
 
@@ -104,7 +108,7 @@ class certificateModel {
     }
     
     private serializePermissions() : dictionary<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess> {
-        if (this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "Operations") {
+        if (this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "Operator") {
             return null;
         } 
         
@@ -127,7 +131,7 @@ class certificateModel {
     static fromDto(dto: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         const model = new certificateModel("editExisting");
         model.name(dto.Name);
-        model.securityClearance("ClusterAdmin"); ///TODO: dto.SecurityClearance
+        model.securityClearance(dto.SecurityClearance);
         model.thumbprint(dto.Thumbprint);
         
         model.permissions(_.map(dto.Permissions, (access, databaseName) => {
