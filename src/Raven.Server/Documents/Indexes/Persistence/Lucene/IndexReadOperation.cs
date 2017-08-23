@@ -327,7 +327,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
                             var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
 
-                            point = new PointImpl(cLongitude, cLatitude, spatialField.GetContext()).GetCenter();
+                            point = spatialField.ReadPoint(cLatitude, cLongitude).GetCenter();
                             break;
                         case MethodType.Wkt:
                             var wkt = field.Arguments[0].GetString(query.QueryParameters);
@@ -341,7 +341,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                             var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
                             var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
 
-                            point = new PointImpl(pLongitude, pLatitude, spatialField.GetContext()).GetCenter();
+                            point = spatialField.ReadPoint(pLatitude, pLongitude).GetCenter();
                             break;
                         default:
                             throw new ArgumentOutOfRangeException();

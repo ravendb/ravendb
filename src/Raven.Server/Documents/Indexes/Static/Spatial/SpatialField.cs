@@ -120,10 +120,10 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             return _shapeStringReadWriter.WriteShape(shape);
         }
 
-        public Shape ReadCircle(double radius, double latitute, double longitude, SpatialUnits? unitOverride)
+        public Shape ReadCircle(double radius, double latitude, double longitude, SpatialUnits? unitOverride)
         {
             var context = GetContext();
-            var point = new NtsPoint(new NetTopologySuite.Geometries.Point(longitude, latitute), context);
+            var point = new NtsPoint(new NetTopologySuite.Geometries.Point(longitude, latitude), context);
 
             if (_options.Type == SpatialFieldType.Geography)
             {
@@ -132,6 +132,12 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
             }
 
             return new CircleImpl(point, radius, context);
+        }
+
+        public Shape ReadPoint(double latitude, double longitude)
+        {
+            var context = GetContext();
+            return new NtsPoint(new NetTopologySuite.Geometries.Point(longitude, latitude), context);
         }
     }
 }
