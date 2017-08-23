@@ -410,47 +410,48 @@ namespace Raven.Client.Documents.Session
         /// <param name="latitude">The latitude.</param>
         /// <param name="longitude">The longitude.</param>
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
-        public IAsyncDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
-            return GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
+            WithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
+            return this;
         }
 
         /// <summary>
         /// Filter matches to be inside the specified radius
         /// </summary>
-        public IAsyncDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
-            return GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
-        }
-
-        public IAsyncDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
-        {
-            return GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
-        }
-
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance()
-        {
-            OrderBy(Constants.Documents.Indexing.Fields.DistanceFieldName);
+            WithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
             return this;
         }
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            Spatial(fieldName, shapeWKT, relation, distanceErrorPct);
             return this;
         }
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(double latitude, double longitude)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
+            OrderByDistance(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistance(fieldName, latitude, longitude);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(double latitude, double longitude)
+        {
+            OrderByDistanceDescending(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            return this;
+        }
+
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(fieldName, latitude, longitude);
             return this;
         }
 
@@ -689,8 +690,9 @@ namespace Raven.Client.Documents.Session
 
         public IAsyncDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            var criteria = clause(new SpatialCriteriaFactory());
-            return GenerateSpatialQueryData(fieldName, criteria);
+            var criteria = clause(SpatialCriteriaFactory.Instance);
+            Spatial(fieldName, criteria);
+            return this;
         }
 
         public IAsyncDocumentQuery<T> SetTransformerParameters(Parameters parameters)
@@ -724,7 +726,11 @@ namespace Raven.Client.Documents.Session
         /// <param name="ordering">Ordering type.</param>
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending, ordering);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
@@ -754,7 +760,12 @@ namespace Raven.Client.Documents.Session
         /// <param name = "ordering">Ordering type.</param>
         public IAsyncDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
+            var fieldName = GetMemberQueryPath(propertySelector.Body);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
@@ -1091,7 +1102,6 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
-                DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
@@ -1106,7 +1116,8 @@ namespace Raven.Client.Documents.Session
                 ShowQueryTimings = ShowQueryTimings,
                 LastEquality = LastEquality,
                 ShouldExplainScores = ShouldExplainScores,
-                IsIntersect = IsIntersect
+                IsIntersect = IsIntersect,
+                DefaultOperator = DefaultOperator
             };
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);

@@ -18,7 +18,7 @@ namespace SlowTests.MailingList
 {
     public class TransformResultsWithProjection : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public void CanGetProjectedResultsWhenUsingTransformWithInMemory()
         {
             using (var store = GetDocumentStore())
@@ -67,9 +67,8 @@ namespace SlowTests.MailingList
                     .Customize(
                         x =>
                             x.WaitForNonStaleResults().SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(true))
-                    .Customize(x => x.WithinRadiusOf("Coordinates", 20, 52.5158768,
-                        longitude: -1.7306246)
-                        .SortByDistance())
+                    .Spatial(x => x.Coordinates, x => x.WithinRadius(20, 52.5158768, -1.7306246))
+                    .OrderByDistance(x => x.Coordinates, 52.5158768, -1.7306246)
                     .Where(x => x.AppointmentDate != null)
                     .ProjectFromIndexFieldsInto<ServiceCalls_Index.Result>()
                     .TransformWith<NearbyServiceCallTransformer, NearbyServiceCallItemViewModel>()
@@ -167,6 +166,8 @@ namespace SlowTests.MailingList
 
                 public double GeoLatitude { get; set; }
                 public double GeoLongitude { get; set; }
+
+                public string Coordinates { get; set; }
             }
         }
     }

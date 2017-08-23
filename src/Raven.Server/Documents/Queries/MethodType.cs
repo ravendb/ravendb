@@ -11,6 +11,13 @@
         Exact,
         Count,
         Sum,
-        Intersect
+        Intersect,
+
+        Circle,
+        Wkt,
+        Within,
+        Contains,
+        Disjoint,
+        Intersects
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Server.Documents.Indexes
 {
@@ -18,7 +19,9 @@ namespace Raven.Server.Documents.Indexes
         public FieldIndexing Indexing { get; set; }
 
         public FieldTermVector TermVector { get; set; }
-        
+
+        public SpatialOptions Spatial { get; set; }
+
         public bool HasSuggestions { get; set; }
 
         public IndexField()
@@ -52,8 +55,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
-                        
-            // options.Spatial // TODO [ppekrol]
+
+            if (options.Spatial != null)
+                field.Spatial = new SpatialOptions(options.Spatial);
 
             return field;
         }

@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
                     break;
                 case IndexType.MapReduce:
                     var staticMapReduceIndex = (MapReduceIndex)index;
-                    source = staticMapReduceIndex.Compiled.Source;
+                    source = staticMapReduceIndex._compiled.Source;
                     break;
             }
 

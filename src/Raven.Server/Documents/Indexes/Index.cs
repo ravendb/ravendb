@@ -13,6 +13,7 @@ using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -25,6 +26,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Static;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
@@ -160,6 +162,8 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
         private Func<bool> _indexValidationStalenessCheck = () => true;
+
+        private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
         private string IndexingThreadName => "Indexing of " + Name + " of " + _indexStorage.DocumentDatabase.Name;
 
@@ -557,7 +561,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
-                    
+
                 _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
@@ -799,7 +803,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
-                                        
+
                                         TimeSpentIndexing.Stop();
 
                                         // If we are here, then the previous block did not throw. There's two
@@ -1149,7 +1153,7 @@ namespace Raven.Server.Documents.Indexes
                 databaseContext.PersistentContext.LongLivedTransactions = true;
 
                 using (var tx = indexContext.OpenWriteTransaction())
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, indexContext))
+                using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
@@ -1716,12 +1720,12 @@ namespace Raven.Server.Documents.Indexes
                             if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, token.Token);
+                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, token.Token);
+                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
                             }
 
                             var includeDocumentsCommand = new IncludeDocumentsCommand(
@@ -1831,7 +1835,7 @@ namespace Raven.Server.Documents.Indexes
 
                             using (var reader = IndexPersistence.OpenFacetedIndexReader(indexTx.InnerTransaction))
                             {
-                                result.Results = reader.FacetedQuery(query, indexContext, token.Token);
+                                result.Results = reader.FacetedQuery(query, indexContext, GetOrAddSpatialField, token.Token);
                                 return result;
                             }
                         }
@@ -1951,10 +1955,7 @@ namespace Raven.Server.Documents.Indexes
                                 includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
                                 DocumentDatabase.TransformerStore, documentsContext))
                         {
-                            var documents = reader.MoreLikeThis(query, stopWords,
-                                fieldsToFetch =>
-                                    GetQueryResultRetriever(null, documentsContext,
-                                        new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, token.Token);
+                            var documents = reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, GetOrAddSpatialField, token.Token);
                             var results = scope != null ? scope.Transform(documents) : documents;
 
                             foreach (var document in results)
@@ -1999,7 +2000,7 @@ namespace Raven.Server.Documents.Indexes
                 }
 
                 var totalResults = new Reference<int>();
-                foreach (var indexEntry in reader.IndexEntries(query, totalResults, documentsContext, token.Token))
+                foreach (var indexEntry in reader.IndexEntries(query, totalResults, documentsContext, GetOrAddSpatialField, token.Token))
                 {
                     result.AddResult(indexEntry);
                 }
@@ -2091,8 +2092,7 @@ namespace Raven.Server.Documents.Indexes
         {
             // the catch all field name means that we have dynamic fields names
 
-            if (IndexPersistence.ContainsField(f) || 
-                IndexPersistence.ContainsField("_"))
+            if (Definition.HasDynamicFields || IndexPersistence.ContainsField(f))
                 return;
 
             ThrowInvalidField(f);
@@ -2480,6 +2480,40 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
+        public override string ToString()
+        {
+            return Name;
+        }
+
+        public void LowMemory()
+        {
+            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
+            _allocationCleanupNeeded = true;
+            _batchProcessCancellationTokenSource?.Cancel();
+        }
+
+        /// <summary>
+        /// We don't need to do anything when the low memory problem is over,
+        /// the class will automatically raise memory usage.
+        /// </summary>
+        public void LowMemoryOver()
+        {
+        }
+
+        internal SpatialField GetOrAddSpatialField(string name)
+        {
+            return _spatialFields.GetOrAdd(name, n =>
+            {
+                SpatialOptions spatialOptions;
+                if (Definition.MapFields.TryGetValue(name, out var field) == false || field.Spatial == null)
+                    spatialOptions = new SpatialOptions();
+                else
+                    spatialOptions = field.Spatial;
+
+                return new SpatialField(name, spatialOptions);
+            });
+        }
+
         private struct QueryDoneRunning : IDisposable
         {
             readonly Index _parent;
@@ -2517,26 +2551,6 @@ namespace Raven.Server.Documents.Indexes
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
                 _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
             }
-        }
-
-        public override string ToString()
-        {
-            return Name;
-        }
-
-        public void LowMemory()
-        {
-            _currentMaximumAllowedMemory = DefaultMaximumMemoryAllocation;
-            _allocationCleanupNeeded = true;
-            _batchProcessCancellationTokenSource?.Cancel();
-        }
-
-        /// <summary>
-        /// We don't need to do anything when the low memory problem is over,
-        /// the class will automatically raise memory usage.
-        /// </summary>
-        public void LowMemoryOver()
-        {
         }
     }
 }

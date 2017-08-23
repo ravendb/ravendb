@@ -82,8 +82,10 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
+                    _converter = new AnonymousLuceneDocumentConverter(fields, index.GetOrAddSpatialField, _index.IsMultiMap, reduceOutput: true);
+                    break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, index.GetOrAddSpatialField, _index.IsMultiMap);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
@@ -119,7 +121,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 });
             }
         }
-        
+
         public void Clean()
         {
             _converter?.Clean();

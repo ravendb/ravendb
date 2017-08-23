@@ -8,6 +8,7 @@
         Double,
         AlphaNumeric,
         Random,
-        Score
+        Score,
+        Distance
     }
 }

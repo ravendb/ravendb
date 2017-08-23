@@ -12,6 +12,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.MoreLikeThis;
 using Raven.Server.Documents.Queries.Parser;
@@ -23,6 +24,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Spatial4n.Core.Shapes.Impl;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
 
@@ -65,14 +67,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _searcher.IndexReader.NumDocs();
         }
 
-        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> Query(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var pageSize = GetPageSize(_searcher, query.PageSize);
             var docsToGet = pageSize;
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
-            var sort = GetSort(query);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var sort = GetSort(query, getSpatialField);
             var returnedResults = 0;
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
@@ -124,7 +126,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> IntersectQuery(IndexQueryServerSide query, FieldsToFetch fieldsToFetch, Reference<int> totalResults, Reference<int> skippedResults, IQueryResultRetriever retriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             if (query.Metadata.Query.Where.Type != OperatorType.Method)
                 throw new InvalidQueryException($"Invalid intersect query. WHERE clause must contains just an intersect() method call while it got {query.Metadata.Query.Where.Type} expression", query.Metadata.QueryText, query.QueryParameters);
@@ -146,7 +148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (whereExpression == null)
                     throw new InvalidQueryException($"Invalid intersect query. The intersect clause at position {i} isn't a valid expression", query.Metadata.QueryText, query.QueryParameters);
 
-                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer);
+                subQueries[i] = GetLuceneQuery(documentsContext, query.Metadata, whereExpression, query.QueryParameters, _analyzer, getSpatialField);
             }
 
             //Not sure how to select the page size here??? The problem is that only docs in this search can be part 
@@ -157,7 +159,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             int previousBaseQueryMatches = 0;
 
             var firstSubDocumentQuery = subQueries[0];
-            var sort = GetSort(query);
+            var sort = GetSort(query, getSpatialField);
 
             using (var scope = new IndexQueryingScope(_indexType, query, fieldsToFetch, _searcher, retriever, _state))
             {
@@ -285,7 +287,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return false;
         }
 
-        private static Sort GetSort(IndexQueryServerSide query)
+        private static Sort GetSort(IndexQueryServerSide query, Func<string, SpatialField> getSpatialField)
         {
             var orderByFields = query.Metadata.OrderBy;
 
@@ -298,13 +300,41 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             {
                 if (field.OrderingType == OrderByFieldType.Random)
                 {
-                    sort.Add(new RandomSortField(field.Name));
+                    string value = null;
+                    if (field.Arguments != null && field.Arguments.Length > 0)
+                        value = field.Arguments[0].NameOrValue;
+
+                    sort.Add(new RandomSortField(value));
                     continue;
                 }
 
                 if (field.OrderingType == OrderByFieldType.Score)
                 {
                     sort.Add(SortField.FIELD_SCORE);
+                    continue;
+                }
+
+                if (field.OrderingType == OrderByFieldType.Distance)
+                {
+                    var spatialField = getSpatialField(field.Name);
+
+                    double latitude;
+                    var latArgument = field.Arguments[0];
+                    if (latArgument.Type != ValueTokenType.Parameter)
+                        latitude = double.Parse(latArgument.NameOrValue);
+                    else
+                        query.QueryParameters.TryGet(latArgument.NameOrValue, out latitude);
+
+                    double longitude;
+                    var lngArgument = field.Arguments[1];
+                    if (latArgument.Type != ValueTokenType.Parameter)
+                        longitude = double.Parse(lngArgument.NameOrValue);
+                    else
+                        query.QueryParameters.TryGet(lngArgument.NameOrValue, out longitude);
+
+                    var point = new PointImpl(longitude, latitude, spatialField.GetContext());
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point.GetCenter());
+                    sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
                     continue;
                 }
 
@@ -367,7 +397,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return results;
         }
 
-        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<Document> MoreLikeThis(MoreLikeThisQueryServerSide query, HashSet<string> stopWords, Func<SelectField[], IQueryResultRetriever> createRetriever, JsonOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var documentQuery = new BooleanQuery();
 
@@ -406,7 +436,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (query.Metadata.WhereFields.Count > 0)
             {
-                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer);
+                var additionalQuery = QueryBuilder.BuildQuery(documentsContext, query.Metadata, query.Metadata.Query.Where, null, _analyzer, getSpatialField);
                 mltQuery = new BooleanQuery
                     {
                         {mltQuery, Occur.MUST},
@@ -443,13 +473,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, CancellationToken token)
+        public IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<int> totalResults, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField, CancellationToken token)
         {
             var docsToGet = GetPageSize(_searcher, query.PageSize);
             var position = query.Start;
 
-            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer);
-            var sort = GetSort(query);
+            var luceneQuery = GetLuceneQuery(documentsContext, query.Metadata, query.QueryParameters, _analyzer, getSpatialField);
+            var sort = GetSort(query, getSpatialField);
 
             var search = ExecuteQuery(luceneQuery, query.Start, docsToGet, sort);
             var termsDocs = IndexedTerms.ReadAllEntriesFromIndex(_searcher.IndexReader, documentsContext, _state);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -129,7 +128,11 @@ namespace Raven.Client.Documents.Session
         /// <param name="ordering">Ordering type.</param>
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.AddOrder(string fieldName, bool descending, OrderingType ordering)
         {
-            AddOrder(fieldName, descending, ordering);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
@@ -141,7 +144,12 @@ namespace Raven.Client.Documents.Session
         /// <param name="ordering">Ordering type.</param>
         public IDocumentQuery<T> AddOrder<TValue>(Expression<Func<T, TValue>> propertySelector, bool descending, OrderingType ordering)
         {
-            AddOrder(GetMemberQueryPath(propertySelector.Body), descending, ordering);
+            var fieldName = GetMemberQueryPath(propertySelector.Body);
+            if (descending)
+                OrderByDescending(fieldName, ordering);
+            else
+                OrderBy(fieldName, ordering);
+
             return this;
         }
 
@@ -651,45 +659,45 @@ namespace Raven.Client.Documents.Session
         /// <param name="latitude">The latitude.</param>
         /// <param name="longitude">The longitude.</param>
         /// <param name="radiusUnits">The units of the <paramref name="radius"/>.</param>
-        public IDocumentQuery<T> WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
-            return GenerateQueryWithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
-        }
-
-        public IDocumentQuery<T> WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = Indexes.Spatial.SpatialUnits.Kilometers)
-        {
-            return GenerateQueryWithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits: radiusUnits);
-        }
-
-        public IDocumentQuery<T> RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = 0.025)
-        {
-            return GenerateSpatialQueryData(fieldName, shapeWKT, rel, distanceErrorPct);
-        }
-
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance()
-        {
-            OrderBy(Constants.Documents.Indexing.Fields.DistanceFieldName);
+            WithinRadiusOf(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
             return this;
         }
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distanceErrorPct)
         {
-            OrderBy(string.Format("{0};{1};{2}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString()));
+            WithinRadiusOf(fieldName, radius, latitude, longitude, radiusUnits, distanceErrorPct);
             return this;
         }
 
-        /// <summary>
-        /// Sorts the query results by distance.
-        /// </summary>
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.SortByDistance(double lat, double lng, string spatialFieldName)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct)
         {
-            OrderBy(string.Format("{0};{1};{2};{3}", Constants.Documents.Indexing.Fields.DistanceFieldName, lat.ToInvariantString(), lng.ToInvariantString(), spatialFieldName));
+            Spatial(fieldName, shapeWKT, relation, distanceErrorPct);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(double latitude, double longitude)
+        {
+            OrderByDistance(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistance(fieldName, latitude, longitude);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(double latitude, double longitude)
+        {
+            OrderByDistanceDescending(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, latitude, longitude);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude)
+        {
+            OrderByDistanceDescending(fieldName, latitude, longitude);
             return this;
         }
 
@@ -926,8 +934,9 @@ namespace Raven.Client.Documents.Session
 
         public IDocumentQuery<T> Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
         {
-            var criteria = clause(new SpatialCriteriaFactory());
-            return GenerateSpatialQueryData(fieldName, criteria);
+            var criteria = clause(SpatialCriteriaFactory.Instance);
+            Spatial(fieldName, criteria);
+            return this;
         }
 
         public T First()
@@ -1105,9 +1114,10 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 TransformResultsFunc = TransformResultsFunc,
                 Includes = new HashSet<string>(Includes),
-                DistanceErrorPct = DistanceErrorPct,
                 RootTypes = { typeof(T) },
                 BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                AfterQueryExecutedCallback = AfterQueryExecutedCallback,
+                AfterStreamExecutedCallback = AfterStreamExecutedCallback,
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
                 HighlighterPreTags = HighlighterPreTags,
                 HighlighterPostTags = HighlighterPostTags,
@@ -1117,9 +1127,9 @@ namespace Raven.Client.Documents.Session
                 DisableCaching = DisableCaching,
                 ShowQueryTimings = ShowQueryTimings,
                 LastEquality = LastEquality,
-                DefaultOperator = DefaultOperator,
                 ShouldExplainScores = ShouldExplainScores,
-                IsIntersect = IsIntersect
+                IsIntersect = IsIntersect,
+                DefaultOperator = DefaultOperator
             };
 
             query.AfterQueryExecuted(AfterQueryExecutedCallback);

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Voron;
@@ -13,6 +14,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadDocumentStats;
         private readonly DocumentsStorage _documentsStorage;
         private readonly DocumentsOperationContext _documentsContext;
+        private readonly Func<string, SpatialField> _getSpatialField;
 
         /// [collection: [key: [referenceKeys]]]
         public Dictionary<string, Dictionary<string, HashSet<Slice>>> ReferencesByCollection;
@@ -27,20 +29,24 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string SourceCollection;
 
+        public readonly TransactionOperationContext IndexContext;
+
+        public readonly IndexDefinitionBase IndexDefinition;
+
+        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, IndexDefinitionBase indexDefinition, TransactionOperationContext indexContext, Func<string, SpatialField> getSpatialField)
+        {
+            _documentsStorage = documentsStorage;
+            _documentsContext = documentsContext;
+            IndexDefinition = indexDefinition;
+            IndexContext = indexContext;
+            _getSpatialField = getSpatialField;
+        }
+
         public void SetSourceCollection(string collection, IndexingStatsScope stats)
         {
             SourceCollection = collection;
             _stats = stats;
             _loadDocumentStats = null;
-        }
-
-        public TransactionOperationContext IndexContext { get; }
-
-        public CurrentIndexingScope(DocumentsStorage documentsStorage, DocumentsOperationContext documentsContext, TransactionOperationContext indexContext)
-        {
-            _documentsStorage = documentsStorage;
-            _documentsContext = documentsContext;
-            IndexContext = indexContext;
         }
 
         public unsafe dynamic LoadDocument(LazyStringValue keyLazy, string keyString, string collectionName)
@@ -105,6 +111,11 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+        
+        public SpatialField GetOrCreateSpatialField(string name)
+        {
+            return _getSpatialField(name);
         }
 
         public void Dispose()

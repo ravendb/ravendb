@@ -6,14 +6,18 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using Lucene.Net.Analysis;
 using Lucene.Net.Search;
+using Lucene.Net.Spatial.Queries;
 using Raven.Client;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries.LuceneIntegration;
 using Sparrow.Json;
+using Spatial4n.Core.Shapes;
 using Query = Raven.Server.Documents.Queries.Parser.Query;
 using Version = Lucene.Net.Util.Version;
 
@@ -21,11 +25,11 @@ namespace Raven.Server.Documents.Queries
 {
     public static class QueryBuilder
     {
-        public static Lucene.Net.Search.Query BuildQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        public static Lucene.Net.Search.Query BuildQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
             using (CultureHelper.EnsureInvariantCulture())
             {
-                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer);
+                var luceneQuery = ToLuceneQuery(context, metadata.Query, whereExpression, metadata, parameters, analyzer, getSpatialField);
 
                 // The parser already throws parse exception if there is a syntax error.
                 // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
@@ -33,7 +37,7 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static Lucene.Net.Search.Query ToLuceneQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, bool exact = false)
+        private static Lucene.Net.Search.Query ToLuceneQuery(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact = false)
         {
             if (expression == null)
                 return new MatchAllDocsQuery();
@@ -162,17 +166,17 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.AndNot:
                     var andPrefix = expression.Type == OperatorType.AndNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                     return LuceneQueryHelper.And(
-                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, exact),
+                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, getSpatialField, exact),
                         LucenePrefixOperator.None,
-                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, exact),
+                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, getSpatialField, exact),
                         andPrefix);
                 case OperatorType.Or:
                 case OperatorType.OrNot:
                     var orPrefix = expression.Type == OperatorType.OrNot ? LucenePrefixOperator.Minus : LucenePrefixOperator.None;
                     return LuceneQueryHelper.Or(
-                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, exact),
+                        ToLuceneQuery(context, query, expression.Left, metadata, parameters, analyzer, getSpatialField, exact),
                         LucenePrefixOperator.None,
-                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, exact),
+                        ToLuceneQuery(context, query, expression.Right, metadata, parameters, analyzer, getSpatialField, exact),
                         orPrefix);
                 case OperatorType.True:
                     return new MatchAllDocsQuery();
@@ -185,7 +189,7 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Search:
                             return HandleSearch(query, expression, metadata, parameters, analyzer);
                         case MethodType.Boost:
-                            return HandleBoost(context, query, expression, metadata, parameters, analyzer, exact);
+                            return HandleBoost(context, query, expression, metadata, parameters, analyzer, getSpatialField, exact);
                         case MethodType.StartsWith:
                             return HandleStartsWith(query, expression, metadata, parameters);
                         case MethodType.EndsWith:
@@ -195,11 +199,16 @@ namespace Raven.Server.Documents.Queries
                         case MethodType.Exists:
                             return HandleExists(query, expression, metadata);
                         case MethodType.Exact:
-                            return HandleExact(context, query, expression, metadata, parameters, analyzer);
+                            return HandleExact(context, query, expression, metadata, parameters, analyzer, getSpatialField);
                         case MethodType.Count:
-                            return HandleCount(context, query, expression, metadata, parameters, analyzer);
+                            return HandleCount(context, query, expression, metadata, parameters, analyzer, getSpatialField);
                         case MethodType.Sum:
-                            return HandleSum(context, query, expression, metadata, parameters, analyzer);
+                            return HandleSum(context, query, expression, metadata, parameters, analyzer, getSpatialField);
+                        case MethodType.Within:
+                        case MethodType.Contains:
+                        case MethodType.Disjoint:
+                        case MethodType.Intersects:
+                            return HandleSpatial(query, expression, metadata, parameters, methodType, getSpatialField);
                         default:
                             QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
                             break;
@@ -309,12 +318,12 @@ namespace Raven.Server.Documents.Queries
             return LuceneQueryHelper.Term(fieldName, valueAsString, LuceneTermType.WildCard);
         }
 
-        private static Lucene.Net.Search.Query HandleBoost(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, bool exact)
+        private static Lucene.Net.Search.Query HandleBoost(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField, bool exact)
         {
             var boost = float.Parse(QueryExpression.Extract(query.QueryText, (ValueToken)expression.Arguments[1]));
             expression = (QueryExpression)expression.Arguments[0];
 
-            var q = ToLuceneQuery(context, query, expression, metadata, parameters, analyzer, exact);
+            var q = ToLuceneQuery(context, query, expression, metadata, parameters, analyzer, getSpatialField, exact);
             q.Boost = boost;
 
             return q;
@@ -323,7 +332,7 @@ namespace Raven.Server.Documents.Queries
         private static Lucene.Net.Search.Query HandleSearch(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
         {
             string fieldName;
-            if(expression.Arguments[0] is FieldToken ft)
+            if (expression.Arguments[0] is FieldToken ft)
                 fieldName = ExtractIndexFieldName(query.QueryText, ft, metadata);
             else if (expression.Arguments[0] is ValueToken vt)
                 fieldName = ExtractIndexFieldName(query.QueryText, vt, metadata);
@@ -331,10 +340,10 @@ namespace Raven.Server.Documents.Queries
                 throw new InvalidOperationException("search() method can only be called with an identifier or string, but was called with " + expression.Arguments[0]);
 
             var (value, valueType) = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
-            
+
             if (valueType != ValueTokenType.String)
                 ThrowMethodExpectsArgumentOfTheFollowingType("search", ValueTokenType.String, valueType, metadata.QueryText, parameters);
-            
+
             Debug.Assert(metadata.IsDynamic == false || metadata.WhereFields[fieldName].IsFullTextSearch);
 
             var valueAsString = (string)value;
@@ -381,12 +390,120 @@ namespace Raven.Server.Documents.Queries
             }
         }
 
-        private static Lucene.Net.Search.Query HandleExact(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        private static Lucene.Net.Search.Query HandleSpatial(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, MethodType spatialMethod, Func<string, SpatialField> getSpatialField)
         {
-            return ToLuceneQuery(context, query, (QueryExpression)expression.Arguments[0], metadata, parameters, analyzer, exact: true);
+            var fieldName = ExtractIndexFieldName(query.QueryText, (FieldToken)expression.Arguments[0], metadata);
+            var shapeExpression = (QueryExpression)expression.Arguments[1];
+
+            var distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct;
+            if (expression.Arguments.Count == 3)
+            {
+                var distanceErrorPctValue = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[2]);
+                distanceErrorPct = (double)distanceErrorPctValue.Value;
+            }
+
+            var spatialField = getSpatialField(fieldName);
+
+            var methodName = QueryExpression.Extract(metadata.Query.QueryText, shapeExpression.Field);
+            var methodType = QueryMethod.GetMethodType(methodName);
+
+            Shape shape = null;
+            switch (methodType)
+            {
+                case MethodType.Circle:
+                    shape = HandleCircle(query, shapeExpression, metadata, parameters, fieldName, spatialField);
+                    break;
+                case MethodType.Wkt:
+                    shape = HandleWkt(query, shapeExpression, metadata, parameters, fieldName, spatialField);
+                    break;
+                default:
+                    QueryMethod.ThrowMethodNotSupported(methodType, metadata.QueryText, parameters);
+                    break;
+            }
+
+            Debug.Assert(shape != null);
+
+            SpatialOperation operation = null;
+            switch (spatialMethod)
+            {
+                case MethodType.Within:
+                    operation = SpatialOperation.IsWithin;
+                    break;
+                case MethodType.Contains:
+                    operation = SpatialOperation.Contains;
+                    break;
+                case MethodType.Disjoint:
+                    operation = SpatialOperation.IsDisjointTo;
+                    break;
+                case MethodType.Intersects:
+                    operation = SpatialOperation.Intersects;
+                    break;
+                default:
+                    QueryMethod.ThrowMethodNotSupported(spatialMethod, metadata.QueryText, parameters);
+                    break;
+            }
+
+            Debug.Assert(operation != null);
+
+            var args = new SpatialArgs(operation, shape)
+            {
+                DistErrPct = distanceErrorPct
+            };
+
+            return spatialField.Strategy.MakeQuery(args);
         }
 
-        private static Lucene.Net.Search.Query HandleCount(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        private static Shape HandleWkt(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName, SpatialField spatialField)
+        {
+            var wktValue = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[0]);
+            AssertValueType(fieldName, wktValue.Type, ValueTokenType.String);
+
+            SpatialUnits? spatialUnits = null;
+            if (expression.Arguments.Count == 2)
+                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueToken, metadata, parameters, fieldName);
+
+            return spatialField.ReadShape((string)wktValue.Value, spatialUnits);
+        }
+
+        private static Shape HandleCircle(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName, SpatialField spatialField)
+        {
+            var radius = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[0]);
+            AssertValueType(fieldName, radius.Type, ValueTokenType.Double);
+
+            var latitute = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
+            AssertValueType(fieldName, latitute.Type, ValueTokenType.Double);
+
+            var longitude = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[2]);
+            AssertValueType(fieldName, longitude.Type, ValueTokenType.Double);
+
+            SpatialUnits? spatialUnits = null;
+            if (expression.Arguments.Count == 4)
+                spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueToken, metadata, parameters, fieldName);
+
+            return spatialField.ReadCircle((double)radius.Value, (double)latitute.Value, (double)longitude.Value, spatialUnits);
+        }
+
+        private static SpatialUnits? GetSpatialUnits(Query query, ValueToken value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
+        {
+            if (value == null)
+                throw new ArgumentNullException(nameof(value));
+
+            var spatialUnitsValue = GetValue(fieldName, query, metadata, parameters, value);
+            AssertValueType(fieldName, spatialUnitsValue.Type, ValueTokenType.String);
+
+            var spatialUnitsValueAsString = spatialUnitsValue.Value.ToString();
+            if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
+                throw new InvalidOperationException($"{nameof(SpatialUnits)} value must be either '{SpatialUnits.Kilometers}' or '{SpatialUnits.Miles}' but was '{spatialUnitsValueAsString}'.");
+
+            return (SpatialUnits)su;
+        }
+
+        private static Lucene.Net.Search.Query HandleExact(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
+        {
+            return ToLuceneQuery(context, query, (QueryExpression)expression.Arguments[0], metadata, parameters, analyzer, getSpatialField, exact: true);
+        }
+
+        private static Lucene.Net.Search.Query HandleCount(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
             if (expression.Arguments == null || expression.Arguments.Count == 0)
                 ThrowMethodExpectsOperatorAfterInvocation("count", metadata.QueryText, parameters);
@@ -395,10 +512,10 @@ namespace Raven.Server.Documents.Queries
 
             queryExpression.Field = expression.Field;
 
-            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer);
+            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer, getSpatialField);
         }
 
-        private static Lucene.Net.Search.Query HandleSum(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        private static Lucene.Net.Search.Query HandleSum(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
             if (expression.Arguments == null || expression.Arguments.Count != 2)
                 ThrowMethodExpectsOperatorAfterInvocation("sum", metadata.QueryText, parameters);
@@ -407,7 +524,7 @@ namespace Raven.Server.Documents.Queries
 
             queryExpression.Field = expression.Arguments[0] as FieldToken;
 
-            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer);
+            return ToLuceneQuery(context, query, queryExpression, metadata, parameters, analyzer, getSpatialField);
         }
 
         public static IEnumerable<(object Value, ValueTokenType Type)> GetValues(string fieldName, Query query, QueryMetadata metadata, BlittableJsonReaderObject parameters, ValueToken value)
@@ -718,6 +835,12 @@ namespace Raven.Server.Documents.Queries
             return previous == current;
         }
 
+        private static void AssertValueType(string fieldName, ValueTokenType fieldType, ValueTokenType expectedType)
+        {
+            if (fieldType != expectedType)
+                ThrowValueTypeMismatch(fieldName, fieldType, ValueTokenType.String);
+        }
+
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
         {
             throw new NotSupportedException($"Unhandled token type: {type}");
@@ -761,6 +884,11 @@ namespace Raven.Server.Documents.Queries
         private static void ThrowUnexpectedParameterValue(object parameter, string queryText, BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException($"Parameter value '{parameter}' of type {parameter.GetType().FullName} is not supported", queryText, parameters);
+        }
+
+        private static void ThrowValueTypeMismatch(string fieldName, ValueTokenType fieldType, ValueTokenType expectedType)
+        {
+            throw new InvalidOperationException($"Field '{fieldName}' should be a '{expectedType}' but was '{fieldType}'.");
         }
     }
 }

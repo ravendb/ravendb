@@ -1,12 +1,16 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Sparrow.Json;
+using Spatial4n.Core.Shapes;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -27,6 +31,12 @@ namespace Raven.Server.Documents.Indexes.Static
         public bool HasBoostedFields { get; set; }
 
         public string Source;
+
+        public IndexingFunc Reduce;
+
+        public string[] OutputFields;
+
+        public string[] GroupByFields;
 
         public void AddMap(string collection, IndexingFunc map)
         {
@@ -91,28 +101,6 @@ namespace Raven.Server.Documents.Indexes.Static
                 keyOrEnumerable.GetType().FullName + ": " + keyOrEnumerable);
         }
 
-        private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
-        {
-            private readonly List<AbstractField> _fields;
-
-            public StaticIndexLuceneDocumentWrapper(List<AbstractField> fields)
-            {
-                _fields = fields;
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void Add(AbstractField field)
-            {
-                _fields.Add(field);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public IList<IFieldable> GetFields()
-            {
-                throw new NotImplementedException();
-            }
-        }
-
         protected IEnumerable<AbstractField> CreateField(string name, object value, bool stored = false, bool? analyzed = null)
         {
             // IMPORTANT: Do not delete this method, it is used by the indexes code when using LoadDocument
@@ -146,12 +134,47 @@ namespace Raven.Server.Documents.Indexes.Static
             return result;
         }
 
-        public IndexingFunc Reduce;
+        public IEnumerable<IFieldable> SpatialGenerate(object lat, object lng)
+        {
+            return SpatialGenerate(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, lat, lng);
+        }
 
-        public string[] OutputFields;
+        public IEnumerable<IFieldable> SpatialGenerate(double? lat, double? lng)
+        {
+            return SpatialGenerate(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, lat, lng);
+        }
 
-        public string[] GroupByFields;
+        public IEnumerable<IFieldable> SpatialGenerate(string name, object lat, object lng)
+        {
+            return SpatialGenerate(name, ConvertToDouble(lat), ConvertToDouble(lng));
+        }
 
+        public IEnumerable<IFieldable> SpatialGenerate(string name, double? lat, double? lng)
+        {
+            var spatialField = GetOrCreateSpatialField(name);
+
+            if (lng == null || double.IsNaN(lng.Value))
+                return Enumerable.Empty<IFieldable>();
+            if (lat == null || double.IsNaN(lat.Value))
+                return Enumerable.Empty<IFieldable>();
+
+            Shape shape = spatialField.GetContext().MakePoint(lng.Value, lat.Value);
+            return spatialField.CreateIndexableFields(shape);
+        }
+
+        public IEnumerable<IFieldable> SpatialGenerate(string name, object shapeWKT)
+        {
+            var spatialField = GetOrCreateSpatialField(name);
+            return spatialField.CreateIndexableFields(shapeWKT);
+        }
+
+        private static SpatialField GetOrCreateSpatialField(string name)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+
+            return CurrentIndexingScope.Current.GetOrCreateSpatialField(name);;
+        }
 
         public dynamic MetadataFor(dynamic doc)
         {
@@ -165,6 +188,39 @@ namespace Raven.Server.Documents.Indexes.Static
             var json = (DynamicBlittableJson)doc;
             json.EnsureMetadata();
             return json;
+        }
+
+        private struct StaticIndexLuceneDocumentWrapper : ILuceneDocumentWrapper
+        {
+            private readonly List<AbstractField> _fields;
+
+            public StaticIndexLuceneDocumentWrapper(List<AbstractField> fields)
+            {
+                _fields = fields;
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public void Add(AbstractField field)
+            {
+                _fields.Add(field);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            public IList<IFieldable> GetFields()
+            {
+                throw new NotImplementedException();
+            }
+        }
+
+        private static double? ConvertToDouble(object value)
+        {
+            if (value == null || value is DynamicNullObject)
+                return null;
+
+            if (value is LazyNumberValue lnv)
+                return lnv.ToDouble(CultureInfo.InvariantCulture);
+
+            return Convert.ToDouble(value);
         }
     }
 }

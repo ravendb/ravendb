@@ -38,6 +38,24 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "sum", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Sum;
 
+            if (string.Equals(methodName, "within", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Within;
+
+            if (string.Equals(methodName, "contains", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Contains;
+            
+            if (string.Equals(methodName, "disjoint", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Disjoint;
+            
+            if (string.Equals(methodName, "intersects", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Intersects;
+
+            if (string.Equals(methodName, "circle", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Circle;
+
+            if (string.Equals(methodName, "wkt", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Wkt;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
 
         }

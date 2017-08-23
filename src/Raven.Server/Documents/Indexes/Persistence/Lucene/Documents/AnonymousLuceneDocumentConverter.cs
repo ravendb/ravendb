@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
     public sealed class AnonymousLuceneDocumentConverter : LuceneDocumentConverterBase
     {
+        private readonly Func<string, SpatialField> _getSpatialField;
         private readonly bool _isMultiMap;
         private PropertyAccessor _propertyAccessor;
 
-        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, bool isMultiMap, bool reduceOutput = false)
+        public AnonymousLuceneDocumentConverter(ICollection<IndexField> fields, Func<string, SpatialField> getSpatialField, bool isMultiMap, bool reduceOutput = false)
             : base(fields, reduceOutput)
         {
+            _getSpatialField = getSpatialField;
             _isMultiMap = isMultiMap;
         }
-        
+
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             int newFields = 0;
@@ -55,7 +57,22 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                int boostedFields = GetRegularFields(instance, field, value, indexContext);
+                var boostedFields = 0;
+                if (field.Spatial != null)
+                {
+                    var spatialField = _getSpatialField(field.Name);
+
+                    foreach (var f in spatialField.CreateIndexableFields(value))
+                    {
+                        instance.Add(f);
+                        boostedFields++;
+                    }
+                }
+                else
+                {
+                    boostedFields = GetRegularFields(instance, field, value, indexContext);
+                }
+
                 newFields += boostedFields;
 
                 if (boostedValue != null)

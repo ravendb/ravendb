@@ -20,13 +20,16 @@ namespace Raven.Client.Documents.Session.Tokens
         public string FieldName { get; private set; }
         public WhereOperator WhereOperator { get; private set; }
         public SearchOperator? SearchOperator { get; set; }
-        public string ParameterName { get; set; }
+        public string ParameterName { get; private set; }
         public string FromParameterName { get; private set; }
         public string ToParameterName { get; private set; }
         public decimal? Boost { get; set; }
         public decimal? Fuzzy { get; set; }
         public int? Proximity { get; set; }
-        public bool Exact { get; set; }
+        public bool Exact { get; private set; }
+
+        public ShapeToken WhereShape { get; private set; }
+        public double DistanceErrorPct { get; private set; }
 
         public static WhereToken Equals(string fieldName, string parameterName, bool exact)
         {
@@ -166,7 +169,55 @@ namespace Raven.Client.Documents.Session.Tokens
                 WhereOperator = WhereOperator.Exists
             };
         }
-        
+
+        public static QueryToken Within(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Within,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Contains(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Contains,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Disjoint(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Disjoint,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
+        public static QueryToken Intersects(string fieldName, ShapeToken shape, double distanceErrorPct)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = null,
+                WhereOperator = WhereOperator.Intersects,
+                WhereShape = shape,
+                DistanceErrorPct = distanceErrorPct
+            };
+        }
+
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -197,6 +248,18 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
                 case WhereOperator.Exists:
                     writer.Append("exists(");
+                    break;
+                case WhereOperator.Within:
+                    writer.Append("within(");
+                    break;
+                case WhereOperator.Contains:
+                    writer.Append("contains(");
+                    break;
+                case WhereOperator.Disjoint:
+                    writer.Append("disjoint(");
+                    break;
+                case WhereOperator.Intersects:
+                    writer.Append("intersects(");
                     break;
             }
 
@@ -267,6 +330,24 @@ namespace Raven.Client.Documents.Session.Tokens
                         .Append(")");
                     break;
                 case WhereOperator.Exists:
+                    writer
+                        .Append(")");
+                    break;
+                case WhereOperator.Within:
+                case WhereOperator.Contains:
+                case WhereOperator.Disjoint:
+                case WhereOperator.Intersects:
+                    writer
+                        .Append(", ");
+
+                    WhereShape.WriteTo(writer);
+
+                    if (Math.Abs(DistanceErrorPct - Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct) > double.Epsilon)
+                    {
+                        writer.Append(", ");
+                        writer.Append(DistanceErrorPct);
+                    }
+
                     writer
                         .Append(")");
                     break;

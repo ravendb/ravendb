@@ -1,5 +1,6 @@
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void TDSQ()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<MySpatialEntity, SpatialIndexForTest>()
-                        .Customize(x => x.WithinRadiusOf("WKT", 98, 99, 99))
+                        .Spatial(x => x.WKT, x => x.WithinRadius(98, 99, 99))
                         .Select(x => x.Name)
                         .Distinct()
                         .ToArray();

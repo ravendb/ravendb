@@ -68,7 +68,7 @@ namespace Raven.Server.Documents.Queries
 
         public string[] GroupBy;
 
-        public (string Name, OrderByFieldType OrderingType, bool Ascending)[] OrderBy;
+        public OrderByField[] OrderBy;
 
         public SelectField[] SelectFields;
 
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Queries
 
             if (Query.OrderBy != null)
             {
-                OrderBy = new(string Name, OrderByFieldType OrderingType, bool Ascending)[Query.OrderBy.Count];
+                OrderBy = new OrderByField[Query.OrderBy.Count];
 
                 for (var i = 0; i < Query.OrderBy.Count; i++)
                 {
@@ -139,7 +139,7 @@ namespace Raven.Server.Documents.Queries
                             OrderBy[i] = ExtractOrderByFromMethod(order, indexFieldName, parameters);
                             break;
                         case OperatorType.Field:
-                            OrderBy[i] = (indexFieldName, order.FieldType, order.Ascending);
+                            OrderBy[i] = new OrderByField(indexFieldName, order.FieldType, order.Ascending, null);
                             break;
                         default:
                             ThrowInvalidOperatorTypeInOrderBy(order.Expression.Type, QueryText, parameters);
@@ -230,32 +230,70 @@ namespace Raven.Server.Documents.Queries
             throw new InvalidQueryException(writer.GetStringBuilder().ToString());
         }
 
-        private (string Name, OrderByFieldType OrderingType, bool Ascending) ExtractOrderByFromMethod(
-            (QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string method, BlittableJsonReaderObject parameters)
+        private OrderByField ExtractOrderByFromMethod((QueryExpression Expression, OrderByFieldType FieldType, bool Ascending) order, string method, BlittableJsonReaderObject parameters)
         {
             if (string.Equals("random", method, StringComparison.OrdinalIgnoreCase))
             {
                 if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
-                    return (null, OrderByFieldType.Random, order.Ascending);
+                    return new OrderByField(null, OrderByFieldType.Random, order.Ascending, null);
 
                 if (order.Expression.Arguments.Count > 1)
-                    throw new InvalidQueryException("Invalid ORDER BY random call, expected zero to one arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+                    throw new InvalidQueryException("Invalid ORDER BY 'random()' call, expected zero to one arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
 
                 var token = order.Expression.Arguments[0] as ValueToken;
                 if (token == null)
-                    throw new InvalidQueryException("Invalid ORDER BY random call, expected value token , got " + order.Expression.Arguments[0], QueryText, parameters);
+                    throw new InvalidQueryException("Invalid ORDER BY 'random()' call, expected value token , got " + order.Expression.Arguments[0], QueryText, parameters);
 
-                var arg = QueryExpression.Extract(QueryText, token);
+                var value = QueryExpression.Extract(QueryText, token);
 
-                return (arg, OrderByFieldType.Random, order.Ascending);
+                return new OrderByField(
+                    null,
+                    OrderByFieldType.Random,
+                    order.Ascending,
+                    new[]
+                    {
+                        new OrderByField.Argument(value, ValueTokenType.String)
+                    });
             }
 
             if (string.Equals("score", method, StringComparison.OrdinalIgnoreCase))
             {
                 if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
-                    return (null, OrderByFieldType.Score, order.Ascending);
+                    return new OrderByField(null, OrderByFieldType.Score, order.Ascending, null);
 
-                throw new InvalidQueryException("Invalid ORDER BY score call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+                throw new InvalidQueryException("Invalid ORDER BY 'score()' call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+            }
+
+            if (string.Equals("distance", method, StringComparison.OrdinalIgnoreCase))
+            {
+                if (order.Expression.Arguments.Count != 3)
+                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected three arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+
+                var fieldToken = order.Expression.Arguments[0] as FieldToken;
+                if (fieldToken == null)
+                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected field token , got " + order.Expression.Arguments[0], QueryText, parameters);
+
+                var latitudeToken = order.Expression.Arguments[1] as ValueToken;
+                if (latitudeToken == null)
+                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected value token , got " + order.Expression.Arguments[1], QueryText, parameters);
+
+                var longitudeToken = order.Expression.Arguments[2] as ValueToken;
+                if (longitudeToken == null)
+                    throw new InvalidQueryException("Invalid ORDER BY 'distance()' call, expected value token , got " + order.Expression.Arguments[2], QueryText, parameters);
+
+                var fieldName = QueryExpression.Extract(Query.QueryText, fieldToken);
+                var latitude = QueryExpression.Extract(Query.QueryText, latitudeToken);
+                var longitude = QueryExpression.Extract(Query.QueryText, longitudeToken);
+
+                return new OrderByField(
+                    fieldName,
+                    OrderByFieldType.Distance,
+                    order.Ascending,
+                    new[]
+                    {
+                        new OrderByField.Argument(latitude, latitudeToken.Type),
+                        new OrderByField.Argument(longitude, longitudeToken.Type)
+                    });
             }
 
             if (IsGroupBy)
@@ -263,18 +301,18 @@ namespace Raven.Server.Documents.Queries
                 if (string.Equals("count", method, StringComparison.OrdinalIgnoreCase))
                 {
                     if (order.Expression.Arguments == null || order.Expression.Arguments.Count == 0)
-                        return (CountFieldName, OrderByFieldType.Long, order.Ascending);
+                        return new OrderByField(CountFieldName, OrderByFieldType.Long, order.Ascending, null);
 
-                    throw new InvalidQueryException("Invalid ORDER BY count() call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
+                    throw new InvalidQueryException("Invalid ORDER BY 'count()' call, expected zero arguments, got " + order.Expression.Arguments.Count, QueryText, parameters);
                 }
 
                 if (string.Equals("sum", method, StringComparison.OrdinalIgnoreCase))
                 {
                     if (order.Expression.Arguments == null)
-                        throw new InvalidQueryException("Invalid ORDER BY sum() call, expected one argument but didn't get any", QueryText, parameters);
+                        throw new InvalidQueryException("Invalid ORDER BY 'sum()' call, expected one argument but didn't get any", QueryText, parameters);
 
                     if (order.Expression.Arguments.Count != 1)
-                        throw new InvalidQueryException("Invalid ORDER BY sum() call, expected one argument, got " + order.Expression.Arguments.Count, QueryText, parameters);
+                        throw new InvalidQueryException("Invalid ORDER BY 'sum()' call, expected one argument, got " + order.Expression.Arguments.Count, QueryText, parameters);
 
                     var sumFieldToken = order.Expression.Arguments[0] as FieldToken;
 
@@ -304,7 +342,7 @@ namespace Raven.Server.Documents.Queries
                             orderingType = OrderByFieldType.Double;
                     }
 
-                    return (fieldName, orderingType, order.Ascending);
+                    return new OrderByField(fieldName, orderingType, order.Ascending, null);
                 }
             }
 
@@ -637,10 +675,71 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.Sum:
                         HandleSum(arguments, parameters);
                         return;
+                    case MethodType.Within:
+                    case MethodType.Contains:
+                    case MethodType.Disjoint:
+                    case MethodType.Intersects:
+                        HandleSpatial(methodName, arguments, parameters);
+                        return;
                     default:
                         QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
                         break;
                 }
+            }
+
+            private void HandleSpatial(string methodName, List<object> arguments, BlittableJsonReaderObject parameters)
+            {
+                var fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+
+                if (arguments.Count < 2 || arguments.Count > 3)
+                    throw new InvalidQueryException($"Method {methodName}() expects 2-3 arguments to be provided", QueryText, parameters);
+
+                var shapeExpression = arguments[1] as QueryExpression;
+
+                if (shapeExpression == null)
+                    throw new InvalidQueryException($"Method {methodName}() expects expression as second argument, got {arguments[1]} type", QueryText, parameters);
+
+                if (arguments.Count == 3)
+                {
+                    var valueToken = arguments[2] as ValueToken;
+
+                    if (valueToken == null)
+                        throw new InvalidQueryException($"Method {methodName}() expects value token as third argument, got {arguments[1]} type", QueryText, parameters);
+                }
+
+                methodName = QueryExpression.Extract(_metadata.Query.QueryText, shapeExpression.Field);
+
+                var methodType = QueryMethod.GetMethodType(methodName);
+                switch (methodType)
+                {
+                    case MethodType.Circle:
+                        arguments = shapeExpression.Arguments;
+                        if (arguments.Count < 3 || arguments.Count > 4)
+                            throw new InvalidQueryException($"Method {methodName}() expects 3-4 arguments to be provided", QueryText, parameters);
+
+                        for (var i = 0; i < arguments.Count; i++)
+                        {
+                            var argument = arguments[i] as ValueToken;
+                            if (argument == null)
+                                throw new InvalidQueryException($"Method {methodName}() expects value token as an argument at index {i}, got {arguments[i]} type", QueryText, parameters);
+                        }
+                        break;
+                    case MethodType.Wkt:
+                        arguments = shapeExpression.Arguments;
+                        if (arguments.Count != 1)
+                            throw new InvalidQueryException($"Method {methodName}() expects one argument to be provided", QueryText, parameters);
+
+                        var valueToken = arguments[0] as ValueToken;
+
+                        if (valueToken == null)
+                            throw new InvalidQueryException($"Method {methodName}() expects value token as an argument, got {arguments[0]} type", QueryText, parameters);
+                        break;
+                    default:
+                        QueryMethod.ThrowMethodNotSupported(methodType, QueryText, parameters);
+                        break;
+                }
+
+                _metadata.AddWhereField(fieldName, ValueTokenType.Null);
             }
 
             private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)

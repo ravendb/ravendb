@@ -410,9 +410,9 @@ namespace Raven.Server.Documents.Indexes.Debugging
 
                 var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
 
-                var retriever = new MapReduceQueryResultRetriever(null, null,context, fieldsToFetch);
+                var retriever = new MapReduceQueryResultRetriever(null, null, context, fieldsToFetch);
                 var result = reader
-                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, CancellationToken.None)
+                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)
@@ -429,7 +429,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.Map:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
-                    return ((MapReduceIndex)self).Compiled.OutputFields;
+                    return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
                     return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:

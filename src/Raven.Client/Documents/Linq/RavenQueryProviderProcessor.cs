@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 
@@ -900,10 +901,30 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Where):
                     VisitQueryableMethodCall(expression);
                     break;
+                case nameof(LinqExtensions.Spatial):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var spatialFieldName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var spatialCriteria);
+
+                    var spatialCriteriaFunc = (Func<SpatialCriteriaFactory, SpatialCriteria>)spatialCriteria;
+
+                    _documentQuery.Spatial((string)spatialFieldName, spatialCriteriaFunc.Invoke(SpatialCriteriaFactory.Instance));
+                    break;
+                case nameof(LinqExtensions.OrderByDistance):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
+
+                    _documentQuery.OrderByDistance((string)distanceFieldName, (double)distanceLatitude, (double)distanceLongitude);
+                    break;
+                case nameof(LinqExtensions.OrderByDistanceDescending):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldNameDesc);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitudeDesc);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitudeDesc);
+
+                    _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (double)distanceLatitudeDesc, (double)distanceLongitudeDesc);
+                    break;
                 default:
-                    {
-                        throw new NotSupportedException("Method not supported: " + expression.Method.Name);
-                    }
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
         }
 
@@ -1393,7 +1414,11 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof(string);
             }
 
-            _documentQuery.AddOrder(fieldName, descending, OrderingUtil.GetOrderingOfType(fieldType));
+            var ordering = OrderingUtil.GetOrderingOfType(fieldType);
+            if (descending)
+                _documentQuery.OrderByDescending(fieldName, ordering);
+            else
+                _documentQuery.OrderBy(fieldName, ordering);
         }
 
         private bool _insideSelect;

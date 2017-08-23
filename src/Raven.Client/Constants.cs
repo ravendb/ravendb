@@ -173,8 +173,6 @@ namespace Raven.Client
 
                     public const string SpatialShapeFieldName = "__spatial_shape";
 
-                    public const string DistanceFieldName = "__distance";
-
                     internal const string RangeFieldSuffix = "_Range";
 
                     public const string RangeFieldSuffixLong = "_L" + RangeFieldSuffix;
