@@ -802,7 +802,7 @@ namespace Raven.Server.Rachis
 
                 if (modification == TopologyModification.Remove)
                 {
-                    _engine.EnsureNodeRemovalOnDeletion(context,nodeTag);
+                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context,nodeTag);
                 }
 
                 context.Transaction.Commit();

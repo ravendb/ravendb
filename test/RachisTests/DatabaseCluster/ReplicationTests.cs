@@ -497,11 +497,10 @@ namespace RachisTests.DatabaseCluster
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/2");
-                    var cv =
-                        $"A:1-{Servers[0].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbBase64Id}, " +
-                        $"C:1-{Servers[2].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbBase64Id}, " +
-                        $"B:2-{Servers[1].ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result.DbBase64Id}";
-                    Assert.Equal(cv, session.Advanced.GetChangeVectorFor(user));
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("A:1-"));
+                    Assert.True(changeVector.Contains("B:2-"));
+                    Assert.True(changeVector.Contains("C:1-"));
                 }
             }
         }

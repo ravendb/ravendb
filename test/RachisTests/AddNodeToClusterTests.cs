@@ -144,6 +144,7 @@ namespace RachisTests
                     Name = "Karmel4"
                 }, "users/4");
                 session.SaveChanges();
+                WaitForUserToContinueTheTest((DocumentStore)responsibleStore);
                 Assert.True(await WaitForDocumentInClusterAsync<User>(serverNodes, "users/4", u => u.Name == "Karmel4", fromSeconds * 5));
             }
 
