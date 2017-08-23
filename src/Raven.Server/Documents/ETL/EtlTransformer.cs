@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Jint.Native;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
@@ -29,11 +30,11 @@ namespace Raven.Server.Documents.ETL
             _returnRun = Database.Scripts.GetScriptRunner(_key, true, out SingleRun);
             if (SingleRun == null)
                 return;
-            SingleRun.SetGlobalFunction(Transformation.LoadTo, (Action<string, object>)LoadToFunction);
+            SingleRun.SetGlobalFunction(Transformation.LoadTo, (Action<string, JsValue>)LoadToFunction);
             for (var i = 0; i < LoadToDestinations.Length; i++)
             {
                 var collection = LoadToDestinations[i];
-                SingleRun.SetGlobalFunction(Transformation.LoadTo + collection, (Action<object>)(cols =>
+                SingleRun.SetGlobalFunction(Transformation.LoadTo + collection, (Action<JsValue>)(cols =>
                 {
                     LoadToFunction(collection, cols);
                 }));
@@ -42,7 +43,7 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract string[] LoadToDestinations { get; }
 
-        protected abstract void LoadToFunction(string tableName, object colsAsObject);
+        protected abstract void LoadToFunction(string tableName, JsValue colsAsObject);
 
         public abstract IEnumerable<TTransformed> GetTransformedResults();
 

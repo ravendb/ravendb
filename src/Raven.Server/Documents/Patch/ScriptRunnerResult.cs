@@ -1,6 +1,6 @@
 using System;
-using Jurassic;
-using Jurassic.Library;
+using Jint.Native;
+using Jint.Native.Object;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.Patch
@@ -8,62 +8,46 @@ namespace Raven.Server.Documents.Patch
     public class ScriptRunnerResult : IDisposable
     {
         private readonly ScriptRunner.SingleRun _parent;
-        private readonly object _instance;
+        private readonly JsValue _instance;
 
-        public ScriptRunnerResult(ScriptRunner.SingleRun parent,object instance)
+        public ScriptRunnerResult(ScriptRunner.SingleRun parent, JsValue instance)
         {
             _parent = parent;
             _instance = instance;
         }
 
-        public object this[string name]
+        public void Set(string name, string value)
         {
-            set => ((BlittableObjectInstance)_instance)[name] = value;
+            ((BlittableObjectInstance)_instance.AsObject()).Put(name, new JsValue(value), false);
         }
 
-        public ObjectInstance Get(string name)
+        public ObjectInstance GetOrCreate(string name)
         {
-            if (_instance is ObjectInstance parent)
+            if (_instance.AsObject() is BlittableObjectInstance boi)
+                return boi.GetOrCreate(name);
+            var parent = _instance.AsObject();
+            var o = parent.Get(name);
+            if (o == null)
             {
-                var o = parent[name] as ObjectInstance;
-                if (o == null)
-                {
-                    parent[name] = o = parent.Engine.Object.Construct();
-                }
-                return o;
+                o = _parent.ScriptEngine.Object.Create(_parent.ScriptEngine.Object.PrototypeObject,
+                    Array.Empty<JsValue>());
+                parent.Put(name, o, false);
             }
-            ThrowInvalidObject(name);
-            return null; // never hit
+            return o.AsObject();
         }
-
-        private void ThrowInvalidObject(string name) => 
-            throw new InvalidOperationException("Unable to get property '" + name + "' because the result is not an object but: " + _instance);
 
         public object Value => _instance;
-        public bool IsNull => _instance == null || _instance == Null.Value || _instance == Undefined.Value;
+        public bool IsNull => _instance == null || _instance.IsNull();
 
-        public T Translate<T>(JsonOperationContext context,
+        public BlittableJsonReaderObject Translate(JsonOperationContext context,
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
-            if (IsNull)
-                return default(T);
+            if (IsNull || _instance.IsNull())
+                return null;
 
-            if (_instance is ArrayInstance)
-                ThrowInvalidArrayResult();
-            if (typeof(T) == typeof(BlittableJsonReaderObject))
-            {
-                if (_instance is ObjectInstance obj)
-                    return (T)(object)JurrasicBlittableBridge.Translate(context, obj, usageMode);
-                ThrowInvalidObject();
-            }
-            return (T)_instance;
+            var obj = _instance.AsObject();
+            return JsBlittableBridge.Translate(context, obj, usageMode);
         }
-
-        private void ThrowInvalidObject() =>
-            throw new InvalidOperationException("Cannot translate instance to object because it is: " + _instance);
-
-        private static void ThrowInvalidArrayResult() =>
-            throw new InvalidOperationException("Script cannot return an array.");
 
         public void Dispose()
         {

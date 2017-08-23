@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Jint.Native;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide.ETL;
 using Raven.Server.Documents.Patch;
@@ -42,14 +43,10 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
         public override void Initalize()
         {
             base.Initalize();
-            if (SingleRun == null)
-                return;
-            SingleRun.DefineToVarcharFunctions();
-            SingleRun.DefineToNVarcharFunctions();
-            SingleRun.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
+            SingleRun?.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
         }
 
-        protected override void LoadToFunction(string tableName, object cols)
+        protected override void LoadToFunction(string tableName, JsValue cols)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
@@ -58,7 +55,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
             BlittableJsonReaderObject result;
             using (var scriptResult = new ScriptRunnerResult(null, cols))
-                result = scriptResult.Translate<BlittableJsonReaderObject>(Context);
+                result = scriptResult.Translate(Context);
             var columns = new List<SqlColumn>(result.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 

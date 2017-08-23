@@ -1,165 +1,142 @@
 ﻿using System;
 using System.Collections.Generic;
-using Jurassic;
-using Jurassic.Library;
+using Jint;
+using Jint.Native;
+using Jint.Native.Object;
+using Jint.Runtime.Descriptors;
 using Sparrow.Json;
 
 
 namespace Raven.Server.Documents.Patch
 {
-    public class NullObjectInstance : ObjectInstance
-    {
-        public NullObjectInstance(ObjectInstance prototype) : base(prototype)
-        {
-        }
-
-        protected override object GetMissingPropertyValue(object key)
-        {
-            return new NullObjectInstance(Prototype);
-        }
-    }
     public class BlittableObjectInstance : ObjectInstance
     {
         public readonly DateTime? LastModified;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
+        public Dictionary<string, BlittableObjectProperty> OwnValues = new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
 
-        public BlittableObjectInstance(ScriptEngine engine, BlittableJsonReaderObject parent, string docId, DateTime? lastModified) : base(engine)
+        public ObjectInstance GetOrCreate(string key)
+        {
+            BlittableObjectProperty value;
+            if (OwnValues.TryGetValue(key, out value) == false)
+            {
+                var propertyIndex = Blittable.GetPropertyIndex(key);
+                value = new BlittableObjectProperty(this, key);
+                if (propertyIndex == -1)
+                {
+                    value.Value = new JsValue(new ObjectInstance(Engine));
+                }
+                OwnValues[key] = value;
+            }
+            return value.Value.AsObject();
+        }
+
+        public sealed class BlittableObjectProperty : PropertyDescriptor
+        {
+            private readonly BlittableObjectInstance _parent;
+            private readonly string _property;
+
+            public override string ToString()
+            {
+                return _property;
+            }
+
+            public BlittableObjectProperty(BlittableObjectInstance parent,string property)
+                : base(null, true, null, null)
+            {
+                _parent = parent;
+                _property = property;
+                var index = _parent.Blittable?.GetPropertyIndex(_property);
+                if (index == null || index == -1)
+                {
+                    Value = new JsValue(new BlittableObjectInstance(_parent.Engine, null, null, null));
+                }
+                else
+                {
+                    Value = GetPropertyValue(_property, index.Value);
+                }
+            }
+
+            public override JsValue Value { get; set; }
+
+
+            private JsValue GetPropertyValue(string key, int propertyIndex)
+            {
+                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+
+                _parent.Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);
+
+                return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
+            }
+
+            private static JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
+            {
+                switch (type & BlittableJsonReaderBase.TypesMask)
+                {
+                    case BlittableJsonToken.Null:
+                        return new JsValue(new BlittableObjectInstance(owner.Engine, null, null, null));
+                    case BlittableJsonToken.Boolean:
+                        return new JsValue((bool)value);
+                    case BlittableJsonToken.Integer:
+                        owner.RecordNumericFieldType(key, BlittableJsonToken.Integer);
+                        return new JsValue((long)value);
+                    case BlittableJsonToken.LazyNumber:
+                        owner.RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
+                        return new JsValue((double)(LazyNumberValue)value);
+                    case BlittableJsonToken.String:
+                        return new JsValue(((LazyStringValue)value).ToString());
+                    case BlittableJsonToken.CompressedString:
+                        return new JsValue(((LazyCompressedStringValue)value).ToString());
+                    case BlittableJsonToken.StartObject:
+                        return new JsValue(new BlittableObjectInstance(owner.Engine,
+                            (BlittableJsonReaderObject)value, null, null));
+                    case BlittableJsonToken.StartArray:
+                        var blitArray = (BlittableJsonReaderArray)value;
+                        var array = new object[blitArray.Length];
+                        for (int i = 0; i < array.Length; i++)
+                        {
+                            var blit = blitArray.GetValueTokenTupleByIndex(i);
+                            array[i] = TranslateToJs(owner, key, blit.Item2, blit.Item1);
+                        }
+                        return JsValue.FromObject(owner.Engine, array);
+                    default:
+                        throw new ArgumentOutOfRangeException(type.ToString());
+                }
+            }
+        }
+
+        public BlittableObjectInstance(Engine engine, BlittableJsonReaderObject blittable, string docId, DateTime? lastModified) : base(engine)
         {
             LastModified = lastModified;
-            Blittable = parent;
+            Blittable = blittable;
             DocumentId = docId;
         }
 
-        public override bool Delete(object key, bool throwOnError)
+        public override bool Delete(string propertyName, bool throwOnError)
         {
-            if(Deletes == null)
+            if (Deletes == null)
                 Deletes = new HashSet<string>();
-            Deletes.Add(key.ToString());
-            return base.Delete(key, throwOnError);
+            Deletes.Add(propertyName);
+            return OwnValues.Remove(propertyName);
         }
 
-        protected override object GetMissingPropertyValue(object key)
+        public override PropertyDescriptor GetOwnProperty(string propertyName)
         {
-            var keyAsString = key.ToString();
-
-            int propertyIndex = Blittable.GetPropertyIndex(keyAsString);
-            if (propertyIndex == -1)
-            {
-                return new NullObjectInstance(Prototype);
-            }
-
-            var value = GetMissingPropertyValue(keyAsString, propertyIndex);
-
-            this[key] = value;
-
-            return value;
+            if (OwnValues.TryGetValue(propertyName, out var val))
+                return val;
+            OwnValues[propertyName] = val = new BlittableObjectProperty(this, propertyName);
+            return val;
         }
 
-        private object GetMissingPropertyValue(string key, int propertyIndex)
-        {
-            var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-
-            Blittable.GetPropertyByIndex(propertyIndex, ref propertyDetails, true);
-
-            object returnedValue;
-            switch (propertyDetails.Token & BlittableJsonReaderBase.TypesMask)
-            {
-                case BlittableJsonToken.Null:
-                    returnedValue = new NullObjectInstance(Prototype);
-                    break;
-                case BlittableJsonToken.Boolean:
-                    returnedValue = (bool)propertyDetails.Value;
-                    break;
-                case BlittableJsonToken.Integer:
-                    RecordNumericFieldType(key, BlittableJsonToken.Integer);
-                    returnedValue = GetJurrasicNumber_TEMPORARY(propertyDetails.Value);
-                    break;
-                case BlittableJsonToken.LazyNumber:
-                    RecordNumericFieldType(key, BlittableJsonToken.LazyNumber);
-                    returnedValue = (double)(LazyNumberValue)propertyDetails.Value;
-                    break;
-                case BlittableJsonToken.String:
-                    returnedValue = ((LazyStringValue)propertyDetails.Value).ToString();
-                    break;
-                case BlittableJsonToken.CompressedString:
-                    returnedValue = ((LazyCompressedStringValue)propertyDetails.Value).ToString();
-                    break;
-                case BlittableJsonToken.StartObject:
-                    returnedValue = new BlittableObjectInstance(Engine, (BlittableJsonReaderObject)propertyDetails.Value, null, null);
-                    break;
-                case BlittableJsonToken.StartArray:
-                    returnedValue = CreateArrayInstanceBasedOnBlittableArray(Engine, propertyDetails.Value as BlittableJsonReaderArray);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(propertyDetails.Token.ToString());
-            }
-
-            return returnedValue;
-        }
 
         private void RecordNumericFieldType(string key, BlittableJsonToken type)
         {
             if (OriginalPropertiesTypes == null)
                 OriginalPropertiesTypes = new Dictionary<string, BlittableJsonToken>();
             OriginalPropertiesTypes[key] = type;
-        }
-
-        public static object GetJurrasicNumber_TEMPORARY(object val)
-        {
-            var value = (long)val;
-            // TODO: Maxim fix me, Jurrasic doesn't support longs
-            // TODO: RavenDB-8263
-            if (value < int.MaxValue)
-                return (int)value;
-            return (double)value;
-        }
-
-        public static ArrayInstance CreateArrayInstanceBasedOnBlittableArray(ScriptEngine engine, BlittableJsonReaderArray blittableArray)
-        {
-            var returnedValue = engine.Array.Construct();
-
-            for (var i = 0; i < blittableArray.Length; i++)
-            {
-                var valueTuple = blittableArray.GetValueTokenTupleByIndex(i);
-                object arrayValue;
-                switch (valueTuple.Item2 & BlittableJsonReaderBase.TypesMask)
-                {
-                    case BlittableJsonToken.Null:
-                        arrayValue = Null.Value;
-                        break;
-                    case BlittableJsonToken.Boolean:
-                        arrayValue = (bool)valueTuple.Item1;
-                        break;
-                    case BlittableJsonToken.Integer:
-                        arrayValue = GetJurrasicNumber_TEMPORARY(valueTuple.Item1);
-                        break;
-                    case BlittableJsonToken.LazyNumber:
-                        arrayValue = (double)(LazyNumberValue)valueTuple.Item1;
-                        break;
-                    case BlittableJsonToken.String:
-                        arrayValue = ((LazyStringValue)valueTuple.Item1).ToString();
-                        break;
-                    case BlittableJsonToken.CompressedString:
-                        arrayValue = ((LazyCompressedStringValue)valueTuple.Item1).ToString();
-                        break;
-                    case BlittableJsonToken.StartObject:
-                        arrayValue = new BlittableObjectInstance(engine, (BlittableJsonReaderObject)valueTuple.Item1, null, null);
-                        break;
-                    case BlittableJsonToken.StartArray:
-                        arrayValue = CreateArrayInstanceBasedOnBlittableArray(engine, valueTuple.Item1 as BlittableJsonReaderArray);
-                        break;
-                    default:
-                        arrayValue = Undefined.Value;
-                        break;
-                }
-
-                returnedValue.Push(arrayValue);
-            }
-
-            return returnedValue;
         }
     }
 }

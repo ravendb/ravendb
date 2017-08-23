@@ -30,8 +30,8 @@ namespace SlowTests.Issues
                     var jsObject = result.Value as BlittableObjectInstance;
                     Assert.NotNull(jsObject);
 
-                    jsObject.SetPropertyValue("Test", (string)null, true);
-                    var json = new ScriptRunnerResult(null,jsObject).Translate<BlittableJsonReaderObject>(context);
+                    jsObject.Put("Test", (string)null, true);
+                    var json = new ScriptRunnerResult(null,jsObject).Translate(context);
                     object value;
                     Assert.True(json.TryGetMember("Test", out value));
                     Assert.Null(value);

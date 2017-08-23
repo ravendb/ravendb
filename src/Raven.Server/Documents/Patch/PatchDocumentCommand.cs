@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Patch
             // that clone later
             using (var scriptResult = _run.Run(context, "execute", new object[] { documentInstance, args }))
             {
-               var  modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext,
+               var  modifiedDocument = scriptResult.Translate(_externalContext,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 var result = new PatchResult
