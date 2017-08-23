@@ -911,17 +911,35 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     break;
                 case nameof(LinqExtensions.OrderByDistance):
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
 
-                    _documentQuery.OrderByDistance((string)distanceFieldName, (double)distanceLatitude, (double)distanceLongitude);
+                        _documentQuery.OrderByDistance((string)distanceFieldName, (double)distanceLatitude, (double)distanceLongitude);
+                    }
+                    else
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
+
+                        _documentQuery.OrderByDistance((string)distanceFieldName, (string)distanceShapeWkt);
+                    }
                     break;
                 case nameof(LinqExtensions.OrderByDistanceDescending):
                     LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldNameDesc);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitudeDesc);
-                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitudeDesc);
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
 
-                    _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (double)distanceLatitudeDesc, (double)distanceLongitudeDesc);
+                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (double)distanceLatitude, (double)distanceLongitude);
+                    }
+                    else
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
+
+                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (string)distanceShapeWkt);
+                    }
                     break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);

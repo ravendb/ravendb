@@ -56,6 +56,9 @@ namespace Raven.Server.Documents.Queries
             if (string.Equals(methodName, "wkt", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Wkt;
 
+            if (string.Equals(methodName, "point", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Point;
+
             throw new NotSupportedException($"Method '{methodName}' is not supported.");
 
         }

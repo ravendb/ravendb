@@ -1825,9 +1825,19 @@ If you really want to do in memory filtering on the data returned from the query
             OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
         }
 
+        public void OrderByDistance(string fieldName, string shapeWkt)
+        {
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt)));
+        }
+
         public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
         {
             OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
+        }
+
+        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
+        {
+            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt)));
         }
     }
 }
