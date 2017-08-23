@@ -166,6 +166,7 @@ namespace Voron.Data.Tables
         public long Update(long id, TableValueBuilder builder)
         {
             AssertWritableTable();
+            AssertNoReferenceToTheActiveSection(builder);
 
             // The ids returned from this function MUST NOT be stored outside of the transaction.
             // These are merely for manipulation within the same transaction, and WILL CHANGE afterwards.
@@ -225,6 +226,29 @@ namespace Voron.Data.Tables
             // can't fit in place, will just delete & insert instead
             Delete(id);
             return Insert(builder);
+        }
+
+        [Conditional("DEBUG")]
+        private void AssertNoReferenceToTheActiveSection(TableValueBuilder builder)
+        {
+            if (_tx.LowLevelTransaction.Environment.Options.RunningOn32Bits)
+                return;
+            var page = _tx.LowLevelTransaction.GetPage(ActiveDataSmallSection.PageNumber);
+            var sectionSize = ActiveDataSmallSection.NumberOfPages * Constants.Storage.PageSize;
+            // this validation is only valid in 64 bits and assuming continious memory ranges
+            for (int i = 0; i < builder.Count; i++)
+            {
+                Slice slice;
+                using (builder.SliceFromLocation(_tx.Allocator, i, out slice))
+                {
+                    if (slice.Content.Ptr >= page.Pointer &&
+                        slice.Content.Ptr < page.Pointer + sectionSize)
+                    {
+                        throw new InvalidOperationException(
+                            "Invalid attempt to insert data with the source equals to the range we are modifying. This is not permitted since it can cause data corruption when table defrag happens");
+                    }
+                }
+            }
         }
 
         [Conditional("DEBUG")]
@@ -359,6 +383,7 @@ namespace Voron.Data.Tables
         public long Insert(TableValueBuilder builder)
         {
             AssertWritableTable();
+            AssertNoReferenceToTheActiveSection(builder);
 
             // Any changes done to this method should be reproduced in the Insert below, as they're used when compacting.
             // The ids returned from this function MUST NOT be stored outside of the transaction.
@@ -1205,11 +1230,11 @@ namespace Voron.Data.Tables
 
             if (exists)
             {
-                id = Update(id, builder);
+                Update(id, builder);
                 return false;
             }
 
-            id = Insert(builder);
+            Insert(builder);
             return true;
         }
 
