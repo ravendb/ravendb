@@ -2,11 +2,12 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import database = require("models/resources/database");
 import databasesManager = require("common/shell/databasesManager");
 import certificateModel = require("models/auth/certificateModel");
-import generateCertificateCommand = require("commands/auth/generateCertificateCommand");
 import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
+import appUrl = require("common/appUrl");
+import endpoints = require("endpoints");
 
 class certificates extends viewModelBase {
 
@@ -26,6 +27,9 @@ class certificates extends viewModelBase {
     newPermissionValidationGroup: KnockoutValidationGroup = ko.validatedObservable({
         newPermissionDatabaseName: this.newPermissionDatabaseName
     });
+
+    generateCertificateUrl = endpoints.global.adminCertificates.adminCertificates;
+    generateCertPayload = ko.observable<string>();
 
     constructor() {
         super();
@@ -114,13 +118,16 @@ class certificates extends viewModelBase {
         const model = this.model();
         switch (model.mode()) {
             case "generate":
-                new generateCertificateCommand(model)
-                    .execute()  
-                    .always(() => {
-                        this.spinners.processing(false);
-                        this.loadCertificates();
-                        this.onCloseEdit();
-                    });
+                this.generateCertPayload(JSON.stringify(model.toGenerateCertificateDto()));
+                
+                $("form[target=certificate_download_iframe]").submit();
+                
+                setTimeout(() => {
+                    this.spinners.processing(false);
+                    this.loadCertificates();
+                    this.onCloseEdit();
+                }, 1000);
+                
                 break;
             case "upload":
                 new uploadCertificateCommand(model)

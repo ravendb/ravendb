@@ -76,7 +76,9 @@ class certificateModel {
         return {
             Name: this.name(),
             Password: this.certificatePassphrase(),
-            Permissions: this.serializePermissions()
+            Permissions: this.serializePermissions(),
+            SecurityClearance: this.securityClearance()
+            //TODO: expiration
         }
     }
     
@@ -85,13 +87,23 @@ class certificateModel {
             Name: this.name(),
             Certificate: this.certificateAsBase64(),
             Password: this.certificatePassphrase(),
-            Permissions: this.serializePermissions()
-            //TODO: other props
+            Permissions: this.serializePermissions(),
+            SecurityClearance: this.securityClearance()
+            //TODO: expiration
         }
     }
     
     private serializePermissions() : dictionary<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess> {
-        return null; //TODO:
+        if (this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "Operations") {
+            return null;
+        } 
+        
+        const result = {} as dictionary<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess>;
+        this.permissions().forEach(permission => {
+            result[permission.databaseName()] = permission.accessLevel();
+        });
+        
+        return result;
     }
     
     static generate() {

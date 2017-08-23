@@ -114,6 +114,7 @@ namespace Raven.Server.Web.Authentication
                 var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, certificate));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
+                NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }

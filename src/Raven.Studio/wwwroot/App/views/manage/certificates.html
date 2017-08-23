@@ -211,3 +211,9 @@
         </div>
     </div>
 </div>
+
+<form target="certificate_download_iframe" style="display: none" method="post" data-bind="attr: { action: generateCertificateUrl }">
+    <input name="Options" data-bind="textInput: generateCertPayload" />
+</form>
+
+<iframe name="certificate_download_iframe" style="display: none"></iframe>
