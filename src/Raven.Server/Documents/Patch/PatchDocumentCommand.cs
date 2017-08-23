@@ -112,7 +112,8 @@ namespace Raven.Server.Documents.Patch
                 return 1;
             }
 
-            object documentInstance = originalDocument;
+            object documentInstance;
+            var clonedDocument = _run.Translate(context, originalDocument) as BlittableObjectInstance;
             var args = _patchArgs;
             if (originalDocument == null)
             {
@@ -120,12 +121,15 @@ namespace Raven.Server.Documents.Patch
                 args = _patchIfMissingArgs;
                 documentInstance = _runIfMissing.CreateEmptyObject();
             }
+            else
+            {
+                documentInstance = clonedDocument;
+            }
 
             // we will to acccess this value, and the original document data may be changed by
             // the actions of the script, so we translate (which will create a clone) then use
             // that clone later
-            var clonedDocument = (BlittableObjectInstance)_run.Translate(context, documentInstance);
-            using (var scriptResult = _run.Run(context, "execute", new object[] { clonedDocument, args }))
+            using (var scriptResult = _run.Run(context, "execute", new object[] { documentInstance, args }))
             {
                var  modifiedDocument = scriptResult.Translate<BlittableJsonReaderObject>(_externalContext,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
