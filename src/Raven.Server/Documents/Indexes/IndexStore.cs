@@ -277,22 +277,21 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(currentIndex != null);
 
                 definition.Name = replacementIndexName;
-                var sideBySideIndex = GetIndex(replacementIndexName);
-                if (sideBySideIndex != null)
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
                 {
-                    creationOptions = GetIndexCreationOptions(definition, sideBySideIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                    creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
                     if (creationOptions == IndexCreationOptions.Noop)
                         return;
 
                     if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                     {
-                        UpdateIndex(definition, sideBySideIndex, sideBySideDifferences);
+                        UpdateIndex(definition, replacementIndex, sideBySideDifferences);
+                        return;
                     }
-                }
 
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
+                }
             }
 
             Index index;
