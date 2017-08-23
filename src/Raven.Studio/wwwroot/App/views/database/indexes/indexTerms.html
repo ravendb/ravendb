@@ -15,11 +15,12 @@
                 </span>
             </div>
             
-            <h4 class="text-center" data-bind="visible: !terms().length">No entries were found</h4>
+            
 
             <div class="collapse" data-bind="attr: { id: 'termCollapse' + $index() }">
                 <div class="field-terms panel-body">
-                    <ul class="list-unstyled row" data-bind="foreach: terms">
+                    <h3 class="text-center" data-bind="visible: !terms().length"><i class="icon-empty-set"></i><span>No entries were found</span></h3>
+                    <ul class="list-unstyled row" data-bind="foreach: terms; visible: terms().length">
                         <li class="col-sm-3">
                             <a data-bind="text: $data, click: _.partial($root.navigateToQuery, $parent.name, $data)" href="#">
                             </a>
@@ -41,6 +42,6 @@
     </div>
 </div>
 
-<div data-bind="visible: fields().length === 0">
-    <h4>No fields were found.</h4>
+<div class="absolute-center" data-bind="visible: fields().length === 0">
+    <h3><i class="icon-empty-set"></i><span>No fields were found.</span></h3>
 </div>
