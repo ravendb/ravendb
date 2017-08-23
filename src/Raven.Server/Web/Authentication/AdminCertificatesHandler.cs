@@ -29,7 +29,9 @@ namespace Raven.Server.Web.Authentication
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "certificate-generation");
+                var stream = TryGetRequestFormStream("Options") ?? RequestBodyStream();
+                
+                var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
@@ -78,6 +80,7 @@ namespace Raven.Server.Web.Authentication
         {
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
+            
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
