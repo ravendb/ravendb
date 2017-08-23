@@ -508,6 +508,8 @@ namespace Raven.Server.Documents.Indexes
                 //If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
                 if (Thread.CurrentThread != indexingThread)
                     indexingThread.Join();
+
+                IndexPersistence.DisposeWriters();
             }
         }
 
