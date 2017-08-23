@@ -164,7 +164,7 @@ namespace Raven.Server
 
                 var addresses = new List<string>();
                 var serverUri = new Uri(Configuration.Core.ServerUrl);
-                foreach (var address in GetListenIpAddresses(serverUri.DnsSafeHost).Where(a=>a.IsIPv6LinkLocal == false))
+                foreach (var address in GetListenIpAddresses(serverUri.DnsSafeHost))
                 {
                     addresses.Add($"{serverUri.Scheme}://{address}:{serverUri.Port}");
                 }
@@ -209,6 +209,7 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
 
+                ServerStore.TriggerDatabases();
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)

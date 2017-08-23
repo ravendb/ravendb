@@ -46,6 +46,11 @@ namespace Raven.Server.Rachis
 
         protected abstract void Apply(TransactionOperationContext context, BlittableJsonReaderObject cmd, long index, Leader leader, ServerStore serverStore);
 
+        public virtual void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        {
+            
+        }
+
         public void Dispose()
         {
             

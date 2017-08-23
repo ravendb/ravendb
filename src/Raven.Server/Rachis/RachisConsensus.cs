@@ -40,6 +40,11 @@ namespace Raven.Server.Rachis
 
         public TStateMachine StateMachine;
 
+        internal override RachisStateMachine GetStateMachine()
+        {
+            return StateMachine;
+        }
+
         protected override void InitializeState(TransactionOperationContext context)
         {
             StateMachine = new TStateMachine();
@@ -56,6 +61,11 @@ namespace Raven.Server.Rachis
         public override void Apply(TransactionOperationContext context, long uptoInclusive, Leader leader)
         {
             StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
+        }
+
+        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        {
+            StateMachine.EnsureNodeRemovalOnDeletion(context, nodeTag);
         }
 
         public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ClusterCertificateHolder.Certificate;
@@ -112,6 +122,8 @@ namespace Raven.Server.Rachis
             LeaderElect,
             Leader
         }
+
+        internal abstract RachisStateMachine GetStateMachine();
 
         public const string InitialTag = "?";
 
@@ -1358,22 +1370,6 @@ namespace Raven.Server.Rachis
 
             await task;
           
-        }
-
-        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
-        {
-            var djv = new RemoveNodeFromClusterCommand
-            {
-                RemovedNode = nodeTag
-            }.ToJson(context);
-            var index = InsertToLeaderLog(context, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
-            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
-            {
-                if (tx is LowLevelTransaction llt && llt.Committed)
-                {
-                    _currentLeader.AddToEntries(index);
-                }
-            };
         }
 
         private volatile string _leaderTag;

@@ -375,6 +375,22 @@ namespace Raven.Server.ServerWide
                 EntityToBlittable.ConvertEntityToBlittable(new DatabaseRecord(), DocumentConventions.Default, ctx);
             }
 
+            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+            _notificationsStorage.Initialize(_env, ContextPool);
+            _operationsStorage.Initialize(_env, ContextPool);
+            DatabaseInfoCache.Initialize(_env, ContextPool);
+
+            NotificationCenter.Initialize();
+            foreach (var alertRaised in storeAlertForLateRaise)
+            {
+                NotificationCenter.Add(alertRaised);
+            }
+            LicenseManager.Initialize(_env, ContextPool);
+            LatestVersionCheck.Check(this);
+        }
+
+        public void TriggerDatabases()
+        {
             _engine = new RachisConsensus<ClusterStateMachine>(this);
 
             var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
@@ -392,19 +408,6 @@ namespace Raven.Server.ServerWide
             {
                 _engine.CurrentLeader.OnNodeStatusChange += OnTopologyChanged;
             }
-
-            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
-            _notificationsStorage.Initialize(_env, ContextPool);
-            _operationsStorage.Initialize(_env, ContextPool);
-            DatabaseInfoCache.Initialize(_env, ContextPool);
-
-            NotificationCenter.Initialize();
-            foreach (var alertRaised in storeAlertForLateRaise)
-            {
-                NotificationCenter.Add(alertRaised);
-            }
-            LicenseManager.Initialize(_env, ContextPool);
-            LatestVersionCheck.Check(this);
 
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())

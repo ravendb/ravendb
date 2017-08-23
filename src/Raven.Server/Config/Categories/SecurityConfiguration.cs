@@ -151,8 +151,8 @@ namespace Raven.Server.Config.Categories
     public enum UnsecuredAccessAddressRange
     {
         None = 0,
-        Local = 1 << 0,
-        PrivateNetwork = 1 << 1,
-        PublicNetwork = 1 << 2
+        Local = 1,
+        PrivateNetwork = 2,
+        PublicNetwork = 4
     }
 }

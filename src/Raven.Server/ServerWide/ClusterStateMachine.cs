@@ -34,7 +34,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Binary;
-using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -479,6 +478,22 @@ namespace Raven.Server.ServerWide
             {
                 NotifyValueChanged(context, type, index);
             }
+        }
+
+        public override void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        {
+            var djv = new RemoveNodeFromClusterCommand
+            {
+                RemovedNode = nodeTag
+            }.ToJson(context);
+            var index = _parent.InsertToLeaderLog(context, context.ReadObject(djv, "remove"), RachisEntryFlags.StateMachineCommand);
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += tx =>
+            {
+                if (tx is LowLevelTransaction llt && llt.Committed)
+                {
+                    _parent.CurrentLeader.AddToEntries(index);
+                }
+            };
         }
 
         private void NotifyValueChanged(TransactionOperationContext context, string type, long index)
