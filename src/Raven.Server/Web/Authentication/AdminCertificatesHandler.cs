@@ -269,6 +269,7 @@ namespace Raven.Server.Web.Authentication
                     }));
                 await ServerStore.Cluster.WaitForIndexNotification(putResult.Etag);
 
+                NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }
