@@ -50,7 +50,7 @@ namespace SlowTests.MailingList
                                     new
                                     {
                                         Categories_Id = p.Categories.Select(x => x.Id),
-                                        _ = SpatialGenerate(p.Location.Lat, p.Location.Lng)
+                                        Coordinates = CreateSpatialField(p.Location.Lat, p.Location.Lng)
                                     };
             }
         }
@@ -79,7 +79,7 @@ namespace SlowTests.MailingList
 
                     var With_WithinRadiusOf = session.Advanced.DocumentQuery<Place>("Place/ByLocationAndCategoryId")
                             .WhereEquals("Categories_Id", "4bf58dd8d48988d17f941735")
-                            .WithinRadiusOf(15, 35.74498, 139.348083)
+                            .WithinRadiusOf("Coordinates", 15, 35.74498, 139.348083)
                             .Take(1024).ToList<Place>();
 
                     Assert.Equal(3, Without_WithinRadiusOf.Count);

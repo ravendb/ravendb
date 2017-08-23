@@ -99,7 +99,7 @@ namespace SlowTests.Issues
                               select new ClassWithLocationReduceResult()
                               {
                                   Id = d.Id,
-                                  Location = (Location)SpatialGenerate("Location", d.Location.Latitude, d.Location.Longitutde)
+                                  Location = (Location)CreateSpatialField(d.Location.Latitude, d.Location.Longitutde)
                               };
             }
         }

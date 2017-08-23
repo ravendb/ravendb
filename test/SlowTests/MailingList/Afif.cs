@@ -101,7 +101,7 @@ namespace SlowTests.MailingList
                                       from sale in sales
                                       select new
                                       {
-                                          _ = locations.Select(l => SpatialGenerate(l.Lat, l.Lng)),
+                                          Coordinates = locations.Select(l => CreateSpatialField(l.Lat, l.Lng)),
                                           // marking this as empty works
                                           sale.SaleId,
                                           Locations = locations,

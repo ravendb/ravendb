@@ -25,7 +25,7 @@ namespace SlowTests.Core.Utils.Indexes
                             select new
                             {
                                 Name = e.Name,
-                                __ = SpatialGenerate("Coordinates", e.Latitude, e.Longitude)
+                                Coordinates = CreateSpatialField(e.Latitude, e.Longitude)
                             };
         }
     }

@@ -33,10 +33,6 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                 case "CreateField":
                     Methods.HasCreateField = true;
                     break;
-                case "this.SpatialGenerate":
-                case "SpatialGenerate":
-                    Methods.HasSpatialGenerate = true;
-                    break;
             }
 
             var memberAccessExpression = node.Expression as MemberAccessExpressionSyntax;

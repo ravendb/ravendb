@@ -65,7 +65,7 @@ namespace SlowTests.MailingList
                 Map = shapes => from s in shapes
                                 select new
                                 {
-                                    __ = SpatialGenerate("Bbox", s.Wkt)
+                                    Bbox = CreateSpatialField(s.Wkt)
                                 };
 
                 SpatialIndexesStrings.Add("Bbox", new SpatialOptions

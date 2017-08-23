@@ -41,7 +41,7 @@ namespace SlowTests.MailingList
                     select new
                     {
                         i,
-                        __distance = SpatialGenerate((double)i.Lat, (double)i.Lon),
+                        Distance = CreateSpatialField((double)i.Lat, (double)i.Lon),
                         i.Name,
                         i.Bedrooms,
                         i.Attributes
@@ -102,7 +102,7 @@ namespace SlowTests.MailingList
                 {
                     var query = session.Query<AccItem, AccItems_Spatial>()
                         .Customize(customization => customization.WaitForNonStaleResults())
-                        .Spatial(x => x.WithinRadius(10, 52.156161, 1.602483))
+                        .Spatial("Distance", x => x.WithinRadius(10, 52.156161, 1.602483))
                         .Where(x => x.Bedrooms == 2);
                     var partialFacetResults = query
                         .ToFacets("facets/AttributeFacets");

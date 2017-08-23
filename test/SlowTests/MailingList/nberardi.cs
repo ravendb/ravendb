@@ -39,8 +39,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
-                        .WithinRadiusOf(500, 45.50955, -73.569133)
-                        .OrderByDistance(45.50955, -73.569133)
+                        .WithinRadiusOf("Coordinates", 500, 45.50955, -73.569133)
+                        .OrderByDistance("Coordinates", 45.50955, -73.569133)
                         .ToList();
 
                     Assert.Equal(results[0].Id, "se/2");
@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                     from e in entities
                     select new
                     {
-                        _ = SpatialGenerate(e.Latitude, e.Longitude)
+                        Coordinates = CreateSpatialField(e.Latitude, e.Longitude)
                     };
             }
         }

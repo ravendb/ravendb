@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .WithinRadiusOf(500, 45.54545, -73.63908)
+                    .WithinRadiusOf("Coordinates", 500, 45.54545, -73.63908)
                     .OpenSubclause()
                     .WhereLucene("Name", $"{terms}")
                     .WhereLucene("Terms", $"{terms}")
@@ -59,7 +59,7 @@ namespace SlowTests.MailingList
                 places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .WithinRadiusOf(500, 45.54545, -73.63908)
+                    .WithinRadiusOf("Coordinates", 500, 45.54545, -73.63908)
                     .OpenSubclause()
                     .WhereLucene("Name", $"{terms}")
                     .WhereLucene("Terms", $"{terms}")
@@ -107,7 +107,7 @@ namespace SlowTests.MailingList
                 var places = session.Advanced.DocumentQuery<Place, PlacesByTermsAndLocation>()
                     .WaitForNonStaleResults()
                     .Statistics(out stats)
-                    .OrderByDistance(Constants.Documents.Indexing.Fields.DefaultSpatialFieldName, 45.54545, -73.63908)
+                    .OrderByDistance("Coordinates", 45.54545, -73.63908)
                     .OpenSubclause()
                     .Search("Name", terms)
                     .Search("Terms", terms)
@@ -155,7 +155,7 @@ namespace SlowTests.MailingList
                               b.Description,
                               b.Address
                           },
-                          _ = SpatialGenerate(b.Latitude, b.Longitude)
+                          Coordinates = CreateSpatialField(b.Latitude, b.Longitude)
                       };
 
                 Index(p => p.Name, FieldIndexing.Search);
