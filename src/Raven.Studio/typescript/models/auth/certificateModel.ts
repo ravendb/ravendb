@@ -30,7 +30,7 @@ class certificateModel {
 
     securityClearanceLabel: KnockoutComputed<string>;
     
-    validationGroup = ko.validatedObservable({
+    validationGroup: KnockoutValidationGroup = ko.validatedObservable({
         name: this.name,
         certificateAsBase64: this.certificateAsBase64
     });
@@ -57,7 +57,9 @@ class certificateModel {
 
     private initValidation() {
         this.name.extend({
-            required: true
+            required: {
+                onlyIf: () => this.mode() !== "editExisting"
+            }
         });
         
         this.certificateAsBase64.extend({
@@ -92,6 +94,14 @@ class certificateModel {
             //TODO: expiration
         }
     }
+
+    toUpdatePermissionsDto() {
+        return {
+            Thumbprint: this.thumbprint(),
+            SecurityClearance: this.securityClearance(),
+            Permissions: this.serializePermissions()
+        }
+    }
     
     private serializePermissions() : dictionary<Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess> {
         if (this.securityClearance() === "ClusterAdmin" || this.securityClearance() === "Operations") {
@@ -116,13 +126,18 @@ class certificateModel {
     
     static fromDto(dto: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         const model = new certificateModel("editExisting");
-        //TODO: fill properties
+        model.name(dto.Name);
+        model.securityClearance("ClusterAdmin"); ///TODO: dto.SecurityClearance
+        model.thumbprint(dto.Thumbprint);
+        
+        model.permissions(_.map(dto.Permissions, (access, databaseName) => {
+            const permission = new certificatePermissionModel();
+            permission.accessLevel(access);
+            permission.databaseName(databaseName);
+            return permission;
+        }));
         return model;
     }
-    
-    //TODO: edit existing cert 
-    
-    
 }
 
 export = certificateModel;

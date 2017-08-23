@@ -6,8 +6,10 @@ import getCertificatesCommand = require("commands/auth/getCertificatesCommand");
 import certificatePermissionModel = require("models/auth/certificatePermissionModel");
 import uploadCertificateCommand = require("commands/auth/uploadCertificateCommand");
 import deleteCertificateCommand = require("commands/auth/deleteCertificateCommand");
+import updateCertificatePermissionsCommand = require("commands/auth/updateCertificatePermissionsCommand");
 import appUrl = require("common/appUrl");
 import endpoints = require("endpoints");
+import copyToClipboard = require("common/copyToClipboard");
 
 class certificates extends viewModelBase {
 
@@ -34,7 +36,9 @@ class certificates extends viewModelBase {
     constructor() {
         super();
 
-        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", "deletePermission", "addNewPermission", "fileSelected", "useDatabase", "deleteCertificate");
+        this.bindToCurrentInstance("onCloseEdit", "save", "enterEditCertificateMode", 
+            "deletePermission", "addNewPermission", "fileSelected", "copyThumbprint",
+            "useDatabase", "deleteCertificate");
         this.initObservables();
         this.initValidation();
     }
@@ -62,6 +66,7 @@ class certificates extends viewModelBase {
     
     enterEditCertificateMode(itemToEdit: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
         this.model(certificateModel.fromDto(itemToEdit));
+        this.model().validationGroup.errors.showAllMessages(false);
     }
 
     deleteCertificate(certificate: Raven.Client.ServerWide.Operations.Certificates.CertificateDefinition) {
@@ -138,8 +143,16 @@ class certificates extends viewModelBase {
                         this.onCloseEdit();
                     });
                 break;
-            //TODO: handle edit/                 
                 
+            case "editExisting":
+                new updateCertificatePermissionsCommand(model)
+                    .execute()
+                    .always(() => {
+                        this.spinners.processing(false);
+                        this.loadCertificates();
+                        this.onCloseEdit();
+                    });
+                break;
         }
     }
     
@@ -159,7 +172,6 @@ class certificates extends viewModelBase {
         const model = this.model();
         model.permissions.remove(permission);
     }
-
 
     useDatabase(databaseName: string) {
         this.newPermissionDatabaseName(databaseName);
@@ -202,6 +214,10 @@ class certificates extends viewModelBase {
             return ["All"];
         }
         return Object.keys(certificateDefinition.Permissions);
+    }
+
+    copyThumbprint(model: certificateModel) {
+        copyToClipboard.copy(model.thumbprint(), "Thumbprint was copied to clipboard.");
     }
 }
 
