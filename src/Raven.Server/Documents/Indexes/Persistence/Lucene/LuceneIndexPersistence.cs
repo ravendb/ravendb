@@ -304,15 +304,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _fields.ContainsKey(field);
         }
 
-        public void Dispose()
+        public void DisposeWriters()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
-            _disposed = true;
-
             _indexWriter?.Analyzer?.Dispose();
             _indexWriter?.Dispose();
+            _indexWriter = null;
 
             if (_suggestionsIndexWriters != null)
             {
@@ -320,7 +316,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     writer.Value?.Dispose();
                 }
+
+                _suggestionsIndexWriters = null;
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
+
+            _disposed = true;
+
+            DisposeWriters();
 
             _converter?.Dispose();
             _directory?.Dispose();
