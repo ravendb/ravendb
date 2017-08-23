@@ -808,7 +808,9 @@ namespace Raven.Server.Documents
             var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
 
-            using (isPartialKey ? TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) : default(ByteStringContext.ExternalScope))
+            using (isPartialKey ? 
+                TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key) 
+              : default(ByteStringContext.InternalScope))
             using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice hash))
             {
                 if (expectedChangeVector != null && currentChangeVector != expectedChangeVector)

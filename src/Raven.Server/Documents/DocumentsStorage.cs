@@ -1510,11 +1510,11 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext.ExternalScope TableValueToSlice(
+        public static ByteStringContext.InternalScope TableValueToSlice(
             DocumentsOperationContext context, int index, ref TableValueReader tvr, out Slice slice)
         {
             var ptr = tvr.Read(index, out int size);
-            return Slice.External(context.Allocator, ptr, size, out slice);
+            return Slice.From(context.Allocator, ptr, size, ByteStringType.Immutable, out slice);
         }
     }
 }
