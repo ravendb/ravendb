@@ -15,6 +15,7 @@
 
         Circle,
         Wkt,
+        Point,
         Within,
         Contains,
         Disjoint,

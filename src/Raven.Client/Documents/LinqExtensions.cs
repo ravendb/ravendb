@@ -1348,7 +1348,7 @@ namespace Raven.Client.Documents
 #if NETSTANDARD2_0
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #else
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance));
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 4);
 #endif
 
             Expression expression = source.Expression;
@@ -1356,6 +1356,27 @@ namespace Raven.Client.Documents
                 expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistance(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 3);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
             return (IRavenQueryable<T>)queryable;
         }
 
@@ -1369,7 +1390,7 @@ namespace Raven.Client.Documents
 #if NETSTANDARD2_0
             var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
 #else
-            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending));
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 4);
 #endif
 
             Expression expression = source.Expression;
@@ -1380,16 +1401,37 @@ namespace Raven.Client.Documents
             return (IRavenQueryable<T>)queryable;
         }
 
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 3);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
 #if !NETSTANDARD2_0
-        private static MethodInfo GetOrderByDistanceMethod(string methodName)
+        private static MethodInfo GetOrderByDistanceMethod(string methodName, int numberOfParameters)
         {
             foreach (var method in typeof(LinqExtensions).GetMethods())
             {
-                if (method.Name != nameof(OrderByDistance))
+                if (method.Name != methodName)
                     continue;
 
                 var parameters = method.GetParameters();
-                if (parameters.Length != 4)
+                if (parameters.Length != numberOfParameters)
                     continue;
 
                 if (parameters[1].ParameterType != typeof(string))

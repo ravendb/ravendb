@@ -9,6 +9,7 @@ using Lucene.Net.Search;
 using Lucene.Net.Store;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors;
@@ -24,6 +25,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Spatial4n.Core.Shapes;
 using Spatial4n.Core.Shapes.Impl;
 using Voron.Impl;
 using Query = Lucene.Net.Search.Query;
@@ -318,22 +320,34 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     var spatialField = getSpatialField(field.Name);
 
-                    double latitude;
-                    var latArgument = field.Arguments[0];
-                    if (latArgument.Type != ValueTokenType.Parameter)
-                        latitude = double.Parse(latArgument.NameOrValue);
-                    else
-                        query.QueryParameters.TryGet(latArgument.NameOrValue, out latitude);
+                    Point point;
+                    switch (field.Method)
+                    {
+                        case MethodType.Circle:
+                            var cLatitude = field.Arguments[1].GetDouble(query.QueryParameters);
+                            var cLongitude = field.Arguments[2].GetDouble(query.QueryParameters);
 
-                    double longitude;
-                    var lngArgument = field.Arguments[1];
-                    if (latArgument.Type != ValueTokenType.Parameter)
-                        longitude = double.Parse(lngArgument.NameOrValue);
-                    else
-                        query.QueryParameters.TryGet(lngArgument.NameOrValue, out longitude);
+                            point = new PointImpl(cLongitude, cLatitude, spatialField.GetContext()).GetCenter();
+                            break;
+                        case MethodType.Wkt:
+                            var wkt = field.Arguments[0].GetString(query.QueryParameters);
+                            SpatialUnits? spatialUnits = null;
+                            if (field.Arguments.Length == 2)
+                                spatialUnits = Enum.Parse<SpatialUnits>(field.Arguments[1].GetString(query.QueryParameters), ignoreCase: true);
 
-                    var point = new PointImpl(longitude, latitude, spatialField.GetContext());
-                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point.GetCenter());
+                            point = spatialField.ReadShape(wkt, spatialUnits).GetCenter();
+                            break;
+                        case MethodType.Point:
+                            var pLatitude = field.Arguments[0].GetDouble(query.QueryParameters);
+                            var pLongitude = field.Arguments[1].GetDouble(query.QueryParameters);
+
+                            point = new PointImpl(pLongitude, pLatitude, spatialField.GetContext()).GetCenter();
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
+
+                    var dsort = new SpatialDistanceFieldComparatorSource(spatialField, point);
                     sort.Add(new SortField(field.Name, dsort, field.Ascending == false));
                     continue;
                 }

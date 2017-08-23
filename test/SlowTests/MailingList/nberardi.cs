@@ -48,6 +48,17 @@ namespace SlowTests.MailingList
                     Assert.Equal(results[2].Id, "se/1");
                 }
 
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Advanced.DocumentQuery<SpatialEntity>("SpatialIndex")
+                        .WithinRadiusOf("Coordinates", 500, 45.50955, -73.569133)
+                        .OrderByDistance("Coordinates", "POINT (-73.569133 45.50955)")
+                        .ToList();
+
+                    Assert.Equal(results[0].Id, "se/2");
+                    Assert.Equal(results[1].Id, "se/3");
+                    Assert.Equal(results[2].Id, "se/1");
+                }
             }
         }
 

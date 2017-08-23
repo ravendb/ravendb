@@ -688,6 +688,18 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt)
+        {
+            OrderByDistance(propertySelector.ToPropertyPath(), shapeWkt);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistance(string fieldName, string shapeWkt)
+        {
+            OrderByDistance(fieldName, shapeWkt);
+            return this;
+        }
+
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude)
         {
             OrderByDistanceDescending(propertySelector.ToPropertyPath(), latitude, longitude);
@@ -697,6 +709,18 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, double latitude, double longitude)
         {
             OrderByDistanceDescending(fieldName, latitude, longitude);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt)
+        {
+            OrderByDistanceDescending(propertySelector.ToPropertyPath(), shapeWkt);
+            return this;
+        }
+
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.OrderByDistanceDescending(string fieldName, string shapeWkt)
+        {
+            OrderByDistanceDescending(fieldName, shapeWkt);
             return this;
         }
 

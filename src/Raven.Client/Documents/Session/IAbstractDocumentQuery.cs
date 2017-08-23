@@ -333,6 +333,10 @@ namespace Raven.Client.Documents.Session
 
         void OrderByDistance(string fieldName, double latitude, double longitude);
 
+        void OrderByDistance(string fieldName, string shapeWkt);
+
         void OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        void OrderByDistanceDescending(string fieldName, string shapeWkt);
     }
 }

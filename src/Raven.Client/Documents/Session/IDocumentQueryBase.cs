@@ -690,11 +690,31 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
+        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(string fieldName, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
         TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
         TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, string shapeWkt);
     }
 }
