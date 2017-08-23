@@ -135,9 +135,13 @@ namespace Raven.Database.Actions
                 .ContinueWith(_ => linkedTokenSource.Dispose());
         }
 
-        public void RemoveAllBefore(string listName,Etag etag)
+        public void RemoveAllBefore(string listName,Etag etag, TimeSpan? timeout = null)
         {
-            TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllBefore(listName,etag));
+            using (Database.DocumentLock.Lock())
+            {
+                TransactionalStorage.Batch(accessor => accessor.Lists.RemoveAllBefore(listName, etag, timeout));
+            }
+            
         }
 
         public void PurgeOutdatedTombstones()

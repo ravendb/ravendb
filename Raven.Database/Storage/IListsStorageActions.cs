@@ -18,7 +18,7 @@ namespace Raven.Database.Storage
 
         ListItem ReadLast(string name);
 
-        void RemoveAllBefore(string name, Etag etag);
+        void RemoveAllBefore(string name, Etag etag, TimeSpan? timeout = null);
         void RemoveAllOlderThan(string name, DateTime dateTime);
 
         void Touch(string name, string key, UuidType uuidType, out Etag preTouchEtag, out Etag afterTouchEtag);
