@@ -23,7 +23,7 @@ namespace SlowTests.MailingList
                         @"
 from post in docs.Posts 
 from Tag in post.Tags
-select new { Tag, Count = 1, Lat = 38.96939, Lon = -77.386398, _ = (object)null }"
+select new { Tag, Count = 1, Lat = 38.96939, Lon = -77.386398, Coordinates = (object)null }"
                     },
                     Reduce =
                         @"

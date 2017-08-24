@@ -20,10 +20,10 @@ namespace SlowTests.Issues
             public SpatialIndexForTest()
             {
                 Map = docs => from doc in docs
-                              select new MySpatialEntity()
+                              select new
                               {
                                   Name = doc.Name,
-                                  WKT = doc.WKT
+                                  WKT = CreateSpatialField(doc.WKT)
                               };
                 Store(x => x.Name, FieldStorage.Yes);
                 Spatial(x => x.WKT, x => x.Cartesian.QuadPrefixTreeIndex(12, new SpatialBounds(0, 0, 200, 200)));
