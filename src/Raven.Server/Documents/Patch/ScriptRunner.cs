@@ -8,7 +8,6 @@ using System.Threading;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
-using Jint.Parser;
 using Jint.Runtime.Interop;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
@@ -112,14 +111,16 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
 
                 foreach (var script in scriptsSource)
+                {
                     try
                     {
                         ScriptEngine.Execute(script);
                     }
-                    catch (ParserException e)
+                    catch (Exception e)
                     {
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
+                }
             }
 
             public override string ToString()
