@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} += val_{_valsCount};",
+                Script = $"this.{pathScript} += args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = valToAdd} 
             };
 
@@ -61,7 +61,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} = val_{_valsCount};",
+                Script = $"this.{pathScript} = args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = value}
             };
 
