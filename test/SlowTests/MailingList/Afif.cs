@@ -82,7 +82,8 @@ namespace SlowTests.MailingList
                                           _ = (object)null,
                                           SaleId = sale.Id,
                                           Locations = sale.Locations.Select(l => new { l.Lat, l.Lng }).ToArray(),
-                                          TotalSold = 0
+                                          TotalSold = 0,
+                                          Coordinates = (object) null
                                       });
 
                 AddMap<Order>(orders => from order in orders
@@ -91,7 +92,8 @@ namespace SlowTests.MailingList
                                             _ = (object)null,
                                             order.SaleId,
                                             Locations = new[] { new { Lat = (double)0, Lng = (double)0 } },
-                                            TotalSold = 1
+                                            TotalSold = 1,
+                                            Coordinates = (object)null
                                         });
 
                 Reduce = sitesales => from sitesale in sitesales
