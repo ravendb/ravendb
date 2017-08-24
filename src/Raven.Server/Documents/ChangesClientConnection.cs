@@ -11,6 +11,7 @@ using Raven.Client.Util;
 using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Threading;
 
 namespace Raven.Server.Documents
 {
@@ -418,12 +419,12 @@ namespace Raven.Server.Documents
             }
         }
 
-        private long _isDisposed;
-        public bool IsDisposed => Interlocked.Read(ref _isDisposed) == 1;
+        private SingleUseFlag _isDisposed = new SingleUseFlag();
+        public bool IsDisposed => _isDisposed.IsRaised();
 
         public void Dispose()
         {
-            Interlocked.Exchange(ref _isDisposed, 1);
+            _isDisposed.RaiseOrDie();
             _cts.Cancel();
             _sendQueue.Enqueue(new ChangeValue
             {

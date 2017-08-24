@@ -16,6 +16,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Sparrow.Compression;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
@@ -427,7 +428,7 @@ namespace Voron.Impl.Journal
             private readonly object _flushingLock = new object();
             private readonly SemaphoreSlim _fsyncLock = new SemaphoreSlim(1);
             private readonly WriteAheadJournal _waj;
-            private int _forceDataSync;
+            private MultipleUseFlag _forceDataSync = new MultipleUseFlag();
             private readonly ManualResetEventSlim _waitForJournalStateUpdateUnderTx = new ManualResetEventSlim();
 
             private long _lastFlushedTransactionId;
@@ -575,7 +576,7 @@ namespace Voron.Impl.Journal
 
                     var needImmediateFsync =
                         _pendingSync.IsCompleted &&
-                        (Interlocked.Exchange(ref _forceDataSync, 0) != 0 ||
+                        (_forceDataSync.Lower() ||
                          _totalWrittenButUnsyncedBytes > 32 * Constants.Size.Megabyte);
 
                     if (needImmediateFsync)
@@ -931,7 +932,7 @@ namespace Voron.Impl.Journal
                             if (_parent._waj._logger.IsInfoEnabled)
                                 _parent._waj._logger.Info(
                                     $"Asking for required sync on {_parent._waj._dataPager.FileName} because started a sync and aborted because we couldn't get the flushing lock");
-                            Interlocked.Exchange(ref _parent._forceDataSync, 1);
+                            _parent._forceDataSync.Raise();
                             return false;
                         }
 

@@ -25,7 +25,7 @@ namespace Raven.Server.Utils.Metrics
         private readonly double _interval;
 
 
-        private SingleUseFlag _initialized;
+        private SingleUseFlag _initialized = new SingleUseFlag();
         private double _rate;
 
         private long _uncounted;
@@ -66,14 +66,14 @@ namespace Raven.Server.Utils.Metrics
             var count = Interlocked.Exchange(ref _uncounted, 0);
 
             var instantRate = count / _interval;
-            if (_initialized.RaiseOrExit())
+            if (_initialized.Raise())
             {
-                double doubleRate = Volatile.Read(ref _rate);
-                Volatile.Write(ref _rate, doubleRate + _alpha * (instantRate - doubleRate));
+                Volatile.Write(ref _rate, instantRate);
             }
             else
             {
-                Volatile.Write(ref _rate, instantRate);
+                double doubleRate = Volatile.Read(ref _rate);
+                Volatile.Write(ref _rate, doubleRate + _alpha * (instantRate - doubleRate));
             }
         }
 

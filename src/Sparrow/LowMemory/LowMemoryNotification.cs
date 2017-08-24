@@ -3,17 +3,11 @@ using System.Collections.Generic;
 using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Logging;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.LowMemory
 {
-    public class LowMemoryFlag
-    {
-        public int LowMemoryState;
-
-        public static LowMemoryFlag None = new LowMemoryFlag();
-    }
-
     public interface ILowMemoryHandler
     {
         void LowMemory();

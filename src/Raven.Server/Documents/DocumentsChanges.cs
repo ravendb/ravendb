@@ -63,7 +63,7 @@ namespace Raven.Server.Documents
 
             foreach (var connection in Connections)
             {
-                if (connection.Value.IsDisposed == false)
+                if (!connection.Value.IsDisposed)
                     connection.Value.SendDocumentChanges(documentChange);
             }
                 

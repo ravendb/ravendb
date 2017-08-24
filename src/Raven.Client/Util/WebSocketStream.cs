@@ -131,7 +131,7 @@ namespace Raven.Client.Util
             base.Dispose(disposing);
 
             AsyncHelpers.RunSync(() => Task.WhenAll(_activeWriteTasks));
-            _isDisposed.Raise();
+            _isDisposed.RaiseOrDie();
         }
     }
 }

@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void MarkForDisposal()
             {
-                ShouldDispose.Raise();
+                ShouldDispose.RaiseOrDie();
             }
 
             public void Dispose()

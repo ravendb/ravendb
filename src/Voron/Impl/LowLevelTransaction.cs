@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Sparrow;
 using Sparrow.Collections;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Data.BTrees;
@@ -232,7 +233,7 @@ namespace Voron.Impl
             _journal = env.Journal;
             _id = id;
             _freeSpaceHandling = freeSpaceHandling;
-            _allocator = context ?? new ByteStringContext(LowMemoryFlag.None);
+            _allocator = context ?? new ByteStringContext(SharedMultipleUseFlag.AlwaysLow);
             _disposeAllocator = context == null;
             _pagerStates = new HashSet<PagerState>(ReferenceEqualityComparer<PagerState>.Default);
 

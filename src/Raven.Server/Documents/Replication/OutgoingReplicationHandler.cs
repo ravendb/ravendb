@@ -23,6 +23,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.Utils;
 using Sparrow;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -726,13 +727,13 @@ namespace Raven.Server.Documents.Replication
             _waitForChanges.Set();
         }
 
-        private int _disposed;
+        private SingleUseFlag _disposed = new SingleUseFlag();
         private readonly DateTime _startedAt = DateTime.UtcNow;
 
         public void Dispose()
         {
-            //There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
-            if (Interlocked.CompareExchange(ref _disposed, 1, 0) == 1)
+            // There are multiple invocations of dispose, this happens sometimes during tests, causing failures.
+            if (!_disposed.Raise())
                 return;
             if (_log.IsInfoEnabled)
                 _log.Info($"Disposing OutgoingReplicationHandler ({FromToString})");

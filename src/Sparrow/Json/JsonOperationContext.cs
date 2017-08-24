@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Sparrow.Collections;
 using Sparrow.Json.Parsing;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 #if VALIDATE
@@ -179,14 +180,14 @@ namespace Sparrow.Json
 
         public long AllocatedMemory => _arenaAllocator.TotalUsed;
 
-        protected readonly LowMemoryFlag LowMemoryFlag;
+        protected readonly SharedMultipleUseFlag LowMemoryFlag;
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, LowMemoryFlag.None);
+            return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.AlwaysLow);
         }
 
-        public JsonOperationContext(int initialSize, int longLivedSize, LowMemoryFlag lowMemoryFlag)
+        public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
         {
             Debug.Assert(lowMemoryFlag != null);
             
