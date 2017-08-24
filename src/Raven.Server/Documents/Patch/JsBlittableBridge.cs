@@ -56,18 +56,8 @@ namespace Raven.Server.Documents.Patch
                     _writer.WriteValue(js.AsString());
                 else if (js.IsNumber())
                     WriteNumber(parent, propName, js.AsNumber());
-              
                 else if (js.IsArray())
-                {
-                    var arrayInstance = js.AsArray();
-                    _writer.StartWriteArray();
-                    foreach (var property in arrayInstance.GetOwnProperties())
-                    {
-                        if (property.Key == "length") continue;
-                        WriteJsonValue(arrayInstance, property.Key, property.Value.Value);
-                    }
-                    _writer.WriteArrayEnd();
-                }
+                    WriteArray(js.AsArray());
                 else if (js.IsObject())
                 {
                     WriteNestedObject(js.AsObject());
@@ -79,6 +69,17 @@ namespace Raven.Server.Documents.Patch
                 return;
             }
             WriteValue(parent, propName, value);
+        }
+
+        private void WriteArray(ArrayInstance arrayInstance)
+        {
+            _writer.StartWriteArray();
+            foreach (var property in arrayInstance.GetOwnProperties())
+            {
+                if (property.Key == "length") continue;
+                WriteJsonValue(arrayInstance, property.Key, property.Value.Value);
+            }
+            _writer.WriteArrayEnd();
         }
 
         private void WriteValue(object parent, string propName, object v)
