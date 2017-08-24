@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Sparrow.Binary;
 using Sparrow.Collections;
 using Sparrow.Extensions;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.Logging
@@ -29,7 +30,7 @@ namespace Sparrow.Logging
         private string _path;
         private readonly TimeSpan _retentionTime;
         private string _dateString;
-        private volatile bool _keepLogging = true;
+        private MultipleUseFlag _keepLogging = new MultipleUseFlag(true);
         private int _logNumber;
         private DateTime _today;
         public bool IsInfoEnabled;
@@ -141,7 +142,7 @@ namespace Sparrow.Logging
                     // have to do this on a separate thread
                     Task.Run(() =>
                     {
-                        _keepLogging = false;
+                        _keepLogging.LowerOrDie();
                         _hasEntries.Set();
 
                         copyLoggingThread.Join();
@@ -150,7 +151,7 @@ namespace Sparrow.Logging
                 }
                 else
                 {
-                    _keepLogging = false;
+                    _keepLogging.LowerOrDie();
                     _hasEntries.Set();
 
                     copyLoggingThread.Join();
@@ -165,7 +166,7 @@ namespace Sparrow.Logging
                 IsOperationsEnabled == false)
                 return;
 
-            _keepLogging = true;
+            _keepLogging.RaiseOrDie();
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
@@ -340,7 +341,7 @@ namespace Sparrow.Logging
                 Interlocked.Increment(ref _generation);
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
-                while (_keepLogging)
+                while (_keepLogging.IsRaised())
                 {
                     const int maxFileSize = 1024 * 1024 * 256;
                     using (var currentFile = GetNewStream(maxFileSize))
@@ -353,11 +354,11 @@ namespace Sparrow.Logging
                         {
                             if (foundEntry == false)
                             {
-                                if (_keepLogging == false)
+                                if (!_keepLogging.IsRaised())
                                     return;
 
                                 _hasEntries.Wait();
-                                if (_keepLogging == false)
+                                if (!_keepLogging.IsRaised())
                                     return;
 
                                 _hasEntries.Reset();

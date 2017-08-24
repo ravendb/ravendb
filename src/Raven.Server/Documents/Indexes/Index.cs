@@ -48,6 +48,7 @@ using Sparrow.Json;
 using Voron;
 using Sparrow.Logging;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Size = Sparrow.Size;
 using Voron.Debugging;
@@ -159,8 +160,8 @@ namespace Raven.Server.Documents.Indexes
         private bool _isCompactionInProgress;
         
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
-        private volatile bool _priorityChanged;
-        private volatile bool _hadRealIndexingWorkToDo;
+        private MultipleUseFlag _priorityChanged = new MultipleUseFlag();
+        private MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
         protected readonly StorageOperationWrapper _storageOperation;
 
@@ -524,7 +525,7 @@ namespace Raven.Server.Documents.Indexes
 
                 InitializeInternal();
 
-                _priorityChanged = true;
+                _priorityChanged.RaiseOrDie();
 
                 if (status == IndexRunningStatus.Running)
                     Start();
@@ -732,7 +733,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void ExecuteIndexing()
         {
-            _priorityChanged = true;
+            _priorityChanged.RaiseOrDie();
             NativeMemory.EnsureRegistered();
             using (CultureHelper.EnsureInvariantCulture())
             {
@@ -813,11 +814,13 @@ namespace Raven.Server.Documents.Indexes
                                     _indexingBatchCompleted.SetAndResetAtomically();
 
                                     if (didWork)
+                                    {
                                         ResetErrors();
+                                        _hadRealIndexingWorkToDo.Raise();
+                                    }
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
-                                    _hadRealIndexingWorkToDo |= didWork;
 
                                     if (_logger.IsInfoEnabled)
                                         _logger.Info($"Finished indexing for '{Name} ({Etag})'.'");
@@ -942,7 +945,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
-                                    _hadRealIndexingWorkToDo = false;
+                                    _hadRealIndexingWorkToDo.LowerOrDie();
                                     storageEnvironment.Cleanup();
                                     _logsAppliedEvent.Reset();
                                 }
@@ -970,10 +973,8 @@ namespace Raven.Server.Documents.Indexes
 
         private void ChangeIndexThreadPriorityIfNeeded()
         {
-            if (_priorityChanged == false)
+            if (!_priorityChanged.Lower())
                 return;
-
-            _priorityChanged = false;
 
             ThreadPriority newPriority;
             var priority = Definition.Priority;
@@ -1001,7 +1002,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleLogsApplied()
         {
-            if (_hadRealIndexingWorkToDo)
+            if (_hadRealIndexingWorkToDo.IsRaised())
                 _logsAppliedEvent.Set();
         }
 
@@ -1291,7 +1292,7 @@ namespace Raven.Server.Documents.Indexes
                 _indexStorage.WritePriority(priority);
 
                 Definition.Priority = priority;
-                _priorityChanged = true;
+                _priorityChanged.RaiseOrDie();
 
                 DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                 {

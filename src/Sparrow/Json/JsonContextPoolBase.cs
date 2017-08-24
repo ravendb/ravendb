@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow.Json
@@ -16,7 +17,7 @@ namespace Sparrow.Json
         private readonly ThreadLocal<ContextStack> _contextPool;
         private readonly NativeMemoryCleaner<ContextStack, T> _nativeMemoryCleaner;
         private bool _disposed;
-        protected LowMemoryFlag LowMemoryFlag = new LowMemoryFlag();
+        protected SharedMultipleUseFlag LowMemoryFlag = new SharedMultipleUseFlag();
 
         private readonly CancellationTokenSource _cts = new CancellationTokenSource();
 
@@ -198,14 +199,13 @@ namespace Sparrow.Json
 
         public void LowMemory()
         {
-            if (Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 1, 0) != 0)
-                return;
-            _nativeMemoryCleaner.CleanNativeMemory(null);
+            if (LowMemoryFlag.Raise())
+                _nativeMemoryCleaner.CleanNativeMemory(null);
         }
 
         public void LowMemoryOver()
         {
-            Interlocked.CompareExchange(ref LowMemoryFlag.LowMemoryState, 0, 1);
+            LowMemoryFlag.Lower();
         }
     }
 }

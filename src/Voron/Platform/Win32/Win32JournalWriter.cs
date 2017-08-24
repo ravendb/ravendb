@@ -199,7 +199,7 @@ namespace Voron.Platform.Win32
 
         public void Dispose()
         {
-            if (_disposed.RaiseOrExit())
+            if (!_disposed.Raise())
                 return;
 
             GC.SuppressFinalize(this);

@@ -7,6 +7,7 @@ using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron.Data;
 using Voron.Exceptions;
@@ -29,7 +30,7 @@ namespace Voron.Impl.Paging
         private DateTime _lastIncrease;
         private readonly object _pagerStateModificationLocker = new object();
         public bool UsePageProtection { get; } = false;
-        private readonly LowMemoryFlag _lowMemoryFlag = new LowMemoryFlag();
+        private MultipleUseFlag _lowMemoryFlag = new MultipleUseFlag();
 
         public Action<PagerState> PagerStateChanged;
 
@@ -246,8 +247,7 @@ namespace Voron.Impl.Paging
                 return MinIncreaseSize;
             }
 
-            // There is no need to barrier for this read
-            if (_lowMemoryFlag.LowMemoryState == 1)
+            if (_lowMemoryFlag.IsRaised())
             {
                 _lastIncrease = now;
                 return MinIncreaseSize;
@@ -363,12 +363,12 @@ namespace Voron.Impl.Paging
         {
             // We could check for nested calls to LowMemory here, but we 
             // probably don't want to error because of it.
-            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 1, 0);
+            _lowMemoryFlag.Raise();
         }
 
         public void LowMemoryOver()
         {
-            Interlocked.CompareExchange(ref _lowMemoryFlag.LowMemoryState, 0, 1);
+            _lowMemoryFlag.Lower();
         }
     }
 

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Sparrow.Binary;
 using Sparrow.LowMemory;
+using Sparrow.Threading;
 #if MEM_GUARD
 using Sparrow.Platform;
 #endif
@@ -38,7 +39,7 @@ namespace Sparrow.Json
         private readonly int _initialSize;
 
         public long TotalUsed;
-        private readonly LowMemoryFlag _lowMemoryFlag;
+        private readonly SharedMultipleUseFlag _lowMemoryFlag;
 
         public long Allocated
         {
@@ -56,7 +57,7 @@ namespace Sparrow.Json
             }
         }
 
-        public ArenaMemoryAllocator(LowMemoryFlag lowMemoryFlag, int initialSize = 1024 * 1024)
+        public ArenaMemoryAllocator(SharedMultipleUseFlag lowMemoryFlag, int initialSize = 1024 * 1024)
         {
             _initialSize = initialSize;
             _ptrStart = _ptrCurrent = NativeMemory.AllocateMemory(initialSize, out _allocatingThread);
@@ -156,7 +157,7 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (_lowMemoryFlag.LowMemoryState != 0)
+            if (_lowMemoryFlag.IsRaised())
                 throw new LowMemoryException($"Request to grow the arena by {requestedSize} because we are under memory pressure");
 
             if (requestedSize >= MaxArenaSize)

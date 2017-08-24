@@ -83,13 +83,13 @@ namespace Raven.Client.Util.Metrics
         {
             var count = _uncounted.GetAndSet(0);
             var instantRate = count / _interval;
-            if (_initialized.RaiseOrExit())
+            if (_initialized.Raise())
             {
-                _rate += _alpha * (instantRate - _rate);
+                _rate.Set(instantRate);
             }
             else
             {
-                _rate.Set(instantRate);
+                _rate += _alpha * (instantRate - _rate);
             }
         }
 

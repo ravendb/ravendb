@@ -22,6 +22,7 @@ using Raven.Server.Utils;
 using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Platform;
+using Sparrow.Threading;
 using Sparrow.Utils;
 using Xunit;
 
@@ -38,7 +39,7 @@ namespace FastTests
         private static readonly ConcurrentSet<string> GlobalPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
         private static readonly SemaphoreSlim ConcurrentTestsSemaphore;
-        private volatile bool _concurrentTestsSemaphoreTaken;
+        private MultipleUseFlag _concurrentTestsSemaphoreTaken = new MultipleUseFlag();
 
         private readonly ConcurrentSet<string> _localPathsToDelete = new ConcurrentSet<string>(StringComparer.OrdinalIgnoreCase);
 
@@ -321,11 +322,8 @@ namespace FastTests
         {
             GC.SuppressFinalize(this);
 
-            if (_concurrentTestsSemaphoreTaken)
-            {
+            if (_concurrentTestsSemaphoreTaken.Lower())
                 ConcurrentTestsSemaphore.Release();
-                _concurrentTestsSemaphoreTaken = false;
-            }
 
             var exceptionAggregator = new ExceptionAggregator("Could not dispose test");
 
@@ -348,7 +346,7 @@ namespace FastTests
        public Task InitializeAsync()
         {
             return ConcurrentTestsSemaphore.WaitAsync()
-                .ContinueWith(x => _concurrentTestsSemaphoreTaken = true);
+                .ContinueWith(x => _concurrentTestsSemaphoreTaken.RaiseOrDie());
         }
 
         public Task DisposeAsync()

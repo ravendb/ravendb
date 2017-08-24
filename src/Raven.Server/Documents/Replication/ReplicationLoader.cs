@@ -330,7 +330,7 @@ namespace Raven.Server.Documents.Replication
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             ConflictResolver.RunConflictResolversOnce();
-            _isInitialized.Raise();
+            _isInitialized.RaiseOrDie();
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord)

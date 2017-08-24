@@ -5,10 +5,11 @@ using System.Threading;
 namespace Sparrow.Threading
 {
     /// <summary>
-    /// A thread-safe, single use flag that can be raised once; meant to be single-user.
+    /// A thread-safe, multiple use flag that can be raised and lowered at will; meant to be
+    /// single-user.
     /// 
-    /// Example use case is a class which runs on multiple threads wants to know if it has
-    /// been disposed or not, or whether a particular event is currently happening.
+    /// Example use case is one class has multiple threads that access it and change the
+    /// behavior externally, such as "stop logging".
     /// 
     /// For convincing on why you should use this class instead of rolling your own, see
     /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/ and
@@ -17,7 +18,7 @@ namespace Sparrow.Threading
     /// PERF: This is a struct instead of a class so that its usage may be made invisible. Do
     /// NOT change this without good reason, could have sizeable impact.
     /// </summary>
-    public struct SingleUseFlag
+    public struct MultipleUseFlag
     {
         private int _state;
 
@@ -25,7 +26,7 @@ namespace Sparrow.Threading
         /// Creates a flag.
         /// </summary>
         /// <param name="raised">if it should be raised or not</param>
-        public SingleUseFlag(bool raised = false)
+        public MultipleUseFlag(bool raised = false)
         {
             _state = 0;
             if (raised)
@@ -43,11 +44,31 @@ namespace Sparrow.Threading
         }
 
         /// <summary>
-        /// This is here to allow RaiseOrDie() to be inlined.
+        /// Lowers the flag. If already low, throws InvalidOperationException.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void LowerOrDie()
+        {
+            if (!Lower())
+                ThrowException();
+        }
+
+        /// <summary>
+        /// This is here to allow RaiseOrDie() and LowerOrDie() to be inlined.
         /// </summary>
         private static void ThrowException()
         {
-            throw new InvalidOperationException($"Repeated operation for a {nameof(SingleUseFlag)} instance");
+            throw new InvalidOperationException($"Repeated operation for a {nameof(MultipleUseFlag)} instance");
+        }
+
+        /// <summary>
+        /// Lowers the flag
+        /// </summary>
+        /// <returns>If already low, false; otherwise, true</returns>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public bool Lower()
+        {
+            return Interlocked.CompareExchange(ref _state, 0, 1) == 1;
         }
 
         /// <summary>
