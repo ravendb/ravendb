@@ -158,6 +158,7 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
+        private bool _isStorageBeingMoved;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
@@ -174,6 +175,8 @@ namespace Raven.Server.Documents.Indexes
         };
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
+
+        private bool IsStorageWorkInProgress => _isCompactionInProgress || _isStorageBeingMoved;
 
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
@@ -351,7 +354,7 @@ namespace Raven.Server.Documents.Indexes
 
             if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
             {
-                throw new InvalidOperationException("After waiting for 10 seconds for all running queries ");
+                throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
             return new ExitWriteLock(_currentlyRunningQueriesLock);
         }
@@ -568,8 +571,12 @@ namespace Raven.Server.Documents.Indexes
 
                 exceptionAggregator.Execute(() =>
                 {
-                    _indexingThread?.Join();
+                    var indexingThread = _indexingThread;
                     _indexingThread = null;
+
+                    // If we invoke Thread.Join from the indexing thread itself it will cause a deadlock
+                    if (indexingThread != null && Thread.CurrentThread != indexingThread)
+                        indexingThread.Join();
                 });
 
                 exceptionAggregator.Execute(() =>
@@ -614,7 +621,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
                 return true;
 
             if (Type == IndexType.Faulty)
@@ -631,7 +638,8 @@ namespace Raven.Server.Documents.Indexes
         {
             Faulty = -1,
             Compacting = -2,
-            Stale = -3
+            Stale = -3,
+            StorageMoving = -4
         }
 
         public virtual (bool IsStale, long LastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
@@ -643,6 +651,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (_isCompactionInProgress)
                 return (true, (long)IndexProgressStatus.Compacting);
+
+            if (_isStorageBeingMoved)
+                return (true, (long)IndexProgressStatus.StorageMoving);
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
@@ -1246,7 +1257,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual List<IndexingError> GetErrors()
         {
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
                 return new List<IndexingError>();
 
             return _indexStorage.ReadErrors();
@@ -1254,7 +1265,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetErrorCount()
         {
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
                 return 0;
 
             if (Type == IndexType.Faulty)
@@ -1265,7 +1276,7 @@ namespace Raven.Server.Documents.Indexes
 
         public DateTime? GetLastIndexingErrorTime()
         {
-            if (_isCompactionInProgress || Type == IndexType.Faulty)
+            if (IsStorageWorkInProgress || Type == IndexType.Faulty)
                 return DateTime.MinValue;
 
             return _indexStorage.ReadLastIndexingErrorTime();
@@ -1419,7 +1430,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
             {
                 return new IndexProgress
                 {
@@ -1477,7 +1488,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
             DocumentsOperationContext documentsContext = null)
         {
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
             {
                 return new IndexStats
                 {
@@ -1656,7 +1667,6 @@ namespace Raven.Server.Documents.Indexes
                 throw new NotSupportedException("Includes are not supported by this type of query.");
 
             using (var marker = MarkQueryAsRunning(query, token))
-
             {
                 var queryDuration = Stopwatch.StartNew();
                 AsyncWaitForIndexing wait = null;
@@ -2023,6 +2033,9 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
+            if (_isStorageBeingMoved)
+                ThrowStorageBeingMoved();
+
             if (_initialized == false)
                 ThrowNotIntialized();
 
@@ -2063,6 +2076,11 @@ namespace Raven.Server.Documents.Indexes
         private void ThrowCompactionInProgress()
         {
             throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
+        }
+
+        private void ThrowStorageBeingMoved()
+        {
+            throw new InvalidOperationException($"Storage of index '{Name} ({Etag})' is currently being moved.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -2212,7 +2230,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
-            if (_isCompactionInProgress)
+            if (IsStorageWorkInProgress)
                 return -1;
 
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
@@ -2371,6 +2389,11 @@ namespace Raven.Server.Documents.Indexes
             }
 
             return true;
+        }
+
+        public IDisposable MovingStorage()
+        {
+            return new MoveStorageOperationWrapper(this);
         }
 
         public IOperationResult Compact(Action<IOperationProgress> onProgress)
@@ -2554,6 +2577,31 @@ namespace Raven.Server.Documents.Indexes
                 if (_hasLock)
                     _parent._currentlyRunningQueriesLock.ExitReadLock();
                 _parent.CurrentlyRunningQueries.TryRemove(_queryInfo);
+            }
+        }
+
+        private class MoveStorageOperationWrapper : IDisposable
+        {
+            private readonly Index _index;
+
+            public MoveStorageOperationWrapper(Index index)
+            {
+                _index = index;
+                index._isCompactionInProgress = true;
+                index.Dispose();
+            }
+
+            public void Dispose()
+            {
+                _index._initialized = false;
+                _index._disposed = false;
+                _index._disposing = false;
+
+                _index.Initialize(_index.DocumentDatabase, _index.Configuration, _index.PerformanceHints);
+
+                _index.Start();
+
+                _index._isStorageBeingMoved = false;
             }
         }
     }

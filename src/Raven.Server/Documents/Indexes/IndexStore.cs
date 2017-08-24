@@ -1076,7 +1076,7 @@ namespace Raven.Server.Documents.Indexes
             public DateTime CreationDate { get; set; }
         }
 
-        public bool TryReplaceIndexes(string oldIndexName, string newIndexName, bool immediately = false)
+        public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
             bool lockTaken = false;
             try
@@ -1084,8 +1084,7 @@ namespace Raven.Server.Documents.Indexes
                 Monitor.TryEnter(_locker, 16, ref lockTaken);
                 if (lockTaken == false)
                     return false;
-
-                if (_indexes.TryGetByName(newIndexName, out Index newIndex) == false)
+                if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
                     return true;
 
                 if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
@@ -1112,6 +1111,28 @@ namespace Raven.Server.Documents.Indexes
                 {
                     using (oldIndex.DrainRunningQueries())
                         DeleteIndexInternal(oldIndex);
+                }
+
+                using (newIndex.DrainRunningQueries())
+                using (newIndex.MovingStorage())
+                {
+                    var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                    var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                    IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                        newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                    if (newIndex.Configuration.TempPath != null)
+                    {
+                        IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                            newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                    }
+
+                    if (newIndex.Configuration.JournalsStoragePath != null)
+                    {
+                        IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                            newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                    }
                 }
 
                 _documentDatabase.Changes.RaiseNotifications(
