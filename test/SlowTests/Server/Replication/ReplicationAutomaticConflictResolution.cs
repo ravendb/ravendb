@@ -65,20 +65,20 @@ function onlyUnique(value, index, self) {
     return self.indexOf(value) === index;
 }
 
-    var names = [];
-    var history = [];
-    for(var i = 0; i < docs.length; i++) 
-    {
-        names = names.concat(docs[i].Name.split(' '));
-        history.push(docs[i]);
-    }
-            var out = {
-                Name: names.filter(onlyUnique).join(' '),
-                Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
-                Grades:{Bio:12,Math:123,Pys:5,Sports:44},
-                Versions:history,
-                '@metadata':docs[0]['@metadata']
-            }
+var names = [];
+var history = [];
+for(var i = 0; i < docs.length; i++) 
+{
+    names = names.concat(docs[i].Name.split(' '));
+    history.push(docs[i]);
+}
+var out = {
+    Name: names.filter(onlyUnique).join(' '),
+    Age: Math.max.apply(Math,docs.map(function(o){return o.Age;})),
+    Grades:{Bio:12,Math:123,Pys:5,Sports:44},
+    Versions:history,
+    '@metadata':docs[0]['@metadata']
+}
 return out;
 ", "Users");
                 await SetupReplicationAsync(master, slave);
@@ -158,7 +158,11 @@ return out;
         public bool WaitForBiggerChangeVector(DocumentStore store, string changeVector)
         {
             var sw = Stopwatch.StartNew();
-            while (sw.ElapsedMilliseconds < 10000)
+
+            var timeout = 10000;
+            if (Debugger.IsAttached)
+                timeout *= 10;
+            while (sw.ElapsedMilliseconds < timeout)
             {
                 using (var session = store.OpenSession())
                 {

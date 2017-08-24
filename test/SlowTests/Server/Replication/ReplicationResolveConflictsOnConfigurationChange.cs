@@ -97,7 +97,6 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument<User>(store1, "foo/bar", u => u.Name == "Store1"));
                 Assert.True(WaitForDocument<User>(store2, "foo/bar", u => u.Name == "Store1"));
-                WaitForUserToContinueTheTest(store1);
             }
         }
 

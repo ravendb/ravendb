@@ -404,8 +404,8 @@ namespace Raven.Server.Documents.Patch
                     return o;
                 if (o is List<object> l)
                 {
-                    var args = new[] { new JsValue(l.Count) };
-                    var jsArray = ScriptEngine.Array.Construct(args);
+                    var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
+                    var args = new JsValue[1];
                     for (var i = 0; i < l.Count; i++)
                     {
                         var value = TranslateToJs(ScriptEngine, context, l[i]);
