@@ -237,16 +237,16 @@ class ioStats extends viewModelBase {
 
     static readonly eventsColors: { [typeName in Sparrow.IoMetrics.MeterType]: { Low: string; High: string } } = {
         "Compression": {
-            Low: "#d64a97", High: "#8a024b"
+            Low: "#cc23a6", High: "#5f076f"
         },
         "DataFlush": {
-            Low: "#6fa8dc", High: "#085394"
+            Low: "#4be3ff", High: "#0c2c7e"
         },
         "DataSync": {
-            Low: "#f6b26b", High: "#b45f06"
+            Low: "#ffb956", High: "#cb3900"
         },
         "JournalWrite": {
-            Low: "#93c47d", High: "#38761d"
+            Low: "#baff4d", High: "#1e4c0a"
         }
     }
 

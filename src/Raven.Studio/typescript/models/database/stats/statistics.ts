@@ -10,6 +10,7 @@ class statistics {
     countOfDocuments: string;
     countOfTransformers: string;
     countOfAttachments: string;
+    countOfUniqueAttachments: string;
     is64Bit: boolean;
     indexPerformanceURL: string;
 
@@ -25,9 +26,7 @@ class statistics {
         this.countOfIndexes = dbStats.CountOfIndexes.toLocaleString();
         this.countOfTransformers = dbStats.CountOfTransformers.toLocaleString();
         this.countOfAttachments = dbStats.CountOfAttachments.toLocaleString();
-        if (dbStats.CountOfAttachments > 0 && dbStats.CountOfAttachments !== dbStats.CountOfUniqueAttachments) {
-            this.countOfAttachments += " (" + dbStats.CountOfUniqueAttachments.toLocaleString() + " unique)";
-        }
+        this.countOfUniqueAttachments = dbStats.CountOfUniqueAttachments.toLocaleString();
         this.is64Bit = dbStats.Is64Bit;
         
         // 1. Create the array with all indexes that we got from the endpoint
