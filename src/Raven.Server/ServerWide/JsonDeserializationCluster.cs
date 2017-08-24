@@ -55,8 +55,8 @@ namespace Raven.Server.ServerWide
 
         public static Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>> Commands = new Dictionary<string, Func<BlittableJsonReaderObject, CommandBase>>
         {
+            [nameof(CompareExchangeCommand)] = GenerateJsonDeserializationRoutine<CompareExchangeCommand>(),
      		[nameof(DeleteCertificateFromClusterCommand)] = GenerateJsonDeserializationRoutine<DeleteCertificateFromClusterCommand>(),
-            [nameof(PutUniqueValueCommand)] = GenerateJsonDeserializationRoutine<PutUniqueValueCommand>(),
             [nameof(EditRevisionsConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditRevisionsConfigurationCommand>(),
             [nameof(EditExpirationCommand)] = GenerateJsonDeserializationRoutine<EditExpirationCommand>(),
             [nameof(DeleteDatabaseCommand)] = GenerateJsonDeserializationRoutine<DeleteDatabaseCommand>(),

@@ -195,7 +195,7 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/unique", "GET", AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
         public Task GetUniqueValue()
         {
             var key = GetStringQueryString("key");
@@ -209,8 +209,8 @@ namespace Raven.Server.Web.System
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(GetRawUniqueValueResult.Index)] = res.Index,
-                        [nameof(GetRawUniqueValueResult.Value)] = res.Value
+                        [nameof(GetRawCompareValueResult.Index)] = res.Index,
+                        [nameof(GetRawCompareValueResult.Value)] = res.Value
                     });
                     writer.Flush();
                 }
@@ -218,7 +218,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/unique", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/cluster/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
         public async Task PutUniqueValue()
         {
             var key = GetStringQueryString("key");
@@ -230,7 +230,7 @@ namespace Raven.Server.Web.System
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-unique-value");
-                var command = new PutUniqueValueCommand(key, updateJson, index);
+                var command = new CompareExchangeCommand(key, updateJson, index);
 
                 var (raftIndex, _) = await ServerStore.SendToLeaderAsync(command);
                 await ServerStore.Cluster.WaitForIndexNotification(raftIndex);

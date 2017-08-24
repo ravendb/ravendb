@@ -5,16 +5,17 @@ using Xunit;
 
 namespace FastTests.Client
 {
-    class UniqueValues : RavenTestBase
+    public class UniqueValues : RavenTestBase
     {
         [Fact]
         public void CanPutUniqueString()
         {
+            DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new UniqueValueOperation<string>("test", "Karmel", 0);
+            var putCmd = new CompareExchangeOperation<string>("test", "Karmel", 0);
             var serverOperationExecutor = new ServerOperationExecutor(store);
             serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetUniqueValue<string>("test");
+            var getCmd = new GetCompareValue<string>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value);
         }
@@ -22,14 +23,15 @@ namespace FastTests.Client
         [Fact]
         public void CanPutUniqueObject()
         {
+            DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new UniqueValueOperation<User>("test", new User
+            var putCmd = new CompareExchangeOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0);
             var serverOperationExecutor = new ServerOperationExecutor(store);
             serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetUniqueValue<User>("test");
+            var getCmd = new GetCompareValue<User>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
         }
@@ -37,12 +39,13 @@ namespace FastTests.Client
         [Fact]
         public void CanPutMultiDifferentValues()
         {
+            DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new UniqueValueOperation<User>("test", new User
+            var putCmd = new CompareExchangeOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0);
-            var putCmd2 = new UniqueValueOperation<User>("test2", new User
+            var putCmd2 = new CompareExchangeOperation<User>("test2", new User
             {
                 Name = "Karmel"
             }, 0);
@@ -51,8 +54,8 @@ namespace FastTests.Client
             serverOperationExecutor.Send(putCmd);
             serverOperationExecutor2.Send(putCmd2);
 
-            var getCmd = new GetUniqueValue<User>("test");
-            var getCmd2 = new GetUniqueValue<User>("test2");
+            var getCmd = new GetCompareValue<User>("test");
+            var getCmd2 = new GetCompareValue<User>("test2");
             var res = serverOperationExecutor.Send(getCmd);
             var res2 = serverOperationExecutor.Send(getCmd2);
             Assert.Equal("Karmel", res.Value.Name);
@@ -62,12 +65,13 @@ namespace FastTests.Client
         [Fact]
         public void ThrowWhenPuttingConcurrently()
         {
+            DoNotReuseServer();
             var store = GetDocumentStore();
-            var putCmd = new UniqueValueOperation<User>("test", new User
+            var putCmd = new CompareExchangeOperation<User>("test", new User
             {
                 Name = "Karmel"
             }, 0);
-            var putCmd2 = new UniqueValueOperation<User>("test", new User
+            var putCmd2 = new CompareExchangeOperation<User>("test", new User
             {
                 Name = "Karmel2"
             }, 0);
@@ -78,7 +82,7 @@ namespace FastTests.Client
             {
                 serverOperationExecutor2.Send(putCmd2);
             });
-            var getCmd = new GetUniqueValue<User>("test");
+            var getCmd = new GetCompareValue<User>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
         }

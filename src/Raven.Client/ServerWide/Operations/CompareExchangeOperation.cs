@@ -11,52 +11,51 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetRawUniqueValueResult
+    public class GetRawCompareValueResult
     {
         public BlittableJsonReaderObject Value;
         public long Index;
     }
 
-    public class GetUniqueValueResult<T>
+    public class GetCompareValueResult<T>
     {
         public T Value;
         public long Index;
     }
 
-    public class GetUniqueValue<T> : IServerOperation<GetUniqueValueResult<T>>
+    public class GetCompareValue<T> : IServerOperation<GetCompareValueResult<T>>
     {
         private readonly string _key;
 
-        public GetUniqueValue(string key)
+        public GetCompareValue(string key)
         {
             _key = key;
         }
 
-        public RavenCommand<GetUniqueValueResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetCompareValueResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetUniqueValueCommand(_key, conventions);
+            return new GetCompareValueCommand(_key, conventions);
         }
 
-        private class GetUniqueValueCommand : RavenCommand<GetUniqueValueResult<T>>
+        private class GetCompareValueCommand : RavenCommand<GetCompareValueResult<T>>
         {
             private readonly string _key;
             private readonly DocumentConventions _conventions;
             
-            public GetUniqueValueCommand(string key, DocumentConventions conventions = null)
+            public GetCompareValueCommand(string key, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
 
                 _key = key;
                 _conventions = conventions ?? DocumentConventions.Default;
-                ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override bool IsReadRequest { get; }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/unique?key={_key}";
+                url = $"{node.Url}/cluster/cmpxchg?key={_key}";
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethods.Get,
@@ -64,14 +63,13 @@ namespace Raven.Client.ServerWide.Operations
                 return request;
             }
 
-            public override void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+            public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
-                var json = context.ReadForMemory(stream, "response/object");
 
-                if (json.TryGet(nameof(GetRawUniqueValueResult.Index), out long index) == false)
+                if (response.TryGet(nameof(GetRawCompareValueResult.Index), out long index) == false)
                     ThrowInvalidResponse();
 
-                json.TryGet(nameof(GetRawUniqueValueResult.Value), out BlittableJsonReaderObject raw);
+                response.TryGet(nameof(GetRawCompareValueResult.Value), out BlittableJsonReaderObject raw);
 
                 T result;
                 object val = null;
@@ -79,7 +77,7 @@ namespace Raven.Client.ServerWide.Operations
 
                 if (val == null)
                 {
-                    Result = new GetUniqueValueResult<T>
+                    Result = new GetCompareValueResult<T>
                     {
                         Index = index,
                         Value = default(T)
@@ -96,7 +94,7 @@ namespace Raven.Client.ServerWide.Operations
                     raw.TryGet("Object", out result);
                 }
 
-                Result = new GetUniqueValueResult<T>
+                Result = new GetCompareValueResult<T>
                 {
                     Index = index,
                     Value = result
@@ -105,13 +103,13 @@ namespace Raven.Client.ServerWide.Operations
         }
     }
 
-    public class UniqueValueOperation<T> : IServerOperation
+    public class CompareExchangeOperation<T> : IServerOperation
     {
         private readonly string _key;
         private readonly T _value;
         private readonly long _index;
 
-        public UniqueValueOperation(string key, T value, long index)
+        public CompareExchangeOperation(string key, T value, long index)
         {
             _key = key;
             _value = value;
@@ -120,17 +118,17 @@ namespace Raven.Client.ServerWide.Operations
 
         public RavenCommand GetCommand( DocumentConventions conventions, JsonOperationContext context)
         {
-            return new PutUniqueValueCommand(_key, _value, _index, conventions);
+            return new CompareExchangeCommand(_key, _value, _index, conventions);
         }
 
-        private class PutUniqueValueCommand : RavenCommand
+        private class CompareExchangeCommand : RavenCommand
         {
             private readonly string _key;
             private readonly T _value;
             private readonly long _index;
             private readonly DocumentConventions _conventions;
 
-            public PutUniqueValueCommand(string key, T value, long index, DocumentConventions conventions = null)
+            public CompareExchangeCommand(string key, T value, long index, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -147,7 +145,7 @@ namespace Raven.Client.ServerWide.Operations
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/unique?key={_key}&index={_index}";
+                url = $"{node.Url}/cluster/cmpxchg?key={_key}&index={_index}";
                 //var tuple = ("Object", _value);
                 var tuple = new Dictionary<string, T>
                 {

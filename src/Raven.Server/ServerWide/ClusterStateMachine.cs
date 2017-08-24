@@ -60,10 +60,12 @@ namespace Raven.Server.ServerWide
 
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
+        private static readonly Slice Unique;
 
         static ClusterStateMachine()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
+            Slice.From(StorageEnvironment.LabelsContext, "Unique", out Unique);
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
 
             ItemsSchema = new TableSchema();
@@ -188,8 +190,8 @@ namespace Raven.Server.ServerWide
                     case nameof(UpdateSubscriptionClientConnectionTime):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
                         break;
-                    case nameof(PutUniqueValueCommand):
-                        PutUniqueItem(context, type, cmd, index);
+                    case nameof(CompareExchangeCommand):
+                        CompareExchange(context, type, cmd, index);
                         break;
                     case nameof(PutLicenseCommand):
                         PutValue<License>(context, type, cmd, index, leader);
@@ -647,14 +649,14 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content);
+            return slice.Content.Match(Items.Content) || slice.Content.Match(Unique.Content);
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
-            UniqueItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
+            UniqueItemsSchema.Create(context.Transaction.InnerTransaction, Unique, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
         }
 
@@ -716,17 +718,17 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public unsafe void PutUniqueItem(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        public unsafe void CompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Items);
-            cmd.TryGet(nameof(PutUniqueValueCommand.Key), out string key);
-            cmd.TryGet(nameof(PutUniqueValueCommand.Index), out long cmdIndex);
+            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Unique);
+            cmd.TryGet(nameof(CompareExchangeCommand.Key), out string key);
+            cmd.TryGet(nameof(CompareExchangeCommand.Index), out long cmdIndex);
             var dbKey = key.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             using (items.Allocate(out TableValueBuilder tvb))
             {
-                cmd.TryGet(nameof(PutUniqueValueCommand.Value), out BlittableJsonReaderObject value);
-                value = context.ReadObject(value, nameof(PutUniqueValueCommand.Value));
+                cmd.TryGet(nameof(CompareExchangeCommand.Value), out BlittableJsonReaderObject value);
+                value = context.ReadObject(value, nameof(CompareExchangeCommand.Value));
 
                 tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                 tvb.Add(index);
@@ -763,7 +765,7 @@ namespace Raven.Server.ServerWide
 
         public unsafe (long Index, BlittableJsonReaderObject Value) GetUniqueItem(TransactionOperationContext context, string key)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Items);
+            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Unique);
             var dbKey = key.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {

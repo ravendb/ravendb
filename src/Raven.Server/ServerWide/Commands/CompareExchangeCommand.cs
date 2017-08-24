@@ -5,15 +5,15 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
-    public class PutUniqueValueCommand : CommandBase
+    public class CompareExchangeCommand : CommandBase
     {
         public string Key;
         public BlittableJsonReaderObject Value;
         public long Index;
 
-        public PutUniqueValueCommand(){ }
+        public CompareExchangeCommand(){ }
 
-        public PutUniqueValueCommand(string key, BlittableJsonReaderObject value, long index)
+        public CompareExchangeCommand(string key, BlittableJsonReaderObject value, long index)
         {
             if(string.IsNullOrEmpty(key))
                 throw new ArgumentNullException(nameof(key),"The key argument must have value");
