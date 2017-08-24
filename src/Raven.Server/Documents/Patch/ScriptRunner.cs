@@ -1,50 +1,94 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Data;
 using System.Diagnostics;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using Esprima;
+using Jint;
 using Jint.Native;
 using Jint.Native.Object;
-using Jint.Runtime.Descriptors.Specialized;
 using Jint.Runtime.Interop;
-using Sparrow.Extensions;
+using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Voron.Global;
-using Constants = Raven.Client.Constants;
 using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunner
     {
+        private const int DefaultStringSize = 50;
+
+        private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
         private readonly DocumentDatabase _db;
         private readonly bool _enableClr;
         public readonly List<string> ScriptsSource = new List<string>();
-        private const int DefaultStringSize = 50;
+
+        public long Runs;
+
+        public ScriptRunner(DocumentDatabase db, bool enableClr)
+        {
+            _db = db;
+            _enableClr = enableClr;
+        }
 
         public void AddScript(string script)
         {
             ScriptsSource.Add(script);
         }
 
+        public ReturnRun GetRunner(out SingleRun run)
+        {
+            if (_cache.TryDequeue(out run) == false)
+                run = new SingleRun(_db, this, ScriptsSource);
+            Interlocked.Increment(ref Runs);
+            return new ReturnRun(this, run);
+        }
+
+        public void TryCompileScript(string script)
+        {
+            try
+            {
+                var engine = new Engine(options => { options.MaxStatements(1).LimitRecursion(1); });
+                engine.Execute(script);
+            }
+            catch (Exception e)
+            {
+                throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
+            }
+        }
+
         public class SingleRun
         {
-            public List<string> DebugOutput;
-            public bool DebugMode;
-            public bool PutOrDeleteCalled;
-            public PatchDebugActions DebugActions;
-
-            public override string ToString()
+#if DEBUG
+            private static readonly HashSet<Type> ExpectedTypes = new HashSet<Type>
             {
-                return string.Join(Environment.NewLine, _runner.ScriptsSource);
-            }
+                typeof(int),
+                typeof(long),
+                typeof(double),
+                typeof(bool),
+                typeof(string)
+            };
+#endif
+            private readonly DocumentDatabase _database;
+
+            private readonly List<IDisposable> _disposables = new List<IDisposable>();
+            private readonly ScriptRunner _runner;
+            public readonly Engine ScriptEngine;
+            private DocumentsOperationContext _context;
+            public int CurrentSteps;
+            public PatchDebugActions DebugActions;
+            public bool DebugMode;
+            public List<string> DebugOutput;
+
+            public int MaxSteps;
+            public bool PutOrDeleteCalled;
+
+            public bool ReadOnly;
 
             private SingleRun()
             {
@@ -56,7 +100,7 @@ namespace Raven.Server.Documents.Patch
             {
                 _database = database;
                 _runner = runner;
-                ScriptEngine = new Jint.Engine(options =>
+                ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
                         .MaxStatements(1000) // TODO: Maxim make this configurable
@@ -72,7 +116,6 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
 
                 foreach (var script in scriptsSource)
-                {
                     try
                     {
                         ScriptEngine.Execute(script);
@@ -81,22 +124,26 @@ namespace Raven.Server.Documents.Patch
                     {
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
-                }
+            }
+
+            public override string ToString()
+            {
+                return string.Join(Environment.NewLine, _runner.ScriptsSource);
             }
 
 
             private JsValue GetLastModified(JsValue self, JsValue[] args)
             {
-                if(args.Length != 1)
+                if (args.Length != 1)
                     throw new InvalidOperationException("id(doc) must be called with a single argument");
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
-                
-                if(args[0].IsObject() == false)
+
+                if (args[0].IsObject() == false)
                     throw new InvalidOperationException("id(doc) must be called with an object argument");
-                
-                if (args[0].AsObject()is BlittableObjectInstance doc)
+
+                if (args[0].AsObject() is BlittableObjectInstance doc)
                 {
                     if (doc.LastModified == null)
                         return Undefined.Instance;
@@ -117,37 +164,48 @@ namespace Raven.Server.Documents.Patch
 
                 var obj = args[0];
 
+                DebugOutput.Add(GetDebugValue(obj, false));
+                return self;
+            }
+
+            private string GetDebugValue(JsValue obj, bool recursive)
+            {
                 if (obj.IsString())
                 {
-                    DebugOutput.Add(obj.ToString());
+                    var debugValue = obj.ToString();
+                    return recursive ? '"' + debugValue + '"' : debugValue;
                 }
-                else if (obj.IsObject())
+                if (obj.IsArray())
+                {
+                    var sb = new StringBuilder("[");
+                    var array = obj.AsArray();
+                    var jsValue = (int)array.Get("length").AsNumber();
+                    for (var i = 0; i < jsValue; i++)
+                    {
+                        if (i != 0)
+                            sb.Append(",");
+                        sb.Append(GetDebugValue(array.Get(i.ToString()), true));
+                    }
+                    sb.Append("]");
+                    return sb.ToString();
+                }
+                if (obj.IsObject())
                 {
                     var result = new ScriptRunnerResult(this, obj);
                     using (var jsonObj = result.TranslateToObject(_context))
-                        DebugOutput.Add(jsonObj.ToString());
+                    {
+                        return jsonObj.ToString();
+                    }
                 }
-                else if (obj.IsBoolean())
-                {
-                    DebugOutput.Add(obj.AsBoolean().ToString());
-                }
-                else if (obj.IsNumber())
-                {
-                    DebugOutput.Add(obj.AsNumber().ToString(CultureInfo.InvariantCulture));
-                }
-                else if (obj.IsNull())
-                {
-                    DebugOutput.Add("null");
-                }
-                else if (obj.IsUndefined())
-                {
-                    DebugOutput.Add("undefined");
-                }
-                else
-                {
-                    DebugOutput.Add(obj.ToString());
-                }
-                return self;
+                if (obj.IsBoolean())
+                    return obj.AsBoolean().ToString();
+                if (obj.IsNumber())
+                    return obj.AsNumber().ToString(CultureInfo.InvariantCulture);
+                if (obj.IsNull())
+                    return "null";
+                if (obj.IsUndefined())
+                    return "undefined";
+                return obj.ToString();
             }
 
             public JsValue PutDocument(JsValue self, JsValue[] args)
@@ -155,39 +213,29 @@ namespace Raven.Server.Documents.Patch
                 string changeVector = null;
 
                 if (args.Length != 2 && args.Length != 3)
-                {
                     throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
-                }
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 if (args[0].IsString() == false && args[0].IsNull() == false && args[0].IsUndefined() == false)
                     AssertValidId();
 
-                var id = (args[0].IsNull() || args[0].IsUndefined()) ? null : args[0].AsString();
+                var id = args[0].IsNull() || args[0].IsUndefined() ? null : args[0].AsString();
 
                 if (args[1].IsObject() == false)
-                {
                     throw new InvalidOperationException(
                         $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
-                }
 
                 PutOrDeleteCalled = true;
 
                 if (args.Length == 3)
-                {
                     if (args[2].IsString())
                         changeVector = args[2].AsString();
                     else if (args[2].IsNull() == false && args[0].IsUndefined() == false)
-                    {
                         throw new InvalidOperationException(
                             $"The change vector must be a string or null. Document ID: '{id}'.");
-                    }
-                }
 
                 if (DebugMode)
-                {
                     DebugActions.PutDocument.Add(id);
-                }
 
                 using (var reader = JsBlittableBridge.Translate(_context, args[1].AsObject(),
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
@@ -204,28 +252,25 @@ namespace Raven.Server.Documents.Patch
 
             public JsValue DeleteDocument(JsValue self, JsValue[] args)
             {
-                if(args.Length != 1 && args.Length != 2)
+                if (args.Length != 1 && args.Length != 2)
                     throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
-                
-                if(args[0].IsString() == false)
+
+                if (args[0].IsString() == false)
                     throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
 
-                string id = args[0].AsString();
+                var id = args[0].AsString();
                 string changeVector = null;
 
                 if (args.Length == 2 && args[1].IsString())
                     changeVector = args[1].AsString();
-                
+
                 PutOrDeleteCalled = true;
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
                 if (DebugMode)
-                {
                     DebugActions.DeleteDocument.Add(id);
-                }
                 var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
                 return new JsValue(result != null);
-
             }
 
             private void AssertNotReadOnly()
@@ -242,13 +287,13 @@ namespace Raven.Server.Documents.Patch
 
             private JsValue GetDocumentId(JsValue self, JsValue[] args)
             {
-                if(args.Length != 1)
+                if (args.Length != 1)
                     throw new InvalidOperationException("id(doc) must be called with a single argument");
 
                 if (args[0].IsNull() || args[0].IsUndefined())
                     return args[0];
-                
-                if(args[0].IsObject() == false)
+
+                if (args[0].IsObject() == false)
                     throw new InvalidOperationException("id(doc) must be called with an object argument");
 
                 var objectInstance = args[0].AsObject();
@@ -257,10 +302,10 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(doc.DocumentId);
 
                 var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
-                if(jsValue.IsObject() == false)
+                if (jsValue.IsObject() == false)
                     return JsValue.Null;
                 var value = jsValue.AsObject().Get(Constants.Documents.Metadata.Id);
-                if(value.IsString() == false)
+                if (value.IsString() == false)
                     return JsValue.Null;
                 return value;
             }
@@ -269,31 +314,22 @@ namespace Raven.Server.Documents.Patch
             {
                 AssertValidDatabaseContext();
 
-                if(args.Length != 1 || args[0].IsString()== false)
+                if (args.Length != 1 || args[0].IsString() == false)
                     throw new InvalidOperationException("load(id) must be called with a single string argument");
 
                 var id = args[0].AsString();
 
                 if (DebugMode)
-                {
                     DebugActions.LoadDocument.Add(id);
-                }
                 var document = _database.DocumentsStorage.Get(_context, id);
                 var translated = TranslateToJs(ScriptEngine, _context, document);
                 return new JsValue((ObjectInstance)translated);
             }
 
-            public bool ReadOnly;
-            private readonly DocumentDatabase _database;
-            private readonly ScriptRunner _runner;
-            private DocumentsOperationContext _context;
-
-            public int MaxSteps;
-            public int CurrentSteps;
-            public readonly Jint.Engine ScriptEngine;
-
-            private static void ThrowTooManyLoopIterations() =>
+            private static void ThrowTooManyLoopIterations()
+            {
                 throw new TimeoutException("The scripts has run for too long and was aborted by the server");
+            }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
             public void OnStateLoopIteration()
@@ -304,14 +340,10 @@ namespace Raven.Server.Documents.Patch
                 ThrowTooManyLoopIterations();
             }
 
-            private readonly List<IDisposable> _disposables = new List<IDisposable>();
-
             public void DisposeClonedDocuments()
             {
                 foreach (var disposable in _disposables)
-                {
                     disposable.Dispose();
-                }
                 _disposables.Clear();
             }
 
@@ -328,16 +360,14 @@ namespace Raven.Server.Documents.Patch
                 PutOrDeleteCalled = false;
                 CurrentSteps = 0;
                 MaxSteps = 1000; // TODO: Maxim make me configurable
-                for (int i = 0; i < args.Length; i++)
-                {
+                for (var i = 0; i < args.Length; i++)
                     args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
-                }
                 JsValue result;
                 try
                 {
                     result = ScriptEngine.Invoke(method, args);
                 }
-                catch (Jint.Runtime.JavaScriptException e)
+                catch (JavaScriptException e)
                 {
                     string msg;
                     if (e.Error.IsString())
@@ -353,24 +383,12 @@ namespace Raven.Server.Documents.Patch
                 return new ScriptRunnerResult(this, result);
             }
 
-
-#if DEBUG
-            static readonly HashSet<Type> ExpectedTypes = new HashSet<Type>
-            {
-                typeof(int),
-                typeof(long),
-                typeof(double),
-                typeof(bool),
-                typeof(string),
-            };
-#endif
-
             public object Translate(JsonOperationContext context, object o)
             {
                 return TranslateToJs(ScriptEngine, context, o);
             }
 
-            private object TranslateToJs(Jint.Engine engine, JsonOperationContext context, object o)
+            private object TranslateToJs(Engine engine, JsonOperationContext context, object o)
             {
                 BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
                 {
@@ -403,9 +421,9 @@ namespace Raven.Server.Documents.Patch
                     return o;
                 if (o is List<object> l)
                 {
-                    var args = new[] { new JsValue(l.Count), };
+                    var args = new[] { new JsValue(l.Count) };
                     var jsArray = ScriptEngine.Array.Construct(args);
-                    for (int i = 0; i < l.Count; i++)
+                    for (var i = 0; i < l.Count; i++)
                     {
                         var value = TranslateToJs(ScriptEngine, context, l[i]);
                         args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
@@ -444,7 +462,8 @@ namespace Raven.Server.Documents.Patch
             }
 
 
-            public object Translate(ScriptRunnerResult result, JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context,
+                BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var val = result.RawJsValue;
                 if (val.IsString())
@@ -461,26 +480,6 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitves");
                 throw new NotSupportedException("Unable to translate " + val.Type);
             }
-        }
-
-        public ScriptRunner(DocumentDatabase db, bool enableClr)
-        {
-            _db = db;
-            _enableClr = enableClr;
-        }
-
-        private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
-
-        public long Runs;
-
-        public ReturnRun GetRunner(out SingleRun run)
-        {
-            if (_cache.TryDequeue(out run) == false)
-            {
-                run = new SingleRun(_db, this, ScriptsSource);
-            }
-            Interlocked.Increment(ref Runs);
-            return new ReturnRun(this, run);
         }
 
         public struct ReturnRun : IDisposable
@@ -505,22 +504,6 @@ namespace Raven.Server.Documents.Patch
                 _parent._cache.Enqueue(_run);
                 _run = null;
                 _parent = null;
-            }
-        }
-
-        public void TryCompileScript(string script)
-        {
-            try
-            {
-                var engine = new Jint.Engine(options =>
-                {
-                    options.MaxStatements(1).LimitRecursion(1);
-                });
-                engine.Execute(script);
-            }
-            catch (Exception e)
-            {
-                throw new JavaScriptParseException("Failed to parse:" + Environment.NewLine + script, e);
             }
         }
     }
