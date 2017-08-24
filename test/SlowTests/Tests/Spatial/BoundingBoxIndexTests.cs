@@ -1,15 +1,11 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-using Raven.Tests.Helpers;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
     public class BoundingBoxIndexTests : RavenTestBase
     {
@@ -27,7 +23,7 @@ namespace Raven.Tests.Spatial
             var rectangle2 = "6 6 10 10";
             var rectangle3 = "0 0 6 6";
 
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 new BBoxIndex().Execute(store);
@@ -35,7 +31,7 @@ namespace Raven.Tests.Spatial
 
                 using (var session = store.OpenSession())
                 {
-                    session.Store(new SpatialDoc{Shape = polygon});
+                    session.Store(new SpatialDoc { Shape = polygon });
                     session.SaveChanges();
                 }
 
@@ -105,35 +101,35 @@ namespace Raven.Tests.Spatial
             }
         }
 
-        public class SpatialDoc
+        private class SpatialDoc
         {
-             public string Id { get; set; }
-             public string Shape { get; set; }
+            public string Id { get; set; }
+            public string Shape { get; set; }
         }
 
-        public class BBoxIndex : AbstractIndexCreationTask<SpatialDoc> 
+        private class BBoxIndex : AbstractIndexCreationTask<SpatialDoc>
         {
             public BBoxIndex()
             {
                 Map = docs => from doc in docs
                               select new
-                                     {
-                                         doc.Shape
-                                     };
+                              {
+                                  Shape = CreateSpatialField(doc.Shape)
+                              };
 
                 Spatial(x => x.Shape, x => x.Cartesian.BoundingBoxIndex());
             }
         }
 
-        public class QuadTreeIndex : AbstractIndexCreationTask<SpatialDoc> 
+        private class QuadTreeIndex : AbstractIndexCreationTask<SpatialDoc>
         {
             public QuadTreeIndex()
             {
                 Map = docs => from doc in docs
                               select new
-                                     {
-                                         doc.Shape
-                                     };
+                              {
+                                  Shape = CreateSpatialField(doc.Shape)
+                              };
 
                 Spatial(x => x.Shape, x => x.Cartesian.QuadPrefixTreeIndex(6, new SpatialBounds(0, 0, 16, 16)));
             }

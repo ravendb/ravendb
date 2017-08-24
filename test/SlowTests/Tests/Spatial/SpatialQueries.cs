@@ -3,29 +3,29 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
-using System.Linq;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
 
+using System.Linq;
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class SpatialQueries : RavenTest
+    public class SpatialQueries : RavenTestBase
     {
-        public class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
+        private class SpatialQueriesInMemoryTestIdx : AbstractIndexCreationTask<Listing>
         {
             public SpatialQueriesInMemoryTestIdx()
             {
                 Map = listings => from listingItem in listings
                                   select new
                                   {
-                                    listingItem.ClassCodes,
-                                    listingItem.Latitude,
-                                    listingItem.Longitude,
-                                    _ = SpatialGenerate(listingItem.Latitude, listingItem.Longitude)
+                                      listingItem.ClassCodes,
+                                      listingItem.Latitude,
+                                      listingItem.Longitude,
+                                      Coordinates = CreateSpatialField(listingItem.Latitude, listingItem.Longitude)
                                   };
             }
         }
@@ -33,13 +33,13 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void CanRunSpatialQueriesInMemory()
         {
-            using (var documentStore = NewDocumentStore(runInMemory: true))
+            using (var store = GetDocumentStore())
             {
-                new SpatialQueriesInMemoryTestIdx().Execute(documentStore);
+                new SpatialQueriesInMemoryTestIdx().Execute(store);
             }
         }
 
-        public class Listing
+        private class Listing
         {
             public string ClassCodes { get; set; }
             public long Latitude { get; set; }
@@ -61,8 +61,8 @@ namespace Raven.Tests.Spatial
             // This item is about 3900 miles from areaOne
             var newYork = new DummyGeoDoc(40.7137578228, -74.0126901936);
 
-            using (var documentStore = NewDocumentStore(runInMemory: true))
-            using (var session = documentStore.OpenSession())
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
             {
 
                 session.Store(areaOneDocOne);
@@ -73,11 +73,15 @@ namespace Raven.Tests.Spatial
                 session.SaveChanges();
 
                 var indexDefinition = new IndexDefinition
-                                        {
-                                            Map = "from doc in docs select new { _ = SpatialGenerate(doc.Latitude, doc.Longitude) }"
-                                        };
+                {
+                    Name = "FindByLatLng",
+                    Maps =
+                    {
+                        "from doc in docs select new { Coordinates = CreateSpatialField(doc.Latitude, doc.Longitude) }"
+                    }
+                };
 
-                documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
+                store.Admin.Send(new PutIndexesOperation(indexDefinition));
 
                 // Wait until the index is built
                 session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
@@ -89,7 +93,7 @@ namespace Raven.Tests.Spatial
 
                 // Expected is that 5.0 will return 3 results
                 var nearbyDocs = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
-                    .WithinRadiusOf(radius, lat, lng)
+                    .WithinRadiusOf("Coordinates", radius, lat, lng)
                     .WaitForNonStaleResults()
                     .ToArray();
 
@@ -112,8 +116,8 @@ namespace Raven.Tests.Spatial
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var documentStore = NewDocumentStore(runInMemory: true))
-            using (var session = documentStore.OpenSession())
+            using (var store = GetDocumentStore())
+            using (var session = store.OpenSession())
             {
                 session.Store(myHouse);
                 session.Store(gym);
@@ -121,10 +125,14 @@ namespace Raven.Tests.Spatial
 
                 var indexDefinition = new IndexDefinition
                 {
-                    Map = "from doc in docs select new { _ = SpatialGenerate(doc.Latitude, doc.Longitude) }"
+                    Name = "FindByLatLng",
+                    Maps =
+                    {
+                        "from doc in docs select new { Coordinates = CreateSpatialField(doc.Latitude, doc.Longitude) }"
+                    }
                 };
 
-                documentStore.DatabaseCommands.PutIndex("FindByLatLng", indexDefinition);
+                store.Admin.Send(new PutIndexesOperation(indexDefinition));
 
                 // Wait until the index is built
                 session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
@@ -136,7 +144,7 @@ namespace Raven.Tests.Spatial
                 // Find within 8 miles.
                 // We should find both my house and the gym.
                 var matchesWithinMiles = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
-                    .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles)
+                    .WithinRadiusOf("Coordinates", radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles)
                     .WaitForNonStaleResults()
                     .ToArray();
                 Assert.NotEqual(null, matchesWithinMiles);
@@ -145,7 +153,7 @@ namespace Raven.Tests.Spatial
                 // Find within 8 kilometers.
                 // We should find only my house, since the gym is ~11 kilometers out.
                 var matchesWithinKilometers = session.Advanced.DocumentQuery<DummyGeoDoc>("FindByLatLng")
-                    .WithinRadiusOf(radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers)
+                    .WithinRadiusOf("Coordinates", radius, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers)
                     .WaitForNonStaleResults()
                     .ToArray();
                 Assert.NotEqual(null, matchesWithinKilometers);
@@ -153,7 +161,7 @@ namespace Raven.Tests.Spatial
             }
         }
 
-        public class DummyGeoDoc
+        private class DummyGeoDoc
         {
             public string Id { get; set; }
             public double Latitude { get; set; }
@@ -161,9 +169,9 @@ namespace Raven.Tests.Spatial
 
             public DummyGeoDoc(double lat, double lng)
             {
-                this.Latitude = lat;
-                this.Longitude = lng;
+                Latitude = lat;
+                Longitude = lng;
             }
-        }        
+        }
     }
 }

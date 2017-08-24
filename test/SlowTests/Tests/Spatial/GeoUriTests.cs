@@ -1,24 +1,24 @@
 using System.Linq;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class GeoUriTests : RavenTest
+    public class GeoUriTests : RavenTestBase
     {
-        public class SpatialDoc
+        private class SpatialDoc
         {
             public string Id { get; set; }
-            public object Point { get; set; }
+            public string Point { get; set; }
         }
 
-        public class PointIndex : AbstractIndexCreationTask<SpatialDoc>
+        private class PointIndex : AbstractIndexCreationTask<SpatialDoc>
         {
             public PointIndex()
             {
-                Map = docs => from doc in docs select new { doc.Point };
+                Map = docs => from doc in docs select new { Point = CreateSpatialField(doc.Point) };
 
                 Spatial(x => x.Point, x => x.Geography.Default());
             }
@@ -27,7 +27,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void PointTest()
         {
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 store.ExecuteIndex(new PointIndex());

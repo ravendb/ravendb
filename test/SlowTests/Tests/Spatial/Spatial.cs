@@ -2,32 +2,29 @@ using System;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Client.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class SpatialTest : RavenTest
+    public class SpatialTest : RavenTestBase
     {
-        public class MyDocumentItem
+        private class MyDocumentItem
         {
             public DateTime Date { get; set; }
             public double? Latitude { get; set; }
             public double? Longitude { get; set; }
         }
 
-        public class MyDocument
+        private class MyDocument
         {
             public string Id { get; set; }
             public MyDocumentItem[] Items { get; set; }
         }
 
-        public class MyProjection
+        private class MyProjection
         {
             public string Id { get; set; }
             public DateTime Date { get; set; }
@@ -35,7 +32,7 @@ namespace Raven.Tests.Spatial
             public double Longitude { get; set; }
         }
 
-        public class MyIndex : AbstractIndexCreationTask<MyDocument, MyProjection>
+        private class MyIndex : AbstractIndexCreationTask<MyDocument, MyProjection>
         {
             public MyIndex()
             {
@@ -51,7 +48,7 @@ namespace Raven.Tests.Spatial
 
                         Latitude = lat,
                         Longitude = lng,
-                        _ = SpatialGenerate(lat, lng)
+                        Coordinates = CreateSpatialField(lat, lng)
                     };
 
                 Store(x => x.Id, FieldStorage.Yes);
@@ -65,7 +62,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void WeirdSpatialResults()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -89,11 +86,11 @@ namespace Raven.Tests.Spatial
                 new MyIndex().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var result = session.Advanced
                         .DocumentQuery<MyDocument, MyIndex>()
                         .WaitForNonStaleResults()
-                        .WithinRadiusOf(0, 12.3456789f, 12.3456789f)
+                        .WithinRadiusOf("Coordinates", 0, 12.3456789f, 12.3456789f)
                         .Statistics(out stats)
                         .SelectFields<MyProjection>("Id", "Latitude", "Longitude")
                         .Take(50)
@@ -109,7 +106,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void MatchSpatialResults()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -133,11 +130,11 @@ namespace Raven.Tests.Spatial
                 new MyIndex().Execute(store);
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var result = session.Advanced
                         .DocumentQuery<MyDocument, MyIndex>()
                         .WaitForNonStaleResults()
-                        .WithinRadiusOf(1, 10, 10)
+                        .WithinRadiusOf("Coordinates", 1, 10, 10)
                         .Statistics(out stats)
                         .SelectFields<MyProjection>("Id", "Latitude", "Longitude")
                         .Take(50)
@@ -149,7 +146,7 @@ namespace Raven.Tests.Spatial
             }
         }
 
-        public class MySpatialIndex : AbstractIndexCreationTask<MySpatialDocument>
+        private class MySpatialIndex : AbstractIndexCreationTask<MySpatialDocument>
         {
             public MySpatialIndex()
             {
@@ -157,12 +154,12 @@ namespace Raven.Tests.Spatial
                     from doc in docs
                     select new
                     {
-                        _ = SpatialGenerate(doc.Latitude, doc.Longitude)
+                        Coordinates = CreateSpatialField(doc.Latitude, doc.Longitude)
                     };
             }
         }
 
-        public class MySpatialDocument
+        private class MySpatialDocument
         {
             public double Latitude { get; set; }
             public double Longitude { get; set; }
@@ -171,7 +168,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void WeirdSpatialResults2()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -188,11 +185,11 @@ namespace Raven.Tests.Spatial
 
                 using (var session = store.OpenSession())
                 {
-                    RavenQueryStatistics stats;
+                    QueryStatistics stats;
                     var result = session.Advanced
                         .DocumentQuery<MySpatialDocument, MySpatialIndex>()
                         .WaitForNonStaleResults()
-                        .WithinRadiusOf(200, 12.3456789f, 12.3456789f)
+                        .WithinRadiusOf("Coordinates", 200, 12.3456789f, 12.3456789f)
                         .Statistics(out stats)
                         .Take(50)
                         .ToArray();
@@ -206,7 +203,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void SpatialSearchWithSwedishCulture()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
@@ -231,8 +228,8 @@ namespace Raven.Tests.Spatial
                         var result = session.Advanced
                             .DocumentQuery<MySpatialDocument, MySpatialIndex>()
                             .WaitForNonStaleResults()
-                            .WithinRadiusOf(radius: 10, latitude: Convert.ToDouble(12.3456789f), longitude: Convert.ToDouble(12.3456789f))
-                            .SortByDistance()
+                            .WithinRadiusOf("Coordinates", radius: 10, latitude: Convert.ToDouble(12.3456789f), longitude: Convert.ToDouble(12.3456789f))
+                            .OrderByDistance("Coordinates", latitude: Convert.ToDouble(12.3456789f), longitude: Convert.ToDouble(12.3456789f))
                             .Take(10).ToList()
                             .FirstOrDefault();
 

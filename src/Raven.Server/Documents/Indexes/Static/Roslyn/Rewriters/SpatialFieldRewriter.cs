@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -26,15 +25,15 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                     var identifier = SyntaxFactory.Literal(name);
                     var variable = SyntaxFactory.LiteralExpression(SyntaxKind.StringLiteralExpression, identifier);
-                    var arguments = node.ArgumentList.Arguments.Insert(0, SyntaxFactory.Argument(variable));
 
+                    var arguments = node.ArgumentList.Arguments.Insert(0, SyntaxFactory.Argument(variable));
                     return node.WithArgumentList(SyntaxFactory.ArgumentList(arguments));
             }
 
             return base.VisitInvocationExpression(node);
         }
 
-        private AnonymousObjectMemberDeclaratorSyntax GetAnonymousObjectMemberDeclaratorSyntax(SyntaxNode node)
+        private static AnonymousObjectMemberDeclaratorSyntax GetAnonymousObjectMemberDeclaratorSyntax(SyntaxNode node)
         {
             var originalNode = node;
 

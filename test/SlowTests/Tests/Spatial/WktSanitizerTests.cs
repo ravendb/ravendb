@@ -1,14 +1,13 @@
 using System.Linq;
-using Raven.Abstractions.Spatial;
-using Raven.Client.Indexes;
-using Raven.Json.Linq;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Queries.Spatial;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class WktSanitizerTests : RavenTest
+    public class WktSanitizerTests : RavenTestBase
     {
         [Fact]
         public void Rectangle()
@@ -60,7 +59,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void Integration()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 store.ExecuteIndex(new SpatialIndex());
@@ -80,26 +79,26 @@ namespace Raven.Tests.Spatial
 
                 using (var session = store.OpenSession())
                 {
-                    var matches = session.Query<RavenJObject, SpatialIndex>()
-                                         .Customize(x => x.WithinRadiusOf("WKT", 150, 50.8, 50.8))
-                                         .Count();
+                    var matches = session.Query<dynamic, SpatialIndex>()
+                        .Spatial("WKT", factory => factory.WithinRadius(150, 50.8, 50.8))
+                        .Count();
 
                     Assert.True(matches == 6);
                 }
             }
         }
 
-        public class SpatialDoc
+        private class SpatialDoc
         {
             public string Id { get; set; }
             public string WKT { get; set; }
         }
 
-        public class SpatialIndex : AbstractIndexCreationTask<SpatialDoc>
+        private class SpatialIndex : AbstractIndexCreationTask<SpatialDoc>
         {
             public SpatialIndex()
             {
-                Map = docs => from doc in docs select new { doc.WKT };
+                Map = docs => from doc in docs select new { WKT = CreateSpatialField(doc.WKT) };
 
                 Spatial(x => x.WKT, x => x.Geography.Default());
             }

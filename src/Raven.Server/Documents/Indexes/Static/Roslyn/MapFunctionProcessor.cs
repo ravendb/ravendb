@@ -34,7 +34,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn
                 DynamicExtensionMethodsRewriter.Instance,
                 DynamicLambdaExpressionsRewriter.Instance,
                 RecurseRewriter.Instance,
-                SpatialFieldRewriter.Instance
+                SpatialFieldRewriter.Instance,
+                CoalesceRewriter.Instance
             })
             {
                 node = rewriter.Visit(node);

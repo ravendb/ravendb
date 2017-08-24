@@ -1,13 +1,13 @@
 using System.Linq;
-using Raven.Client;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class SpatialTest2 : RavenTest
+    public class SpatialTest2 : RavenTestBase
     {
         public class Entity
         {
@@ -20,22 +20,22 @@ namespace Raven.Tests.Spatial
             public EntitiesByLocation()
             {
                 Map = entities => from entity in entities
-                                  select new { _ = SpatialGenerate(entity.Latitude, entity.Longitude) };
+                                  select new { Coordinates = CreateSpatialField(entity.Latitude, entity.Longitude) };
             }
         }
 
         [Fact]
         public void WeirdSpatialResults()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 using (IDocumentSession session = store.OpenSession())
                 {
                     Entity entity = new Entity()
-                                        {
-                                            Latitude = 45.829507799999988,
-                                            Longitude = -73.800524699999983
-                                        };
+                    {
+                        Latitude = 45.829507799999988,
+                        Longitude = -73.800524699999983
+                    };
                     session.Store(entity);
                     session.SaveChanges();
                 }
@@ -45,14 +45,14 @@ namespace Raven.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     session.Query<Entity, EntitiesByLocation>()
-                        .Customize(x => x.WaitForNonStaleResultsAsOfLastWrite())
+                        .Customize(x => x.WaitForNonStaleResults())
                         .ToList();
 
                     // Let's search within a 150km radius
                     var results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
-                        .WithinRadiusOf(radius: 150000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
+                        .WithinRadiusOf("Coordinates", radius: 150000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
                         // This is less than 1km from the entity
-                        .SortByDistance()
+                        .OrderByDistance("Coordinates", latitude: 45.831909, longitude: -73.810322)
                         .ToList();
 
                     // This works
@@ -60,8 +60,8 @@ namespace Raven.Tests.Spatial
 
                     // Let's search within a 15km radius
                     results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
-                        .WithinRadiusOf(radius: 15000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
-                        .SortByDistance()
+                        .WithinRadiusOf("Coordinates", radius: 15000 * 0.000621, latitude: 45.831909, longitude: -73.810322)
+                        .OrderByDistance("Coordinates", latitude: 45.831909, longitude: -73.810322)
                         .ToList();
 
                     // This fails
@@ -69,8 +69,8 @@ namespace Raven.Tests.Spatial
 
                     // Let's search within a 1.5km radius
                     results = session.Advanced.DocumentQuery<Entity, EntitiesByLocation>()
-                        .WithinRadiusOf(radius: 1500 * 0.000621, latitude: 45.831909, longitude: -73.810322)
-                        .SortByDistance()
+                        .WithinRadiusOf("Coordinates", radius: 1500 * 0.000621, latitude: 45.831909, longitude: -73.810322)
+                        .OrderByDistance("Coordinates", latitude: 45.831909, longitude: -73.810322)
                         .ToList();
 
                     // This fails

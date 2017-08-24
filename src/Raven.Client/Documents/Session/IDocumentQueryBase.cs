@@ -645,7 +645,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+        TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -655,7 +655,7 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that

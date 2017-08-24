@@ -65,9 +65,9 @@ namespace Raven.Client.Documents.Queries.Spatial
         private readonly double _radius;
         private readonly double _latitude;
         private readonly double _longitude;
-        private readonly SpatialUnits _radiusUnits;
+        private readonly SpatialUnits? _radiusUnits;
 
-        public CircleCriteria(double radius, double latitude, double longitude, SpatialUnits radiusUnits, SpatialRelation relation, double distErrorPercent)
+        public CircleCriteria(double radius, double latitude, double longitude, SpatialUnits? radiusUnits, SpatialRelation relation, double distErrorPercent)
             : base(relation, distErrorPercent)
         {
             _radius = radius;
