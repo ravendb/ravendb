@@ -8,7 +8,7 @@ using Xunit;
 
 namespace FastTests.Client.Subscriptions
 {
-    public class LinqMethodsSupportForSubscriptionScript : RavenTestBase
+    public class SubscriptionScripts : RavenTestBase
     {
         [Fact]
         public async Task CanHandleAny()
@@ -672,8 +672,8 @@ namespace FastTests.Client.Subscriptions
                         call => call.Started > DateTime.UtcNow)
                 };
 
-                Assert.True(options.Criteria.Script.StartsWith("return Date.parse(this.Started)>new Date("));
-                Assert.True(options.Criteria.Script.EndsWith(").getTime();"));
+                Assert.Equal(@"return Date.parse(this.Started)>(function (date) { return new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), date.getUTCHours(), date.getUTCMinutes(), date.getUTCSeconds(), date.getUTCMilliseconds());})(new Date()).getTime();",
+                    options.Criteria.Script);
 
                 var id = await store.Subscriptions.CreateAsync(options);
 
@@ -732,7 +732,7 @@ namespace FastTests.Client.Subscriptions
                         call => call.Started < new DateTime(1990 , 1 , 1))
                 };
 
-                Assert.Equal("return Date.parse(this.Started)<new Date(1990, 1, 1);",
+                Assert.Equal("return Date.parse(this.Started)<new Date(1990, 0, 1);",
                     options.Criteria.Script);
 
                 var id = await store.Subscriptions.CreateAsync(options);
@@ -801,7 +801,7 @@ namespace FastTests.Client.Subscriptions
                         call => call.Person.DateOfBirth < new DateTime(1984, 1, 1))
                 };
 
-                Assert.Equal("return Date.parse(this.Person.DateOfBirth)<new Date(1984, 1, 1);",
+                Assert.Equal("return Date.parse(this.Person.DateOfBirth)<new Date(1984, 0, 1);",
                     options.Criteria.Script);
 
                 var id = await store.Subscriptions.CreateAsync(options);
