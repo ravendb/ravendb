@@ -131,7 +131,7 @@ namespace Raven.Server.Documents.Patch
             // that clone later
             using (var scriptResult = _run.Run(context, "execute", new object[] { documentInstance, args }))
             {
-               var  modifiedDocument = scriptResult.Translate(_externalContext,
+               var  modifiedDocument = scriptResult.TranslateToObject(_externalContext,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 var result = new PatchResult
@@ -173,12 +173,6 @@ namespace Raven.Server.Documents.Patch
                 {
                     result.ChangeVector = putResult.Value.ChangeVector;
                     result.Collection = putResult.Value.Collection.Name;
-                }
-
-                if (_debugMode)
-                {
-
-                    //result.Debug = 
                 }
 
                 PatchResult = result;

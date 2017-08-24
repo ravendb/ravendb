@@ -510,7 +510,7 @@ namespace Raven.Server.Documents.Handlers
 
                             context.Write(writer, new DynamicJsonValue
                             {
-                                ["Info"] = command.DebugOutput,
+                                ["Info"] = new DynamicJsonArray(command.DebugOutput),
                                 ["Actions"] = command.DebugActions?.GetDebugActions()
                             });
                         }

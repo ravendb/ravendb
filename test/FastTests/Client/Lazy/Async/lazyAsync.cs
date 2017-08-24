@@ -178,6 +178,8 @@ select {
 ")
                         .AddParameter("id", "contacts/1")
                         .LazilyAsync();
+
+                WaitForUserToContinueTheTest(store);
                 var contactDto = (await contactViewModel.Value).First();
                 foreach (var detail in contactDto.ContactDetails)
                 {

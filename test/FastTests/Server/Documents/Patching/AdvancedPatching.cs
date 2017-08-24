@@ -673,11 +673,11 @@ this.Value = another.Value;
                 {
                     await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                     {
-                        Script = @"put('Items/1', { Property: 1}, null, 'invalid-etag');",
+                        Script = @"put('Items/1', { Property: 1}, 'invalid-etag');",
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector null. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector: invalid-etag. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 
@@ -699,11 +699,11 @@ this.Value = another.Value;
                         Script = @"put(
     'Items/1', 
     { 'Property':'Value'},
-    123456789 );",
+    '123456789' );",
                     }));
                 });
 
-                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
+                Assert.Contains("Document Items/1 does not exist, but Put was called with change vector: 123456789. Optimistic concurrency violation, transaction will be aborted.", exception.Message);
             }
         }
 

@@ -13,10 +13,6 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 {
     internal class SqlDocumentTransformer : EtlTransformer<ToSqlItem, SqlTableWithRecords>
     {
-        
-
-        private const string AttachmentMarker = "$attachment/";
-
         private readonly Transformation _transformation;
         private readonly SqlEtlConfiguration _config;
         private readonly Dictionary<string, SqlTableWithRecords> _tables;
@@ -40,22 +36,12 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         protected override string[] LoadToDestinations { get; }
 
-        public override void Initalize()
-        {
-            base.Initalize();
-            SingleRun?.SetGlobalFunction(Transformation.LoadAttachment, (Func<string, string>)LoadAttachmentFunction);
-        }
-
-        protected override void LoadToFunction(string tableName, JsValue cols)
+        protected override void LoadToFunction(string tableName, ScriptRunnerResult cols)
         {
             if (tableName == null)
                 ThrowLoadParameterIsMandatory(nameof(tableName));
-            if (cols == null)
-                ThrowLoadParameterIsMandatory(nameof(cols));
 
-            BlittableJsonReaderObject result;
-            using (var scriptResult = new ScriptRunnerResult(null, cols))
-                result = scriptResult.Translate(Context);
+            var result = cols.TranslateToObject(Context);
             var columns = new List<SqlColumn>(result.Count);
             var prop = new BlittableJsonReaderObject.PropertyDetails();
 
@@ -101,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
 
         private static unsafe bool IsLoadAttachment(LazyStringValue value, out string attachmentName)
         {
-            if (value.Length <= AttachmentMarker.Length)
+            if (value.Length <= Transformation.AttachmentMarker.Length)
             {
                 attachmentName = null;
                 return false;
@@ -116,15 +102,11 @@ namespace Raven.Server.Documents.ETL.Providers.SQL
                 return false;
             }
 
-            attachmentName = value.Substring(AttachmentMarker.Length);
+            attachmentName = value.Substring(Transformation.AttachmentMarker.Length);
 
             return true;
         }
 
-        private static string LoadAttachmentFunction(string attachmentName)
-        {
-            return $"{AttachmentMarker}{attachmentName}";
-        }
 
         private SqlTableWithRecords GetOrAdd(string tableName)
         {

@@ -36,15 +36,17 @@ namespace Raven.Server.Documents.Patch
             return o.AsObject();
         }
 
-        public object Value => _instance;
-        public bool IsNull => _instance == null || _instance.IsNull();
+        public bool? BooleanValue => _instance.IsBoolean() ? _instance.AsBoolean() : (bool?)null;
 
-        public BlittableJsonReaderObject Translate(JsonOperationContext context,
+        public bool IsNull => _instance == null || _instance.IsNull() || _instance.IsUndefined();
+        public string StringValue => _instance.IsString() ? _instance.AsString() : null;
+        public JsValue RawJsValue => _instance;
+
+        public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context,
             BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
-            if (IsNull || _instance.IsNull())
+            if (IsNull)
                 return null;
-
             var obj = _instance.AsObject();
             return JsBlittableBridge.Translate(context, obj, usageMode);
         }

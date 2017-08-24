@@ -112,52 +112,41 @@ namespace Raven.Server.Documents.TcpHandlers
                     var item = (revisionTuple.current ?? revisionTuple.previous);
                     Debug.Assert(item != null);
 
-                    var dynamicValue = new DynamicJsonValue();
-
-                    if (revisionTuple.current != null)
-                        dynamicValue["Current"] = revisionTuple.current.Data;
-
-                    if (revisionTuple.previous != null)
-                        dynamicValue["Previous"] = revisionTuple.previous.Data;
-
-                    using (var revision = docsContext.ReadObject(dynamicValue, item.Id))
+                    if (ShouldSendDocumentWithRevisions(subscription, run, patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
-                        if (ShouldSendDocumentWithRevisions(subscription, run, patch, docsContext, item, revision, out var transformResult, out var exception) == false)
+                        if (exception != null)
                         {
-                            if (exception != null)
-                            {
-                                yield return (revisionTuple.current, exception);
-                            }
-                            else
-                            {
-                                // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
-                                yield return (new Document
-                                {
-                                    Data = null,
-                                    ChangeVector = item.ChangeVector,
-                                    Etag = item.Etag
-                                }, null);
-                            }
+                            yield return (revisionTuple.current, exception);
                         }
                         else
                         {
-                            using (transformResult)
+                            // make sure that if we read a lot of irrelevant documents, we send keep alive over the network
+                            yield return (new Document
                             {
-                                if (transformResult == null)
-                                {
-                                    yield return (revisionTuple.current, null);
-                                    continue;
-                                }
-
-                                yield return (new Document
-                                {
-                                    Id = item.Id,
-                                    Etag = item.Etag,
-                                    Data = transformResult,
-                                    LowerId = item.LowerId,
-                                    ChangeVector = item.ChangeVector
-                                }, null);
+                                Data = null,
+                                ChangeVector = item.ChangeVector,
+                                Etag = item.Etag
+                            }, null);
+                        }
+                    }
+                    else
+                    {
+                        using (transformResult)
+                        {
+                            if (transformResult == null)
+                            {
+                                yield return (revisionTuple.current, null);
+                                continue;
                             }
+
+                            yield return (new Document
+                            {
+                                Id = item.Id,
+                                Etag = item.Etag,
+                                Data = transformResult,
+                                LowerId = item.LowerId,
+                                ChangeVector = item.ChangeVector
+                            }, null);
                         }
                     }
                 }
@@ -186,7 +175,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                return patch.MatchCriteria(run, dbContext, doc, out transformResult);
+                return patch.MatchCriteria(run, dbContext, doc, ref transformResult);
             }
             catch (Exception ex)
             {
@@ -207,7 +196,7 @@ namespace Raven.Server.Documents.TcpHandlers
             SubscriptionPatchDocument patch,
             DocumentsOperationContext dbContext,
             Document item,
-            BlittableJsonReaderObject revision,
+            (Document Previous, Document Current) revision,
             out BlittableJsonReaderObject transformResult,
             out Exception exception)
         {
@@ -223,20 +212,22 @@ namespace Raven.Server.Documents.TcpHandlers
             if (patch == null)
                 return true;
 
+            revision.Current?.EnsureMetadata();
+            revision.Previous?.EnsureMetadata();
+
+            transformResult = dbContext.ReadObject(new DynamicJsonValue
+            {
+                ["Current"] = revision.Current?.Data,
+                ["Previous"] = revision.Previous?.Data
+            }, item.Id);
+
             if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
             {
-                transformResult = revision;
                 return true;
             }
             try
             {
-                var docToProccess = new Document
-                {
-                    Data = revision,
-                    Id = item.Id
-                };
-
-                return patch.MatchCriteria(run, dbContext, docToProccess, out transformResult);
+                return patch.MatchCriteria(run, dbContext, transformResult, ref transformResult);
             }
             catch (Exception ex)
             {

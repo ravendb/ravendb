@@ -518,7 +518,6 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            bool isServerScript = false;
             DocumentDatabase database = null;
             switch (args[0].ToLower())
             {
@@ -536,7 +535,6 @@ namespace Raven.Server.Utils.Cli
                     }
                     break;
                 case "server":
-                    isServerScript = true;
                     break;
                 default:
                     WriteError($"Invalid arguments '{args[0]}' passed to script", cli);
@@ -580,29 +578,17 @@ namespace Raven.Server.Utils.Cli
                 {
                     writer.WriteNull();
                 }
-                else if (result.Value is bool b)
+                else if (result.RawJsValue.IsBoolean())
                 {
-                    writer.WriteBool(b);
+                    writer.WriteBool(result.RawJsValue.AsBoolean());
                 }
-                else if (result.Value is string s)
+                else if (result.RawJsValue.IsString())
                 {
-                    writer.WriteString(s);
-                }
-                else if (result.Value is LazyStringValue lsv)
-                {
-                    writer.WriteString(lsv);
-                }
-                else if (result.Value is LazyCompressedStringValue lcsv)
-                {
-                    writer.WriteString(lcsv);
-                }
-                else if (result.Value is LazyNumberValue lnv)
-                {
-                    writer.WriteDouble(lnv);
+                    writer.WriteString(result.RawJsValue.AsString());
                 }
                 else
                 {
-                    writer.WriteObject(result.Translate(ctx));
+                    writer.WriteObject(result.TranslateToObject(ctx));
                 }
 
                 writer.WriteEndObject();

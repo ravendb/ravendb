@@ -373,7 +373,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingDoc(string id, string excpectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} does not exist, but Put was called with change vector {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} does not exist, but Put was called with change vector: {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExpectedChangeVector = excpectedChangeVector
             };
