@@ -48,7 +48,7 @@ namespace Raven.Client.Util
 
                 for (var i = 0; i < args.Count; i++)
                 {
-                    var name = $"arg_{Parameters.Count}_{Suffix}";
+                    var name = $"args.arg_{Parameters.Count}_{Suffix}";
                     if (i != 0)
                         javascriptWriter.Write(", ");
                     javascriptWriter.Write(name);
