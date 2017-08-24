@@ -21,11 +21,14 @@ namespace Raven.Server.Documents.Queries
             if (query == null || query.Query == null || query.QueryParameters == null || query.QueryParameters.Count == 0)
                 return false;
 
-            metadataHash = GetQueryMetadataHash(query, context);
+            metadataHash = GetQueryMetadataHash(query);
 
             metadata = _cache[metadataHash % CacheSize];
             if (metadata == null)
                 return false;
+            //TODO: Here we assume that if the hashes are the same, then the values are the same
+            //TODO: this isn't always the case, but the problem is that this is perf sensitive
+            //TODO: place and we don't want to do a lot of comparisons all the time here
             if (metadata.CacheKey != metadataHash)
             {
                 var nextProbe = Hashing.Mix(metadataHash) % CacheSize;
@@ -67,23 +70,12 @@ namespace Raven.Server.Documents.Queries
             _cache[loc] = metadata;
         }
 
-        private static ulong GetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query, JsonOperationContext context)
+        private static ulong GetQueryMetadataHash(IndexQueryBase<BlittableJsonReaderObject> query)
         {
-            using (var hasher = new QueryHashCalculator(context))
-            {
-                hasher.Write(query.Query);
-
-                var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                foreach (var index in query.QueryParameters.GetPropertiesByInsertionOrder())
-                {
-                    query.QueryParameters.GetPropertyByIndex(index, ref propertyDetails);
-
-                    var tokenType = QueryBuilder.GetValueTokenType(propertyDetails.Value, query.Query, query.QueryParameters, unwrapArrays: true);
-                    hasher.Write((int)tokenType);
-                }
-
-                return hasher.GetHash();
-            }
+            var hash = Hashing.XXHash64.CalculateRaw(query.Query);
+            if (query.QueryParameters == null)
+                return hash;
+            return Hashing.Combine(hash, query.QueryParameters.GetHashOfPropertyNames());
         }
     }
 }

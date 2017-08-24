@@ -62,16 +62,6 @@ namespace Raven.Server.Documents.Patch
 
         public class SingleRun
         {
-#if DEBUG
-            private static readonly HashSet<Type> ExpectedTypes = new HashSet<Type>
-            {
-                typeof(int),
-                typeof(long),
-                typeof(double),
-                typeof(bool),
-                typeof(string)
-            };
-#endif
             private readonly DocumentDatabase _database;
 
             private readonly List<IDisposable> _disposables = new List<IDisposable>();
@@ -319,8 +309,7 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.LoadDocument.Add(id);
                 var document = _database.DocumentsStorage.Get(_context, id);
-                var translated = TranslateToJs(ScriptEngine, _context, document);
-                return new JsValue((ObjectInstance)translated);
+                return TranslateToJs(ScriptEngine, _context, document);
             }
 
             public void DisposeClonedDocuments()
@@ -329,6 +318,8 @@ namespace Raven.Server.Documents.Patch
                     disposable.Dispose();
                 _disposables.Clear();
             }
+
+            private JsValue[] _args = Array.Empty<JsValue>();
 
             public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
@@ -343,12 +334,15 @@ namespace Raven.Server.Documents.Patch
                 PutOrDeleteCalled = false;
                 ScriptEngine.ResetStatementsCount();
                 ScriptEngine.ResetTimeoutTicks();
+                if (_args.Length != args.Length)
+                    _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
-                    args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
+                    _args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
                 JsValue result;
                 try
                 {
-                    result = ScriptEngine.Invoke(method, args);
+                    var call = ScriptEngine.GetValue(method).TryCast<ICallable>();
+                    result = call.Call(Undefined.Instance, _args);
                 }
                 catch (JavaScriptException e)
                 {
@@ -371,7 +365,7 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(ScriptEngine, context, o);
             }
 
-            private object TranslateToJs(Engine engine, JsonOperationContext context, object o)
+            private JsValue TranslateToJs(Engine engine, JsonOperationContext context, object o)
             {
                 BlittableJsonReaderObject Clone(BlittableJsonReaderObject origin)
                 {
@@ -389,26 +383,23 @@ namespace Raven.Server.Documents.Patch
                     return cloned;
                 }
 
-                if (o is Document d)
-                    return new BlittableObjectInstance(engine, Clone(d.Data), d.Id, d.LastModified);
+                if (o is Document doc)
+                    return new BlittableObjectInstance(engine, Clone(doc.Data), doc.Id, doc.LastModified);
                 if (o is DocumentConflict dc)
                     return new BlittableObjectInstance(engine, Clone(dc.Doc), dc.Id, dc.LastModified);
                 if (o is BlittableJsonReaderObject json)
                     return new BlittableObjectInstance(engine, json, null, null);
-                // Removing this for now to see what breaks
-                //if (o is BlittableJsonReaderArray array)
-                //    return BlittableObjectInstance.CreateArrayInstanceBasedOnBlittableArray(engine, array);
                 if (o == null)
                     return Null.Instance;
-                if (o is long)
-                    return o;
-                if (o is List<object> l)
+                if (o is long lng)
+                    return new JsValue(lng);
+                if (o is List<object> list)
                 {
                     var jsArray = ScriptEngine.Array.Construct(Array.Empty<JsValue>());
                     var args = new JsValue[1];
-                    for (var i = 0; i < l.Count; i++)
+                    for (var i = 0; i < list.Count; i++)
                     {
-                        var value = TranslateToJs(ScriptEngine, context, l[i]);
+                        var value = TranslateToJs(ScriptEngine, context, list[i]);
                         args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
                         ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
                     }
@@ -418,14 +409,19 @@ namespace Raven.Server.Documents.Patch
                 if (o is RavenServer || o is DocumentDatabase)
                 {
                     AssertAdminScriptInstance();
-                    return o;
+                    return JsValue.FromObject(engine, o);
                 }
-                if (o is ObjectInstance)
-                    return o;
-#if DEBUG
-                Debug.Assert(ExpectedTypes.Contains(o.GetType()));
-#endif
-                return o;
+                if (o is ObjectInstance j)
+                    return j;
+                if (o is bool b)
+                    return new JsValue(b);
+                if (o is int integer)
+                    return new JsValue(integer);
+                if (o is double dbl)
+                    return new JsValue(dbl);
+                if (o is string s)
+                    return new JsValue(s);
+                throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
             }
 
             private void AssertAdminScriptInstance()

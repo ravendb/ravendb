@@ -15,11 +15,7 @@ namespace Raven.Client.Documents.Queries
     /// </summary>
     public class IndexQuery : IndexQuery<Parameters>
     {
-        public override bool Equals(IndexQuery<Parameters> other)
-        {
-            return base.Equals(other);
-        }
-
+      
         public ulong GetQueryHash(JsonOperationContext ctx)
         {
             using (var hasher = new QueryHashCalculator(ctx))

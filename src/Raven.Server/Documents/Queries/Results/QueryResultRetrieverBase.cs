@@ -262,10 +262,11 @@ namespace Raven.Server.Documents.Queries.Results
 
             if (fieldToFetch.QueryField.Function != null)
             {
-                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length];
+                var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
+                args[0] = _query.QueryParameters;
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i+1]);
                 }
                 value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
@@ -411,7 +412,6 @@ namespace Raven.Server.Documents.Queries.Results
         private object InvokeFunction(string methodName, Query query, object[] args)
         {
             var key = new QueryKey(query.DeclaredFunctions);
-
             using (_database.Scripts.GetScriptRunner(key, true, out var run))
             using(var result = run.Run(_context as DocumentsOperationContext, methodName, args))
             {

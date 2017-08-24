@@ -166,19 +166,22 @@ namespace Raven.Server.Documents.Queries
 
             var sb = new StringBuilder();
 
-            sb.Append("function ").Append(name).Append("(");
+            sb.Append("function ").Append(name).Append("(rvnQueryArgs");
             int index = 0;
             var args = new SelectField[RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
             {
-                if (index != 0)
-                    sb.Append(", ");
+                sb.Append(", ");
                 sb.Append(alias.Key);
                 args[index++] = SelectField.Create(string.Empty, null, alias.Value.PropertyPath,
                     alias.Value.Array, true);
             }
             sb.AppendLine(") { ");
+            foreach (var parameter in parameters.GetPropertyNames())
+            {
+                sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+            }
             sb.Append("    return ");
 
             sb.Append(QueryExpression.Extract(Query.QueryText, Query.SelectFunctionBody));
@@ -189,7 +192,7 @@ namespace Raven.Server.Documents.Queries
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
 
-            SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
+            SelectFields = new[] {SelectField.CreateMethodCall(name, null, args)};
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
