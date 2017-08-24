@@ -39,7 +39,13 @@
             <div class="col-sm-6 col-lg-4 col-xl-3">
                 <div class="stats-item">
                     <div class="name"><i class="icon-attachment"></i><span>Attachments Count</span></div>
-                    <div class="value"><span data-bind="text: countOfAttachments"></span><span class="text-muted"> / </span><small>0 <span class="text-muted">unique</span></small></div>
+                    <div class="value">
+                        <span data-bind="text: countOfAttachments"></span>
+                        <span data-bind="visible: countOfAttachments !== countOfUniqueAttachments" class="text-muted"> / </span>
+                        <small data-bind="visible: countOfAttachments !== countOfUniqueAttachments">
+                            <span class="text-muted" data-bind="text: countOfUniqueAttachments + ' unique'"></span>
+                        </small>
+                    </div>
                 </div>
             </div>
             <div class="col-sm-6 col-lg-4 col-xl-3">
