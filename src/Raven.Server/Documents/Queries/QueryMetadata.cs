@@ -178,9 +178,12 @@ namespace Raven.Server.Documents.Queries
                     alias.Value.Array, true);
             }
             sb.AppendLine(") { ");
-            foreach (var parameter in parameters.GetPropertyNames())
+            if (parameters != null)
             {
-                sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                foreach (var parameter in parameters.GetPropertyNames())
+                {
+                    sb.Append("var $").Append(parameter).Append(" = rvnQueryArgs.").Append(parameter).AppendLine(";");
+                }
             }
             sb.Append("    return ");
 
