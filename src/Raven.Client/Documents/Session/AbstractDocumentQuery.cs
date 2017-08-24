@@ -534,8 +534,6 @@ namespace Raven.Client.Documents.Session
             SetHighlighterTags(new[] { preTag }, new[] { postTag });
         }
 
-            AssertNoRawQuery();
-        	fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
         public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
         {
             throw new NotImplementedException("This feature is not yet implemented");
@@ -971,7 +969,6 @@ If you really want to do in memory filtering on the data returned from the query
         ///   The fields are the names of the fields to sort, defaulting to sorting by ascending.
         ///   You can prefix a field name with '-' to indicate sorting by descending or '+' to sort by ascending
         /// </summary>
-        /// <param name = "fields">The fields.</param>
         public void OrderBy(string field, OrderingType ordering = OrderingType.String)
         {
             AssertNoRawQuery();

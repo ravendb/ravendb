@@ -793,12 +793,12 @@ namespace Raven.Server.Documents.Indexes
                                     try
                                     {
                                         TimeSpentIndexing.Start();
-                                        var _lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
+                                        var lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread();
 
                                         didWork = DoIndexingWork(scope, _batchProcessCancellationTokenSource.Token);
 
-                                        _lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - _lastAllocatedBytes;
-                                        scope.AddAllocatedBytes(_lastAllocatedBytes);
+                                        lastAllocatedBytes = GC.GetAllocatedBytesForCurrentThread() - lastAllocatedBytes;
+                                        scope.AddAllocatedBytes(lastAllocatedBytes);
                                     }
                                     catch (OperationCanceledException)
                                     {
@@ -1894,7 +1894,9 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+
+        public virtual MoreLikeThisQueryResultServerSide MoreLikeThisQuery(MoreLikeThisQueryServerSide query, DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             AssertIndexState();
 
@@ -1937,26 +1939,21 @@ namespace Raven.Server.Documents.Indexes
                     {
                         var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
                             documentsContext, query.Includes);
+                        var documents = reader.MoreLikeThis(query, stopWords,
+                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition)), documentsContext,
+                            GetOrAddSpatialField, token.Token);
 
-                        using (
-                            var scope = transformer?.OpenTransformationScope(query.TransformerParameters,
-                                includeDocumentsCommand, DocumentDatabase.DocumentsStorage,
-                                DocumentDatabase.TransformerStore, documentsContext))
+                        foreach (var document in documents)
+
                         {
-                            var documents = reader.MoreLikeThis(query, stopWords, fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition, null)), documentsContext, GetOrAddSpatialField, token.Token);
-                            var results = scope != null ? scope.Transform(documents) : documents;
-
-                            foreach (var document in results)
-                        
-                        	{
-                            	result.Results.Add(document);
-                            	includeDocumentsCommand.Gather(document);
-	                        }
+                            result.Results.Add(document);
+                            includeDocumentsCommand.Gather(document);
+                        }
 
                         includeDocumentsCommand.Fill(result.Includes);
-                    }
 
-                    return result;
+                        return result;
+                    }
                 }
             }
         }
