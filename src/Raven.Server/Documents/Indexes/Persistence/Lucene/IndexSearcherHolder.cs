@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading;
 using Sparrow.Logging;
@@ -10,6 +11,7 @@ using Lucene.Net.Store;
 using Raven.Server.Documents.Queries;
 using Sparrow;
 using Sparrow.Json;
+using Sparrow.Threading;
 using Voron.Impl;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene
@@ -115,7 +117,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             private IState _indexSearcherInitializationState;
             private readonly Lazy<IndexSearcher> _lazyIndexSearcher;
 
-            public volatile bool ShouldDispose;
+            public SingleUseFlag ShouldDispose = new SingleUseFlag();
             public int Usage;
             public readonly long AsOfTxId;
 
@@ -124,7 +126,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 _recreateSearcher = recreateSearcher;
                 _logger = LoggingSource.Instance.GetLogger<IndexSearcherHolder>(dbName);
                 AsOfTxId = tx.LowLevelTransaction.Id;
-                _lazyIndexSearcher = new Lazy<IndexSearcher>(() => _recreateSearcher(_indexSearcherInitializationState));
+                _lazyIndexSearcher = new Lazy<IndexSearcher>(() =>
+                {
+                    Debug.Assert(_indexSearcherInitializationState != null);
+                    return _recreateSearcher(_indexSearcherInitializationState);
+                });
             }
 
             public IndexSearcher GetIndexSearcher(IState state)
@@ -136,14 +142,14 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             ~IndexSearcherHoldingState()
             {
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose}");
+                    _logger.Info($"IndexSearcherHoldingState wasn't properly disposed. Usage count: {Usage}, tx id: {AsOfTxId}, should dispose: {ShouldDispose.IsRaised()}");
 
                 Dispose();
             }
 
             public void MarkForDisposal()
             {
-                ShouldDispose = true;
+                ShouldDispose.Raise();
             }
 
             public void Dispose()
@@ -151,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (Interlocked.Decrement(ref Usage) > 0)
                     return;
 
-                if (ShouldDispose == false)
+                if (!ShouldDispose.IsRaised())
                     return;
 
                 if (_lazyIndexSearcher.IsValueCreated)
