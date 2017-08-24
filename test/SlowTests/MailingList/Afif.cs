@@ -79,7 +79,6 @@ namespace SlowTests.MailingList
                 AddMap<Sale>(sales => from sale in sales
                                       select new
                                       {
-                                          _ = (object)null,
                                           SaleId = sale.Id,
                                           Locations = sale.Locations.Select(l => new { l.Lat, l.Lng }).ToArray(),
                                           TotalSold = 0,
@@ -89,7 +88,6 @@ namespace SlowTests.MailingList
                 AddMap<Order>(orders => from order in orders
                                         select new
                                         {
-                                            _ = (object)null,
                                             order.SaleId,
                                             Locations = new[] { new { Lat = (double)0, Lng = (double)0 } },
                                             TotalSold = 1,
