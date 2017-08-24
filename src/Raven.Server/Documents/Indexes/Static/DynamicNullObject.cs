@@ -218,6 +218,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public static implicit operator float(DynamicNullObject o) { return float.NaN; }
         public static implicit operator float? (DynamicNullObject o) { return null; }
 
+        public static implicit operator string(DynamicNullObject self) { return null; }
+
         public override bool Equals(object obj)
         {
             return obj == null || obj is DynamicNullObject;
@@ -233,11 +235,6 @@ namespace Raven.Server.Documents.Indexes.Static
             if (obj is DynamicNullObject || obj == null)
                 return 0;
             return -1;
-        }
-
-        public static implicit operator string(DynamicNullObject self)
-        {
-            return null;
         }
     }
 }

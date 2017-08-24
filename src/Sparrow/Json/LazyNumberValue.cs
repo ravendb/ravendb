@@ -23,17 +23,28 @@ namespace Sparrow.Json
             if (self._longVal != null)
                 return self._longVal.Value;
 
-            self._longVal = long.Parse(self.Inner);
+            if (long.TryParse(self.Inner, out var longVal) == false)
+            {
+                var doubleVal = (double)self;
+                longVal = (long)doubleVal;
+            }
+
+            self._longVal = longVal;
             return self._longVal.Value; // that's inefficient, but percise
         }
-
 
         public static implicit operator ulong(LazyNumberValue self)
         {
             if (self._ulongVal != null)
                 return self._ulongVal.Value;
 
-            self._ulongVal = ulong.Parse(self.Inner);
+            if (ulong.TryParse(self.Inner, out var ulongVal) == false)
+            {
+                var doubleVal = (double)self;
+                ulongVal = (ulong)doubleVal;
+            }
+
+            self._ulongVal = ulongVal;
             return self._ulongVal.Value; // that's inefficient, but percise
         }
 
@@ -142,7 +153,7 @@ namespace Sparrow.Json
             if (obj is decimal)
                 return ((decimal)this).Equals((decimal)obj);
 
-            if (obj is LazyStringValue l && 
+            if (obj is LazyStringValue l &&
                 l.Length == 3) // checking for 3 as optimization
                 return Inner.Equals(l); // this is to match NaN
 

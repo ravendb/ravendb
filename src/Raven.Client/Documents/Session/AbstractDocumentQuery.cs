@@ -1770,7 +1770,7 @@ If you really want to do in memory filtering on the data returned from the query
             }
         }
 
-        protected void WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent)
+        protected void WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits, double distErrorPercent)
         {
             fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
 

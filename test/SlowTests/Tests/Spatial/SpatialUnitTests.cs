@@ -1,16 +1,13 @@
-using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using Raven.Abstractions.Indexing;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class SpatialUnitTests : RavenTest
+    public class SpatialUnitTests : RavenTestBase
     {
         [Fact]
         public void Test()
@@ -19,7 +16,7 @@ namespace Raven.Tests.Spatial
             // The gym is about 7.32 miles (11.79 kilometers) from my house.
             var gym = new DummyGeoDoc(44.682861, -93.25);
 
-            using (var store = NewRemoteDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 store.Initialize();
                 store.ExecuteIndex(new KmGeoIndex());
@@ -37,12 +34,12 @@ namespace Raven.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     var km = session.Query<DummyGeoDoc, KmGeoIndex>()
-                                         .Spatial(x => x.Location, x => x.WithinRadiusOf(8, myHouse.Longitude, myHouse.Latitude))
+                                         .Spatial(x => x.Location, x => x.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
                                          .Count();
                     Assert.Equal(1, km);
 
                     var miles = session.Query<DummyGeoDoc, MilesGeoIndex>()
-                                         .Spatial(x => x.Location, x => x.WithinRadiusOf(8, myHouse.Longitude, myHouse.Latitude))
+                                         .Spatial(x => x.Location, x => x.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
                                          .Count();
                     Assert.Equal(2, miles);
                 }
@@ -50,60 +47,60 @@ namespace Raven.Tests.Spatial
                 using (var session = store.OpenSession())
                 {
                     var km = session.Query<DummyGeoDoc, KmGeoIndex>()
-                                    .Customize(x => x.WithinRadiusOf("Location", 8, myHouse.Latitude, myHouse.Longitude))
-                                    .Count();
+                        .Spatial("Location", factory => factory.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
+                        .Count();
                     Assert.Equal(1, km);
 
                     var miles = session.Query<DummyGeoDoc, MilesGeoIndex>()
-                                    .Customize(x => x.WithinRadiusOf("Location", 8, myHouse.Latitude, myHouse.Longitude))
-                                    .Count();
+                        .Spatial("Location", factory => factory.WithinRadius(8, myHouse.Latitude, myHouse.Longitude))
+                        .Count();
                     Assert.Equal(2, miles);
                 }
 
                 using (var session = store.OpenSession())
                 {
                     var miles = session.Query<DummyGeoDoc, MilesGeoIndex>()
-                                    .Customize(x => x.WithinRadiusOf("Location", 8, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers))
-                                    .Count();
+                        .Spatial("Location", factory => factory.WithinRadius(8, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Kilometers))
+                        .Count();
                     Assert.Equal(1, miles);
 
                     var km = session.Query<DummyGeoDoc, KmGeoIndex>()
-                                    .Customize(x => x.WithinRadiusOf("Location", 8, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles))
-                                    .Count();
+                        .Spatial("Location", factory => factory.WithinRadius(8, myHouse.Latitude, myHouse.Longitude, SpatialUnits.Miles))
+                        .Count();
                     Assert.Equal(2, km);
                 }
             }
         }
 
-        public class KmGeoIndex : AbstractIndexCreationTask<DummyGeoDoc>
+        private class KmGeoIndex : AbstractIndexCreationTask<DummyGeoDoc>
         {
-             public KmGeoIndex()
-             {
-                 Map = docs => from doc in docs
-                               select new
-                                      {
-                                          doc.Location
-                                      };
+            public KmGeoIndex()
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  Location = CreateSpatialField(doc.Location[1], doc.Location[0])
+                              };
 
-                 Spatial(x => x.Location, x => x.Geography.Default(SpatialUnits.Kilometers));
-             }
+                Spatial(x => x.Location, x => x.Geography.Default(SpatialUnits.Kilometers));
+            }
         }
 
-        public class MilesGeoIndex : AbstractIndexCreationTask<DummyGeoDoc>
+        private class MilesGeoIndex : AbstractIndexCreationTask<DummyGeoDoc>
         {
             public MilesGeoIndex()
-             {
-                 Map = docs => from doc in docs
-                               select new
-                                      {
-                                          doc.Location
-                                      };
+            {
+                Map = docs => from doc in docs
+                              select new
+                              {
+                                  Location = CreateSpatialField(doc.Location[1], doc.Location[0])
+                              };
 
-                 Spatial(x => x.Location, x => x.Geography.Default(SpatialUnits.Miles));
-             }
+                Spatial(x => x.Location, x => x.Geography.Default(SpatialUnits.Miles));
+            }
         }
 
-        public class DummyGeoDoc
+        private class DummyGeoDoc
         {
             public string Id { get; set; }
             public double[] Location { get; set; }
@@ -114,8 +111,8 @@ namespace Raven.Tests.Spatial
             {
                 Latitude = lat;
                 Longitude = lng;
-                Location = new[] { lng, lat};
+                Location = new[] { lng, lat };
             }
-        }   
+        }
     }
 }

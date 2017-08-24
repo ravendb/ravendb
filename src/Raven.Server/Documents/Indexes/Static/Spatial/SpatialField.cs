@@ -123,21 +123,16 @@ namespace Raven.Server.Documents.Indexes.Static.Spatial
         public Shape ReadCircle(double radius, double latitude, double longitude, SpatialUnits? unitOverride)
         {
             var context = GetContext();
-            var point = new NtsPoint(new NetTopologySuite.Geometries.Point(longitude, latitude), context);
 
             if (_options.Type == SpatialFieldType.Geography)
-            {
                 radius = ShapeStringReadWriter.TranslateCircleRadius(radius, unitOverride ?? _options.Units);
-                return new GeoCircle(point, radius, context);
-            }
 
-            return new CircleImpl(point, radius, context);
+            return context.MakeCircle(longitude, latitude, radius);
         }
 
         public Shape ReadPoint(double latitude, double longitude)
         {
-            var context = GetContext();
-            return new NtsPoint(new NetTopologySuite.Geometries.Point(longitude, latitude), context);
+            return GetContext().MakePoint(longitude, latitude);
         }
     }
 }

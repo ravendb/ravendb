@@ -1,30 +1,31 @@
+using System.Globalization;
 using System.Linq;
-using Raven.Abstractions.Data;
-using Raven.Abstractions.Indexing;
-using Raven.Client;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
+using Raven.Client.Documents.Session;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class Nick : RavenTest
+    public class Nick : RavenTestBase
     {
-        public class MySpatialDocument
+        private class MySpatialDocument
         {
             public string Id { get; set; }
             public double Latitude { get; set; }
             public double Longitude { get; set; }
         }
 
-        public class MySpatialIndex : Raven.Client.Indexes.AbstractIndexCreationTask<MySpatialDocument>
+        private class MySpatialIndex : AbstractIndexCreationTask<MySpatialDocument>
         {
             public MySpatialIndex()
             {
                 Map = entities => from entity in entities
                                   select new
                                   {
-                                      _ = SpatialGenerate(entity.Latitude, entity.Longitude)
+                                      Coordinates = CreateSpatialField(entity.Latitude, entity.Longitude)
                                   };
             }
         }
@@ -32,7 +33,7 @@ namespace Raven.Tests.Spatial
         [Fact]
         public void Test()
         {
-            using (IDocumentStore store = NewDocumentStore())
+            using (IDocumentStore store = GetDocumentStore())
             {
                 using (IDocumentSession session = store.OpenSession())
                 {
@@ -56,31 +57,40 @@ namespace Raven.Tests.Spatial
                 {
                     var result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
                         // 1.025 is for the 2.5% uncertainty at the circle circumference
-                        .WithinRadiusOf(radius: 35.75 * 1.025, latitude: 48.6003516, longitude: 2.4632387000000335)
+                        .WithinRadiusOf("Coordinates", radius: 35.75 * 1.025, latitude: 48.6003516, longitude: 2.4632387000000335)
                         .SingleOrDefault();
 
                     Assert.NotNull(result); // A location should be returned.
 
                     result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
-                        .WithinRadiusOf(radius: 30, latitude: 48.6003516, longitude: 2.4632387000000335)
+                        .WithinRadiusOf("Coordinates", radius: 30, latitude: 48.6003516, longitude: 2.4632387000000335)
                         .SingleOrDefault();
 
                     Assert.Null(result); // No result should be returned.
 
                     result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
-                        .WithinRadiusOf(radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
+                        .WithinRadiusOf("Coordinates", radius: 33, latitude: 48.6003516, longitude: 2.4632387000000335)
                         .SingleOrDefault();
 
                     Assert.Null(result); // No result should be returned.
 
-                    var shape = SpatialIndexQuery.GetQueryShapeFromLatLon(48.6003516, 2.4632387000000335, 33);
+                    var shape = GetQueryShapeFromLatLon(48.6003516, 2.4632387000000335, 33);
                     result = session.Advanced.DocumentQuery<MySpatialDocument, MySpatialIndex>()
-                        .RelatesToShape(Constants.DefaultSpatialFieldName, shape, SpatialRelation.Intersects, 0)
+                        .RelatesToShape("Coordinates", shape, SpatialRelation.Intersects, 0)
                         .SingleOrDefault();
 
                     Assert.Null(result); // No result should be returned.
                 }
             }
+        }
+
+        private static string GetQueryShapeFromLatLon(double lat, double lng, double radius)
+        {
+            return "Circle(" +
+                   lng.ToString("F6", CultureInfo.InvariantCulture) + " " +
+                   lat.ToString("F6", CultureInfo.InvariantCulture) + " " +
+                   "d=" + radius.ToString("F6", CultureInfo.InvariantCulture) +
+                   ")";
         }
     }
 }

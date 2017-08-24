@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Queries.Spatial
             return RelatesToShape(shapeWKT, SpatialRelation.Within, distErrorPercent);
         }
 
-        public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
             return new CircleCriteria(radius, latitude, longitude, radiusUnits, SpatialRelation.Within, distErrorPercent);
         }

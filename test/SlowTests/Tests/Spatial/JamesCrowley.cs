@@ -1,19 +1,17 @@
 using System;
 using System.Linq;
-using Raven.Client.Embedded;
-using Raven.Client.Indexes;
-using Raven.Tests.Common;
-
+using FastTests;
+using Raven.Client.Documents.Indexes;
 using Xunit;
 
-namespace Raven.Tests.Spatial
+namespace SlowTests.Tests.Spatial
 {
-    public class JamesCrowley : RavenTest
+    public class JamesCrowley : RavenTestBase
     {
         [Fact]
         public void GeoSpatialTest()
         {
-            using (var store = NewDocumentStore())
+            using (var store = GetDocumentStore())
             {
                 new EventsBySimpleLocation().Execute(store);
                 using (var session = store.OpenSession())
@@ -37,7 +35,8 @@ namespace Raven.Tests.Spatial
                     session.SaveChanges();
                 }
 
-                WaitForUserToContinueTheTest(store);
+                WaitForIndexing(store);
+
                 using (var session = store.OpenSession())
                 {
                     var matchingEvents = session.Advanced.DocumentQuery<EventWithLocation, EventsBySimpleLocation>()
@@ -46,16 +45,16 @@ namespace Raven.Tests.Spatial
                     Assert.Equal(1, matchingEvents.Count);
                     Assert.Equal("Some event", matchingEvents.First().EventName);
                     Assert.Equal("TechHub", matchingEvents.First().VenueName);
-                }		   
+                }
             }
         }
 
-        public enum EventType
+        private enum EventType
         {
             Conference
         }
 
-        public class EventVenue
+        private class EventVenue
         {
             public string Name { get; set; }
 
@@ -70,7 +69,7 @@ namespace Raven.Tests.Spatial
             public string Id { get; set; }
         }
 
-        public class GeoLocation
+        private class GeoLocation
         {
             public double Latitude { get; set; }
 
@@ -84,11 +83,11 @@ namespace Raven.Tests.Spatial
 
             public GeoLocation()
             {
-                
+
             }
         }
 
-        public class EventWithLocation
+        private class EventWithLocation
         {
             public string EventName { get; set; }
 
@@ -103,7 +102,7 @@ namespace Raven.Tests.Spatial
             public string EventId { get; set; }
         }
 
-        public class EventListing
+        private class EventListing
         {
             public string Name { get; set; }
 
@@ -120,7 +119,8 @@ namespace Raven.Tests.Spatial
 
             public string Id { get; set; }
         }
-        public class EventsBySimpleLocation : AbstractMultiMapIndexCreationTask<EventWithLocation>
+
+        private class EventsBySimpleLocation : AbstractMultiMapIndexCreationTask<EventWithLocation>
         {
             public EventsBySimpleLocation()
             {
@@ -133,7 +133,7 @@ namespace Raven.Tests.Spatial
                                                           VenueName = (string)null,
                                                           Long = 0,
                                                           Lat = 0,
-                                                          _ = (object)null,
+                                                          Coordinates = (object)null,
                                                       });
                 AddMap<EventVenue>(venues => from v in venues
                                              select new
@@ -144,27 +144,24 @@ namespace Raven.Tests.Spatial
                                                  VenueName = v.Name,
                                                  Long = v.GeoLocation.Longitude,
                                                  Lat = v.GeoLocation.Latitude,
-                                                 _ = (object)null,
+                                                 Coordinates = (object)null,
                                              });
                 Reduce = results => from result in results
                                     group result by result.VenueId
                                         into g
-                                        let latitude = g.Select(x => x.Lat).FirstOrDefault(t => t != 0)
-                                        let longitude = g.Select(x => x.Long).FirstOrDefault(t => t != 0)
-                                        select new
-                                        {
-                                            VenueId = g.Key,
-                                            EventId = g.Select(x => x.EventId).FirstOrDefault(x => x != null),
-                                            VenueName = g.Select(x => x.VenueName).FirstOrDefault(x => x != null),
-                                            EventName = g.Select(x => x.EventName).FirstOrDefault(x => x != null),
-                                            Lat = latitude,
-                                            Long = longitude,
-                                            _ = SpatialGenerate(latitude, longitude) 
-                                        };
+                                    let latitude = g.Select(x => x.Lat).FirstOrDefault(t => t != 0)
+                                    let longitude = g.Select(x => x.Long).FirstOrDefault(t => t != 0)
+                                    select new
+                                    {
+                                        VenueId = g.Key,
+                                        EventId = g.Select(x => x.EventId).FirstOrDefault(x => x != null),
+                                        VenueName = g.Select(x => x.VenueName).FirstOrDefault(x => x != null),
+                                        EventName = g.Select(x => x.EventName).FirstOrDefault(x => x != null),
+                                        Lat = latitude,
+                                        Long = longitude,
+                                        Coordinates = CreateSpatialField(latitude, longitude)
+                                    };
             }
         }
-
     }
-
-    
 }

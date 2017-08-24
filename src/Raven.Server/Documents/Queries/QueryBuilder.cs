@@ -399,7 +399,9 @@ namespace Raven.Server.Documents.Queries
             if (expression.Arguments.Count == 3)
             {
                 var distanceErrorPctValue = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[2]);
-                distanceErrorPct = (double)distanceErrorPctValue.Value;
+                AssertValueIsNumber(fieldName, distanceErrorPctValue.Type);
+
+                distanceErrorPct = Convert.ToDouble(distanceErrorPctValue.Value);
             }
 
             var spatialField = getSpatialField(fieldName);
@@ -456,7 +458,7 @@ namespace Raven.Server.Documents.Queries
         private static Shape HandleWkt(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName, SpatialField spatialField)
         {
             var wktValue = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[0]);
-            AssertValueType(fieldName, wktValue.Type, ValueTokenType.String);
+            AssertValueIsString(fieldName, wktValue.Type);
 
             SpatialUnits? spatialUnits = null;
             if (expression.Arguments.Count == 2)
@@ -468,19 +470,19 @@ namespace Raven.Server.Documents.Queries
         private static Shape HandleCircle(Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName, SpatialField spatialField)
         {
             var radius = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[0]);
-            AssertValueType(fieldName, radius.Type, ValueTokenType.Double);
+            AssertValueIsNumber(fieldName, radius.Type);
 
             var latitute = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[1]);
-            AssertValueType(fieldName, latitute.Type, ValueTokenType.Double);
+            AssertValueIsNumber(fieldName, latitute.Type);
 
             var longitude = GetValue(fieldName, query, metadata, parameters, (ValueToken)expression.Arguments[2]);
-            AssertValueType(fieldName, longitude.Type, ValueTokenType.Double);
+            AssertValueIsNumber(fieldName, longitude.Type);
 
             SpatialUnits? spatialUnits = null;
             if (expression.Arguments.Count == 4)
                 spatialUnits = GetSpatialUnits(query, expression.Arguments[3] as ValueToken, metadata, parameters, fieldName);
 
-            return spatialField.ReadCircle((double)radius.Value, (double)latitute.Value, (double)longitude.Value, spatialUnits);
+            return spatialField.ReadCircle(Convert.ToDouble(radius.Value), Convert.ToDouble(latitute.Value), Convert.ToDouble(longitude.Value), spatialUnits);
         }
 
         private static SpatialUnits? GetSpatialUnits(Query query, ValueToken value, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
@@ -489,7 +491,7 @@ namespace Raven.Server.Documents.Queries
                 throw new ArgumentNullException(nameof(value));
 
             var spatialUnitsValue = GetValue(fieldName, query, metadata, parameters, value);
-            AssertValueType(fieldName, spatialUnitsValue.Type, ValueTokenType.String);
+            AssertValueIsString(fieldName, spatialUnitsValue.Type);
 
             var spatialUnitsValueAsString = spatialUnitsValue.Value.ToString();
             if (Enum.TryParse(typeof(SpatialUnits), spatialUnitsValueAsString, true, out var su) == false)
@@ -835,10 +837,16 @@ namespace Raven.Server.Documents.Queries
             return previous == current;
         }
 
-        private static void AssertValueType(string fieldName, ValueTokenType fieldType, ValueTokenType expectedType)
+        private static void AssertValueIsString(string fieldName, ValueTokenType fieldType)
         {
-            if (fieldType != expectedType)
+            if (fieldType != ValueTokenType.String)
                 ThrowValueTypeMismatch(fieldName, fieldType, ValueTokenType.String);
+        }
+
+        private static void AssertValueIsNumber(string fieldName, ValueTokenType fieldType)
+        {
+            if (fieldType != ValueTokenType.Double && fieldType != ValueTokenType.Long)
+                ThrowValueTypeMismatch(fieldName, fieldType, ValueTokenType.Double);
         }
 
         private static void ThrowUnhandledValueTokenType(ValueTokenType type)
