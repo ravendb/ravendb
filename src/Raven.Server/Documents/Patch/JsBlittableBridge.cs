@@ -147,7 +147,9 @@ namespace Raven.Server.Documents.Patch
                 _recursive = new HashSet<object>();
             try
             {
-                if (_recursive.Add(obj) && obj is FunctionInstance == false)
+                if (_recursive.Add(obj) 
+                    && obj is FunctionInstance == false 
+                    && obj is BlittableObjectInstance.NullObject == false)
                     WriteInstance(obj);
                 else
                     _writer.WriteValueNull();

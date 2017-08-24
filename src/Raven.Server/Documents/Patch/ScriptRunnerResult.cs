@@ -27,10 +27,9 @@ namespace Raven.Server.Documents.Patch
                 return boi.GetOrCreate(name);
             var parent = _instance.AsObject();
             var o = parent.Get(name);
-            if (o == null)
+            if (o == null || o.IsUndefined() || o.IsNull())
             {
-                o = _parent.ScriptEngine.Object.Create(_parent.ScriptEngine.Object.PrototypeObject,
-                    Array.Empty<JsValue>());
+                o = _parent.ScriptEngine.Object.Construct(Array.Empty<JsValue>());
                 parent.Put(name, o, false);
             }
             return o.AsObject();
