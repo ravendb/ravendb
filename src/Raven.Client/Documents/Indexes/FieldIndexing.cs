@@ -3,6 +3,9 @@
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
+
+using System;
+
 namespace Raven.Client.Documents.Indexes
 {
     /// <summary>
@@ -18,6 +21,7 @@ namespace Raven.Client.Documents.Indexes
         /// Index the tokens produced by running the field's value through an Analyzer. This is useful for common text.
         /// </summary>
         Search,
+
         /// <summary>
         /// Index the field's value without using an Analyzer, so it can be searched.  As no analyzer is used the 
         /// value will be stored as a single term. This is useful for unique Ids like product numbers.
@@ -26,6 +30,11 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
-        Default
+        Default,
+
+        [Obsolete("This value is only here so we can deserialize old values from Smuggler", true)]
+        NotAnalyzed = Exact,
+        [Obsolete("This value is only here so we can deserialize old values from Smuggler", true)]
+        Analyzed = Search
     }
 }
