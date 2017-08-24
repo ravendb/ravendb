@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
-        private bool _isStorageBeingMoved;
+        private volatile bool _isStorageBeingMoved;
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
@@ -347,12 +347,12 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal ExitWriteLock DrainRunningQueries()
+        internal ExitWriteLock DrainRunningQueries(TimeSpan? timeout = null)
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld)
                 return new ExitWriteLock();
 
-            if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
+            if (_currentlyRunningQueriesLock.TryEnterWriteLock(timeout ?? TimeSpan.FromSeconds(10)) == false)
             {
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
@@ -2033,13 +2033,10 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
-            if (_isStorageBeingMoved)
-                ThrowStorageBeingMoved();
-
-            if (_initialized == false)
+            if (_initialized == false && _isStorageBeingMoved == false)
                 ThrowNotIntialized();
 
-            if (_disposed || _disposing)
+            if ((_disposed || _disposing) && _isStorageBeingMoved == false)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -2076,11 +2073,6 @@ namespace Raven.Server.Documents.Indexes
         private void ThrowCompactionInProgress()
         {
             throw new InvalidOperationException($"Index '{Name} ({Etag})' is currently being compacted.");
-        }
-
-        private void ThrowStorageBeingMoved()
-        {
-            throw new InvalidOperationException($"Storage of index '{Name} ({Etag})' is currently being moved.");
         }
 
         private void AssertQueryDoesNotContainFieldsThatAreNotIndexed(QueryMetadata metadata)
@@ -2555,7 +2547,8 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(TimeSpan.FromSeconds(3)) == false)
+                var timeout = _parent._isStorageBeingMoved ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(3);
+                if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
                 _hasLock = true;
@@ -2587,7 +2580,7 @@ namespace Raven.Server.Documents.Indexes
             public MoveStorageOperationWrapper(Index index)
             {
                 _index = index;
-                index._isCompactionInProgress = true;
+                index._isStorageBeingMoved = true;
                 index.Dispose();
             }
 

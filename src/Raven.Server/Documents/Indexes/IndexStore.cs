@@ -1109,11 +1109,11 @@ namespace Raven.Server.Documents.Indexes
 
                 if (oldIndex != null)
                 {
-                    using (oldIndex.DrainRunningQueries())
+                    using (oldIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
                         DeleteIndexInternal(oldIndex);
                 }
 
-                using (newIndex.DrainRunningQueries())
+                using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
                 using (newIndex.MovingStorage())
                 {
                     var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
