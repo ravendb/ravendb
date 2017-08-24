@@ -373,7 +373,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration, PerformanceHintsConfiguration performanceHints)
+        protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
+            PerformanceHintsConfiguration performanceHints)
         {
             if (_disposed)
                 throw new ObjectDisposedException($"Index '{Name} ({Etag})' was already disposed.");
@@ -563,7 +564,7 @@ namespace Raven.Server.Documents.Indexes
 
                     DocumentDatabase.Changes.OnIndexChange -= HandleIndexChange;
                 }
-                    
+
                 _indexValidationStalenessCheck = null;
 
                 var exceptionAggregator = new ExceptionAggregator(_logger, $"Could not dispose {nameof(Index)} '{Name}'");
@@ -813,7 +814,7 @@ namespace Raven.Server.Documents.Indexes
                                     }
                                     finally
                                     {
-                                        
+
                                         TimeSpentIndexing.Stop();
 
                                         // If we are here, then the previous block did not throw. There's two
@@ -915,7 +916,11 @@ namespace Raven.Server.Documents.Indexes
 
                         if (batchCompleted)
                         {
-                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange { Name = Name, Type = IndexChangeTypes.BatchCompleted });
+                            DocumentDatabase.Changes.RaiseNotifications(new IndexChange
+                            {
+                                Name = Name,
+                                Type = IndexChangeTypes.BatchCompleted
+                            });
                         }
 
                         try
@@ -1163,15 +1168,16 @@ namespace Raven.Server.Documents.Indexes
                 databaseContext.PersistentContext.LongLivedTransactions = true;
 
                 using (var tx = indexContext.OpenWriteTransaction())
-                using (CurrentIndexingScope.Current = new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField))
+                using (CurrentIndexingScope.Current =
+                    new CurrentIndexingScope(DocumentDatabase.DocumentsStorage, databaseContext, Definition, indexContext, GetOrAddSpatialField))
                 {
                     var writeOperation = new Lazy<IndexWriteOperation>(() => IndexPersistence.OpenIndexWriter(indexContext.Transaction.InnerTransaction));
 
                     try
                     {
-                    using (InitializeIndexingWork(indexContext))
-                    {
-                            
+                        using (InitializeIndexingWork(indexContext))
+                        {
+
                             foreach (var work in _indexWorkers)
                             {
                                 using (var scope = stats.For(work.Name))
@@ -1192,32 +1198,32 @@ namespace Raven.Server.Documents.Indexes
                                 }
                             }
 
-                        _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
-                    }
+                            _indexStorage.WriteReferences(CurrentIndexingScope.Current, tx);
+                        }
 
-                    using (stats.For(IndexingOperation.Storage.Commit))
-                    {
-                        tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
-
-                        tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
+                        using (stats.For(IndexingOperation.Storage.Commit))
                         {
-                            if (writeOperation.IsValueCreated)
+                            tx.InnerTransaction.LowLevelTransaction.RetrieveCommitStats(out CommitStats commitStats);
+
+                            tx.InnerTransaction.LowLevelTransaction.AfterCommitWhenNewReadTransactionsPrevented += () =>
                             {
-                                using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                                if (writeOperation.IsValueCreated)
                                 {
-                                    // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
-                                    // also we need this to be called when new read transaction are prevented in order to ensure
-                                    // that queries won't get the searcher having 'old' state but see 'new' changes committed here
-                                    // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
-                                    IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    using (stats.For(IndexingOperation.Lucene.RecreateSearcher))
+                                    {
+                                        // we need to recreate it after transaction commit to prevent it from seeing uncommitted changes
+                                        // also we need this to be called when new read transaction are prevented in order to ensure
+                                        // that queries won't get the searcher having 'old' state but see 'new' changes committed here
+                                        // e.g. the old searcher could have a segment file in its in-memory state which has been removed in this tx
+                                        IndexPersistence.RecreateSearcher(tx.InnerTransaction);
+                                    }
                                 }
-                            }
-                        };
+                            };
 
-                        tx.Commit();
+                            tx.Commit();
 
-                        stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
-                    }
+                            stats.RecordCommitStats(commitStats.NumberOfModifiedPages, commitStats.NumberOf4KbsWrittenToDisk);
+                        }
                     }
                     catch
                     {
@@ -1230,7 +1236,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats);
+        public abstract IIndexedDocumentsEnumerator GetMapEnumerator(IEnumerable<Document> documents, string collection, TransactionOperationContext indexContext,
+            IndexingStatsScope stats);
 
         public abstract void HandleDelete(DocumentTombstone tombstone, string collection, IndexWriteOperation writer,
             TransactionOperationContext indexContext, IndexingStatsScope stats);
@@ -1866,7 +1873,8 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        public virtual SuggestionQueryResultServerSide SuggestionsQuery(SuggestionQueryServerSide query, DocumentsOperationContext documentsContext, OperationCancelToken token)
+        public virtual SuggestionQueryResultServerSide SuggestionsQuery(SuggestionQueryServerSide query, DocumentsOperationContext documentsContext,
+            OperationCancelToken token)
         {
             AssertIndexState();
 
@@ -2252,7 +2260,8 @@ namespace Raven.Server.Documents.Indexes
             return _lastStats;
         }
 
-        public abstract IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
+        public abstract IQueryResultRetriever
+            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
 
         protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {
@@ -2305,7 +2314,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (stats.ErrorsCount >= IndexStorage.MaxNumberOfKeptErrors)
             {
-                stats.RecordMapCompletedReason($"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
+                stats.RecordMapCompletedReason(
+                    $"Number of errors ({stats.ErrorsCount}) reached maximum number of allowed errors per batch ({IndexStorage.MaxNumberOfKeptErrors})");
                 return false;
             }
 
@@ -2509,6 +2519,7 @@ namespace Raven.Server.Documents.Indexes
             readonly Index _parent;
             private readonly ExecutingQueryInfo _queryInfo;
             private bool _hasLock;
+
             public QueryDoneRunning(Index parent, ExecutingQueryInfo queryInfo)
             {
                 _parent = parent;
@@ -2527,7 +2538,8 @@ namespace Raven.Server.Documents.Indexes
 
             private void ThrowLockTimeoutException()
             {
-                throw new TimeoutException($"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
+                throw new TimeoutException(
+                    $"Could not get the index read lock in a reasonable time, {_parent.Name} is probably undergoing maintenance now, try again later");
             }
 
             public void ReleaseLock()
@@ -2568,3 +2580,5 @@ namespace Raven.Server.Documents.Indexes
                 _index._isStorageBeingMoved = false;
             }
         }
+    }
+}
