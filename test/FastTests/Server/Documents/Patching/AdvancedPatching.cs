@@ -323,7 +323,7 @@ namespace FastTests.Server.Documents.Patching
                 {
                     await commands.PutAsync("doc", null, _test, null);
 
-                    var invalidOperationException = await Assert.ThrowsAsync<RavenException>(async () =>
+                    var invalidOperationException = await Assert.ThrowsAsync<JavaScriptException>(async () =>
                     {
                         await store.Operations.SendAsync(new PatchOperation("doc", null, new PatchRequest
                         {
