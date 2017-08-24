@@ -672,9 +672,9 @@ namespace Raven.Server.Documents.Queries.Parser
         private void ThrowParseException(string msg)
         {
             var sb = new StringBuilder()
-                .Append(Scanner.Column)
-                .Append(":")
                 .Append(Scanner.Line)
+                .Append(":")
+                .Append(Scanner.Column)
                 .Append(" ")
                 .Append(msg)
                 .Append(" but got");
