@@ -11,6 +11,7 @@
 //    #define DETECT_LEAKS  //for now always enable DETECT_LEAKS in debug.
 //#endif
 
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Sparrow
@@ -95,11 +96,11 @@ namespace Sparrow
         private readonly Factory _factory;
 
 #if DETECT_LEAKS
-    private static readonly ConditionalWeakTable<T, LeakTracker> leakTrackers = new ConditionalWeakTable<T, LeakTracker>();
+    private static readonly ConditionalWeakTable<T, LeakTracker> LeakTrackers = new ConditionalWeakTable<T, LeakTracker>();
 
     private class LeakTracker : IDisposable
     {
-        private volatile bool disposed;
+        private SingleUseFlag _disposed = new SingleUseFlag();
 
 #if TRACE_LEAKS
         internal volatile object Trace = null;
@@ -107,7 +108,7 @@ namespace Sparrow
 
         public void Dispose()
         {
-            disposed = true;
+            _disposed.Raise();
             GC.SuppressFinalize(this);
         }
 
@@ -122,7 +123,7 @@ namespace Sparrow
 
         ~LeakTracker()
         {
-            if (!this.disposed && !Environment.HasShutdownStarted)
+            if (!_disposed.IsRaised() && !Environment.HasShutdownStarted)
             {
                 var trace = GetTrace();
 
@@ -181,7 +182,7 @@ namespace Sparrow
 
 #if DETECT_LEAKS
         var tracker = new LeakTracker();
-        leakTrackers.Add(inst, tracker);
+        LeakTrackers.Add(inst, tracker);
 
 #if TRACE_LEAKS
         var frame = CaptureStackTrace();
@@ -271,10 +272,10 @@ namespace Sparrow
         {
 #if DETECT_LEAKS
         LeakTracker tracker;
-        if (leakTrackers.TryGetValue(old, out tracker))
+        if (LeakTrackers.TryGetValue(old, out tracker))
         {
             tracker.Dispose();
-            leakTrackers.Remove(old);
+            LeakTrackers.Remove(old);
         }
         else
         {
@@ -285,7 +286,7 @@ namespace Sparrow
         if (replacement != null)
         {
             tracker = new LeakTracker();
-            leakTrackers.Add(replacement, tracker);
+            LeakTrackers.Add(replacement, tracker);
         }
 #endif
         }

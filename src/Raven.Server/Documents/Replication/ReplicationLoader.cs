@@ -20,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Raven.Server.Utils;
+using Sparrow.Threading;
 using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Replication
@@ -37,7 +38,7 @@ namespace Raven.Server.Documents.Replication
         internal ManualResetEventSlim DebugWaitAndRunReplicationOnce;
 
         public readonly DocumentDatabase Database;
-        private volatile bool _isInitialized;
+        private SingleUseFlag _isInitialized = new SingleUseFlag();
 
         private readonly Timer _reconnectAttemptTimer;
         internal readonly int MinimalHeartbeatInterval;
@@ -323,14 +324,13 @@ namespace Raven.Server.Documents.Replication
 
         public void Initialize(DatabaseRecord record)
         {
-            if (_isInitialized) //precaution -> probably not necessary, but still...
+            if (_isInitialized.IsRaised()) //precaution -> probably not necessary, but still...
                 return;
 
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             ConflictResolver.RunConflictResolversOnce();
-
-            _isInitialized = true;
+            _isInitialized.Raise();
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
