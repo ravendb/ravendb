@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Queries.Parser
 
             var query = parser.Parse();
             var output = new StringWriter();
-            Query.WriteSelectOrWith(new JsonTextWriter(output), query.With, "WITH", q);
+            //Query.WriteExpressionsList(new JsonTextWriter(output), query.With, "WITH", q);
             var actual = output.GetStringBuilder().ToString();
 
             Assert.Equal(json, actual);

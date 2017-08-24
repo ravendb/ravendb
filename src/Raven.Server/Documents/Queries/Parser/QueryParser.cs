@@ -42,13 +42,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     ThrowParseException(name + " function was declared multiple times");
             }
 
-            if (Scanner.TryScan("SELECT"))
-                q.Select = SelectClause("SELECT", q);
-
             q.From = FromClause();
-
-            if (Scanner.TryScan("WITH"))
-                q.With = SelectClauseExpressions("WITH");
 
             if (Scanner.TryScan("GROUP BY"))
                 q.GroupBy = GroupBy();
@@ -59,13 +53,11 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("ORDER BY"))
                 q.OrderBy = OrderBy();
 
-            if (Scanner.TryScan("SELECT"))
-            {
-                if(q.Select!= null)
-                    ThrowParseException("Only a single SELECT clause is allowed, but got two");
+            if (Scanner.TryScan("LOAD"))
+                q.Load = SelectClauseExpressions("LOAD");
 
+            if (Scanner.TryScan("SELECT"))
                 q.Select = SelectClause("SELECT", q);
-            }
 
             if (Scanner.NextToken())
                 ThrowParseException("Expected end of query");

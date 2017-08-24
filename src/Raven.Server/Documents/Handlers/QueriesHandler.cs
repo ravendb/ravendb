@@ -352,7 +352,7 @@ namespace Raven.Server.Documents.Handlers
 
         private void EnsureQueryHasOnlyFromClause(Query query, string collection)
         {
-            if (query.Where != null || query.Select != null || query.OrderBy != null || query.GroupBy != null || query.With != null)
+            if (query.Where != null || query.Select != null || query.OrderBy != null || query.GroupBy != null || query.Load != null)
                 throw new BadRequestException($"Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM {collection}'. If you need to perform filtering please issue the query to the static index.");
         }
 

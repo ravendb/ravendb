@@ -115,8 +115,8 @@ namespace Raven.Server.Documents.Queries
                     GroupBy[i] = QueryExpression.Extract(QueryText, Query.GroupBy[i]);
             }
 
-            if (Query.With != null)
-                HandleWithClause(parameters);
+            if (Query.Load != null)
+                HandleLoadClause(parameters);
 
             if (Query.SelectFunctionBody != null)
                 HandleSelectFunctionBody(parameters);
@@ -214,83 +214,59 @@ namespace Raven.Server.Documents.Queries
                 parameters);
         }
 
-        private void HandleWithClause(BlittableJsonReaderObject parameters)
+        private void HandleLoadClause(BlittableJsonReaderObject parameters)
         {
-            List<string> includes = null;
-            foreach (var with in Query.With)
-            {
-                if (with.Expression.Type != OperatorType.Method)
-                    ThrowInvalidWith(with.Expression, "WITH clause support only method calls, but got: ", parameters);
-                var methodName = QueryExpression.Extract(QueryText, with.Expression.Field);
-                if (Enum.TryParse(methodName, true, out WithMethods method) == false)
-                {
-                    ThrowInvalidWith(with.Expression, $"WITH clause had an invalid method call ({string.Join(", ", Enum.GetNames(typeof(WithMethods)))} are allowed), got: ", parameters);
-                }
-                switch (method)
-                {
-                    case WithMethods.Load:
-                        if (with.Alias == null)
-                            ThrowInvalidWith(with.Expression, "WITH clause require that `load` method will use an alias but got: ", parameters);
-
-                        var alias = QueryExpression.Extract(QueryText, with.Alias);
-
-                        var path = GetWithClausePropertyPath(with.Expression, "include", parameters);
-                        var array = false;
-                        if (alias.EndsWith("[]"))
-                        {
-                            array = true;
-                            alias = alias.Substring(0, alias.Length - 2);
-                        }
-                        if (RootAliasPaths.TryAdd(alias, (path, array)) == false)
-                        {
-                            ThrowInvalidWith(with.Expression, "WITH clause duplicate alias detected: ", parameters);
-                        }
-                        break;
-                    case WithMethods.Include:
-                        if (with.Alias != null)
-                            ThrowInvalidWith(with.Expression, "WITH clause 'include' call cannot have an alias, but got: ", parameters);
-                        if (includes == null)
-                            includes = new List<string>();
-                        includes.Add(GetWithClausePropertyPath(with.Expression, "include", parameters));
-                        break;
-                    default:
-                        ThrowInvalidWith(with.Expression, "WITH clause used an unfamiliar method: " + method, parameters);
-                        break;
-                }
-            }
-            if (includes != null)
-                Includes = includes.ToArray();
-        }
-
-        private string GetWithClausePropertyPath(QueryExpression method, string methodName, BlittableJsonReaderObject parameters)
-        {
-            string ParseIncludePath(string path)
+            string ParseIncludePath(QueryExpression expr,string path)
             {
                 var indexOf = path.IndexOf('.');
                 if (indexOf == -1)
                     return path;
                 if (Query.From.Alias == null)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
+                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
                 Debug.Assert(Query.From.Alias != null);
                 if (Query.From.Alias.TokenLength != indexOf)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ", parameters);
+                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
                 var compare = string.Compare(
                     QueryText, Query.From.Alias.TokenStart,
                     path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
                 if (compare != 0)
-                    ThrowInvalidWith(method, "WITH clause is trying to use an alias that isn't specified in the from clause: ", parameters);
+                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
                 return path.Substring(indexOf + 1);
             }
 
-            if (method.Arguments.Count != 1)
-                ThrowInvalidWith(method, $"WITH clause '{methodName}' call must have a single parameter, but got: ", parameters);
+            foreach (var load in Query.Load)
+            {
+                if (load.Alias == null)
+                    ThrowInvalidWith(load.Expression, "LOAD clause requires an alias but got: ", parameters);
 
-            if (method.Arguments[0] is FieldToken f)
-                return ParseIncludePath(QueryExpression.Extract(QueryText, f));
-            if (method.Arguments[0] is ValueToken v)
-                return ParseIncludePath(QueryExpression.Extract(QueryText, v, stripQuotes: true));
-            ThrowInvalidWith(method, "WITH clause 'include' method argument is unknown, expected field or value but got:", parameters);
-            return null;// never hit
+                var alias = QueryExpression.Extract(QueryText, load.Alias);
+
+                string path;
+                switch (load.Expression.Type)
+                {
+                        case OperatorType.Field:
+                            path = QueryExpression.Extract(QueryText, load.Expression.Field);
+                        break;
+                        case OperatorType.Value:
+                            path = QueryExpression.Extract(QueryText, load.Expression.Value);
+                        break;
+                    default:
+                        ThrowInvalidWith(load.Expression, "LOAD clause require a field or value refereces", parameters);
+                        path = null; // enver hit
+                        break;
+                }
+                var array = false;
+                if (alias.EndsWith("[]"))
+                {
+                    array = true;
+                    alias = alias.Substring(0, alias.Length - 2);
+                }
+                path = ParseIncludePath(load.Expression, path);
+                if (RootAliasPaths.TryAdd(alias, (path, array)) == false)
+                {
+                    ThrowInvalidWith(load.Expression, "LOAD clause duplicate alias detected: ", parameters);
+                }
+            }
         }
 
         private void ThrowInvalidWith(QueryExpression expr, string msg, BlittableJsonReaderObject parameters)
@@ -576,6 +552,7 @@ namespace Raven.Server.Documents.Queries
                 {
                     name = name.Substring(indexOf + 1);
                     hasSourceAlias = true;
+                    array = sourceAlias.Array;
                 }
                 else if(RootAliasPaths.Count != 0)
                 {
@@ -587,7 +564,7 @@ namespace Raven.Server.Documents.Queries
                 hasSourceAlias = true;
                 if (string.IsNullOrEmpty(alias))
                     alias = name;
-                array = name.EndsWith("[]");
+                array = sourceAlias.Array;
                 name = string.Empty;
             }
             return SelectField.Create(name, alias, sourceAlias.Path, array, hasSourceAlias);
