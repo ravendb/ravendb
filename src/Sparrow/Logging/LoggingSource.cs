@@ -39,8 +39,8 @@ namespace Sparrow.Logging
 
         public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
-
-        private static byte[] _headerRow = Encodings.Utf8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
+        private static byte[] _headerRow = 
+            Encodings.Utf8.GetBytes($"Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException{Environment.NewLine}");
 
         public class WebSocketContext
         {

@@ -5,6 +5,7 @@ param(
     $DataDir = "",
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
+    $LogsMode = "Operations",
     [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun)
@@ -68,6 +69,11 @@ if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
 if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
     $dockerArgs += "-e" 
     $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
+}
+
+if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
+    $dockerArgs += "-e"
+    $dockerArgs += "Raven.Logs.Mode=$LogsMode"
 }
 
 $dockerArgs += '-p'

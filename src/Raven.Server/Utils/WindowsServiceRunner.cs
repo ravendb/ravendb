@@ -46,6 +46,9 @@ namespace Raven.Server.Utils
 
         public void Start(string[] startupArguments, ServiceStoppedCallback serviceStoppedCallback)
         {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Starting RavenDB Windows Service: {ServiceName}.");
+
             _ravenServer.AfterDisposal += () => serviceStoppedCallback();
 
             try
@@ -75,6 +78,9 @@ namespace Raven.Server.Utils
 
         public void Stop()
         {
+            if (Logger.IsInfoEnabled)
+                Logger.Info($"Stopping RavenDB Windows Service: {ServiceName}.");
+
             _ravenServer.Dispose();
         }
     }
