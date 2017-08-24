@@ -13,22 +13,24 @@ interface autoCompleteLastKeyword {
     keyword: string,
     keywordModifier: string,
     operator: string,
+    fieldPrefix: string[],
+    readonly getFieldPrefix: string,
     identifiers: string[],
     text: string,
-    paren: number,
+    paren: number
 }
 
 interface queryCompleterProviders {
     terms: (indexName: string, field: string, pageSize: number, callback: (terms: Array<string>) => void) => void;
     indexFields: (indexName: string, callback: (fields: Array<string>) => void) => void;
-    collectionFields: (collectionName: string, callback: (fields: Array<string>) => void) => void;
+    collectionFields: (collectionName: string, prefix: string, callback: (fields: object) => void) => void;
     collections: (callback: (collectionNames: Array<string>) => void) => void;
     indexNames: (callback: (indexNames: Array<string>) => void) => void;
 }
 
 class queryCompleter {
     private tokenIterator: new(session : AceAjax.IEditSession, initialRow: number, initialColumn: number) => AceAjax.TokenIterator = ace.require("ace/token_iterator").TokenIterator;
-    private indexOrCollectionFieldsCache = new Map<string, string[]>();
+    private indexOrCollectionFieldsCache = new Map<string, autoCompleteWordList[]>();
     
     constructor(private providers: queryCompleterProviders) {
         _.bindAll(this, "complete");
@@ -37,7 +39,7 @@ class queryCompleter {
     /**
      * Extracts collection or index used in current query 
      */
-    private static getQuerySubject(session: AceAjax.IEditSession): { type: "index" | "collection", subject: string } {
+    private static extractIndexOrCollectionName(session: AceAjax.IEditSession): { type: "index" | "collection", name: string } {
         let keyword: string;
         
         for (let row = 0; row < session.getLength(); row++) {
@@ -55,13 +57,13 @@ class queryCompleter {
                         if (keyword === "from") {
                             return {
                                 type: "collection",
-                                subject: indexName
+                                name: indexName
                             }
                         }
                         if (keyword === "index") {
                             return {
                                 type: "index",
-                                subject: indexName
+                                name: indexName
                             };
                         }
                         break;
@@ -71,13 +73,13 @@ class queryCompleter {
                         if (keyword === "from") {
                             return {
                                 type: "collection",
-                                subject: indexName
+                                name: indexName
                             }
                         }
                         if (keyword === "index") {
                             return {
                                 type: "index",
-                                subject: indexName
+                                name: indexName
                             }
                         }
                         break;
@@ -88,33 +90,48 @@ class queryCompleter {
         return null;
     }
 
-    private getIndexFields(session: AceAjax.IEditSession): JQueryPromise<string[]> {
-        const querySubject = queryCompleter.getQuerySubject(session);
-        if (!querySubject) {
-            return $.when<string[]>([]); 
-        }
+    private getIndexFields(queryIndexName: string, queryIndexType: string, prefix: string): JQueryPromise<autoCompleteWordList[]> {
+        const wordList: autoCompleteWordList[] = [];
 
-        const cachedFields = this.indexOrCollectionFieldsCache.get(querySubject.subject);
-        if (cachedFields) {
-            return $.when<string[]>(cachedFields);
+        let key = queryIndexName;
+        if (prefix) {
+            key += prefix;
         }
-
-        const fieldsTasks = $.Deferred<string[]>();
         
-        if (querySubject.type === "index") {
-            this.providers.indexFields(querySubject.subject, fields => {
-                this.indexOrCollectionFieldsCache.set(querySubject.subject, fields);
-                fieldsTasks.resolve(fields);
+        const cachedFields = this.indexOrCollectionFieldsCache.get(key);
+        if (cachedFields) {
+            return $.when<autoCompleteWordList[]>(cachedFields);
+        }
+
+        const fieldsTasks = $.Deferred<autoCompleteWordList[]>();
+        
+        if (queryIndexType === "index") {
+            this.providers.indexFields(queryIndexName, fields => {
+                fields.map(field => {
+                    wordList.push({caption: field, value: field, score: 1, meta: "field"});
+                });
+                
+                this.indexOrCollectionFieldsCache.set(key, wordList);
+                fieldsTasks.resolve(wordList);
             });
         } else {
-            this.providers.collectionFields(querySubject.subject, fields => {
-                if (fields && fields.length) {
-                    this.indexOrCollectionFieldsCache.set(querySubject.subject, fields);
-                    fieldsTasks.resolve(fields);
-                }
+            this.providers.collectionFields(queryIndexName, prefix, fields => {
+                _.forOwn(fields, (value, key) => {
+                    let formattedFieldType = value.toLowerCase().split(", ").map((fieldType: string) => {
+                        if (fieldType.length > 5 && fieldType.startsWith("array")){
+                            fieldType = fieldType.substr(5) + "[]";
+                        }
+                        return fieldType;
+                    }).join(" | ");
+
+                    wordList.push({caption: key, value: key, score: 1, meta: formattedFieldType + " field"});
+                });
+                
+                this.indexOrCollectionFieldsCache.set(key, wordList);
+                fieldsTasks.resolve(wordList);
             });
         }
-        
+
         return fieldsTasks.promise();
     }
 
@@ -133,99 +150,113 @@ class queryCompleter {
     }
     
     private getLastKeyword(session: AceAjax.IEditSession, pos: AceAjax.Position): autoCompleteLastKeyword {
-        let keyword: string;
-        let keywordModifier: string;
-        let identifiers: string[] = [];
-        let text: string;
-        let operator: string;
-        let paren = 0;
+        const result: autoCompleteLastKeyword = {
+            keywordsBefore: undefined,
+            keyword: undefined,
+            keywordModifier: undefined,
+            operator: undefined,
+            fieldPrefix: undefined,
+            get getFieldPrefix():string {
+                return this.fieldPrefix ? this.fieldPrefix.join(".") : undefined;
+            },
+            identifiers: [],
+            text: undefined,
+            paren: 0
+        };
+            
         let liveAutoCompleteSkippedTriggerToken = false;
+        let isFieldPrefixMode = 0;
 
         const iterator: AceAjax.TokenIterator = new this.tokenIterator(session, pos.row, pos.column);
         do {
             if ((<any>iterator).$tokenIndex < 0) {
-                text = "__new_line";
+                result.text = "__new_line";
                 continue;
             }
             const token = iterator.getCurrentToken();
             if (!token) {
                 break;
             } else if (!liveAutoCompleteSkippedTriggerToken){
-                const firstToken = token.value.trim();
                 liveAutoCompleteSkippedTriggerToken = true;
-                if (firstToken !== "" && firstToken !==","){
+                if (token.type === "identifier") {
                     continue;
+                }
+                else if (token.type === "text") {
+                    const firstToken = token.value.trim();
+                    if (firstToken !== "" && firstToken !== "," && firstToken !== "." && firstToken !== "[].") {
+                        continue;
+                    }
                 }
             }
 
             switch (token.type) {
                 case "keyword":
-                    if (keyword === "by") {
-                        keyword = token.value.toLowerCase() + " by";
+                    if (result.keyword === "by") {
+                        result.keyword = token.value.toLowerCase() + " by";
                     }
                     else {
-                        keyword = token.value.toLowerCase();
+                        result.keyword = token.value.toLowerCase();
                     }
 
-                    if (keyword === "desc" ||
-                        keyword === "asc" ||
-                        keyword === "and" ||
-                        keyword === "or" ||
-                        keyword === "as") {
-                        
-                        if (identifiers.length > 0 || !keywordModifier) {
-                            keywordModifier = keyword;
+                    if (result.keyword === "desc" ||
+                        result.keyword === "asc" ||
+                        result.keyword === "and" ||
+                        result.keyword === "or" ||
+                        result.keyword === "as") {
+
+                        if (result.identifiers.length > 0 || !result.keywordModifier) {
+                            result.keywordModifier = result.keyword;
                         }
-                        
+
                         continue;
                     }
 
-                    if (keyword === "by") {
+                    if (result.keyword === "by") {
                         continue;
                     }
 
-                    return {
-                        keywordsBefore: this.getKeywordsBefore(iterator),
-                        keyword: keyword,
-                        keywordModifier: keywordModifier,
-                        operator: operator,
-                        identifiers: identifiers,
-                        text: text,
-                        paren: paren,
-                    };
+                    result.keywordsBefore = this.getKeywordsBefore(iterator);
+                    return result;
                 case "support.function":
-                    return {
-                        keywordsBefore: this.getKeywordsBefore(iterator),
-                        keyword: "__support.function",
-                        keywordModifier: keywordModifier,
-                        operator: operator,
-                        identifiers: identifiers,
-                        text: text,
-                        paren: paren,
-                    };
+                    result.keywordsBefore = this.getKeywordsBefore(iterator);
+                    result.keyword = "__support.function";
+                    return result;
                 case "keyword.operator":
-                    operator = token.value;
+                    result.operator = token.value;
                     break;
                 case "identifier":
-                    identifiers.push(token.value);
+                    if (isFieldPrefixMode === 1) {
+                        result.fieldPrefix.push(token.value);
+                    } else {
+                        result.identifiers.push(token.value);
+                    }
                     break;
                 case "string":
                     const indexName = token.value.substr(1, token.value.length - 2);
-                    identifiers.push(indexName);
+                    result.identifiers.push(indexName);
                     break;
                 case "paren.lparen":
-                    paren++;
+                    result.paren++;
                     break;
                 case "paren.rparen":
-                    paren--;
+                    result.paren--;
                     break;
                 case "text":
-                    if (identifiers.length > 0 && text !== ",") {
+                    const text = token.value.trim();
+                    if (isFieldPrefixMode === 0 && (text === "." || text === "[].")) {
+                        isFieldPrefixMode = 1;
+                        result.fieldPrefix = [];
+                    }
+                    else if (isFieldPrefixMode === 1 && !token.value.trim()) {
+                        isFieldPrefixMode = 2;
+                    }
+                    
+                    if (result.identifiers.length > 0 && result.text !== ",") {
                         if (token.value.trim() === ",") {
-                            text = ",";
+                            result.text = ",";
                         }
                         else {
-                            text = token.value;
+                            result.text = token.value;
                         }
                     }
                     break;
@@ -235,11 +266,16 @@ class queryCompleter {
         return null;
     }
 
-    private completeFields(session: AceAjax.IEditSession, callback: (errors: any[], wordList: autoCompleteWordList[]) => void): void {
-        this.getIndexFields(session)
-            .done((indexFields) => this.completeWords(callback, indexFields.map(field => {
-                return {value: field, score: 1, meta: "field"};
-            })));
+    private completeFields(session: AceAjax.IEditSession, prefix: string, callback: (errors: any[], wordList: autoCompleteWordList[]) => void): void {
+        const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
+        if (!queryIndexName) {
+            return;
+        }
+        
+        this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
+            .done((wordList) => {
+                callback(null, wordList);
+            });
     }
 
     complete(editor: AceAjax.Editor,
@@ -265,7 +301,7 @@ class queryCompleter {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) {
                     if (lastKeyword.paren > 0) {
                         // from (Collection, {show fields here})
-                        this.completeFields(session, callback);
+                        this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                         return;
                     }
 
@@ -296,7 +332,7 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeFields(session, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "select":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
@@ -307,13 +343,13 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeFields(session, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "group by":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
                     return;
                 }
-                this.completeFields(session, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             case "order by":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
@@ -329,7 +365,7 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeFields(session, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
                 
             case "where": {
@@ -340,9 +376,15 @@ class queryCompleter {
                         return;
                     }
 
-                    this.getIndexFields(session)
-                        .done((indexFields) => {
-                            if (!indexFields.find(x => x === currentField)) {
+                    // TODO: remove extractIndexOrCollectionName and extract in getLastKeyword
+                    const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
+                    if (!queryIndexName) {
+                        return;
+                    }
+
+                    this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
+                        .done((wordList) => {
+                            if (!wordList.find(x => x.value === currentField)) {
                                 return;
                             }
 
@@ -357,13 +399,13 @@ class queryCompleter {
 
 
                             // for non dynamic indexes query index terms, for dynamic indexes, try perform general auto complete
-                            const querySubject = queryCompleter.getQuerySubject(session);
-                            if (!querySubject) {
+                            const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
+                            if (!queryIndexName) {
                                 return; // todo: try to callback with error
                             }
                             
-                            if (querySubject.type === "index") {
-                                this.providers.terms(querySubject.subject, currentField, 20, terms => {
+                            if (queryIndexName.type === "index") {
+                                this.providers.terms(queryIndexName.name, currentField, 20, terms => {
                                     if (terms && terms.length) {
                                         this.completeWords(callback,
                                             terms.map(term => ({value: `'${term}'`, score: 1, meta: "value"})));
@@ -394,7 +436,7 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeFields(session, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                 break;
             }
             case "group":
@@ -475,14 +517,16 @@ class queryCompleter {
                         callback(result.Results);
                     })
             },
-            collectionFields: (collectionName, callback) => {
+            collectionFields: (collectionName, prefix, callback) => {
+                if (collectionName === "@all_docs"){
+                    collectionName = "All Documents";
+                }
                 const matchedCollection = collectionsTracker.default.collections().find(x => x.name === collectionName);
                 if (matchedCollection) {
-                    matchedCollection.fetchDocuments(0, 1)
+                    matchedCollection.fetchFields(prefix)
                         .done(result => {
-                            if (result && result.items.length) {
-                                const propertyNames = new document(result.items[0]).getDocumentPropertyNames();
-                                callback(propertyNames);
+                            if (result) {
+                                callback(result);
                             }
                         });
                 }
