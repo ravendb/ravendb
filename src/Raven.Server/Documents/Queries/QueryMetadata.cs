@@ -498,7 +498,7 @@ namespace Raven.Server.Documents.Queries
                                 else if (expression.Arguments[i] is FieldToken ft)
                                     args[i] = GetSelectValue(null, ft);
                                 else
-                                    ThrowInvalidMethodArgument();
+                                    ThrowInvalidMethodArgument(parameters);
                             }
 
                             return SelectField.CreateMethodCall(methodName, alias, args);
@@ -737,7 +737,7 @@ namespace Raven.Server.Documents.Queries
                     case MethodType.EndsWith:
                     case MethodType.Search:
                     case MethodType.Lucene:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
 
                         if (arguments.Count == 1)
                             throw new InvalidQueryException($"Method {methodName}() expects second argument to be provided", QueryText, parameters);
@@ -755,7 +755,7 @@ namespace Raven.Server.Documents.Queries
                             _metadata.AddWhereField(fieldName, valueType);
                         break;
                     case MethodType.Exists:
-                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+                        fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
                         _metadata.AddExistField(fieldName);
                         break;
                     case MethodType.Boost:
@@ -794,7 +794,7 @@ namespace Raven.Server.Documents.Queries
 
             private void HandleSpatial(string methodName, List<object> arguments, BlittableJsonReaderObject parameters)
             {
-                var fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName);
+                var fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
 
                 if (arguments.Count < 2 || arguments.Count > 3)
                     throw new InvalidQueryException($"Method {methodName}() expects 2-3 arguments to be provided", QueryText, parameters);
@@ -866,12 +866,12 @@ namespace Raven.Server.Documents.Queries
                 Visit(sumExpression, parameters);
             }
 
-            private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName)
+            private string ExtractFieldNameFromFirstArgument(List<object> arguments, string methodName, BlittableJsonReaderObject parameters)
             {
                 var fieldArgument = arguments[0] as FieldToken;
 
                 if (fieldArgument == null)
-                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument");
+                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument",QueryText, parameters);
 
                 return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
             }
