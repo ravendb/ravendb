@@ -18,6 +18,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Voron.Global;
 using Constants = Raven.Client.Constants;
+using JavaScriptException = Jint.Runtime.JavaScriptException;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -331,7 +332,24 @@ namespace Raven.Server.Documents.Patch
                 {
                     args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
                 }
-                var result = ScriptEngine.Invoke(method, args);
+                JsValue result;
+                try
+                {
+                    result = ScriptEngine.Invoke(method, args);
+                }
+                catch (Jint.Runtime.JavaScriptException e)
+                {
+                    string msg;
+                    if (e.Error.IsString())
+                        msg = e.Error.AsString();
+                    else if (e.Error.IsObject())
+                        msg = JsBlittableBridge.Translate(ctx, e.Error.AsObject()).ToString();
+                    else
+                        msg = e.Error.ToString();
+
+                    msg = "At " + e.Column + ":" + e.LineNumber + Environment.NewLine + msg;
+                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
+                }
                 return new ScriptRunnerResult(this, result);
             }
 

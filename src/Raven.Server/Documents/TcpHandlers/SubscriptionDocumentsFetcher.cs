@@ -116,7 +116,7 @@ namespace Raven.Server.Documents.TcpHandlers
                     {
                         if (exception != null)
                         {
-                            yield return (revisionTuple.current, exception);
+                            yield return (item, exception);
                         }
                         else
                         {
@@ -220,6 +220,10 @@ namespace Raven.Server.Documents.TcpHandlers
                 ["Current"] = revision.Current?.Data,
                 ["Previous"] = revision.Previous?.Data
             }, item.Id);
+
+            revision.Current?.ResetModifications();
+            revision.Previous?.ResetModifications();
+
 
             if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
             {

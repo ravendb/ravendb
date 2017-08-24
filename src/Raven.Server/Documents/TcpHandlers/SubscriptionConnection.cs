@@ -438,10 +438,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 if (result.Exception != null)
                                 {
+                                    var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
                                     writer.WriteValue(BlittableJsonToken.StartObject,
                                         docsContext.ReadObject(new DynamicJsonValue
                                         {
-                                            [Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Client.Constants.Documents.Metadata.Key]
+                                            [Client.Constants.Documents.Metadata.Key] = metadata
                                         }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
