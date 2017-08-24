@@ -10,6 +10,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Lucene.Net.Documents;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Conventions;
@@ -48,6 +49,15 @@ namespace Raven.Server.ServerWide
     {
         private const string LocalNodeStateTreeName = "LocalNodeState";
         private static readonly TableSchema ItemsSchema;
+
+        private static readonly TableSchema UniqueItemsSchema;
+        private enum UniqueItems
+        {
+            Key,
+            Index,
+            Value
+        }
+
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
 
@@ -71,6 +81,13 @@ namespace Raven.Server.ServerWide
                 Name = EtagIndexName,
                 IsGlobal = true,
                 StartIndex = 3
+            });
+
+            UniqueItemsSchema = new TableSchema();
+            UniqueItemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            {
+                StartIndex = 0,
+                Count = 1
             });
         }
 
@@ -170,6 +187,9 @@ namespace Raven.Server.ServerWide
                     case nameof(ToggleSubscriptionStateCommand):
                     case nameof(UpdateSubscriptionClientConnectionTime):
                         SetValueForTypedDatabaseCommand(context, type, cmd, index, leader);
+                        break;
+                    case nameof(PutUniqueValueCommand):
+                        PutUniqueItem(context, type, cmd, index);
                         break;
                     case nameof(PutLicenseCommand):
                         PutValue<License>(context, type, cmd, index, leader);
@@ -634,6 +654,7 @@ namespace Raven.Server.ServerWide
         {
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
+            UniqueItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
         }
 
@@ -692,6 +713,67 @@ namespace Raven.Server.ServerWide
 
                     yield return GetCurrentItem(context, result.Value);
                 }
+            }
+        }
+
+        public unsafe void PutUniqueItem(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Items);
+            cmd.TryGet(nameof(PutUniqueValueCommand.Key), out string key);
+            cmd.TryGet(nameof(PutUniqueValueCommand.Index), out long cmdIndex);
+            var dbKey = key.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            using (items.Allocate(out TableValueBuilder tvb))
+            {
+                cmd.TryGet(nameof(PutUniqueValueCommand.Value), out BlittableJsonReaderObject value);
+                value = context.ReadObject(value, nameof(PutUniqueValueCommand.Value));
+
+                tvb.Add(keySlice.Content.Ptr, keySlice.Size);
+                tvb.Add(index);
+                tvb.Add(value.BasePointer, value.Size);
+
+                if (items.ReadByKey(keySlice, out var reader))
+                {
+                    var itemIndex = *(long*)reader.Read((int)UniqueItems.Index, out var _);
+                    if (cmdIndex == itemIndex)
+                    {
+                        items.Update(reader.Id, tvb);
+                        return;
+                    }
+                    throw new ConcurrencyException($"The key '{key}' was already changed by an other command.");
+                }
+                items.Set(tvb);
+            }
+            context.Transaction.InnerTransaction.LowLevelTransaction.OnDispose += transaction =>
+            {
+                if (transaction is LowLevelTransaction llt && llt.Committed)
+                    TaskExecutor.Execute(_ =>
+                    {
+                        try
+                        {
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, null);
+                        }
+                        catch (Exception e)
+                        {
+                            _rachisLogIndexNotifications.NotifyListenersAbout(index, e);
+                        }
+                    }, null);
+            };
+        }
+
+        public unsafe (long Index, BlittableJsonReaderObject Value) GetUniqueItem(TransactionOperationContext context, string key)
+        {
+            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Items);
+            var dbKey = key.ToLowerInvariant();
+            using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
+            {
+                if (items.ReadByKey(keySlice, out var reader))
+                {
+                    var index = *(long*)reader.Read((int)UniqueItems.Index, out var _);
+                    var value = reader.Read((int)UniqueItems.Value, out var size);
+                    return (index, new BlittableJsonReaderObject(value, size, context));
+                }
+                return (0, null);
             }
         }
 

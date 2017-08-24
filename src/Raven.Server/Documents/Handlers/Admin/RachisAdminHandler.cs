@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
 
 
-                var (etag, result) = await ServerStore.PutCommandAsync(command);
+                var (etag, result) = await ServerStore.SendToLeaderAsync(command);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
