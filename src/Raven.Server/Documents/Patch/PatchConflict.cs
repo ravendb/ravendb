@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Patch
                     }
                     return false;
                 }
-                if (result.Value is string s && s == TombstoneResolverValue)
+                if (result.StringValue == TombstoneResolverValue)
                 {
                     resolved = null;
                     return true;
@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Patch
                 // we cannot change collections here anyway, anything else, the 
                 // user need to merge on their own
                 instance.Put(Constants.Documents.Metadata.Collection,new JsValue(_fstDocumentConflict.Collection), false);
-                resolved = result.Translate(context,
+                resolved = result.TranslateToObject(context,
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk);
                 return true;
             }

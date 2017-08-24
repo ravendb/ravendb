@@ -46,21 +46,17 @@ namespace Raven.Server.Documents.Patch
 
         private void WriteJsonValue(object parent, string propName, object value)
         {
-            if (value is NullObjectInstance)
-            {
-                _writer.WriteValueNull();
-                return;
-            }
             if (value is JsValue js)
             {
                 if (js.IsBoolean())
                     _writer.WriteValue(js.AsBoolean());
+                else if (js.IsUndefined() || js.IsNull())
+                    _writer.WriteValueNull();
                 else if (js.IsString())
                     _writer.WriteValue(js.AsString());
                 else if (js.IsNumber())
                     WriteNumber(parent, propName, js.AsNumber());
-                else if (js.IsUndefined() || js.IsNull())
-                    _writer.WriteValueNull();
+              
                 else if (js.IsArray())
                 {
                     var arrayInstance = js.AsArray();
@@ -115,6 +111,10 @@ namespace Raven.Server.Documents.Patch
                 _writer.WriteArrayEnd();
             }
             else if (v is RegExpInstance)
+            {
+                _writer.WriteValueNull();
+            }
+            else if (v is BlittableObjectInstance.NullObject)
             {
                 _writer.WriteValueNull();
             }

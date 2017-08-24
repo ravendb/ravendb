@@ -28,36 +28,30 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         protected override string[] LoadToDestinations { get; }
 
-        protected override void LoadToFunction(string collectionName, JsValue document)
+        protected override void LoadToFunction(string collectionName, ScriptRunnerResult document)
         {
             if (collectionName == null)
                 ThrowLoadParameterIsMandatory(nameof(collectionName));
-            if (document == null)
-                ThrowLoadParameterIsMandatory(nameof(document));
+            string id;
 
-            using (var scriptRunnerResult = new ScriptRunnerResult(null, document))
+            if (_script.IsLoadedToDefaultCollection(Current, collectionName))
             {
-                string id;
-
-                if (_script.IsLoadedToDefaultCollection(Current, collectionName))
-                {
-                    id = Current.DocumentId;
-                }
-                else
-                {
-                    id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
-
-                    var metadata = scriptRunnerResult.GetOrCreate(Constants.Documents.Metadata.Key);
-                    metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
-                    metadata.Put(Constants.Documents.Metadata.Id, id, false);
-                }
-
-                var transformed = scriptRunnerResult.Translate(Context);
-
-                var transformResult = Context.ReadObject(transformed, id);
-
-                _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));   
+                id = Current.DocumentId;
             }
+            else
+            {
+                id = GetPrefixedId(Current.DocumentId, collectionName, OperationType.Put);
+
+                var metadata = document.GetOrCreate(Constants.Documents.Metadata.Key);
+                metadata.Put(Constants.Documents.Metadata.Collection, collectionName, false);
+                metadata.Put(Constants.Documents.Metadata.Id, id, false);
+            }
+
+            var transformed = document.TranslateToObject(Context);
+
+            var transformResult = Context.ReadObject(transformed, id);
+
+            _commands.Add(new PutCommandDataWithBlittableJson(id, null, transformResult));
         }
 
         private string GetPrefixedId(LazyStringValue documentId, string loadCollectionName, OperationType type)

@@ -17,15 +17,15 @@ namespace Raven.Server.Documents.Subscriptions
             _patchRequest = new PatchRequest(filterJavaScript, PatchRequestType.Subscription);
         }
 
-        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, Document document, out BlittableJsonReaderObject transformResult)
+        public bool MatchCriteria(ScriptRunner.SingleRun run, DocumentsOperationContext context, object document, ref BlittableJsonReaderObject transformResult)
         {
-            transformResult = null;
-
-            using (var result = run.Run(context, "execute", new object[] {document}))
+            using (var result = run.Run(context, "execute", new[] {document}))
             {
-                if (result.Value is bool b)
-                    return b;
-                transformResult = result.Translate(context);
+                var resultAsBool = result.BooleanValue;
+                if (resultAsBool != null)
+                    return resultAsBool.Value;
+
+                transformResult = result.TranslateToObject(context);
                 return transformResult != null;    
             }
         }

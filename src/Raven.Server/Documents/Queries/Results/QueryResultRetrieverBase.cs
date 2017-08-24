@@ -268,7 +268,6 @@ namespace Raven.Server.Documents.Queries.Results
                     TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
                 }
                 value = InvokeFunction(
-                    
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,
                     args);

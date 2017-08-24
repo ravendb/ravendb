@@ -3,16 +3,21 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Esprima;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors.Specialized;
+using Jint.Runtime.Interop;
 using Sparrow.Extensions;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron.Global;
+using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents.Patch
 {
@@ -56,80 +61,134 @@ namespace Raven.Server.Documents.Patch
                         .MaxStatements(1000) // TODO: Maxim make this configurable
                         .Strict();
                 });
-                //TODO: Maybe convert to ClrFunction for perf?
-                ScriptEngine.SetValue("output", (Action<object>)OutputDebug);
+                ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 
-                ScriptEngine.SetValue("load", (Func<string, object>)LoadDocument);
-                ScriptEngine.SetValue("del", (Func<string, string, bool>)DeleteDocument);
-                ScriptEngine.SetValue("put", (Func<string, object, string, string>)PutDocument);
+                ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
+                ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
+                ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
 
-                ScriptEngine.SetValue("id", (Func<object, string>)GetDocumentId);
-                ScriptEngine.SetValue("lastModified", (Func<object, string>)GetLastModified);
+                ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, GetDocumentId));
+                ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
 
                 foreach (var script in scriptsSource)
                 {
-                    ScriptEngine.Execute(script);
+                    try
+                    {
+                        ScriptEngine.Execute(script);
+                    }
+                    catch (ParserException e)
+                    {
+                        throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
+                    }
                 }
             }
 
 
-            private string GetLastModified(object arg)
+            private JsValue GetLastModified(JsValue self, JsValue[] args)
             {
-                if (arg is BlittableObjectInstance doc)
-                    return doc.LastModified?.GetDefaultRavenFormat();
-                return null;
+                if(args.Length != 1)
+                    throw new InvalidOperationException("id(doc) must be called with a single argument");
+
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+                
+                if(args[0].IsObject() == false)
+                    throw new InvalidOperationException("id(doc) must be called with an object argument");
+                
+                if (args[0].AsObject()is BlittableObjectInstance doc)
+                {
+                    if (doc.LastModified == null)
+                        return Undefined.Instance;
+
+                    // we use UTC because last modified is in UTC
+                    var epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                    var jsTime = doc.LastModified.Value.Subtract(epoch)
+                        .TotalMilliseconds;
+                    return new JsValue(jsTime);
+                }
+                return Undefined.Instance;
             }
 
-            private void OutputDebug(object obj)
+            private JsValue OutputDebug(JsValue self, JsValue[] args)
             {
                 if (DebugMode == false)
-                    return;
+                    return self;
 
-                if (obj is string str)
+                var obj = args[0];
+
+                if (obj.IsString())
                 {
-                    DebugOutput.Add(str);
+                    DebugOutput.Add(obj.ToString());
                 }
-                else if (obj is ObjectInstance json)
+                else if (obj.IsObject())
                 {
-                    var stringified = ScriptEngine.Json.Stringify(json, Array.Empty<JsValue>())
-                        .AsString();
-                    DebugOutput.Add(stringified);
+                    var result = new ScriptRunnerResult(this, obj);
+                    using (var jsonObj = result.TranslateToObject(_context))
+                        DebugOutput.Add(jsonObj.ToString());
                 }
-                else if (ReferenceEquals(obj, Undefined.Instance))
+                else if (obj.IsBoolean())
                 {
-                    DebugOutput.Add("undefined");
+                    DebugOutput.Add(obj.AsBoolean().ToString());
                 }
-                else if (obj == null || ReferenceEquals(obj, Null.Instance))
+                else if (obj.IsNumber())
+                {
+                    DebugOutput.Add(obj.AsNumber().ToString(CultureInfo.InvariantCulture));
+                }
+                else if (obj.IsNull())
                 {
                     DebugOutput.Add("null");
+                }
+                else if (obj.IsUndefined())
+                {
+                    DebugOutput.Add("undefined");
                 }
                 else
                 {
                     DebugOutput.Add(obj.ToString());
                 }
+                return self;
             }
 
-            public string PutDocument(string id, object document, string changeVector)
+            public JsValue PutDocument(JsValue self, JsValue[] args)
             {
-                PutOrDeleteCalled = true;
-                AssertValidDatabaseContext();
-                AssertNotReadOnly();
-                var objectInstance = document as ObjectInstance;
-                if (objectInstance == null)
+                string changeVector = null;
+
+                if (args.Length != 2 && args.Length != 3)
                 {
-                    AssertValidDocumentObject(id);
-                    return null;//never hit
+                    throw new InvalidOperationException("put(id, doc, changeVector) must be called with called with 2 or 3 arguments only");
                 }
                 AssertValidDatabaseContext();
-                if (changeVector == "undefined")
-                    changeVector = null;
+                AssertNotReadOnly();
+                if (args[0].IsString() == false && args[0].IsNull() == false && args[0].IsUndefined() == false)
+                    AssertValidId();
+
+                var id = (args[0].IsNull() || args[0].IsUndefined()) ? null : args[0].AsString();
+
+                if (args[1].IsObject() == false)
+                {
+                    throw new InvalidOperationException(
+                        $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
+                }
+
+                PutOrDeleteCalled = true;
+
+                if (args.Length == 3)
+                {
+                    if (args[2].IsString())
+                        changeVector = args[2].AsString();
+                    else if (args[2].IsNull() == false && args[0].IsUndefined() == false)
+                    {
+                        throw new InvalidOperationException(
+                            $"The change vector must be a string or null. Document ID: '{id}'.");
+                    }
+                }
 
                 if (DebugMode)
                 {
                     DebugActions.PutDocument.Add(id);
                 }
 
-                using (var reader = JsBlittableBridge.Translate(_context, objectInstance,
+                using (var reader = JsBlittableBridge.Translate(_context, args[1].AsObject(),
                     BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
@@ -137,8 +196,25 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public bool DeleteDocument(string id, string changeVector)
+            private static void AssertValidId()
             {
+                throw new InvalidOperationException("The first parameter to put(id, doc, changeVector) must be a string");
+            }
+
+            public JsValue DeleteDocument(JsValue self, JsValue[] args)
+            {
+                if(args.Length != 1 && args.Length != 2)
+                    throw new InvalidOperationException("delete(id, changeVector) must be called with at least one parameter");
+                
+                if(args[0].IsString() == false)
+                    throw new InvalidOperationException("delete(id, changeVector) id argument must be a string");
+
+                string id = args[0].AsString();
+                string changeVector = null;
+
+                if (args.Length == 2 && args[1].IsString())
+                    changeVector = args[1].AsString();
+                
                 PutOrDeleteCalled = true;
                 AssertValidDatabaseContext();
                 AssertNotReadOnly();
@@ -147,7 +223,7 @@ namespace Raven.Server.Documents.Patch
                     DebugActions.DeleteDocument.Add(id);
                 }
                 var result = _database.DocumentsStorage.Delete(_context, id, changeVector);
-                return result != null;
+                return new JsValue(result != null);
 
             }
 
@@ -157,35 +233,53 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("Cannot make modifications in readonly context");
             }
 
-            private static void AssertValidDocumentObject(string id)
-            {
-                throw new InvalidOperationException(
-                    $"Created document must be a valid object which is not null or empty. Document ID: '{id}'.");
-            }
-
             private void AssertValidDatabaseContext()
             {
                 if (_context == null)
                     throw new InvalidOperationException("Unable to put documents when this instance is not attached to a database operation");
             }
 
-            private string GetDocumentId(object arg)
+            private JsValue GetDocumentId(JsValue self, JsValue[] args)
             {
-                if (arg is BlittableObjectInstance doc)
-                    return doc.DocumentId;
-                return null;
+                if(args.Length != 1)
+                    throw new InvalidOperationException("id(doc) must be called with a single argument");
+
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+                
+                if(args[0].IsObject() == false)
+                    throw new InvalidOperationException("id(doc) must be called with an object argument");
+
+                var objectInstance = args[0].AsObject();
+
+                if (objectInstance is BlittableObjectInstance doc && doc.DocumentId != null)
+                    return new JsValue(doc.DocumentId);
+
+                var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
+                if(jsValue.IsObject() == false)
+                    return JsValue.Null;
+                var value = jsValue.AsObject().Get(Constants.Documents.Metadata.Id);
+                if(value.IsString() == false)
+                    return JsValue.Null;
+                return value;
             }
 
-            private object LoadDocument(string id)
+            private JsValue LoadDocument(JsValue self, JsValue[] args)
             {
                 AssertValidDatabaseContext();
+
+                if(args.Length != 1 || args[0].IsString()== false)
+                    throw new InvalidOperationException("load(id) must be called with a single string argument");
+
+                var id = args[0].AsString();
 
                 if (DebugMode)
                 {
                     DebugActions.LoadDocument.Add(id);
                 }
                 var document = _database.DocumentsStorage.Get(_context, id);
-                return TranslateToJs(ScriptEngine, _context, document);
+                var translated = TranslateToJs(ScriptEngine, _context, document);
+                return new JsValue((ObjectInstance)translated);
             }
 
             public bool ReadOnly;
@@ -264,10 +358,10 @@ namespace Raven.Server.Documents.Patch
                 {
                     if (ReadOnly)
                         return origin;
-                    
+
                     // RavenDB-8286
                     // here we need to make sure that we aren't sending a value to 
-                    // the js engine that might be modifed by the actions of the js engine
+                    // the js engine that might be modified by the actions of the js engine
                     // for example, calling put() mgiht cause the original data to change 
                     // because we defrag the data that we looked at. We are handling this by
                     // ensuring that we have our own, safe, copy.
@@ -291,11 +385,15 @@ namespace Raven.Server.Documents.Patch
                     return o;
                 if (o is List<object> l)
                 {
+                    var args = new[] { new JsValue(l.Count), };
+                    var jsArray = ScriptEngine.Array.Construct(args);
                     for (int i = 0; i < l.Count; i++)
                     {
-                        l[i] = TranslateToJs(ScriptEngine, context, l[i]);
+                        var value = TranslateToJs(ScriptEngine, context, l[i]);
+                        args[0] = value as JsValue ?? JsValue.FromObject(ScriptEngine, value);
+                        ScriptEngine.Array.PrototypeObject.Push(jsArray, args);
                     }
-                    return l;
+                    return jsArray;
                 }
                 // for admin
                 if (o is RavenServer || o is DocumentDatabase)
@@ -304,9 +402,7 @@ namespace Raven.Server.Documents.Patch
                     return o;
                 }
                 if (o is ObjectInstance)
-                {
                     return o;
-                }
 #if DEBUG
                 Debug.Assert(ExpectedTypes.Contains(o.GetType()));
 #endif
@@ -329,18 +425,23 @@ namespace Raven.Server.Documents.Patch
                 return new SingleRun().OnStateLoopIteration;
             }
 
-            public void SetGlobalFunction(string functionName, Delegate functionInstance)
-            {
-                ScriptEngine.SetValue(functionName,functionInstance);
-            }
 
-            
             public object Translate(ScriptRunnerResult result, JsonOperationContext context, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
-                if (result.Value is ObjectInstance)
-                    return result.Translate(_context, usageMode);
-
-                return result.Value;
+                var val = result.RawJsValue;
+                if (val.IsString())
+                    return val.AsString();
+                if (val.IsBoolean())
+                    return val.AsBoolean();
+                if (val.IsObject())
+                    return result.TranslateToObject(context, usageMode);
+                if (val.IsNumber())
+                    return val.AsNumber();
+                if (val.IsNull() || val.IsUndefined())
+                    return null;
+                if (val.IsArray())
+                    throw new InvalidOperationException("Returning arrays from scripts is not supported, only objects or primitves");
+                throw new NotSupportedException("Unable to translate " + val.Type);
             }
         }
 

@@ -4,6 +4,9 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
+using Jint.Runtime.Descriptors.Specialized;
+using Jint.Runtime.Interop;
+using Lucene.Net.Messages;
 using Sparrow.Json;
 
 
@@ -30,8 +33,25 @@ namespace Raven.Server.Documents.Patch
                     value.Value = new JsValue(new ObjectInstance(Engine));
                 }
                 OwnValues[key] = value;
+                Deletes?.Remove(key);
             }
             return value.Value.AsObject();
+        }
+
+        public class NullObject : ObjectInstance
+        {
+            public NullObject(Engine engine) : base(engine)
+            {
+            }
+
+            public override PropertyDescriptor GetOwnProperty(string propertyName)
+            {
+                if (propertyName == "toString")
+                    return null;
+                if (propertyName == "valueOf")
+                    return new ClrAccessDescriptor(Engine, _ => new ClrFunctionInstance(Engine, (value, values) => new JsValue(0)));
+                return new ClrAccessDescriptor(Engine, value => this);
+            }
         }
 
         public sealed class BlittableObjectProperty : PropertyDescriptor
@@ -52,7 +72,7 @@ namespace Raven.Server.Documents.Patch
                 var index = _parent.Blittable?.GetPropertyIndex(_property);
                 if (index == null || index == -1)
                 {
-                    Value = new JsValue(new BlittableObjectInstance(_parent.Engine, null, null, null));
+                    Value = new JsValue(new NullObject(_parent.Engine));
                 }
                 else
                 {
@@ -61,7 +81,6 @@ namespace Raven.Server.Documents.Patch
             }
 
             public override JsValue Value { get; set; }
-
 
             private JsValue GetPropertyValue(string key, int propertyIndex)
             {
@@ -115,6 +134,7 @@ namespace Raven.Server.Documents.Patch
             DocumentId = docId;
         }
 
+
         public override bool Delete(string propertyName, bool throwOnError)
         {
             if (Deletes == null)
@@ -127,10 +147,31 @@ namespace Raven.Server.Documents.Patch
         {
             if (OwnValues.TryGetValue(propertyName, out var val))
                 return val;
+            Deletes?.Remove(propertyName);
             OwnValues[propertyName] = val = new BlittableObjectProperty(this, propertyName);
             return val;
         }
 
+        public override IEnumerable<KeyValuePair<string, PropertyDescriptor>> GetOwnProperties()
+        {
+            foreach (var value in OwnValues)
+            {
+                yield return new KeyValuePair<string, PropertyDescriptor>(value.Key, value.Value);
+            }
+            if(Blittable == null)
+                yield break;
+            foreach (var prop in Blittable.GetPropertyNames())
+            {
+                if(Deletes?.Contains(prop) == true)
+                    continue;
+                if(OwnValues.ContainsKey(prop))
+                    continue;
+                yield return new KeyValuePair<string, PropertyDescriptor>(
+                    prop,
+                    GetOwnProperty(prop)
+                    );
+            }
+        }
 
         private void RecordNumericFieldType(string key, BlittableJsonToken type)
         {
