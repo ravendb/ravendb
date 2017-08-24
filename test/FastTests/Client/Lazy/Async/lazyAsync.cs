@@ -169,7 +169,7 @@ namespace FastTests.Client.Lazy.Async
                         .RawQuery(@"
 from Contacts as contact
 with load(contact.DetailIds) as details[]
-where contact.__document_id = :id
+where contact.__document_id = $id
 select {
     ContactId: id(contact),
     ContactName: contact.Name,
@@ -248,7 +248,7 @@ select {
                         .RawQuery(@"
 declare function triple(pos) { return pos *3; }
 from Items
-where __document_id in (:ids)
+where __document_id in ($ids)
 select triple(Position) as Position
 ")
                         .AddParameter("ids", new[] {"items/1", "items/2"})

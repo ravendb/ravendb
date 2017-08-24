@@ -27,7 +27,7 @@ namespace SlowTests.MailingList
                     var query = RavenTestHelper.GetIndexQuery(session.Query<User>()
                         .Search(x => x.FirstName, "*Ore?n*"));
 
-                    Assert.Equal("FROM Users WHERE search(FirstName, :p0)", query.Query);
+                    Assert.Equal("FROM Users WHERE search(FirstName, $p0)", query.Query);
                     Assert.Equal(@"*Ore?n*", query.QueryParameters["p0"]);
                 }
             }

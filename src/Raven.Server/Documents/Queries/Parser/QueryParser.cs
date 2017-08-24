@@ -366,7 +366,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         internal bool Parameter(out int tokenStart, out int tokenLength)
         {
-            if (Scanner.TryScan(':') == false)
+            if (Scanner.TryScan('$') == false)
             {
                 tokenStart = 0;
                 tokenLength = 0;

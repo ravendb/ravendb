@@ -269,51 +269,51 @@ namespace Raven.Client.Documents.Session.Tokens
             {
                 case WhereOperator.In:
                     writer
-                        .Append(" IN (:")
+                        .Append(" IN ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.AllIn:
                     writer
-                        .Append(" ALL IN (:")
+                        .Append(" ALL IN ($")
                         .Append(ParameterName)
                         .Append(")");
                     break;
                 case WhereOperator.Between:
                     writer
-                        .Append(" BETWEEN :")
+                        .Append(" BETWEEN $")
                         .Append(FromParameterName)
-                        .Append(" AND :")
+                        .Append(" AND $")
                         .Append(ToParameterName);
                     break;
                 case WhereOperator.Equals:
                     writer
-                        .Append(" = :")
+                        .Append(" = $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.GreaterThan:
                     writer
-                        .Append(" > :")
+                        .Append(" > $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.GreaterThanOrEqual:
                     writer
-                        .Append(" >= :")
+                        .Append(" >= $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.LessThan:
                     writer
-                        .Append(" < :")
+                        .Append(" < $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.LessThanOrEqual:
                     writer
-                        .Append(" <= :")
+                        .Append(" <= $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.Search:
                     writer
-                        .Append(", :")
+                        .Append(", $")
                         .Append(ParameterName);
 
                     if (SearchOperator == Queries.SearchOperator.And)
@@ -325,7 +325,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.StartsWith:
                 case WhereOperator.EndsWith:
                     writer
-                        .Append(", :")
+                        .Append(", $")
                         .Append(ParameterName)
                         .Append(")");
                     break;
