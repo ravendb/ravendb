@@ -40,7 +40,6 @@ namespace rvn
                             throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
                         }
                         var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
-                        ;
                         pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
                     }
                     try

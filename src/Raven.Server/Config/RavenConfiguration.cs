@@ -74,8 +74,8 @@ namespace Raven.Server.Config
             ResourceType = resourceType;
 
             _configBuilder = new ConfigurationBuilder();
-            AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
+            _configBuilder.AddEnvironmentVariables("RAVEN.");
 
             Settings = _configBuilder.Build();
 
@@ -115,22 +115,6 @@ namespace Raven.Server.Config
             else 
             {
                 _configBuilder.AddJsonFile("settings.json", optional: true);
-            }
-        }
-
-        private void AddEnvironmentVariables()
-        {
-            const string prefix = "RAVEN.";
-
-            foreach (DictionaryEntry de in Environment.GetEnvironmentVariables())
-            {
-                var s = de.Key as string;
-                if (s == null)
-                    continue;
-                if (s.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) == false)
-                    continue;
-
-                _configBuilder.Properties[s.Substring(prefix.Length)] = de.Value;
             }
         }
 
