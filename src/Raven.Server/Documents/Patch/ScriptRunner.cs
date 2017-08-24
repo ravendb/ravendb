@@ -80,12 +80,9 @@ namespace Raven.Server.Documents.Patch
             private readonly ScriptRunner _runner;
             public readonly Engine ScriptEngine;
             private DocumentsOperationContext _context;
-            public int CurrentSteps;
             public PatchDebugActions DebugActions;
             public bool DebugMode;
             public List<string> DebugOutput;
-
-            public int MaxSteps;
             public bool PutOrDeleteCalled;
 
             public bool ReadOnly;
@@ -326,20 +323,6 @@ namespace Raven.Server.Documents.Patch
                 return new JsValue((ObjectInstance)translated);
             }
 
-            private static void ThrowTooManyLoopIterations()
-            {
-                throw new TimeoutException("The scripts has run for too long and was aborted by the server");
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            public void OnStateLoopIteration()
-            {
-                CurrentSteps++;
-                if (CurrentSteps < MaxSteps)
-                    return;
-                ThrowTooManyLoopIterations();
-            }
-
             public void DisposeClonedDocuments()
             {
                 foreach (var disposable in _disposables)
@@ -358,8 +341,8 @@ namespace Raven.Server.Documents.Patch
                         DebugActions = new PatchDebugActions();
                 }
                 PutOrDeleteCalled = false;
-                CurrentSteps = 0;
-                MaxSteps = 1000; // TODO: Maxim make me configurable
+                ScriptEngine.ResetStatementsCount();
+                ScriptEngine.ResetTimeoutTicks();
                 for (var i = 0; i < args.Length; i++)
                     args[i] = TranslateToJs(ScriptEngine, ctx, args[i]);
                 JsValue result;
@@ -455,12 +438,6 @@ namespace Raven.Server.Documents.Patch
             {
                 return ScriptEngine.Object.Construct(Array.Empty<JsValue>());
             }
-
-            internal static Action GetUselessOnStateLoopIterationInstanceForCodeGenerationOnly()
-            {
-                return new SingleRun().OnStateLoopIteration;
-            }
-
 
             public object Translate(ScriptRunnerResult result, JsonOperationContext context,
                 BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
