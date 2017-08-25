@@ -122,7 +122,7 @@ namespace SlowTests.Issues
 
             foreach (var server in Servers)
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex + 1);
+                await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
         }
     }
