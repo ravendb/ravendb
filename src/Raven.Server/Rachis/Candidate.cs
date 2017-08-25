@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using Raven.Client.Http;
+using Sparrow.Threading;
 
 namespace Raven.Server.Rachis
 {
@@ -15,14 +16,10 @@ namespace Raven.Server.Rachis
         private readonly List<CandidateAmbassador> _voters = new List<CandidateAmbassador>();
         private readonly ManualResetEvent _peersWaiting = new ManualResetEvent(false);
         private Thread _thread;
-        private bool _running;
         public long RunRealElectionAtTerm { get; private set; }
 
-        public bool Running
-        {
-            get { return Volatile.Read(ref _running); }
-            private set { Volatile.Write(ref _running, value); }
-        }
+        private MultipleUseFlag _running = new MultipleUseFlag();
+        public bool Running => _running.IsRaised();
 
 
         public Candidate(RachisConsensus engine)
@@ -38,7 +35,8 @@ namespace Raven.Server.Rachis
             {
                 try
                 {
-                    Running = true;
+                    // Operation may fail, that's why we don't RaiseOrDie
+                    _running.Raise();
                     if (_engine.Log.IsInfoEnabled)
                     {
                         _engine.Log.Info($"Candidate {_engine.Tag}: Starting elections");
@@ -82,7 +80,7 @@ namespace Raven.Server.Rachis
                         }
                         candidateAmbassador.Start();
                     }
-                    while (Running)
+                    while (_running.IsRaised())
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
@@ -100,7 +98,7 @@ namespace Raven.Server.Rachis
                             StateChange(); // will wake ambassadors and make them ping peers again
                             continue;
                         }
-                        if (Running == false)
+                        if (!_running.IsRaised())
                             return;
 
                         _peersWaiting.Reset();
@@ -137,7 +135,7 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
-                            Running = false;
+                            _running.LowerOrDie();
                             _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership");
                             break;
                         }
@@ -221,7 +219,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            Running = false;
+            _running.LowerOrDie();
             _stateChange.TrySetCanceled();
             _peersWaiting.Set();
             //TODO: shutdown notification of some kind?

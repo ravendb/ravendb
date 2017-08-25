@@ -83,7 +83,7 @@ namespace Raven.Server.Rachis
                                 _conenctToPeer = _engine.ConnectToPeer(_url, _certificate, context).Result;
                             }
 
-                            if (_candidate.Running == false)
+                            if (!_candidate.Running)
                                 break; 
                         }
                         catch (Exception e)
