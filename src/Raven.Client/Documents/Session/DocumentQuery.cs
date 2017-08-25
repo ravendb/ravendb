@@ -332,7 +332,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// 	Matches value
         /// </summary>
-        public IDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -344,6 +344,33 @@ namespace Raven.Client.Documents.Session
         IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
             WhereEquals(whereParams);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Not matches value
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(string fieldName, object value, bool exact)
+        {
+            WhereNotEquals(fieldName, value, exact);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Not matches value
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Not matches value
+        /// </summary>
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.WhereNotEquals(WhereParams whereParams)
+        {
+            WhereNotEquals(whereParams);
             return this;
         }
 

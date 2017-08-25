@@ -92,6 +92,16 @@ namespace Raven.Client.Documents.Session
         void WhereEquals(WhereParams whereParams);
 
         /// <summary>
+        ///   Not matches value
+        /// </summary>
+        void WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        void WhereNotEquals(WhereParams whereParams);
+
+        /// <summary>
         ///   Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>

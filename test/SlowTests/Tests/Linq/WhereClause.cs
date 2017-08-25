@@ -260,7 +260,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any());
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = $p0 OR Name = $p1))", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE (Name != $p0 AND Name != $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -294,7 +294,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == true);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name = $p0 OR Name = $p1))", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE (Name != $p0 AND Name != $p1)", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -312,7 +312,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (true AND NOT (Name = $p0 OR Name = $p1)))", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name != $p0 AND Name != $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
                 }
@@ -330,7 +330,7 @@ namespace SlowTests.Tests.Linq
                     var q = indexedUsers.Where(user => user.Name.Any() == false);
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (true AND NOT (Name = $p0 OR Name = $p1)))", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE (true AND NOT (Name != $p0 AND Name != $p1))", iq.Query);
                     Assert.Equal(null, iq.QueryParameters["p0"]);
                     Assert.Equal(string.Empty, iq.QueryParameters["p1"]);
 
@@ -525,7 +525,7 @@ namespace SlowTests.Tests.Linq
                             select user;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("FROM IndexedUsers WHERE (exists(Age) AND NOT Age = $p0)", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE Age != $p0", iq.Query);
                     Assert.Equal(15, iq.QueryParameters["p0"]);
                 }
             }

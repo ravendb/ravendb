@@ -368,7 +368,7 @@ namespace Raven.Client.Documents.Session
             {
                 OrderByDescending(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
                 return;
-        }
+            }
 
             OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
         }
@@ -649,19 +649,6 @@ If you really want to do in memory filtering on the data returned from the query
         }
 
         /// <summary>
-        ///   Matches value
-        /// </summary>
-        public void WhereEquals(string fieldName, object value, bool exact = false)
-        {
-            WhereEquals(new WhereParams
-            {
-                FieldName = fieldName,
-                Value = value,
-                Exact = exact
-            });
-        }
-
-        /// <summary>
         ///   Simplified method for opening a new clause within the query
         /// </summary>
         /// <returns></returns>
@@ -689,17 +676,71 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///   Matches value
         /// </summary>
+        public void WhereEquals(string fieldName, object value, bool exact = false)
+        {
+            WhereEquals(new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value,
+                Exact = exact
+            });
+        }
+
+        /// <summary>
+        ///   Matches value
+        /// </summary>
         public void WhereEquals(WhereParams whereParams)
         {
+            if (Negate)
+            {
+                Negate = false;
+                WhereNotEquals(whereParams);
+                return;
+            }
+
             whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
 
             var transformToEqualValue = TransformValue(whereParams);
             LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
 
             AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(whereParams.FieldName);
 
             WhereTokens.AddLast(WhereToken.Equals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
+        }
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        public void WhereNotEquals(string fieldName, object value, bool exact = false)
+        {
+            WhereNotEquals(new WhereParams
+            {
+                FieldName = fieldName,
+                Value = value,
+                Exact = exact
+            });
+        }
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        public void WhereNotEquals(WhereParams whereParams)
+        {
+            if (Negate)
+            {
+                Negate = false;
+                WhereEquals(whereParams);
+                return;
+            }
+
+            whereParams.FieldName = EnsureValidFieldName(whereParams.FieldName, whereParams.IsNestedPath);
+
+            var transformToEqualValue = TransformValue(whereParams);
+            LastEquality = new KeyValuePair<string, object>(whereParams.FieldName, transformToEqualValue);
+
+            AppendOperatorIfNeeded(WhereTokens);
+
+            WhereTokens.AddLast(WhereToken.NotEquals(whereParams.FieldName, AddQueryParameter(transformToEqualValue), whereParams.Exact));
         }
 
         ///<summary>
@@ -1788,7 +1829,7 @@ If you really want to do in memory filtering on the data returned from the query
             NegateIfNeeded(fieldName);
 
             WhereTokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
-    }
+        }
 
         protected void Spatial(string fieldName, string shapeWKT, SpatialRelation relation, double distErrorPercent)
         {
@@ -1815,7 +1856,7 @@ If you really want to do in memory filtering on the data returned from the query
                     break;
                 default:
                     throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
-}
+            }
 
             WhereTokens.AddLast(relationToken);
         }

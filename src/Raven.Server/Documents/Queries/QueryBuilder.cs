@@ -45,6 +45,7 @@ namespace Raven.Server.Documents.Queries
             switch (expression.Type)
             {
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThan:
                 case OperatorType.LessThanEqual:
@@ -64,6 +65,8 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     case OperatorType.Equal:
                                         return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsString, exact);
+                                    case OperatorType.NotEqual:
+                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.LessThan:
                                         return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsString, exact);
                                     case OperatorType.GreaterThan:
@@ -81,6 +84,8 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     case OperatorType.Equal:
                                         return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsLong);
+                                    case OperatorType.NotEqual:
+                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsLong);
                                     case OperatorType.LessThan:
                                         return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsLong);
                                     case OperatorType.GreaterThan:
@@ -98,6 +103,8 @@ namespace Raven.Server.Documents.Queries
                                 {
                                     case OperatorType.Equal:
                                         return LuceneQueryHelper.Equal(luceneFieldName, termType, valueAsDouble);
+                                    case OperatorType.NotEqual:
+                                        return LuceneQueryHelper.NotEqual(luceneFieldName, termType, valueAsDouble);
                                     case OperatorType.LessThan:
                                         return LuceneQueryHelper.LessThan(luceneFieldName, termType, valueAsDouble);
                                     case OperatorType.GreaterThan:

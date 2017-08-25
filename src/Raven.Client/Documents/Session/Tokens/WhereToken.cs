@@ -42,6 +42,17 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+        public static WhereToken NotEquals(string fieldName, string parameterName, bool exact)
+        {
+            return new WhereToken
+            {
+                FieldName = fieldName,
+                ParameterName = parameterName,
+                WhereOperator = WhereOperator.NotEquals,
+                Exact = exact
+            };
+        }
+
         public static WhereToken StartsWith(string fieldName, string parameterName)
         {
             return new WhereToken
@@ -289,6 +300,11 @@ namespace Raven.Client.Documents.Session.Tokens
                 case WhereOperator.Equals:
                     writer
                         .Append(" = $")
+                        .Append(ParameterName);
+                    break;
+                case WhereOperator.NotEquals:
+                    writer
+                        .Append(" != $")
                         .Append(ParameterName);
                     break;
                 case WhereOperator.GreaterThan:

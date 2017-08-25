@@ -3,6 +3,7 @@
     public enum OperatorType
     {
         Equal,
+        NotEqual,
         LessThan,
         GreaterThan,
         LessThanEqual,

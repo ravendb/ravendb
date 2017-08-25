@@ -219,19 +219,16 @@ namespace Raven.Client.Documents.Linq
                 _subClauseDepth++;
                 _documentQuery.OpenSubclause();
             }
-            _isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoLeft;
+
             VisitExpression(andAlso.Left);
             _documentQuery.AndAlso();
-            _isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoRight;
             VisitExpression(andAlso.Right);
-            _isNotEqualCheckBoundsToAndAlso = false;
 
             if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
             {
                 _subClauseDepth--;
                 _documentQuery.CloseSubclause();
             }
-
 
             _subClauseDepth--;
             if (_subClauseDepth > 0)
@@ -411,18 +408,13 @@ namespace Raven.Client.Documents.Linq
                 Equals(((ConstantExpression)expression.Right).Value, 0))
             {
                 var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-                _documentQuery.OpenSubclause();
-                _documentQuery.WhereExists(expressionMemberInfo.Path);
-                _documentQuery.AndAlso();
-                _documentQuery.NegateNext();
-                _documentQuery.WhereEquals(new WhereParams
+                _documentQuery.WhereNotEquals(new WhereParams
                 {
                     FieldName = expressionMemberInfo.Path,
                     Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
                     AllowWildcards = false,
                     Exact = _insideExact
                 });
-                _documentQuery.CloseSubclause();
                 return;
             }
 
@@ -433,24 +425,14 @@ namespace Raven.Client.Documents.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
-            if (_isNotEqualCheckBoundsToAndAlso == false)
-            {
-                _documentQuery.OpenSubclause();
-                _documentQuery.WhereExists(memberInfo.Path);
-                _documentQuery.AndAlso();
-            }
 
-            _documentQuery.NegateNext();
-            _documentQuery.WhereEquals(new WhereParams
+            _documentQuery.WhereNotEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false,
                 Exact = _insideExact
             });
-
-            if (_isNotEqualCheckBoundsToAndAlso == false)
-                _documentQuery.CloseSubclause();
         }
 
         private static Type GetMemberType(ExpressionInfo info)
@@ -594,8 +576,6 @@ namespace Raven.Client.Documents.Linq
                 }
             }
 
-
-
             _documentQuery.WhereEquals(new WhereParams
             {
                 FieldName = fieldInfo.Path,
@@ -629,14 +609,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
         }
 
-        private void VisitIsNullOrEmpty(MethodCallExpression expression)
+        private void VisitIsNullOrEmpty(MethodCallExpression expression, bool notEquals)
         {
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.OpenSubclause();
-            _documentQuery.WhereEquals(memberInfo.Path, null, _insideExact);
-            _documentQuery.OrElse();
-            _documentQuery.WhereEquals(memberInfo.Path, string.Empty, _insideExact);
+
+            if (notEquals)
+                _documentQuery.WhereNotEquals(memberInfo.Path, null, _insideExact);
+            else
+                _documentQuery.WhereEquals(memberInfo.Path, null, _insideExact);
+
+            if (notEquals)
+                _documentQuery.AndAlso();
+            else
+                _documentQuery.OrElse();
+
+            if (notEquals)
+                _documentQuery.WhereNotEquals(memberInfo.Path, string.Empty, _insideExact);
+            else
+                _documentQuery.WhereEquals(memberInfo.Path, string.Empty, _insideExact);
+
             _documentQuery.CloseSubclause();
         }
 
@@ -749,24 +742,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
                 {
                     memberInfo = GetMember(memberExpression.Expression);
-                    if (boolValue)
-                    {
-                        _documentQuery.OpenSubclause();
-                        _documentQuery.WhereTrue();
-                        _documentQuery.AndAlso();
-                        _documentQuery.NegateNext();
-                    }
-                    _documentQuery.WhereEquals(new WhereParams
+                    var whereParams = new WhereParams
                     {
                         FieldName = memberInfo.Path,
                         Value = null,
                         AllowWildcards = false,
                         Exact = _insideExact
-                    });
+                    };
+
                     if (boolValue)
-                    {
-                        _documentQuery.CloseSubclause();
-                    }
+                        _documentQuery.WhereNotEquals(whereParams);
+                    else
+                        _documentQuery.WhereEquals(whereParams);
                 }
                 else
                 {
@@ -1078,12 +1065,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
                         {
-                            _documentQuery.OpenSubclause();
-                            _documentQuery.WhereTrue();
-                            _documentQuery.AndAlso();
-                            _documentQuery.NegateNext();
-                            VisitIsNullOrEmpty(expression);
-                            _documentQuery.CloseSubclause();
+                            VisitIsNullOrEmpty(expression, notEquals: true);
                         }
                         else
                         {
@@ -1136,7 +1118,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                 case "IsNullOrEmpty":
                     {
-                        VisitIsNullOrEmpty(expression);
+                        VisitIsNullOrEmpty(expression, notEquals: false);
                         break;
                     }
                 default:
@@ -1442,7 +1424,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
         private bool _insideSelect;
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
-        private bool _isNotEqualCheckBoundsToAndAlso;
 
         private void VisitSelect(Expression operand)
         {

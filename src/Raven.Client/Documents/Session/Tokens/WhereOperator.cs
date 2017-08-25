@@ -3,6 +3,7 @@ namespace Raven.Client.Documents.Session.Tokens
     public enum WhereOperator
     {
         Equals,
+        NotEquals,
         GreaterThan,
         GreaterThanOrEqual,
         LessThan,
