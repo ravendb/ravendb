@@ -385,17 +385,17 @@ namespace Raven.Server.ServerWide
             {
                 NotificationCenter.Add(alertRaised);
             }
+
+            _engine = new RachisConsensus<ClusterStateMachine>(this);
+            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
+            _engine.Initialize(_env, Configuration, myUrl);
+
             LicenseManager.Initialize(_env, ContextPool);
             LatestVersionCheck.Check(this);
         }
 
         public void TriggerDatabases()
         {
-            _engine = new RachisConsensus<ClusterStateMachine>(this);
-
-            var myUrl = Configuration.Core.PublicServerUrl.HasValue ? Configuration.Core.PublicServerUrl.Value.UriValue : Configuration.Core.ServerUrl;
-            _engine.Initialize(_env, Configuration, myUrl);
-
             _engine.StateMachine.DatabaseChanged += DatabasesLandlord.ClusterOnDatabaseChanged;
             _engine.StateMachine.DatabaseChanged += OnDatabaseChanged;
             _engine.StateMachine.DatabaseValueChanged += DatabasesLandlord.ClusterOnDatabaseValueChanged;
