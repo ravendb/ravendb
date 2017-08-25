@@ -1113,25 +1113,28 @@ namespace Raven.Server.Documents.Indexes
                         DeleteIndexInternal(oldIndex);
                 }
 
-                using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
-                using (newIndex.MovingStorage())
+                if (newIndex.Configuration.RunInMemory == false)
                 {
-                    var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                    var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
-
-                    IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                        newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                    if (newIndex.Configuration.TempPath != null)
+                    using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
+                    using (newIndex.MovingStorage())
                     {
-                        IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                            newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
-                    }
+                        var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                        var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
 
-                    if (newIndex.Configuration.JournalsStoragePath != null)
-                    {
-                        IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                            newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                        IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                            newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                        if (newIndex.Configuration.TempPath != null)
+                        {
+                            IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                        }
+
+                        if (newIndex.Configuration.JournalsStoragePath != null)
+                        {
+                            IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                        }
                     }
                 }
 
