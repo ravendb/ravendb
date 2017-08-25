@@ -82,7 +82,7 @@ namespace SlowTests.MailingList
                                           SaleId = sale.Id,
                                           Locations = sale.Locations.Select(l => new { l.Lat, l.Lng }).ToArray(),
                                           TotalSold = 0,
-                                          Coordinates = (object) null
+                                          Coordinates = (object)null
                                       });
 
                 AddMap<Order>(orders => from order in orders
