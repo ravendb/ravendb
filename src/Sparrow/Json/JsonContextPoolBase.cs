@@ -48,7 +48,7 @@ namespace Sparrow.Json
                     current = current.Next;
                     if (ctx == null)
                         continue;
-                    if (Interlocked.CompareExchange(ref ctx.InUse, 1, 0) != 0)
+                    if (!ctx.InUse.Raise())
                         continue;
                     ctx.Dispose();
                 }
@@ -123,7 +123,7 @@ namespace Sparrow.Json
                 context = current.Value;
                 if (context == null)
                     continue;
-                if (Interlocked.CompareExchange(ref context.InUse, 1, 0) != 0)
+                if (!context.InUse.Raise())
                     continue;
                 context.Renew();
                 disposable = new ReturnRequestContext
@@ -149,7 +149,8 @@ namespace Sparrow.Json
             public void Dispose()
             {
                 Context.Reset();
-                Interlocked.Exchange(ref Context.InUse, 0);
+                // These contexts are reused, so we don't want to use LowerOrDie here.
+                Context.InUse.Lower();
                 Context.InPoolSince = DateTime.UtcNow;
 
                 Parent.Push(Context);

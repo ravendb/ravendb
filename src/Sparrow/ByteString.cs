@@ -381,7 +381,7 @@ namespace Sparrow
         {
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
-            InUse = 1;
+            InUse.RaiseOrDie();
             LowMemoryNotification.NotifyAllocationPending();
         }
 
@@ -476,7 +476,7 @@ namespace Sparrow
 
                 if (segment.Size >= size)
                 {
-                    if (Interlocked.CompareExchange(ref segment.InUse, 1, 0) != 0)
+                    if (!segment.InUse.Raise())
                         continue;
 
                     return segment;
@@ -502,7 +502,7 @@ namespace Sparrow
                 return;
             }
 
-            Interlocked.Exchange(ref memory.InUse, 0);
+            memory.InUse.LowerOrDie();
             memory.InPoolSince = DateTime.UtcNow;
 
             var stack = SegmentsPool.Value;

@@ -56,7 +56,7 @@ namespace Sparrow.Utils
                         // it is too old, we can dispose it, but need to protect from races
                         // if the owner thread will just pick it up
 
-                        if (Interlocked.CompareExchange(ref item.InUse, 1, 0) != 0)
+                        if (!item.InUse.Raise())
                             continue;
 
                         try
