@@ -35,6 +35,7 @@ namespace rvn
             ConfigureOfflineOperationCommand();
             ConfigureAdminChannelCommand();
             ConfigureWindowsServiceCommand();
+            ConfigureLogsCommand();
 
             _app.OnExecute(() =>
             {
@@ -51,6 +52,40 @@ namespace rvn
                 ExitWithError(parsingException.Message, _app);
                 return 1;
             }
+        }
+
+        private static void ConfigureLogsCommand()
+        {
+            _app.Command("logstream", cmd =>
+            {
+                cmd.ExtendedHelpText = "Tail server logs.";
+                cmd.HelpOption(HelpOptionString);
+
+                var serverAddressOption = cmd.Option("--server-url | -s", "RavenDB server URL", CommandOptionType.SingleValue);
+                var certOption = cmd.Option("--client-cert-path | -c", "client certificate", CommandOptionType.SingleValue);
+
+                cmd.OnExecute(() =>
+                {
+                    if (serverAddressOption.HasValue() == false)
+                        ExitWithError("Server url is required.", cmd);
+
+                    var serverUrl = serverAddressOption.Value();
+                    if (serverUrl.StartsWith("wss:", StringComparison.OrdinalIgnoreCase) && certOption.HasValue() == false)
+                        ExitWithError("Client certificate path is required when server operates is secured.", cmd);
+
+                    if (certOption.HasValue() && File.Exists(certOption.Value()) == false)
+                        ExitWithError($"Certificate file not found: {certOption.Value()}", cmd);
+
+                    var logStream = new LogStream(
+                        serverAddressOption.Value(), 
+                        certOption.HasValue() == false ? null : certOption.Value());
+
+                    Console.CancelKeyPress += (sender, args) => logStream.Stop();
+
+                    logStream.PrintAsync(Console.OpenStandardOutput()).Wait();
+                    return 0;
+                });
+            });
         }
 
         private static void ConfigureAdminChannelCommand()
