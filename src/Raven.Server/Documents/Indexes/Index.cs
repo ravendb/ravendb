@@ -568,7 +568,7 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() =>
                 {
                     IndexPersistence?.Dispose();
-                    // IndexPersistence = null; - let it access IndexPersistence.ContainsField in AssertKnownField when storage is being moved
+                    // IndexPersistence = null; - let it access IndexPersistence.ContainsField in AssertKnownField when storage operation is running
                 });
 
                 exceptionAggregator.Execute(() =>
@@ -2355,7 +2355,7 @@ namespace Raven.Server.Documents.Indexes
         public IDisposable StorageOperation()
         {
             if (Monitor.TryEnter(_storageOperation) == false)
-                throw new InvalidOperationException("TODO arek");
+                throw new InvalidOperationException($"Storage operation on index '{Name} ({Etag})' is already running");
 
             _storageOperation.Init();
 
@@ -2602,7 +2602,7 @@ namespace Raven.Server.Documents.Indexes
             public void Init()
             {
                 if (Interlocked.CompareExchange(ref _isRunning, 1, 0) != 0)
-                    throw new InvalidOperationException("TODO arek");
+                    throw new InvalidOperationException("Storage operation is already running");
 
                 _lock.EnterWriteLock();
 
@@ -2642,7 +2642,7 @@ namespace Raven.Server.Documents.Indexes
                     Monitor.Exit(_index._storageOperation);
 
                     if (Interlocked.CompareExchange(ref _isRunning, 0, 1) != 1)
-                        throw new InvalidOperationException("TODO arek");
+                        throw new InvalidOperationException("Storage operation wasn't running. It should not happen.");
                 }
             }
 
