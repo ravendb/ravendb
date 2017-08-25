@@ -166,7 +166,7 @@ namespace Raven.Server.Documents.Queries
                         path = QueryExpression.Extract(QueryText, include.Field);
                         break;
                     case OperatorType.Value:
-                        path = QueryExpression.Extract(QueryText, include.Value);
+                        path = QueryExpression.Extract(QueryText, include.Value, stripQuotes: true);
                         break;
                     default:
                         throw new InvalidOperationException("Unable to figure out how to deal with include of type " + include.Type);

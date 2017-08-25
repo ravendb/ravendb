@@ -21,13 +21,6 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public QueryScanner Scanner = new QueryScanner();
 
-        private static readonly string[] Keywords =
-        {
-            "SELECT", "ORDER", "GROUP", "BY", "ASC", "DESC", "ASCENDING", "DESCENDING",
-            "WHERE", "LOAD", "INCLUDE", "AS", "TRUE", "FALSE", "NULL", "STRING", "LONG",
-            "DOUBLE", "ALPHANUMBERIC", "DECLARE", "FUNCTION"
-        };
-
         public void Init(string q)
         {
             _depth = 0;
@@ -875,13 +868,6 @@ namespace Raven.Server.Documents.Queries.Parser
                 TokenStart = tokenStart,
                 IsQuoted = isQuoted
             };
-            foreach (var keyword in Keywords)
-            {
-                if (tokenLength != keyword.Length)
-                    continue;
-                if (string.Compare(Scanner.Input, tokenStart, keyword, 0, keyword.Length, true) == 0)
-                    return false;
-            }
             return true;
         }
 
