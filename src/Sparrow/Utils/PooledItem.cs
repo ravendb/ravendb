@@ -1,11 +1,11 @@
 ﻿using System;
+using Sparrow.Threading;
 
 namespace Sparrow.Utils
 {
     public abstract class PooledItem : IDisposable
     {
-        // TODO: Replace for a SingleUseFlag STRUCT.
-        public int InUse;
+        public MultipleUseFlag InUse = new MultipleUseFlag();
         public DateTime InPoolSince;
 
         public abstract void Dispose();
