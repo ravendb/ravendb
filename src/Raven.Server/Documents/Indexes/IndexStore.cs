@@ -1116,7 +1116,7 @@ namespace Raven.Server.Documents.Indexes
                 if (newIndex.Configuration.RunInMemory == false)
                 {
                     using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
-                    using (newIndex.MovingStorage())
+                    using (newIndex.StorageOperation())
                     {
                         var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
                         var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);

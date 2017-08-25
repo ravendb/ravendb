@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -43,13 +44,15 @@ namespace SlowTests.Issues
                             Type = IndexType.Map,
                             Name = "Users_ByName"
                         }));
+
+                        Thread.Sleep(100);
                     }
                 });
 
 
                 while (changeDefinitionTask.IsCompleted == false)
                 {
-                    Parallel.For(0, 10, _ =>
+                    Parallel.For(0, 4, _ =>
                     {
                         using (var session = store.OpenSession())
                         {
