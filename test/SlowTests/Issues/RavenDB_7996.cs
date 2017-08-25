@@ -36,9 +36,10 @@ namespace SlowTests.Issues
 
                 using (var commands = store.Commands())
                 {
-                    var query = @"select count(), Address.Country
+                    var query = @"
                         from Companies
-                        group by Address.Country";
+                        group by Address.Country
+                        select count(), Address.Country";
 
                     var results = commands.Query(new IndexQuery { Query = query }).Results;
 
