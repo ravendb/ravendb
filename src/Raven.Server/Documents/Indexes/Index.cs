@@ -536,7 +536,7 @@ namespace Raven.Server.Documents.Indexes
 
                 InitializeInternal();
 
-                _priorityChanged.RaiseOrDie();
+                _priorityChanged.Raise();
 
                 if (status == IndexRunningStatus.Running)
                     Start();
@@ -748,7 +748,7 @@ namespace Raven.Server.Documents.Indexes
 
         protected void ExecuteIndexing()
         {
-            _priorityChanged.RaiseOrDie();
+            _priorityChanged.Raise();
             NativeMemory.EnsureRegistered();
             using (CultureHelper.EnsureInvariantCulture())
             {
@@ -960,7 +960,7 @@ namespace Raven.Server.Documents.Indexes
 
                                 if (numberOfSetEvents == 1 && _logsAppliedEvent.IsSet)
                                 {
-                                    _hadRealIndexingWorkToDo.LowerOrDie();
+                                    _hadRealIndexingWorkToDo.Lower();
                                     storageEnvironment.Cleanup();
                                     _logsAppliedEvent.Reset();
                                 }
@@ -1017,7 +1017,7 @@ namespace Raven.Server.Documents.Indexes
 
         private void HandleLogsApplied()
         {
-            if (_hadRealIndexingWorkToDo.IsRaised())
+            if (_hadRealIndexingWorkToDo)
                 _logsAppliedEvent.Set();
         }
 
@@ -1307,7 +1307,7 @@ namespace Raven.Server.Documents.Indexes
                 _indexStorage.WritePriority(priority);
 
                 Definition.Priority = priority;
-                _priorityChanged.RaiseOrDie();
+                _priorityChanged.Raise();
 
                 DocumentDatabase.Changes.RaiseNotifications(new IndexChange
                 {
@@ -2013,10 +2013,10 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
-            if (_initialized == false && !_isStorageBeingMoved)
+            if (_initialized == false && _isStorageBeingMoved == false)
                 ThrowNotIntialized();
 
-            if ((_disposed || _disposing) && !_isStorageBeingMoved)
+            if ((_disposed || _disposing) && _isStorageBeingMoved == false)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -2564,7 +2564,7 @@ namespace Raven.Server.Documents.Indexes
             public MoveStorageOperationWrapper(Index index)
             {
                 _index = index;
-                index._isStorageBeingMoved.RaiseOrDie();
+                index._isStorageBeingMoved.Raise();
                 index.Dispose();
             }
 
@@ -2578,7 +2578,7 @@ namespace Raven.Server.Documents.Indexes
 
                 _index.Start();
 
-                _index._isStorageBeingMoved.LowerOrDie();
+                _index._isStorageBeingMoved.Lower();
             }
         }
     }

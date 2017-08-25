@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             public void MarkForDisposal()
             {
-                ShouldDispose.RaiseOrDie();
+                ShouldDispose.Raise();
             }
 
             public void Dispose()
@@ -157,7 +157,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (Interlocked.Decrement(ref Usage) > 0)
                     return;
 
-                if (!ShouldDispose.IsRaised())
+                if (ShouldDispose == false)
                     return;
 
                 if (_lazyIndexSearcher.IsValueCreated)

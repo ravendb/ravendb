@@ -5,18 +5,21 @@ using System.Threading;
 namespace Sparrow.Threading
 {
     /// <summary>
-    /// A thread-safe, single use flag that can be raised once; meant to be single-user.
+    /// A thread-safe, single use flag that can be raised once; meant to be
+    /// single-user. DO NOT PASS THIS AROUND.
     /// </summary>
     /// 
-    /// Example use case is a class which runs on multiple threads wants to know if it has
-    /// been disposed or not, or whether a particular event is currently happening.
+    /// Example use case is a class which runs on multiple threads wants to 
+    /// know if it has been disposed or not, or whether a particular event is
+    /// currently happening.
     /// 
-    /// For convincing on why you should use this class instead of rolling your own, see
-    /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/ and
-    /// http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
+    /// For convincing on why you should use this class instead of rolling your
+    /// own, see http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/
+    /// and http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
     /// 
-    /// PERF: This is a struct instead of a class so that its usage may be made invisible. Do
-    /// NOT change this without good reason, could have sizeable impact.
+    /// PERF: This is a struct instead of a class so that its usage may be 
+    /// made invisible. Do NOT change this without good reason, could have
+    /// sizeable impact.
     public struct SingleUseFlag
     {
         private int _state;
@@ -38,7 +41,7 @@ namespace Sparrow.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RaiseOrDie()
         {
-            if (!Raise())
+            if (Raise() == false)
                 ThrowException();
         }
 
@@ -47,7 +50,7 @@ namespace Sparrow.Threading
         /// </summary>
         private static void ThrowException()
         {
-            throw new InvalidOperationException($"Repeated operation for a {nameof(SingleUseFlag)} instance");
+            throw new InvalidOperationException($"Repeated Raise for a {nameof(SingleUseFlag)} instance");
         }
 
         /// <summary>

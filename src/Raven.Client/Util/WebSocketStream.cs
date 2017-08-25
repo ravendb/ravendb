@@ -108,7 +108,7 @@ namespace Raven.Client.Util
 
         private void ThrowOnDisposed()
         {
-            if(_isDisposed.IsRaised())
+            if(_isDisposed)
                 throw new ObjectDisposedException("Cannot use WebsocketStream after it was disposed");
         }
 
@@ -131,7 +131,7 @@ namespace Raven.Client.Util
             base.Dispose(disposing);
 
             AsyncHelpers.RunSync(() => Task.WhenAll(_activeWriteTasks));
-            _isDisposed.RaiseOrDie();
+            _isDisposed.Raise();
         }
     }
 }

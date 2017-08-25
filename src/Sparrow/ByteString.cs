@@ -381,7 +381,7 @@ namespace Sparrow
         {
             Size = size;
             Segment = NativeMemory.AllocateMemory(size, out _thread);
-            InUse.RaiseOrDie();
+            InUse.Raise();
             LowMemoryNotification.NotifyAllocationPending();
         }
 
@@ -502,7 +502,7 @@ namespace Sparrow
                 return;
             }
 
-            memory.InUse.LowerOrDie();
+            memory.InUse.Lower();
             memory.InPoolSince = DateTime.UtcNow;
 
             var stack = SegmentsPool.Value;
@@ -1511,7 +1511,7 @@ namespace Sparrow
             // Check if we can release this memory segment back to the pool.
             if (_isFinalizerThread || 
                 segment.Memory.Size > ByteStringContext.MaxAllocationBlockSizeInBytes ||
-                _lowMemoryFlag.IsRaised())
+                _lowMemoryFlag)
             {
                 segment.Memory.Dispose();
             }

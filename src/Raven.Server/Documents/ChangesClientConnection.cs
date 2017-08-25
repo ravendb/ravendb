@@ -424,7 +424,7 @@ namespace Raven.Server.Documents
 
         public void Dispose()
         {
-            _isDisposed.RaiseOrDie();
+            _isDisposed.Raise();
             _cts.Cancel();
             _sendQueue.Enqueue(new ChangeValue
             {

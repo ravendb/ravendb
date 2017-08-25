@@ -324,13 +324,13 @@ namespace Raven.Server.Documents.Replication
 
         public void Initialize(DatabaseRecord record)
         {
-            if (_isInitialized.IsRaised()) //precaution -> probably not necessary, but still...
+            if (_isInitialized) //precaution -> probably not necessary, but still...
                 return;
 
             ConflictSolverConfig = record.ConflictSolverConfig;
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _log);
             ConflictResolver.RunConflictResolversOnce();
-            _isInitialized.RaiseOrDie();
+            _isInitialized.Raise();
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord)
