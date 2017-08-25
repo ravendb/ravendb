@@ -46,7 +46,7 @@ namespace Sparrow.Utils
                         if (item == null)
                             continue;
 
-                        if (!_lowMemoryFlag.IsRaised())
+                        if (_lowMemoryFlag == false)
                         {
                             var timeInPool = now - item.InPoolSince;
                             if (timeInPool < _idleTime)

@@ -142,7 +142,7 @@ namespace Sparrow.Logging
                     // have to do this on a separate thread
                     Task.Run(() =>
                     {
-                        _keepLogging.LowerOrDie();
+                        _keepLogging.Lower();
                         _hasEntries.Set();
 
                         copyLoggingThread.Join();
@@ -151,7 +151,7 @@ namespace Sparrow.Logging
                 }
                 else
                 {
-                    _keepLogging.LowerOrDie();
+                    _keepLogging.Lower();
                     _hasEntries.Set();
 
                     copyLoggingThread.Join();
@@ -166,7 +166,7 @@ namespace Sparrow.Logging
                 IsOperationsEnabled == false)
                 return;
 
-            _keepLogging.RaiseOrDie();
+            _keepLogging.Raise();
             _loggingThread = new Thread(BackgroundLogger)
             {
                 IsBackground = true,
@@ -341,7 +341,7 @@ namespace Sparrow.Logging
                 Interlocked.Increment(ref _generation);
                 var threadStates = new List<WeakReference<LocalThreadWriterState>>();
                 var threadStatesToRemove = new FastStack<WeakReference<LocalThreadWriterState>>();
-                while (_keepLogging.IsRaised())
+                while (_keepLogging)
                 {
                     const int maxFileSize = 1024 * 1024 * 256;
                     using (var currentFile = GetNewStream(maxFileSize))
@@ -354,11 +354,11 @@ namespace Sparrow.Logging
                         {
                             if (foundEntry == false)
                             {
-                                if (!_keepLogging.IsRaised())
+                                if (_keepLogging == false)
                                     return;
 
                                 _hasEntries.Wait();
-                                if (!_keepLogging.IsRaised())
+                                if (_keepLogging == false)
                                     return;
 
                                 _hasEntries.Reset();

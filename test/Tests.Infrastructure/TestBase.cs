@@ -346,7 +346,7 @@ namespace FastTests
        public Task InitializeAsync()
         {
             return ConcurrentTestsSemaphore.WaitAsync()
-                .ContinueWith(x => _concurrentTestsSemaphoreTaken.RaiseOrDie());
+                .ContinueWith(x => _concurrentTestsSemaphoreTaken.Raise());
         }
 
         public Task DisposeAsync()

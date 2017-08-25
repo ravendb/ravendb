@@ -157,7 +157,7 @@ namespace Sparrow.Json
 
         private void GrowArena(int requestedSize)
         {
-            if (_lowMemoryFlag.IsRaised())
+            if (_lowMemoryFlag)
                 throw new LowMemoryException($"Request to grow the arena by {requestedSize} because we are under memory pressure");
 
             if (requestedSize >= MaxArenaSize)

@@ -95,7 +95,7 @@ namespace Voron.Platform.Win32
 
         public void Write(long posBy4Kb, byte* p, int numberOf4Kb)
         {
-            if (_disposed.IsRaised())
+            if (_disposed)
                 throw new ObjectDisposedException("Win32JournalWriter");
 
             const int maxNumberInSingleWrite = (int.MaxValue / (4 * Constants.Size.Kilobyte));

@@ -6,21 +6,22 @@ using System.Threading;
 namespace Sparrow.Threading
 {
     /// <summary>
-    /// A thread-safe, multiple use flag that can be raised and lowered at will; meant to be
-    /// shared between many users.
+    /// A thread-safe, multiple use flag that can be raised and lowered at
+    /// will; meant to be shared between many users.
     /// </summary>
     /// 
-    /// Example use case is one class wants to let others know that an event has happened (i.e.
-    /// the system is running out of memory), but does not want to use a callback. Then, the
-    /// class can have a SharedMultipleUseFlag, which it passes by reference to others who want
-    /// to be notified, and simply raises it and lowers it as desired.
+    /// Example use case is one class wants to let others know that an event
+    /// has happened (i.e. the system is running out of memory), but does not
+    /// want to use a callback. Then, the class can have a SharedMultipleUseFlag,
+    /// which it passes by reference to others who want to be notified, and 
+    /// simply raises it and lowers it as desired.
     /// 
-    /// For convincing on why you should use this class instead of rolling your own, see
-    /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/ and
-    /// http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
+    /// For convincing on why you should use this class instead of rolling your
+    /// own, see http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/
+    /// and http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
     /// 
-    /// This is a class instead of a struct so that multiple holders may share a single flag, do
-    /// NOT change this without revisiting call places.
+    /// This is a class instead of a struct so that multiple holders may share
+    /// a single flag, do NOT change this without revisiting call places.
     public sealed class SharedMultipleUseFlag
     {
         private MultipleUseFlag _flag;

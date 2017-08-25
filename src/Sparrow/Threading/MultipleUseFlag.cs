@@ -5,19 +5,21 @@ using System.Threading;
 namespace Sparrow.Threading
 {
     /// <summary>
-    /// A thread-safe, multiple use flag that can be raised and lowered at will; meant to be
-    /// single-user.
+    /// An atomic, thread-safe, multiple use flag that can be raised and
+    /// lowered at will; meant to be single-user. DO NOT PASS THIS AROUND.
     /// </summary>
     /// 
-    /// Example use case is one class has multiple threads that access it and change the
-    /// behavior externally, such as "stop logging".
+    /// Example use case is one class has multiple threads that access it
+    /// and change the behavior externally, such as "stop logging".
     /// 
-    /// For convincing on why you should use this class instead of rolling your own, see
-    /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/ and
-    /// http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
+    /// For convincing on why you should use this class instead of rolling
+    /// your own, see
+    /// http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/
+    /// and http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
     /// 
-    /// PERF: This is a struct instead of a class so that its usage may be made invisible. Do
-    /// NOT change this without good reason, could have sizeable impact.
+    /// PERF: This is a struct instead of a class so that its usage may be
+    /// made invisible. Do NOT change this without good reason, could have
+    /// sizeable impact.
     public struct MultipleUseFlag
     {
         private int _state;
@@ -39,8 +41,16 @@ namespace Sparrow.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RaiseOrDie()
         {
-            if (!Raise())
-                ThrowException();
+            if (Raise() == false)
+                ThrowRaiseException();
+        }
+
+        /// <summary>
+        /// This is here to allow RaiseOrDie() to be inlined.
+        /// </summary>
+        private static void ThrowRaiseException()
+        {
+            throw new InvalidOperationException($"Repeated Raise for a {nameof(MultipleUseFlag)} instance");
         }
 
         /// <summary>
@@ -49,16 +59,16 @@ namespace Sparrow.Threading
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void LowerOrDie()
         {
-            if (!Lower())
-                ThrowException();
+            if (Lower() == false)
+                ThrowLowerException();
         }
 
         /// <summary>
-        /// This is here to allow RaiseOrDie() and LowerOrDie() to be inlined.
+        /// This is here to allow LowerOrDie() to be inlined.
         /// </summary>
-        private static void ThrowException()
+        private static void ThrowLowerException()
         {
-            throw new InvalidOperationException($"Repeated operation for a {nameof(MultipleUseFlag)} instance");
+            throw new InvalidOperationException($"Repeated Lower for a {nameof(MultipleUseFlag)} instance");
         }
 
         /// <summary>

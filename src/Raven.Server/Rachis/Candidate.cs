@@ -80,7 +80,7 @@ namespace Raven.Server.Rachis
                         }
                         candidateAmbassador.Start();
                     }
-                    while (_running.IsRaised())
+                    while (_running)
                     {
                         if (_peersWaiting.WaitOne(_engine.Timeout.TimeoutPeriod) == false)
                         {
@@ -98,7 +98,7 @@ namespace Raven.Server.Rachis
                             StateChange(); // will wake ambassadors and make them ping peers again
                             continue;
                         }
-                        if (!_running.IsRaised())
+                        if (_running == false)
                             return;
 
                         _peersWaiting.Reset();
@@ -135,7 +135,7 @@ namespace Raven.Server.Rachis
 
                         if (realElectionsCount >= majority)
                         {
-                            _running.LowerOrDie();
+                            _running.Lower();
                             _engine.SwitchToLeaderState(ElectionTerm, $"Was elected by {majority} nodes to leadership");
                             break;
                         }
@@ -219,7 +219,7 @@ namespace Raven.Server.Rachis
 
         public void Dispose()
         {
-            _running.LowerOrDie();
+            _running.Lower();
             _stateChange.TrySetCanceled();
             _peersWaiting.Set();
             //TODO: shutdown notification of some kind?

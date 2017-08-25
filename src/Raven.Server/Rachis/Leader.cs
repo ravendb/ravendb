@@ -77,7 +77,7 @@ namespace Raven.Server.Rachis
 
         public void Start()
         {
-            _running.RaiseOrDie();
+            _running.Raise();
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -278,7 +278,7 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
                 _newEntry.Set(); //This is so the noop would register right away
-                while (_running.IsRaised())
+                while (_running)
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
@@ -653,7 +653,7 @@ namespace Raven.Server.Rachis
                         throw new TimeoutException(message);
                     }
                 }
-                _running.LowerOrDie();
+                _running.Lower();
                 _shutdownRequested.Set();
                 TaskExecutor.Execute(_ =>
                 {
@@ -816,7 +816,7 @@ namespace Raven.Server.Rachis
                     Interlocked.Exchange(ref _topologyModification, null);
                 });
             }
-            _hasNewTopology.RaiseOrDie();
+            _hasNewTopology.Raise();
             _voterResponded.Set();
             _newEntry.Set();
 

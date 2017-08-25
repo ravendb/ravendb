@@ -247,7 +247,7 @@ namespace Voron.Impl.Paging
                 return MinIncreaseSize;
             }
 
-            if (_lowMemoryFlag.IsRaised())
+            if (_lowMemoryFlag)
             {
                 _lastIncrease = now;
                 return MinIncreaseSize;

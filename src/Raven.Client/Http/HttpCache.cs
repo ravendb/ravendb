@@ -149,7 +149,7 @@ namespace Raven.Client.Http
 
         private void FreeSpace()
         {
-            Debug.Assert(_isFreeSpaceRunning.IsRaised());
+            Debug.Assert(_isFreeSpaceRunning);
 
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Started to clear the http cache. Items: {_items.Count}");
@@ -184,7 +184,7 @@ namespace Raven.Client.Http
                 }
             }
 
-            _isFreeSpaceRunning.LowerOrDie();
+            _isFreeSpaceRunning.Lower();
         }
 
         private long FreeItem(KeyValuePair<string, HttpCacheItem> item)
@@ -285,8 +285,8 @@ namespace Raven.Client.Http
 
         public void LowMemory()
         {
-            _isFreeSpaceRunning.Raise();
-            FreeSpace();
+            if (_isFreeSpaceRunning.Raise())
+                FreeSpace();
         }
 
         public void LowMemoryOver()
