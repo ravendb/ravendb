@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
 
@@ -7,6 +8,7 @@ namespace Sparrow.Threading
     /// <summary>
     /// A thread-safe, multiple use flag that can be raised and lowered at will; meant to be
     /// shared between many users.
+    /// </summary>
     /// 
     /// Example use case is one class wants to let others know that an event has happened (i.e.
     /// the system is running out of memory), but does not want to use a callback. Then, the
@@ -19,7 +21,6 @@ namespace Sparrow.Threading
     /// 
     /// This is a class instead of a struct so that multiple holders may share a single flag, do
     /// NOT change this without revisiting call places.
-    /// </summary>
     public sealed class SharedMultipleUseFlag
     {
         private MultipleUseFlag _flag;
@@ -93,6 +94,17 @@ namespace Sparrow.Threading
         public bool IsRaised()
         {
             return _flag.IsRaised();
+        }
+
+        /// <summary>
+        /// Returns true iff the flag is raised. Same as calling IsRaised().
+        /// </summary>
+        /// <param name="flag">Flag to check</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator bool(SharedMultipleUseFlag flag)
+        {
+            Debug.Assert(!ReferenceEquals(flag, null));
+            return flag.IsRaised();
         }
     }
 }

@@ -7,6 +7,7 @@ namespace Sparrow.Threading
     /// <summary>
     /// A thread-safe, multiple use flag that can be raised and lowered at will; meant to be
     /// single-user.
+    /// </summary>
     /// 
     /// Example use case is one class has multiple threads that access it and change the
     /// behavior externally, such as "stop logging".
@@ -17,7 +18,6 @@ namespace Sparrow.Threading
     /// 
     /// PERF: This is a struct instead of a class so that its usage may be made invisible. Do
     /// NOT change this without good reason, could have sizeable impact.
-    /// </summary>
     public struct MultipleUseFlag
     {
         private int _state;
@@ -86,6 +86,16 @@ namespace Sparrow.Threading
         public bool IsRaised()
         {
             return _state != 0;
+        }
+
+        /// <summary>
+        /// Returns true iff the flag is raised. Same as calling IsRaised().
+        /// </summary>
+        /// <param name="flag">Flag to check</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator bool(MultipleUseFlag flag)
+        {
+            return flag.IsRaised();
         }
     }
 }

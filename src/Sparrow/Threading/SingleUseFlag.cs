@@ -6,6 +6,7 @@ namespace Sparrow.Threading
 {
     /// <summary>
     /// A thread-safe, single use flag that can be raised once; meant to be single-user.
+    /// </summary>
     /// 
     /// Example use case is a class which runs on multiple threads wants to know if it has
     /// been disposed or not, or whether a particular event is currently happening.
@@ -16,7 +17,6 @@ namespace Sparrow.Threading
     /// 
     /// PERF: This is a struct instead of a class so that its usage may be made invisible. Do
     /// NOT change this without good reason, could have sizeable impact.
-    /// </summary>
     public struct SingleUseFlag
     {
         private int _state;
@@ -65,6 +65,16 @@ namespace Sparrow.Threading
         public bool IsRaised()
         {
             return _state != 0;
+        }
+
+        /// <summary>
+        /// Returns true iff the flag is raised. Same as calling IsRaised().
+        /// </summary>
+        /// <param name="flag">Flag to check</param>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static implicit operator bool(SingleUseFlag flag)
+        {
+            return flag.IsRaised();
         }
     }
 }
