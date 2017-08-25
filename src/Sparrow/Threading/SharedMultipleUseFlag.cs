@@ -25,7 +25,10 @@ namespace Sparrow.Threading
     {
         private MultipleUseFlag _flag;
 
-        public static SharedMultipleUseFlag AlwaysLow = new SharedMultipleUseFlag(false);
+        /// <summary>
+        /// This flag is always lowered and should not be raised by anyone.
+        /// </summary>
+        public static SharedMultipleUseFlag None = new SharedMultipleUseFlag(false);
 
         /// <summary>
         /// Copy constructor. DO NOT USE.

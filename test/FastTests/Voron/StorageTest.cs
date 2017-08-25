@@ -20,7 +20,7 @@ namespace FastTests.Voron
         protected StorageEnvironmentOptions _options;
         protected readonly string DataDir = GenerateDataDir();
 
-        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.AlwaysLow);
+        private ByteStringContext _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
         public static string GenerateDataDir()
         {

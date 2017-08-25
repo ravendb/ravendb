@@ -76,7 +76,7 @@ namespace Voron.Recovery
             using (var destinationStream = File.OpenWrite(_output))
             using (var logFile = File.CreateText(Path.Combine(Path.GetDirectoryName(_output), LogFileName)))
             using (var gZipStream = new GZipStream(destinationStream, CompressionMode.Compress, true))
-            using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.AlwaysLow))
+            using (var context = new JsonOperationContext(_initialContextSize, _initialContextLongLivedSize, SharedMultipleUseFlag.None))
             using (var writer = new BlittableJsonTextWriter(context, gZipStream))
             {
                 WriteSmugglerHeader(writer);

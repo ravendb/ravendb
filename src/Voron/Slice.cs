@@ -202,7 +202,7 @@ namespace Voron
 
     public static class Slices
     {
-        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext(SharedMultipleUseFlag.AlwaysLow);
+        private static readonly ByteStringContext SharedSliceContent = new ByteStringContext(SharedMultipleUseFlag.None);
 
         public static readonly Slice AfterAllKeys;
         public static readonly Slice BeforeAllKeys;

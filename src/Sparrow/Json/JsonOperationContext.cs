@@ -184,7 +184,7 @@ namespace Sparrow.Json
 
         public static JsonOperationContext ShortTermSingleUse()
         {
-            return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.AlwaysLow);
+            return new JsonOperationContext(4096, 1024, SharedMultipleUseFlag.None);
         }
 
         public JsonOperationContext(int initialSize, int longLivedSize, SharedMultipleUseFlag lowMemoryFlag)
