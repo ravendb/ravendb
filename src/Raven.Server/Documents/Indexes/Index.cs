@@ -2375,6 +2375,7 @@ namespace Raven.Server.Documents.Indexes
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({Etag})' cannot be compacted because compaction is already in progress.");
+
             var progress = new IndexCompactionProgress
             {
                 Message = "Draining queries for " + Name
@@ -2398,54 +2399,48 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var environmentOptions =
-                        (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
-                        DocumentDatabase.CatastrophicFailureNotification);
-                    srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                    srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                    srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                    srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                    srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                    Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
+                    var storageEnvironmentOptions = _environment.Options;
 
-                    var wasRunning = _indexingThread != null;
-
-                    Dispose();
-
-                    compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
+                    using (StorageOperation())
                     {
-                        compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                        compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                        compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                        compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                        compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                        var environmentOptions =
+                            (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            DocumentDatabase.CatastrophicFailureNotification);
+                        srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                        srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                        srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                        srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                        srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                        srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                         Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
-                        StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+
+                        using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                                DocumentDatabase.CatastrophicFailureNotification))
                         {
-                            progress.Processed = progressReport.GlobalProgress;
-                            progress.Total = progressReport.GlobalTotal;
+                            compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                            compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                            compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                            compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                            compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                            compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                            Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
-                            onProgress?.Invoke(progress);
-                        });
+                            StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                            {
+                                progress.Processed = progressReport.GlobalProgress;
+                                progress.Total = progressReport.GlobalTotal;
+
+                                onProgress?.Invoke(progress);
+                            });
+                        }
+
+                        IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
+                        IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
                     }
-
-                    IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
-                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
-
-                    _initialized = false;
-                    _disposed = false;
-
-                    Initialize(DocumentDatabase, Configuration, DocumentDatabase.Configuration.PerformanceHints);
-
-                    if (wasRunning)
-                        Start();
 
                     return IndexCompactionResult.Instance;
                 }
