@@ -162,7 +162,7 @@ namespace Raven.Server.Documents.Indexes
         private volatile bool _priorityChanged;
         private volatile bool _hadRealIndexingWorkToDo;
         private Func<bool> _indexValidationStalenessCheck = () => true;
-        private readonly StorageOperationWrapper _storageOperation;
+        protected readonly StorageOperationWrapper _storageOperation;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -357,21 +357,6 @@ namespace Raven.Server.Documents.Indexes
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
             return new ExitWriteLock(_currentlyRunningQueriesLock);
-        }
-
-        internal struct ExitWriteLock : IDisposable
-        {
-            readonly ReaderWriterLockSlim _rwls;
-
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
-            {
-                _rwls = rwls;
-            }
-
-            public void Dispose()
-            {
-                _rwls?.ExitWriteLock();
-            }
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
@@ -2201,6 +2186,10 @@ namespace Raven.Server.Documents.Indexes
             if (_storageOperation.IsRunning)
                 return -1;
 
+            if (_storageOperation.TryGetReadLock(TimeSpan.FromSeconds(1), out var storageLock) == false)
+                return -1;
+
+            using (storageLock)
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
@@ -2214,6 +2203,8 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
+            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
+            using (storageLock)
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
@@ -2567,11 +2558,44 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private class StorageOperationWrapper : IDisposable
+        internal struct ExitWriteLock : IDisposable
+        {
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls?.ExitWriteLock();
+            }
+        }
+
+        protected struct ExitReadLock : IDisposable
+        {
+            public static ExitReadLock Default = default(ExitReadLock);
+
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitReadLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls?.ExitReadLock();
+            }
+        }
+
+        protected class StorageOperationWrapper : IDisposable
         {
             private readonly Index _index;
             private bool _wasRunning;
             private long _isRunning;
+            private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
             public StorageOperationWrapper(Index index)
             {
@@ -2579,6 +2603,29 @@ namespace Raven.Server.Documents.Indexes
             }
 
             public bool IsRunning => Interlocked.Read(ref _isRunning) == 1;
+
+            public void Init()
+            {
+                if (Interlocked.CompareExchange(ref _isRunning, 1, 0) != 0)
+                    throw new InvalidOperationException("TODO arek");
+
+                _lock.EnterWriteLock();
+
+                _wasRunning = _index._indexingThread != null;
+            }
+
+            public bool TryGetReadLock(TimeSpan timeout, out ExitReadLock @lock)
+            {
+                if (_lock.IsReadLockHeld || _lock.TryEnterReadLock(timeout) == false)
+                {
+                    @lock = ExitReadLock.Default;
+                    return false;
+                    
+                }
+
+                @lock = new ExitReadLock(_lock);
+                return true;
+            }
 
             public void Dispose()
             {
@@ -2595,19 +2642,18 @@ namespace Raven.Server.Documents.Indexes
                 }
                 finally
                 {
+                    _lock.ExitWriteLock();
+
                     Monitor.Exit(_index._storageOperation);
 
                     if (Interlocked.CompareExchange(ref _isRunning, 0, 1) != 1)
                         throw new InvalidOperationException("TODO arek");
                 }
             }
-            
-            public void Init()
-            {
-                if (Interlocked.CompareExchange(ref _isRunning, 1, 0) != 0)
-                    throw new InvalidOperationException("TODO arek");
 
-                _wasRunning = _index._indexingThread != null;
+            private void ThrowReadLockTimeoutException()
+            {
+                throw new TimeoutException($"Could not get the index storage read lock in a reasonable time, {_index.Name} is probably undergoing maintenance now, try again later");
             }
         }
     }

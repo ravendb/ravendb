@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
@@ -145,6 +146,8 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public override Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
+            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
+            using (storageLock)
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
