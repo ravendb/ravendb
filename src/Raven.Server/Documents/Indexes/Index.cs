@@ -582,7 +582,7 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() =>
                 {
                     IndexPersistence?.Dispose();
-                    IndexPersistence = null;
+                    // IndexPersistence = null; - let it access IndexPersistence.ContainsField in AssertKnownField when storage is being moved
                 });
 
                 exceptionAggregator.Execute(() =>
