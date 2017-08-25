@@ -108,7 +108,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///   Matches value
         /// </summary>
-        public IAsyncDocumentQuery<T> WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
         {
             WhereEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
             return this;
@@ -120,6 +120,33 @@ namespace Raven.Client.Documents.Session
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereEquals(WhereParams whereParams)
         {
             WhereEquals(whereParams);
+            return this;
+        }
+
+        /// <summary>
+        /// 	Not matches value
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals(string fieldName, object value, bool exact)
+        {
+            WhereNotEquals(fieldName, value, exact);
+            return this;
+        }
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact)
+        {
+            WhereNotEquals(GetMemberQueryPath(propertySelector.Body), value, exact);
+            return this;
+        }
+
+        /// <summary>
+        ///   Not matches value
+        /// </summary>
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.WhereNotEquals(WhereParams whereParams)
+        {
+            WhereNotEquals(whereParams);
             return this;
         }
 

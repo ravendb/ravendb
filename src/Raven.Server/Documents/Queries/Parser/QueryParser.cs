@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Queries.Parser
 {
     public class QueryParser
     {
-        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "BETWEEN", "IN", "ALL IN", "(" };
+        private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "!=", "BETWEEN", "IN", "ALL IN", "(" };
         private static readonly string[] BinaryOperators = { "OR", "AND" };
         private static readonly string[] StaticValues = { "true", "false", "null" };
         private static readonly string[] OrderByOptions = { "ASC", "DESC", "ASCENDING", "DESCENDING" };
@@ -530,6 +530,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     case "=":
                     case "==":
                         type = OperatorType.Equal;
+                        break;
+                    case "!=":
+                        type = OperatorType.NotEqual;
                         break;
                     case "BETWEEN":
                         type = OperatorType.Between;

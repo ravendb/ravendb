@@ -532,6 +532,21 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereEquals(WhereParams whereParams);
 
         /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
+
+        /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals(WhereParams whereParams);
+
+        /// <summary>
         ///     Matches fields where the value is greater than the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>

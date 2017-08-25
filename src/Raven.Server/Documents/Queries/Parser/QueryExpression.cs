@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 case ValueTokenType.True:
                     return "true";
             }
-            if(stripQuotes && val.Type == ValueTokenType.String)
-                return Extract(q, val.TokenStart+1, val.TokenLength-2, val.EscapeChars);
+            if (stripQuotes && val.Type == ValueTokenType.String)
+                return Extract(q, val.TokenStart + 1, val.TokenLength - 2, val.EscapeChars);
 
             return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
         }
@@ -102,6 +102,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(" ");
                     break;
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
@@ -111,6 +112,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         case OperatorType.Equal:
                             writer.Write(" = ");
+                            break;
+                        case OperatorType.NotEqual:
+                            writer.Write(" != ");
                             break;
                         case OperatorType.LessThan:
                             writer.Write(" < ");
@@ -219,6 +223,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.True:
                     break;
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
