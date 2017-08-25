@@ -453,6 +453,7 @@ class queryCompleter {
         callback(null,  keywords.map(keyword  => {
             const word = <autoCompleteWordList>keyword;
             word.caption = _.trim(keyword.value, "'");
+            keyword.value += " ";
             return word;
         }))
     }
@@ -460,7 +461,7 @@ class queryCompleter {
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
         this.providers.collections(collections => {
            const wordList = collections.map(name => ({
-               value: name + " ",
+               value: name,
                score: 2,
                meta: "collection"
            })); 
