@@ -31,6 +31,13 @@ namespace Raven.Server.Documents.Queries.Parser
             TokenLength = 0;
         }
 
+        public bool AtEndOfInput()
+        {
+            if (SkipWhitespace() == false)
+                return true;
+            return _pos == _q.Length;
+        }
+
         public bool NextToken()
         {
             if (SkipWhitespace() == false)

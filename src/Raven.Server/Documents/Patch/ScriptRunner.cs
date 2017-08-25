@@ -421,6 +421,8 @@ namespace Raven.Server.Documents.Patch
                     return new JsValue(dbl);
                 if (o is string s)
                     return new JsValue(s);
+                if (o is JsValue js)
+                    return js;
                 throw new InvalidOperationException("No idea how to convert " + o + " to JsValue");
             }
 

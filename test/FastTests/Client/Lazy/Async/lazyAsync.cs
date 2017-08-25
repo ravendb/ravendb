@@ -168,8 +168,8 @@ namespace FastTests.Client.Lazy.Async
                     session.Advanced.AsyncDocumentQuery<ContactDto>()
                         .RawQuery(@"
 from Contacts as contact
-with load(contact.DetailIds) as details[]
 where contact.__document_id = $id
+load contact.DetailIds as details[]
 select {
     ContactId: id(contact),
     ContactName: contact.Name,
@@ -179,7 +179,6 @@ select {
                         .AddParameter("id", "contacts/1")
                         .LazilyAsync();
 
-                WaitForUserToContinueTheTest(store);
                 var contactDto = (await contactViewModel.Value).First();
                 foreach (var detail in contactDto.ContactDetails)
                 {

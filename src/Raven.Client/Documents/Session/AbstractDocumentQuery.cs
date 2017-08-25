@@ -1236,22 +1236,22 @@ If you really want to do in memory filtering on the data returned from the query
 
             var queryText = new StringBuilder();
 
-            BuildSelect(queryText);
             BuildFrom(queryText);
-            BuildWith(queryText);
             BuildGroupBy(queryText);
             BuildWhere(queryText);
             BuildOrderBy(queryText);
+            BuildSelect(queryText);
+            BuildInclude(queryText);
 
             return queryText.ToString();
         }
 
-        private void BuildWith(StringBuilder queryText)
+        private void BuildInclude(StringBuilder queryText)
         {
             if (Includes == null || Includes.Count == 0)
                 return;
 
-            queryText.Append(" WITH ");
+            queryText.Append(" INCLUDE ");
             bool first = true;
             foreach (var include in Includes)
             {
@@ -1262,13 +1262,12 @@ If you really want to do in memory filtering on the data returned from the query
                 for (int i = 0; i < include.Length; i++)
                 {
                     var ch = include[i];
-                    if (char.IsLetterOrDigit(ch) == false && ch != '_')
+                    if (char.IsLetterOrDigit(ch) == false && ch != '_' && ch != '.')
                     {
                         requiredQuotes = true;
                         break;
                     }
                 }
-                queryText.Append("include(");
                 if (requiredQuotes)
                 {
                     queryText.Append("'").Append(include.Replace("'", "\\'")).Append("'");
@@ -1277,7 +1276,6 @@ If you really want to do in memory filtering on the data returned from the query
                 {
                     queryText.Append(include);
                 }
-                queryText.Append(")");
             }
         }
 
@@ -1447,7 +1445,7 @@ If you really want to do in memory filtering on the data returned from the query
                 return;
 
             writer
-                .Append("SELECT ");
+                .Append(" SELECT ");
 
             var token = SelectTokens.First;
             if (SelectTokens.Count == 1 && token.Value is DistinctToken)
@@ -1540,6 +1538,7 @@ If you really want to do in memory filtering on the data returned from the query
 
                 token = token.Next;
             }
+
         }
 
         private static void AddSpaceIfNeeded(QueryToken previousToken, QueryToken currentToken, StringBuilder writer)

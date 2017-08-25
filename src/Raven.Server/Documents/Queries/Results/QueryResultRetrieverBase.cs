@@ -263,11 +263,13 @@ namespace Raven.Server.Documents.Queries.Results
             if (fieldToFetch.QueryField.Function != null)
             {
                 var args = new object[fieldToFetch.QueryField.FunctionArgs.Length + 1];
-                args[0] = _query.QueryParameters;
                 for (int i = 0; i < fieldToFetch.FunctionArgs.Length; i++)
                 {
-                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i+1]);
+                    TryGetValue(fieldToFetch.FunctionArgs[i], document, out args[i]);
                 }
+
+                args[args.Length - 1] = _query.QueryParameters;
+
                 value = InvokeFunction(
                     fieldToFetch.QueryField.Name,
                     _query.Metadata.Query,

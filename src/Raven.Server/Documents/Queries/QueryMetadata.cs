@@ -148,9 +148,37 @@ namespace Raven.Server.Documents.Queries
                     }
                 }
             }
+
+            if (Query.Include != null)
+                HandleQueryInclude(parameters);
         }
-        
-        
+
+        private void HandleQueryInclude(BlittableJsonReaderObject parameters)
+        {
+            var includes = new List<string>();
+            foreach (var include in Query.Include)
+            {
+                string path;
+
+                switch (include.Type)
+                {
+                    case OperatorType.Field:
+                        path = QueryExpression.Extract(QueryText, include.Field);
+                        break;
+                    case OperatorType.Value:
+                        path = QueryExpression.Extract(QueryText, include.Value);
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unable to figure out how to deal with include of type " + include.Type);
+                }
+
+                var expressionPath = ParseExpressionPath(include, path, parameters);
+                includes.Add(expressionPath);
+            }
+            Includes = includes.ToArray();
+        }
+
+
         private void HandleSelectFunctionBody(BlittableJsonReaderObject parameters)
         {
             if (Query.Select != null && Query.Select.Count > 0)
@@ -166,18 +194,21 @@ namespace Raven.Server.Documents.Queries
 
             var sb = new StringBuilder();
 
-            sb.Append("function ").Append(name).Append("(rvnQueryArgs");
+            sb.Append("function ").Append(name).Append("(");
             int index = 0;
             var args = new SelectField[RootAliasPaths.Count];
 
             foreach (var alias in RootAliasPaths)
             {
-                sb.Append(", ");
+                if (index != 0)
+                    sb.Append(", ");
                 sb.Append(alias.Key);
                 args[index++] = SelectField.Create(string.Empty, null, alias.Value.PropertyPath,
                     alias.Value.Array, true);
             }
-            sb.AppendLine(") { ");
+            if (index != 0)
+                sb.Append(", ");
+            sb.AppendLine("rvnQueryArgs) { ");
             if (parameters != null)
             {
                 foreach (var parameter in parameters.GetPropertyNames())
@@ -217,26 +248,26 @@ namespace Raven.Server.Documents.Queries
                 parameters);
         }
 
+        string ParseExpressionPath(QueryExpression expr, string path, BlittableJsonReaderObject parameters)
+        {
+            var indexOf = path.IndexOf('.');
+            if (indexOf == -1)
+                return path;
+            if (Query.From.Alias == null)
+                ThrowInvalidWith(expr, "LOAD clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
+            Debug.Assert(Query.From.Alias != null);
+            if (Query.From.Alias.TokenLength != indexOf)
+                ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
+            var compare = string.Compare(
+                QueryText, Query.From.Alias.TokenStart,
+                path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
+            if (compare != 0)
+                ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
+            return path.Substring(indexOf + 1);
+        }
+
         private void HandleLoadClause(BlittableJsonReaderObject parameters)
         {
-            string ParseIncludePath(QueryExpression expr,string path)
-            {
-                var indexOf = path.IndexOf('.');
-                if (indexOf == -1)
-                    return path;
-                if (Query.From.Alias == null)
-                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias but the from clause hasn't specified one: ", parameters);
-                Debug.Assert(Query.From.Alias != null);
-                if (Query.From.Alias.TokenLength != indexOf)
-                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
-                var compare = string.Compare(
-                    QueryText, Query.From.Alias.TokenStart,
-                    path, 0, indexOf, StringComparison.OrdinalIgnoreCase);
-                if (compare != 0)
-                    ThrowInvalidWith(expr, "LOAD clause is trying to use an alias that isn't specified in the from clause: ", parameters);
-                return path.Substring(indexOf + 1);
-            }
-
             foreach (var load in Query.Load)
             {
                 if (load.Alias == null)
@@ -264,7 +295,7 @@ namespace Raven.Server.Documents.Queries
                     array = true;
                     alias = alias.Substring(0, alias.Length - 2);
                 }
-                path = ParseIncludePath(load.Expression, path);
+                path = ParseExpressionPath(load.Expression, path, parameters);
                 if (RootAliasPaths.TryAdd(alias, (path, array)) == false)
                 {
                     ThrowInvalidWith(load.Expression, "LOAD clause duplicate alias detected: ", parameters);

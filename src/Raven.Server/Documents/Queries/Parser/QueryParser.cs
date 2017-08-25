@@ -21,6 +21,13 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public QueryScanner Scanner = new QueryScanner();
 
+        private static readonly string[] Keywords =
+        {
+            "SELECT", "ORDER", "GROUP", "BY", "ASC", "DESC", "ASCENDING", "DESCENDING",
+            "WHERE", "LOAD", "INCLUDE", "AS", "TRUE", "FALSE", "NULL", "STRING", "LONG",
+            "DOUBLE", "ALPHANUMBERIC", "DECLARE", "FUNCTION"
+        };
+
         public void Init(string q)
         {
             _depth = 0;
@@ -59,10 +66,43 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("SELECT"))
                 q.Select = SelectClause("SELECT", q);
 
-            if (Scanner.NextToken())
+            if (Scanner.TryScan("INCLUDE"))
+                q.Include = IncludeClause();
+
+            if (Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private List<QueryExpression> IncludeClause()
+        {
+            List<QueryExpression> includes = new List<QueryExpression>();
+            
+            do
+            {
+                if (Value(out var val))
+                {
+                    includes.Add(new QueryExpression
+                    {
+                        Type = OperatorType.Value,
+                        Value = val
+                    });
+                }
+                else if (Field(out var field))
+                {
+                    includes.Add(new QueryExpression
+                    {
+                        Type = OperatorType.Field,
+                        Field = field
+                    });
+                }
+                else
+                {
+                    ThrowParseException("Unable to understand include clause expression");
+                }
+            } while (Scanner.TryScan(","));
+            return includes;
         }
 
         private (StringSegment Name, ValueToken FunctionText) DeclaredFunction()
@@ -258,6 +298,8 @@ namespace Raven.Server.Documents.Queries.Parser
             } while (true);
             return @select;
         }
+
+
 
         private (FieldToken From, FieldToken Alias, QueryExpression Filter, bool Index) FromClause()
         {
@@ -833,6 +875,13 @@ namespace Raven.Server.Documents.Queries.Parser
                 TokenStart = tokenStart,
                 IsQuoted = isQuoted
             };
+            foreach (var keyword in Keywords)
+            {
+                if (tokenLength != keyword.Length)
+                    continue;
+                if (string.Compare(Scanner.Input, tokenStart, keyword, 0, keyword.Length, true) == 0)
+                    return false;
+            }
             return true;
         }
 

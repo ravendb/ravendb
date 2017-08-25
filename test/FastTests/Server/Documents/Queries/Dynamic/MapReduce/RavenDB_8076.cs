@@ -39,22 +39,25 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     foreach (var q in new(string Query, string Field)[]
                     {
-                        (@"select count()
+                        (@"
                         from Companies
-                        group by Address1 order by count()", "Count"),
+                        group by Address1 order by count() {0} 
+                        select count()", "Count"),
 
-                        (@"select count() as MyCount
+                        (@"
                         from Companies
-                        group by Address1 order by count() as long", "MyCount"),
+                        group by Address1 order by count() as long {0}
+                        select count() as MyCount", "MyCount"),
 
-                        (@"select count() as Count
+                        (@"
                         from Companies
-                        group by Address1 order by Count as long", "Count"),
+                        group by Address1 order by Count as long {0}
+                        select count() as Count", "Count"),
                     })
                     {
                         // asc
 
-                        var results = commands.Query(new IndexQuery { Query = q.Query }).Results;
+                        var results = commands.Query(new IndexQuery { Query = string.Format(q.Query, "ASC") }).Results;
 
                         Assert.Equal(2, results.Length);
 
@@ -68,7 +71,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                         // desc
 
-                        results = commands.Query(new IndexQuery { Query = q.Query + " desc" }).Results;
+                        results = commands.Query(new IndexQuery { Query = string.Format(q.Query, "DESC") }).Results;
 
                         item = (BlittableJsonReaderObject)results[0];
                         Assert.True(item.TryGet(q.Field, out count));
@@ -84,22 +87,25 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     foreach (var q in new (string Query, string Field)[]
                     {
-                        (@"select sum(AccountsReceivable)
+                        (@"
                         from Companies
-                        group by Address1 order by sum(AccountsReceivable)", "AccountsReceivable"),
+                        group by Address1 order by sum(AccountsReceivable) {0}
+select sum(AccountsReceivable)", "AccountsReceivable"),
 
-                        (@"select sum(AccountsReceivable) as Sum
+                        (@"
                         from Companies
-                        group by Address1 order by sum(AccountsReceivable) as double", "Sum"),
+                        group by Address1 order by sum(AccountsReceivable) as double {0}
+select sum(AccountsReceivable) as Sum", "Sum"),
 
-                        (@"select sum(AccountsReceivable) as Sum
+                        (@"
                         from Companies
-                        group by Address1 order by Sum", "Sum")
+                        group by Address1 order by Sum {0}
+select sum(AccountsReceivable) as Sum", "Sum")
                     })
                     {
                         // asc
 
-                        var results = commands.Query(new IndexQuery { Query = q.Query }).Results;
+                        var results = commands.Query(new IndexQuery { Query = string.Format(q.Query, "ASC") }).Results;
 
                         Assert.Equal(2, results.Length);
 
@@ -113,7 +119,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                         // desc
 
-                        results = commands.Query(new IndexQuery { Query = q.Query + " desc" }).Results;
+                        results = commands.Query(new IndexQuery { Query = string.Format(q.Query, "DESC") }).Results;
 
                         item = (BlittableJsonReaderObject)results[0];
                         Assert.True(item.TryGet(q.Field, out sum));
@@ -159,17 +165,20 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     foreach (var q in new(string Query, string Field)[]
                     {
-                        (@"select count()
+                        (@"
                         from Companies
-                        group by Address1 where count() >= 2", "Count"),
+                        group by Address1 where count() >= 2
+select count()", "Count"),
 
-                        (@"select count() as MyCount
+                        (@"
                         from Companies
-                        group by Address1 where count() in (2, 3)", "MyCount"),
+                        group by Address1 where count() in (2, 3)
+select count() as MyCount", "MyCount"),
 
-                        (@"select count() as Count
+                        (@"
                         from Companies
-                        group by Address1 where Count >= 2", "Count")
+                        group by Address1 where Count >= 2
+select count() as Count", "Count")
                     })
                     {
                         var results = commands.Query(new IndexQuery { Query = q.Query }).Results;
@@ -186,17 +195,20 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 {
                     foreach (var q in new(string Query, string Field)[]
                     {
-                        (@"select sum(AccountsReceivable)
+                        (@"
                         from Companies
-                        group by Address1 where sum(AccountsReceivable) > 1", "AccountsReceivable"),
+                        group by Address1 where sum(AccountsReceivable) > 1
+select sum(AccountsReceivable)", "AccountsReceivable"),
 
-                        (@"select sum(AccountsReceivable) as Sum
+                        (@"
                         from Companies
-                        group by Address1 where sum(AccountsReceivable) between 2 and 5", "Sum"),
+                        group by Address1 where sum(AccountsReceivable) between 2 and 5
+select sum(AccountsReceivable) as Sum", "Sum"),
 
-                        (@"select sum(AccountsReceivable) as Sum
+                        (@"
                         from Companies
-                        group by Address1 where Sum > 1", "Sum")
+                        group by Address1 where Sum > 1
+select sum(AccountsReceivable) as Sum", "Sum")
                     })
                     {
                         var results = commands.Query(new IndexQuery { Query = q.Query }).Results;

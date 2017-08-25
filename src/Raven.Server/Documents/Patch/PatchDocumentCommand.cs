@@ -113,7 +113,6 @@ namespace Raven.Server.Documents.Patch
             }
 
             object documentInstance;
-            var clonedDocument = _run.Translate(context, originalDocument) as BlittableObjectInstance;
             var args = _patchArgs;
             if (originalDocument == null)
             {
@@ -123,7 +122,7 @@ namespace Raven.Server.Documents.Patch
             }
             else
             {
-                documentInstance = clonedDocument;
+                documentInstance = _run.Translate(context, originalDocument);
             }
 
             // we will to acccess this value, and the original document data may be changed by
@@ -137,7 +136,7 @@ namespace Raven.Server.Documents.Patch
                 var result = new PatchResult
                 {
                     Status = PatchStatus.NotModified,
-                    OriginalDocument = _isTest == false ? null : clonedDocument.Blittable?.Clone(_externalContext),
+                    OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext),
                     ModifiedDocument = modifiedDocument
                 };
 
@@ -151,14 +150,14 @@ namespace Raven.Server.Documents.Patch
 
                 DocumentsStorage.PutOperationResults? putResult = null;
 
-                if (clonedDocument == null)
+                if (originalDocument == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
                         putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
 
                     result.Status = PatchStatus.Created;
                 }
-                else if (DocumentCompare.IsEqualTo(clonedDocument.Blittable, modifiedDocument,
+                else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument,
                     tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
                 {
                     Debug.Assert(originalDocument != null);
