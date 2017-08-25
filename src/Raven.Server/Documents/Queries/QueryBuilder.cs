@@ -150,22 +150,40 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.In:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName].Type).LuceneTermType;
+                        LuceneTermType termType = LuceneTermType.Null;
+                        bool hasGotTheRealType = false;
 
                         var matches = new List<string>();
-                        foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
-                            matches.Add(LuceneQueryHelper.GetTermValue(value, termType, exact));
+                        foreach (var tuple in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
+                        {
+                            if (hasGotTheRealType == false)
+                            {
+                                // we assume that the type of all the parameters is the same
+                                termType = GetLuceneField(fieldName, tuple.Type).LuceneTermType;
+                                hasGotTheRealType = true;
+                            }
+                            matches.Add(LuceneQueryHelper.GetTermValue(tuple.Value, termType, exact));
+                        }
 
                         return new TermsMatchQuery(fieldName, matches);
                     }
                 case OperatorType.AllIn:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        var termType = GetLuceneField(fieldName, metadata.WhereFields[fieldName].Type).LuceneTermType;
+                        LuceneTermType termType =LuceneTermType.Null;
+                        var hasGotTheRealType = false;
 
                         var allInQuery = new BooleanQuery();
                         foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, fieldName))
-                            allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value, exact), Occur.MUST);
+                        {
+                            if (hasGotTheRealType == false)
+                            {
+                                // here we assume that all the values are of the same type
+                                termType = GetLuceneField(fieldName, value.Type).LuceneTermType;
+                                hasGotTheRealType = true;
+                            }
+                            allInQuery.Add(LuceneQueryHelper.Equal(fieldName, termType, value.Value, exact), Occur.MUST);
+                        }
 
                         return allInQuery;
                     }
@@ -232,7 +250,13 @@ namespace Raven.Server.Documents.Queries
             return null;
         }
 
-        private static IEnumerable<string> GetValuesForIn(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, string fieldName)
+        private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
+            JsonOperationContext context,
+            Query query, 
+            QueryExpression expression, 
+            QueryMetadata metadata, 
+            BlittableJsonReaderObject parameters,
+            string fieldName)
         {
             foreach (var valueToken in expression.Values)
             {
@@ -258,7 +282,7 @@ namespace Raven.Server.Documents.Queries
                             break;
                     }
 
-                    yield return valueAsString;
+                    yield return (valueAsString, type);
                 }
             }
         }
@@ -542,7 +566,6 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-                var expectedValueType = metadata.WhereFields[fieldName].Type;
 
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
@@ -553,10 +576,16 @@ namespace Raven.Server.Documents.Queries
                 var array = parameterValue as BlittableJsonReaderArray;
                 if (array != null)
                 {
+                    ValueTokenType? expectedValueType = null; ;
                     foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
                     {
-                        if (AreValueTokenTypesValid(expectedValueType, item.Type) == false)
-                            ThrowInvalidParameterType(expectedValueType, item, metadata.QueryText, parameters);
+                        if (expectedValueType == null)
+                            expectedValueType = item.Type;
+                        else
+                        {
+                            if (AreValueTokenTypesValid(expectedValueType.Value, item.Type) == false)
+                                ThrowInvalidParameterType(expectedValueType.Value, item, metadata.QueryText, parameters);
+                        }
 
                         yield return item;
                     }
@@ -565,8 +594,6 @@ namespace Raven.Server.Documents.Queries
                 }
 
                 var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
-                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
-                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 yield return (parameterValue, parameterValueType);
                 yield break;
@@ -606,8 +633,6 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-                var expectedValueType = metadata.WhereFields[fieldName].Type;
-
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
 
@@ -615,9 +640,6 @@ namespace Raven.Server.Documents.Queries
                     ThrowParameterValueWasNotProvided(parameterName, metadata.QueryText, parameters);
 
                 var parameterValueType = GetValueTokenType(parameterValue, metadata.QueryText, parameters);
-
-                if (AreValueTokenTypesValid(expectedValueType, parameterValueType) == false)
-                    ThrowInvalidParameterType(expectedValueType, parameterValue, parameterValueType, metadata.QueryText, parameters);
 
                 return (UnwrapParameter(parameterValue, parameterValueType), parameterValueType);
             }

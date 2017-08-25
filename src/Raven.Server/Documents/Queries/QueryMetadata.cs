@@ -78,12 +78,12 @@ namespace Raven.Server.Documents.Queries
 
         public string[] Includes;
 
-        private void AddSearchField(string fieldName, ValueTokenType value)
+        private void AddSearchField(string fieldName)
         {
             var indexFieldName = GetIndexFieldName(fieldName);
 
             IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = new WhereField(value, isFullTextSearch: true);
+            WhereFields[indexFieldName] = new WhereField(true);
         }
 
         private void AddExistField(string fieldName)
@@ -91,12 +91,12 @@ namespace Raven.Server.Documents.Queries
             IndexFieldNames.Add(GetIndexFieldName(fieldName));
         }
 
-        private void AddWhereField(string fieldName, ValueTokenType value)
+        private void AddWhereField(string fieldName)
         {
             var indexFieldName = GetIndexFieldName(fieldName);
 
             IndexFieldNames.Add(indexFieldName);
-            WhereFields[indexFieldName] = new WhereField(value, isFullTextSearch: false);
+            WhereFields[indexFieldName] = new WhereField(isFullTextSearch: false);
         }
 
         private void Build(BlittableJsonReaderObject parameters)
@@ -421,24 +421,7 @@ namespace Raven.Server.Documents.Queries
 
                     if (orderingType == OrderByFieldType.Implicit)
                     {
-                        if (WhereFields.TryGetValue(fieldName, out var whereField))
-                        {
-                            switch (whereField.Type)
-                            {
-                                case ValueTokenType.Double:
-                                    orderingType = OrderByFieldType.Double;
-                                    break;
-                                case ValueTokenType.Long:
-                                    orderingType = OrderByFieldType.Long;
-                                    break;
-                                default:
-                                    throw new InvalidQueryException(
-                                        $"Invalid query due to invalid value type of '{fieldName}' in WHERE clause, expected {nameof(ValueTokenType.Double)} or {nameof(ValueTokenType.Long)} because it's the argument of sum() function, got the value of {whereField.Type} type",
-                                        QueryText, parameters);
-                            }
-                        }
-                        else
-                            orderingType = OrderByFieldType.Double;
+                        orderingType = OrderByFieldType.Double;
                     }
 
                     return new OrderByField(fieldName, orderingType, order.Ascending);
@@ -688,7 +671,7 @@ namespace Raven.Server.Documents.Queries
 
             public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
             {
-                _metadata.AddWhereField(fieldName, GetValueTokenType(parameters, value, unwrapArrays: false));
+                _metadata.AddWhereField(fieldName);
             }
 
             public override void VisitFieldTokens(string fieldName, ValueToken firstValue, ValueToken secondValue, BlittableJsonReaderObject parameters)
@@ -702,7 +685,7 @@ namespace Raven.Server.Documents.Queries
                 if (QueryBuilder.AreValueTokenTypesValid(valueType1, valueType2) == false)
                     ThrowIncompatibleTypesOfParameters(fieldName, QueryText, parameters, firstValue, secondValue);
 
-                _metadata.AddWhereField(fieldName, valueType1);
+                _metadata.AddWhereField(fieldName);
             }
 
             public override void VisitFieldTokens(string fieldName, List<ValueToken> values, BlittableJsonReaderObject parameters)
@@ -730,7 +713,7 @@ namespace Raven.Server.Documents.Queries
                         previousType = valueType;
                 }
 
-                _metadata.AddWhereField(fieldName, previousType);
+                _metadata.AddWhereField(fieldName);
             }
 
             public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
@@ -761,12 +744,10 @@ namespace Raven.Server.Documents.Queries
                         if (valueToken == null)
                             throw new InvalidQueryException($"Method {methodName}() expects value token as second argument, got {arguments[1]} type", QueryText, parameters);
 
-                        var valueType = GetValueTokenType(parameters, valueToken, unwrapArrays: true);
-
                         if (methodType == MethodType.Search)
-                            _metadata.AddSearchField(fieldName, valueType);
+                            _metadata.AddSearchField(fieldName);
                         else
-                            _metadata.AddWhereField(fieldName, valueType);
+                            _metadata.AddWhereField(fieldName);
                         break;
                     case MethodType.Exists:
                         fieldName = ExtractFieldNameFromFirstArgument(arguments, methodName, parameters);
@@ -842,7 +823,7 @@ namespace Raven.Server.Documents.Queries
                         break;
                 }
 
-                _metadata.AddWhereField(fieldName, ValueTokenType.Null);
+                _metadata.AddWhereField(fieldName);
             }
 
             private void HandleCount(string providedCountMethodName, FieldToken methodNameToken, List<object> arguments, BlittableJsonReaderObject parameters)
