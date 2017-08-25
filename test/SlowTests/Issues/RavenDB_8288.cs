@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         [Fact]
         public async void Queries_will_work_during_index_replacements()
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(path: NewDataPath()))
             {
                 using (var session = store.OpenAsyncSession())
                 {
