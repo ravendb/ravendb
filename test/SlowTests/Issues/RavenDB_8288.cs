@@ -11,7 +11,7 @@ namespace SlowTests.Issues
     public class RavenDB_8288 : RavenTestBase
     {
         [Fact]
-        public async void Queries_will_work_during_index_replacements()
+        public async Task Queries_will_work_during_index_replacements()
         {
             using (var store = GetDocumentStore(path: NewDataPath()))
             {
