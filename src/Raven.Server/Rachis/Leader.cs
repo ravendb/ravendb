@@ -14,6 +14,7 @@ using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
 using Sparrow.Collections.LockFree;
+using Sparrow.Threading;
 using Voron.Impl;
 using Voron.Impl.Extensions;
 
@@ -42,7 +43,7 @@ namespace Raven.Server.Rachis
             public Action<TaskCompletionSource<(long, object)>> OnNotify;
         }
 
-        private int _hasNewTopology;
+        private MultipleUseFlag _hasNewTopology = new MultipleUseFlag();
         private readonly ManualResetEvent _newEntry = new ManualResetEvent(false);
         private readonly ManualResetEvent _voterResponded = new ManualResetEvent(false);
         private readonly ManualResetEvent _promotableUpdated = new ManualResetEvent(false);
@@ -71,15 +72,12 @@ namespace Raven.Server.Rachis
             _engine = engine;
         }
 
-        public bool Running
-        {
-            get { return Volatile.Read(ref _running); }
-            private set { Volatile.Write(ref _running, value); }
-        }
+        private MultipleUseFlag _running = new MultipleUseFlag();
+        public bool Running => _running.IsRaised();
 
         public void Start()
         {
-            Running = true;
+            _running.RaiseOrDie();
             ClusterTopology clusterTopology;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -280,7 +278,7 @@ namespace Raven.Server.Rachis
                     tx.Commit();
                 }
                 _newEntry.Set(); //This is so the noop would register right away
-                while (_running)
+                while (_running.IsRaised())
                 {
                     switch (WaitHandle.WaitAny(handles, _engine.ElectionTimeout))
                     {
@@ -385,7 +383,7 @@ namespace Raven.Server.Rachis
         private void OnVoterConfirmation()
         {
             TransactionOperationContext context;
-            if (Interlocked.CompareExchange(ref _hasNewTopology, 0, 1) != 0)
+            if (_hasNewTopology.Lower())
             {
                 ClusterTopology clusterTopology;
                 using (_engine.ContextPool.AllocateOperationContext(out context))
@@ -489,7 +487,6 @@ namespace Raven.Server.Rachis
         /// </summary>
         private readonly SortedList<long, int> _nodesPerIndex = new SortedList<long, int>();
 
-        private bool _running;
         private readonly Stopwatch _leadership = Stopwatch.StartNew();
         private int VotersMajority => _voters.Count / 2 + 1;
 
@@ -656,7 +653,7 @@ namespace Raven.Server.Rachis
                         throw new TimeoutException(message);
                     }
                 }
-                Running = false;
+                _running.LowerOrDie();
                 _shutdownRequested.Set();
                 TaskExecutor.Execute(_ =>
                 {
@@ -819,7 +816,7 @@ namespace Raven.Server.Rachis
                     Interlocked.Exchange(ref _topologyModification, null);
                 });
             }
-            Interlocked.Exchange(ref _hasNewTopology, 1);
+            _hasNewTopology.RaiseOrDie();
             _voterResponded.Set();
             _newEntry.Set();
 
