@@ -73,7 +73,6 @@ body {
         overflow-x: hidden;
     }
 
-
     .top-alert {
         .padding.padding-xs;
         display: block;
@@ -82,6 +81,24 @@ body {
         height: @top-alert-height;
         text-align: center;
         line-height: 18px;
+    }
+
+    &.disconnected {
+        &::before {
+            .backdrop;
+            content: '';
+            display: block;
+            z-index: @zindex-disconnected -1;
+        }
+
+        &::after {
+            .icon-style;
+            .absolute-center;
+            content: @icon-connection-lost;
+            z-index: @zindex-disconnected;
+            font-size: 4vw;
+            color: @brand-danger;
+        }
     }
 }
 
