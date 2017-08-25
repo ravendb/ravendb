@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ServiceModel.Channels;
-using Raven.Client.Documents.Subscriptions;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Sparrow.Json.Parsing;
