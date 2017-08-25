@@ -51,7 +51,7 @@ namespace Voron
         /// This is the shared storage where we are going to store all the static constants for names.
         /// WARNING: This context will never be released, so only static constants should be added here.
         /// </summary>
-        public static readonly ByteStringContext LabelsContext = new ByteStringContext(SharedMultipleUseFlag.AlwaysLow, ByteStringContext.MinBlockSizeInBytes);
+        public static readonly ByteStringContext LabelsContext = new ByteStringContext(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes);
 
         private readonly StorageEnvironmentOptions _options;
 

@@ -160,7 +160,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.AlwaysLow))
+            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var progress = json["Progress"];
@@ -181,7 +181,7 @@ namespace FastTests.Server.Documents.Operations
                 }
             };
 
-            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.AlwaysLow))
+            using (var context = new JsonOperationContext(1024, 1024, SharedMultipleUseFlag.None))
             {
                 var json = context.ReadObject(state.ToJson(), "state");
                 var result = json["Result"] as BlittableJsonReaderObject;

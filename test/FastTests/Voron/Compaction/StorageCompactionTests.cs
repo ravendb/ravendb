@@ -39,7 +39,7 @@ namespace FastTests.Voron.Compaction
         public unsafe void ShouldPreserveTables(int entries, int seed)
         {
             // Create random docs to check everything is preserved
-            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.AlwaysLow))
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
             {
                 var create = new Dictionary<Slice, long>();
                 var delete = new List<Slice>();
