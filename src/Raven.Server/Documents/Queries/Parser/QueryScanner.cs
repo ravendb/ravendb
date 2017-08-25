@@ -210,6 +210,22 @@ namespace Raven.Server.Documents.Queries.Parser
             return false;
         }
 
+        public bool CurrentTokenMatchesAnyOf(string[] options)
+        {
+            foreach (var match in options)
+            {
+                if (match.Length != TokenLength)
+                    continue;
+
+                if (string.Compare(_q, TokenStart, match, 0, match.Length, StringComparison.OrdinalIgnoreCase) != 0)
+                    continue;
+              
+                return true;
+            }
+
+            return false;
+        }
+
         public bool String()
         {
             EscapeChars = 0;
@@ -285,6 +301,13 @@ namespace Raven.Server.Documents.Queries.Parser
             Failed:
             _pos = original;
             return false;
+
+        }
+
+        public void GoBack(int matchLength)
+        {
+            _pos -= matchLength;
+            Column -= matchLength;
 
         }
     }

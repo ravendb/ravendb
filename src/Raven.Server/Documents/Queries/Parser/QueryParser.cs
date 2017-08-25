@@ -37,7 +37,7 @@ namespace Raven.Server.Documents.Queries.Parser
             while (Scanner.TryScan("DECLARE"))
             {
                 var (name, func) = DeclaredFunction();
-             
+
                 if (q.TryAddFunction(name, QueryExpression.Extract(Scanner.Input, func)) == false)
                     ThrowParseException(name + " function was declared multiple times");
             }
@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Queries.Parser
                 q.OrderBy = OrderBy();
 
             if (Scanner.TryScan("LOAD"))
-                q.Load = SelectClauseExpressions("LOAD");
+                q.Load = SelectClauseExpressions("LOAD", false);
 
             if (Scanner.TryScan("SELECT"))
                 q.Select = SelectClause("SELECT", q);
@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Queries.Parser
         private List<QueryExpression> IncludeClause()
         {
             List<QueryExpression> includes = new List<QueryExpression>();
-            
+
             do
             {
                 if (Value(out var val))
@@ -126,7 +126,7 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Method(null, out _) == false)
                 ThrowParseException("Unable to parse function " + name + " signature");
 
-            if(Scanner.FunctionBody() == false)
+            if (Scanner.FunctionBody() == false)
                 ThrowParseException("Unable to get function body for " + name);
 
             return (name, new ValueToken
@@ -233,10 +233,10 @@ namespace Raven.Server.Documents.Queries.Parser
                 return new List<(QueryExpression, FieldToken)>();
             }
 
-            return SelectClauseExpressions(clause);
+            return SelectClauseExpressions(clause, true);
         }
 
-        private List<(QueryExpression, FieldToken)> SelectClauseExpressions(string clause)
+        private List<(QueryExpression, FieldToken)> SelectClauseExpressions(string clause, bool aliasAsRequired)
         {
             var select = new List<(QueryExpression Expr, FieldToken Id)>();
 
@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     return null; // never callsed
                 }
 
-                if (Alias(out var alias) == false && expr.Type == OperatorType.Value)
+                if (Alias(aliasAsRequired, out var alias) == false && expr.Type == OperatorType.Value)
                 {
                     alias = new FieldToken
                     {
@@ -357,38 +357,51 @@ namespace Raven.Server.Documents.Queries.Parser
                 };
             }
 
-            FieldToken alias = null;
-            if (Scanner.TryScan("AS"))
-            {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
-                    ThrowParseException("Expected ALIAS after AS in FROM");
 
-                alias = new FieldToken
-                {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
-
-            }
+            Alias(false, out var alias);
 
             return (field, alias, filter, index);
         }
 
-        private bool Alias(out FieldToken alias)
+        private static readonly string[] AliasKeywords =
         {
-            if (Scanner.TryScan("AS") == false)
+            "AS",
+            "SELECT",
+            "WHERE",
+            "LOAD",
+            "GROUP",
+            "ORDER",
+            "INCLUDE"
+        };
+
+        private bool Alias(bool aliasAsRequired, out FieldToken alias)
+        {
+            bool required = false;
+            if (Scanner.TryScan(AliasKeywords, out var match))
+            {
+                required = true;
+                if (match != "AS")
+                {
+                    // found a keyword
+                    Scanner.GoBack(match.Length);
+                    alias = null;
+                    return false;
+                }
+            }
+            if (aliasAsRequired && required == false)
             {
                 alias = null;
                 return false;
             }
 
-            if (Field(out alias) == false)
+            if (Field(out alias))
+                return true;
+
+            if (required)
                 ThrowParseException("Expected field alias after AS in SELECT");
 
-            return true;
+            return false;
+            ;
         }
 
         internal bool Parameter(out int tokenStart, out int tokenLength)
@@ -831,6 +844,16 @@ namespace Raven.Server.Documents.Queries.Parser
                     }
                     else
                     {
+                        token = null;
+                        return false;
+                    }
+                }
+                if (part == 1 && isQuoted == false)
+                {
+                    // need to ensure that this isn't a keyword
+                    if (Scanner.CurrentTokenMatchesAnyOf(AliasKeywords))
+                    {
+                        Scanner.GoBack(Scanner.TokenLength);
                         token = null;
                         return false;
                     }
