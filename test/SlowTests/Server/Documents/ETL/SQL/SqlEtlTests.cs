@@ -576,7 +576,10 @@ loadToOrders(orderData);");
 
                    }
                }));
-                SetupSqlEtl(store, @"output ('Tralala');asdfsadf
+                SetupSqlEtl(store, @"output ('Tralala'); 
+
+undefined();
+
 var nameArr = this.StepName.split('.'); loadToOrders({});");
 
                 var condition = await task.WaitWithTimeout(TimeSpan.FromSeconds(30));
