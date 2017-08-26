@@ -89,11 +89,9 @@ namespace Raven.Server.Documents.Patch
                     return value.IsNull() || value.IsUndefined();
                 }
 
-                public bool TryGetCallable(Engine engine, Reference reference, out JsValue value)
+                public bool TryGetCallable(Engine engine, object callee, out JsValue value)
                 {
-                    value = new JsValue(
-                        new ClrFunctionInstance(engine, (thisObj, values) => thisObj)
-                    );
+                    value = new JsValue(new ClrFunctionInstance(engine, (thisObj, values) => thisObj));
                     return true;
                 }
 

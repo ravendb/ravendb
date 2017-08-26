@@ -18,17 +18,12 @@
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'MemGuard' ">
+  <PropertyGroup Condition="'$(Configuration)' == 'MemGuard'">
     <DefineConstants>$(DefineConstants);MEM_GUARD</DefineConstants>
+    <Optimize>true</Optimize>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)' == 'Validate' ">
-    <DefineConstants>$(DefineConstants);MEM_GUARD_STACK</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)'=='Release'">
-    <DefineConstants>$(DefineConstants)</DefineConstants>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration'=='Validate'">
-    <DefineConstants>$(DefineConstants);VALIDATE;</DefineConstants>
+  <PropertyGroup Condition="'$(Configuration)' == 'Validate'">
+    <DefineConstants>$(DefineConstants);MEM_GUARD_STACK;VALIDATE</DefineConstants>
     <Optimize>true</Optimize>
   </PropertyGroup>
   <ItemGroup>
