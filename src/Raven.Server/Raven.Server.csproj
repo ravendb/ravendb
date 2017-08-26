@@ -22,9 +22,6 @@
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
   </PropertyGroup>
-  <PropertyGroup>
-    <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
-  </PropertyGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
     <EmbeddedResource Include="Web\Assets\Unsafe.html" />
@@ -62,7 +59,7 @@
   <ItemGroup>
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
-    <PackageReference Include="Jint" Version="2.11.1-ravendb" />
+    <PackageReference Include="Jint" Version="2.11.17" />
     <PackageReference Include="Lucene.Net" Version="3.0.11" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.11" />
     <PackageReference Include="Lucene.Net" Version="3.0.11" />
@@ -118,12 +115,12 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x86'" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate|AnyCPU'">
+    <Optimize>true</Optimize>
+  </PropertyGroup>
   <PropertyGroup>
     <ServerGarbageCollection>true</ServerGarbageCollection>
     <ConcurrentGarbageCollection>true</ConcurrentGarbageCollection>
     <RetainVMGarbageCollection>true</RetainVMGarbageCollection>
-  </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Validate|AnyCPU'">
-    <Optimize>true</Optimize>
   </PropertyGroup>
 </Project>
