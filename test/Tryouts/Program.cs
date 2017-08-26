@@ -23,11 +23,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SimpleQueries())
+                using (var test = new SlowTests.Server.Replication.ReplicationWithRevisions())
                 {
                     try
                     {
-                        test.Includes("from Employees where FirstName = 'Phoebe' include ReprotsTo");
+                        test.CreateConflictAndResolveItIncreaseTheRevisions().Wait();
                     }
                     catch (Exception e)
                     {
