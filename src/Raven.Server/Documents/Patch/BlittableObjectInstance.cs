@@ -4,9 +4,6 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
-using Jint.Runtime.Descriptors.Specialized;
-using Jint.Runtime.Interop;
-using Lucene.Net.Messages;
 using Sparrow.Json;
 
 
@@ -38,22 +35,6 @@ namespace Raven.Server.Documents.Patch
             return value.Value.AsObject();
         }
 
-        public class NullObject : ObjectInstance
-        {
-            public NullObject(Engine engine) : base(engine)
-            {
-            }
-
-            public override PropertyDescriptor GetOwnProperty(string propertyName)
-            {
-                if (propertyName == "toString")
-                    return null;
-                if (propertyName == "valueOf")
-                    return new ClrAccessDescriptor(Engine, _ => new ClrFunctionInstance(Engine, (value, values) => new JsValue(0)));
-                return new ClrAccessDescriptor(Engine, value => this);
-            }
-        }
-
         public sealed class BlittableObjectProperty : PropertyDescriptor
         {
             private readonly BlittableObjectInstance _parent;
@@ -72,7 +53,7 @@ namespace Raven.Server.Documents.Patch
                 var index = _parent.Blittable?.GetPropertyIndex(_property);
                 if (index == null || index == -1)
                 {
-                    Value = new JsValue(new NullObject(_parent.Engine));
+                    Value = JsValue.Undefined;
                 }
                 else
                 {
@@ -96,7 +77,7 @@ namespace Raven.Server.Documents.Patch
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
-                        return new JsValue(new BlittableObjectInstance(owner.Engine, null, null, null));
+                        return JsValue.Null;
                     case BlittableJsonToken.Boolean:
                         return new JsValue((bool)value);
                     case BlittableJsonToken.Integer:

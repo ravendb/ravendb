@@ -9,6 +9,7 @@ using SlowTests.Cluster;
 using Raven.Server.Documents.Replication;
 using Raven.Client.Documents;
 using SlowTests.Client.Subscriptions;
+using SlowTests.Queries;
 using SlowTests.Server.Documents.ETL.Raven;
 using SlowTests.Tests.Linq;
 
@@ -22,11 +23,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_3929())
+                using (var test = new SimpleQueries())
                 {
                     try
                     {
-                        test.NullPropagationShouldNotAffectOperators();
+                        test.Includes("from Employees where FirstName = 'Phoebe' include ReprotsTo");
                     }
                     catch (Exception e)
                     {

@@ -115,10 +115,6 @@ namespace Raven.Server.Documents.Patch
             {
                 _writer.WriteValueNull();
             }
-            else if (v is BlittableObjectInstance.NullObject)
-            {
-                _writer.WriteValueNull();
-            }
             else if (v is ObjectInstance obj)
             {
                 WriteNestedObject(obj);
@@ -148,8 +144,7 @@ namespace Raven.Server.Documents.Patch
             try
             {
                 if (_recursive.Add(obj) 
-                    && obj is FunctionInstance == false 
-                    && obj is BlittableObjectInstance.NullObject == false)
+                    && obj is FunctionInstance == false)
                     WriteInstance(obj);
                 else
                     _writer.WriteValueNull();

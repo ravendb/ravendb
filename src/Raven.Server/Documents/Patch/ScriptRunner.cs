@@ -9,6 +9,7 @@ using Jint;
 using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
+using Jint.Runtime.References;
 using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
@@ -75,10 +76,31 @@ namespace Raven.Server.Documents.Patch
 
             public bool ReadOnly;
 
-            private SingleRun()
+            public class NullPropgationReferenceResolver : IReferenceResolver
             {
-                // here just to get an instance that jurrasic
-                // can use
+                public bool TryUnresolvableReference(Engine engine, Reference reference, out JsValue value)
+                {
+                    value = Null.Instance;
+                    return true;
+                }
+
+                public bool TryPropertyReference(Engine engine, Reference reference, ref JsValue value)
+                {
+                    return value.IsNull() || value.IsUndefined();
+                }
+
+                public bool TryGetCallable(Engine engine, Reference reference, out JsValue value)
+                {
+                    value = new JsValue(
+                        new ClrFunctionInstance(engine, (thisObj, values) => thisObj)
+                    );
+                    return true;
+                }
+
+                public bool CheckCoercible(JsValue value)
+                {
+                    return true;
+                }
             }
 
             public SingleRun(DocumentDatabase database, ScriptRunner runner, List<string> scriptsSource)
@@ -88,6 +110,7 @@ namespace Raven.Server.Documents.Patch
                 ScriptEngine = new Engine(options =>
                 {
                     options.LimitRecursion(64)
+                        .SetReferencesResolver(new NullPropgationReferenceResolver())
                         .MaxStatements(1000) // TODO: Maxim make this configurable
                         .Strict();
                 });
@@ -390,7 +413,7 @@ namespace Raven.Server.Documents.Patch
                 if (o is BlittableJsonReaderObject json)
                     return new BlittableObjectInstance(engine, json, null, null);
                 if (o == null)
-                    return Null.Instance;
+                    return Undefined.Instance;
                 if (o is long lng)
                     return new JsValue(lng);
                 if (o is List<object> list)

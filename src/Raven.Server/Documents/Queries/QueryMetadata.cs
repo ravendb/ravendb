@@ -476,6 +476,11 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.Value:
                     return GetSelectValue(alias, expression.Value);
                 case OperatorType.Field:
+                    if (expression.Field.IsQuoted)
+                    {
+                        var value = QueryExpression.Extract(QueryText, expression.Field);
+                        return SelectField.CreateValue(value, alias, ValueTokenType.String);
+                    }
                     return GetSelectValue(alias, expression.Field);
                 case OperatorType.Method:
                     var methodName = QueryExpression.Extract(QueryText, expression.Field);

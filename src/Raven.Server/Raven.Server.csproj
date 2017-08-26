@@ -62,10 +62,9 @@
   <ItemGroup>
     <PackageReference Include="DasMulli.Win32.ServiceUtils" Version="1.0.1" />
     <PackageReference Include="JetBrains.Annotations" Version="11.0.0" />
-    <PackageReference Include="Jint" Version="2.10.100" />
+    <PackageReference Include="Jint" Version="2.11.1-ravendb" />
     <PackageReference Include="Lucene.Net" Version="3.0.11" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.11" />
-    <PackageReference Include="Jint" Version="3.0.0-beta-001" />
     <PackageReference Include="Lucene.Net" Version="3.0.11" />
     <PackageReference Include="Microsoft.AspNetCore.Server.Kestrel" Version="2.0.0" />
     <PackageReference Include="Microsoft.AspNetCore.WebSockets" Version="2.0.0" />
