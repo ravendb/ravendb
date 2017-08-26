@@ -118,15 +118,30 @@ namespace Raven.Server.Documents.Queries.Parser
                         Line++;
                         Column = 1;
                         break;
-                    case '/': // comment to end of line / input
+                    case '/': // comment to end of line / input, /* */ for multi line
                     {
-                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '/')
+                        if (_pos + 1 >= _q.Length || _q[_pos + 1] != '/' && _q[_pos + 1] != '*')
                             return true;
                         _pos += 2;
+                        if (_q[_pos - 1] == '/')
+                        {
+                            for (; _pos < _q.Length; _pos++)
+                                if (_q[_pos] == '\n')
+                                    goto case '\n';
+                            return false; // end of input
+                        }
+                        // multi line comment
                         for (; _pos < _q.Length; _pos++)
+                        {
                             if (_q[_pos] == '\n')
-                                goto case '\n';
-                        return false; // end of input
+                                Line++;
+                            if (_q[_pos] == '*' && _pos + 1 <= _q.Length && _q[_pos + 1] == '/')
+                            {
+                                _pos++;
+                                break;
+                            }
+                        }
+                        break;// now search for more whitespace / done / eof
                     }
                     default:
                         return true;
