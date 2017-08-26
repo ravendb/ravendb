@@ -255,7 +255,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("SELECT Name FROM INDEX 'IndexName' WHERE Birthday >= $p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= $p0 SELECT Name", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -269,7 +269,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("SELECT Name, Age FROM INDEX 'IndexName' WHERE Birthday >= $p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= $p0 SELECT Name, Age", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 

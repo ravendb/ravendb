@@ -229,6 +229,8 @@ namespace Raven.Client.Documents.Session.Tokens
             };
         }
 
+
+      
         public override void WriteTo(StringBuilder writer)
         {
             if (Boost.HasValue)
@@ -274,7 +276,7 @@ namespace Raven.Client.Documents.Session.Tokens
                     break;
             }
 
-            writer.Append(FieldName);
+            WriteField(writer, FieldName);
 
             switch (WhereOperator)
             {
@@ -398,5 +400,6 @@ namespace Raven.Client.Documents.Session.Tokens
                     .Append(")");
             }
         }
+
     }
 }

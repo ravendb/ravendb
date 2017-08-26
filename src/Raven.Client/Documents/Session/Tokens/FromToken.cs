@@ -43,7 +43,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 }
                 else
                 {
-                    writer.Append(CollectionName);
+                   WriteField(writer, CollectionName);
                 }
 
                 return;

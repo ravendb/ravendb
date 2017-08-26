@@ -1471,7 +1471,6 @@ If you really want to do in memory filtering on the data returned from the query
 
         private void BuildFrom(StringBuilder writer)
         {
-            AddSpaceIfNeeded(SelectTokens.Last?.Value, FromToken, writer);
             FromToken.WriteTo(writer);
         }
 

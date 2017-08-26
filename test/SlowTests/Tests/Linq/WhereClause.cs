@@ -953,7 +953,7 @@ namespace SlowTests.Tests.Linq
                             select user.Name;
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("SELECT Name FROM IndexedUsers WHERE Birthday >= $p0", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE Birthday >= $p0 SELECT Name", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -973,7 +973,7 @@ namespace SlowTests.Tests.Linq
                             select new { user.Name, user.Age };
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("SELECT Name, Age FROM IndexedUsers WHERE Birthday >= $p0", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE Birthday >= $p0 SELECT Name, Age", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }
@@ -1031,7 +1031,7 @@ namespace SlowTests.Tests.Linq
                             select new { user.Name, user.Age };
 
                     var iq = RavenTestHelper.GetIndexQuery(q);
-                    Assert.Equal("SELECT Name, Age FROM IndexedUsers WHERE Birthday >= $p0", iq.Query);
+                    Assert.Equal("FROM IndexedUsers WHERE Birthday >= $p0 SELECT Name, Age", iq.Query);
                     Assert.Equal(new DateTime(2010, 05, 15), iq.QueryParameters["p0"]);
                 }
             }

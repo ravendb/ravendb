@@ -41,9 +41,19 @@ namespace SlowTests.Tests
 
             yield return assemblyToScan;
 
-            foreach (var referencedAssembly in assemblyToScan.GetReferencedAssemblies().Select(Assembly.Load))
+            foreach (var asm in assemblyToScan.GetReferencedAssemblies())
             {
-                foreach (var assembly in GetAssemblies(referencedAssembly))
+
+                Assembly load;
+                try
+                {
+                    load = Assembly.Load(asm);
+                }
+                catch
+                {
+                    continue;
+                }
+                foreach (var assembly in GetAssemblies(load))
                     yield return assembly;
             }
         }
