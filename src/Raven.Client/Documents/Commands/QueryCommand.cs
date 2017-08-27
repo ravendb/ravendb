@@ -31,8 +31,10 @@ namespace Raven.Client.Documents.Commands
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
+            CanCache = _indexQuery.DisableCaching == false;
+
             // we won't allow aggresive caching of queries with WaitForNonStaleResults
-            AggressiveCacheAllowed = _indexQuery.WaitForNonStaleResults == false;
+            CanCacheAggressively = CanCache && _indexQuery.WaitForNonStaleResults == false;
 
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")

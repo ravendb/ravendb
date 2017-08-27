@@ -422,10 +422,6 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.DisableCaching));
-            writer.WriteBool(query.DisableCaching);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.ExplainScores));
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
