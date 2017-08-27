@@ -453,7 +453,10 @@ class queryCompleter {
         callback(null,  keywords.map(keyword  => {
             const word = <autoCompleteWordList>keyword;
             word.caption = _.trim(keyword.value, "'");
-            keyword.value += " ";
+            if (keyword.value.indexOf(" ") >= 0){
+                keyword.value = "'" + keyword.value + "'"; // wrap collection name in 'collection name' if it has spaces. Also used for other values.
+            }
+            keyword.value += " "; // insert space after each completed keyword or other value.
             return word;
         }))
     }
