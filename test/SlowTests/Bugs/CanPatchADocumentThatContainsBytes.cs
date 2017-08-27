@@ -45,16 +45,12 @@ namespace SlowTests.Bugs
                     var index = GetIndexQuery(session.Query<PrimarySkills.Result, PrimarySkills>()
                         .Where(result => result.SkillId == 1));
 
-                    var patch = new PatchRequest
-                    {
-                        Script = @"
+                    index.Query += @" update { 
 for (var i = 0; i < this.Skills.$values.length; i++) {
     this.Skills.$values[i].IsPrimary = false
 }
-"
-                    };
-
-                    var operation = store.Operations.Send(new PatchByQueryOperation(index, patch));
+}";
+                    var operation = store.Operations.Send(new PatchByQueryOperation(index));
 
                     operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 

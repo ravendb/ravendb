@@ -1,6 +1,7 @@
 ﻿using System;
 using Microsoft.AspNetCore.Http;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Json;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -29,7 +30,11 @@ namespace Raven.Server.Documents.Queries
             Metadata = new QueryMetadata(Query, queryParameters, 0);
         }
 
-        public static IndexQueryServerSide Create(BlittableJsonReaderObject json, JsonOperationContext context, QueryMetadataCache cache)
+        public static IndexQueryServerSide Create(
+            BlittableJsonReaderObject json, 
+            JsonOperationContext context, 
+            QueryMetadataCache cache,
+            QueryType queryType = QueryType.Select)
         {
             var result = JsonDeserializationServer.IndexQuery(json);
 
@@ -39,10 +44,13 @@ namespace Raven.Server.Documents.Queries
             if (string.IsNullOrWhiteSpace(result.Query))
                 throw new InvalidOperationException($"Index query does not contain '{nameof(Query)}' field.");
 
-            result.Metadata = cache.TryGetMetadata(result, context, out var metadataHash, out var metadata)
-                ? metadata
-                : new QueryMetadata(result.Query, result.QueryParameters, metadataHash);
+            if (cache.TryGetMetadata(result, context, out var metadataHash, out var metadata))
+            {
+                result.Metadata = metadata;
+                return result;
+            }
 
+            result.Metadata = new QueryMetadata(result.Query, result.QueryParameters, metadataHash, queryType);
             return result;
         }
 

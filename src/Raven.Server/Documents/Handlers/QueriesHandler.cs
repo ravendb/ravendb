@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
@@ -323,19 +324,18 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "queries/patch");
             if (reader == null)
                 throw new BadRequestException("Missing JSON content.");
-            if (reader.TryGet("Patch", out BlittableJsonReaderObject patchJson) == false || patchJson == null)
-                throw new BadRequestException("Missing 'Patch' property.");
             if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                 throw new BadRequestException("Missing 'Query' property.");
 
-            var patch = PatchRequest.Parse(patchJson, out var patchArgs);
-            var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache);
+            var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
+
+            var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
 
             if (query.Metadata.IsDynamic == false)
             {
                 ExecuteQueryOperation(query.Metadata,
                     (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(
-                        query, options.Query, patch, patchArgs, context, onProgress, token),
+                        query, options.Query, patch, query.QueryParameters, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
             }
             else
@@ -343,7 +343,8 @@ namespace Raven.Server.Documents.Handlers
                 EnsureQueryHasOnlyFromClause(query.Metadata.Query, query.Metadata.CollectionName);
 
                 ExecuteQueryOperation(query.Metadata,
-                    (runner, options, onProgress, token) => runner.Collection.ExecutePatch(query.Metadata.CollectionName, options.Collection, patch, onProgress, token),
+                    (runner, options, onProgress, token) => 
+                    runner.Collection.ExecutePatch(query.Metadata.CollectionName, options.Collection, patch, query.QueryParameters, onProgress, token),
                     context, returnContextToPool, Operations.Operations.OperationType.UpdateByCollection);
             }
 
@@ -352,7 +353,13 @@ namespace Raven.Server.Documents.Handlers
 
         private void EnsureQueryHasOnlyFromClause(Query query, string collection)
         {
-            if (query.Where != null || query.Select != null || query.OrderBy != null || query.GroupBy != null || query.Load != null)
+            if (query.Where != null || 
+                query.Select != null || 
+                query.OrderBy != null || 
+                query.GroupBy != null || 
+                query.Load != null || 
+                query.Include != null || 
+                query.From.Filter != null)
                 throw new BadRequestException($"Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM {collection}'. If you need to perform filtering please issue the query to the static index.");
         }
 

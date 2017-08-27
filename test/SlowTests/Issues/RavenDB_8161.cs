@@ -22,10 +22,7 @@ namespace SlowTests.Issues
                 {
                     store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {
-                        Query = "FROM Orders"
-                    }, new PatchRequest
-                    {
-                        Script = @"put(""orders/"", this);"
+                        Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
                     })).WaitForCompletion(TimeSpan.FromSeconds(30));
                 }
 

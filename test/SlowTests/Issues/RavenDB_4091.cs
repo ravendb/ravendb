@@ -70,10 +70,7 @@ namespace SlowTests.Issues
 
                 WaitForIndexing(store);
 
-                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}'" }, new PatchRequest
-                {
-                    Script = @"this.Sample = 'Value'"
-                }));
+                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery { Query = $"FROM INDEX '{new Company_ByName().IndexName}' UPDATE {{this.Sample = 'Value'}}" }));
 
                 var progresses = new List<IOperationProgress>();
 

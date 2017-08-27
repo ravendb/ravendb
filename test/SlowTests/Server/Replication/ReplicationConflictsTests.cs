@@ -358,10 +358,7 @@ namespace SlowTests.Server.Replication
                 // /indexes/Raven/DocumentsByEntityName
                 var operation = store2.Operations.Send(new PatchByQueryOperation(new IndexQuery
                 {
-                    Query = $"FROM INDEX '{userIndex.IndexName}'"
-                }, new PatchRequest
-                {
-                    Script = string.Empty
+                    Query = $"FROM INDEX '{userIndex.IndexName}' UPDATE {{ }}"
                 }));
 
                 Assert.Throws<DocumentConflictException>(() => operation.WaitForCompletion(TimeSpan.FromSeconds(15)));

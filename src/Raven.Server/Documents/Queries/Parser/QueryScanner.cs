@@ -298,6 +298,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     case '\'':
                         if (String() == false)
                             goto Failed;
+                        // we are now positioned at the _next_character, but we'll increment it
+                        // need to go back to stay in the same place :-)
+                        _pos--;
                         break;
                     case '{':
                         nested++;

@@ -27,10 +27,7 @@ namespace SlowTests.Server.Documents
                 {
                     await store.Operations.Send(new PatchByQueryOperation(new IndexQuery
                     {
-                        Query = "FROM Orders"
-                    }, new PatchRequest()
-                    {
-                        Script = @"put(""orders/"", this);"
+                        Query = @"FROM Orders UPDATE { put(""orders/"", this); } "
                     })).WaitForCompletionAsync(TimeSpan.FromSeconds(30));
                 }
 

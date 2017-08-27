@@ -20,6 +20,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public string QueryText;
         public ValueToken SelectFunctionBody { get; set; }
+        public ValueToken UpdateBody { get; set; }
 
         public string ToJsonAst()
         {

@@ -787,9 +787,8 @@ this.Value = another.Value;
                 }
 
                 var operation = await store.Operations.SendAsync(new PatchByQueryOperation(
-                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Value = 1" },
-                    new PatchRequest { Script = @"put('NewItem/3', {'CopiedValue': this.Value });" }),
-                    CancellationToken.None);
+                    "FROM INDEX 'TestIndex' WHERE Value = 1 update { put('NewItem/3', {'CopiedValue': this.Value });}"
+                    ));
                 await operation.WaitForCompletionAsync(TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())
@@ -914,8 +913,7 @@ this.Else = a;
                 WaitForIndexing(store);
 
                 var operation = store.Operations.Send(new PatchByQueryOperation(
-                    new IndexQuery { Query = "FROM INDEX 'TestIndex' WHERE Owner = 'Bob'" },
-                    new PatchRequest { Script = SampleScript }));
+                    $"FROM INDEX \'TestIndex\' WHERE Owner = \'Bob\' UPDATE {{ {SampleScript}}}"));
 
                 operation.WaitForCompletion(TimeSpan.FromSeconds(15));
 

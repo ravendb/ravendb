@@ -29,10 +29,11 @@ namespace Raven.Server.Documents
             return ExecuteOperation(collectionName, options, Context, onProgress, key => new DeleteDocumentCommand(key, null, Database), token);
         }
 
-        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, Action<IOperationProgress> onProgress, OperationCancelToken token)
+        public Task<IOperationResult> ExecutePatch(string collectionName, CollectionOperationOptions options, PatchRequest patch, 
+            BlittableJsonReaderObject patchArgs, Action<IOperationProgress> onProgress, OperationCancelToken token)
         {
             return ExecuteOperation(collectionName, options, Context, onProgress,
-                key => new PatchDocumentCommand(Context, key, null, false,(patch, null),(null,null),
+                key => new PatchDocumentCommand(Context, key, null, false,(patch, patchArgs),(null,null),
                     Database, false,false), token);
         }
 

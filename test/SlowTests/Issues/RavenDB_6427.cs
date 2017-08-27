@@ -39,10 +39,7 @@ namespace SlowTests.Issues
 
                 using (var session = store.OpenSession())
                 {
-                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Stuffs" }, new PatchRequest
-                    {
-                        Script = "this.Key = this.Key + 1;"
-                    })).WaitForCompletion(TimeSpan.FromSeconds(15));
+                    store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Stuffs UPDATE { this.Key = this.Key + 1; }" })).WaitForCompletion(TimeSpan.FromSeconds(15));
 
                     using (var reader = session.Advanced.Stream<Stuff>(startsWith: "stuffs/"))
                     {

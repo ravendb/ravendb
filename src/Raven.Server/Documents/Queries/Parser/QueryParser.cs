@@ -5,6 +5,12 @@ using Sparrow;
 
 namespace Raven.Server.Documents.Queries.Parser
 {
+    public enum QueryType
+    {
+        Select,
+        Update
+    }
+
     public class QueryParser
     {
         private static readonly string[] OperatorStartMatches = { ">=", "<=", "<", ">", "=", "==", "!=", "BETWEEN", "IN", "ALL IN", "(" };
@@ -27,7 +33,7 @@ namespace Raven.Server.Documents.Queries.Parser
             Scanner.Init(q);
         }
 
-        public Query Parse()
+        public Query Parse(QueryType queryType = QueryType.Select)
         {
             var q = new Query
             {
@@ -56,16 +62,43 @@ namespace Raven.Server.Documents.Queries.Parser
             if (Scanner.TryScan("LOAD"))
                 q.Load = SelectClauseExpressions("LOAD", false);
 
-            if (Scanner.TryScan("SELECT"))
-                q.Select = SelectClause("SELECT", q);
+            switch (queryType)
+            {
+                case QueryType.Select:
+                    if (Scanner.TryScan("SELECT"))
+                        q.Select = SelectClause("SELECT", q);
+                    if (Scanner.TryScan("INCLUDE"))
+                        q.Include = IncludeClause();
+                    break;
+                case QueryType.Update:
+                    if (Scanner.TryScan("UPDATE") == false)
+                        ThrowParseException("Update operations must end with UPDATE clause");
 
-            if (Scanner.TryScan("INCLUDE"))
-                q.Include = IncludeClause();
+                    var functionStart = Scanner.Position;
+                    if (Scanner.FunctionBody() == false)
+                        ThrowParseException("Update clause must have a single function body");
+
+                    q.UpdateBody = new ValueToken
+                    {
+                        Type = ValueTokenType.String,
+                        TokenStart = functionStart,
+                        TokenLength = Scanner.Position - functionStart
+                    };
+                    break;
+                default:
+                    ThrowUnknownQueryType(queryType);
+                    break;
+            }
 
             if (Scanner.AtEndOfInput() == false)
                 ThrowParseException("Expected end of query");
 
             return q;
+        }
+
+        private static void ThrowUnknownQueryType(QueryType queryType)
+        {
+            throw new ArgumentOutOfRangeException(nameof(queryType), queryType, "Unknown query type");
         }
 
         private List<QueryExpression> IncludeClause()
@@ -342,7 +375,7 @@ namespace Raven.Server.Documents.Queries.Parser
                         ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
                 }
 
-             
+
             }
 
 
@@ -359,7 +392,8 @@ namespace Raven.Server.Documents.Queries.Parser
             "LOAD",
             "GROUP",
             "ORDER",
-            "INCLUDE"
+            "INCLUDE",
+            "UPDATE"
         };
 
         private bool Alias(bool aliasAsRequired, out FieldToken alias)

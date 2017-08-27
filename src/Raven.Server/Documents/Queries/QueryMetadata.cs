@@ -20,13 +20,13 @@ namespace Raven.Server.Documents.Queries
 
         public readonly Dictionary<StringSegment, (string PropertyPath, bool Array)> RootAliasPaths = new Dictionary<StringSegment, (string PropertyPath, bool Array)>();
 
-        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey)
+        public QueryMetadata(string query, BlittableJsonReaderObject parameters, ulong cacheKey, QueryType queryType = QueryType.Select)
         {
             CacheKey = cacheKey;
 
             var qp = new QueryParser();
             qp.Init(query);
-            Query = qp.Parse();
+            Query = qp.Parse(queryType);
 
             QueryText = Query.QueryText;
 
@@ -875,6 +875,27 @@ namespace Raven.Server.Documents.Queries
 
                 return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
             }
+        }
+
+        public string GetUpdateBody()
+        {
+            if (Query.UpdateBody == null)
+                throw new InvalidOperationException("UPDATE cluase was not specified");
+
+            var updateBody = QueryExpression.Extract(QueryText, Query.UpdateBody);
+
+            if(Query.From.Alias == null) // will have to use this 
+               return updateBody;
+
+            var alias = QueryExpression.Extract(QueryText, Query.From.Alias);
+            // patch is sending this, but we can also specify the alias.
+            // this is so we can more easily share the code between query patch
+            // and per document patch
+            return $@"
+var {alias} = this;
+{updateBody}
+";
+
         }
     }
 }
