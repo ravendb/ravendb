@@ -19,7 +19,7 @@ namespace Raven.Server.Web.Studio
         private const int MaxArrayItemsToFetch = 16;
         
         [RavenAction("/databases/*/studio/collections/fields", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetCollectionFeilds()
+        public Task GetCollectionFields()
         {
             var collection = GetStringQueryString("collection", required: false);
             var prefix = GetStringQueryString("prefix", required: false);
@@ -148,11 +148,11 @@ namespace Raven.Server.Web.Studio
                 }
                 else
                 {
-                    var prefixFeilds = prefix.Split('.', StringSplitOptions.RemoveEmptyEntries);
-                    for (var i = 0; i < prefixFeilds.Length; i++)
+                    var prefixFields = prefix.Split('.', StringSplitOptions.RemoveEmptyEntries);
+                    for (var i = 0; i < prefixFields.Length; i++)
                     {
-                        var prefixFeild = prefixFeilds[i];
-                        var index = data.GetPropertyIndex(prefixFeild);
+                        var prefixField = prefixFields[i];
+                        var index = data.GetPropertyIndex(prefixField);
                         if (index < 0)
                             break;
 
@@ -160,7 +160,7 @@ namespace Raven.Server.Web.Studio
                         data.GetPropertyByIndex(index, ref prop);
                         var token = prop.Token & BlittableJsonReaderBase.TypesMask;
 
-                        if (i + 1 == prefixFeilds.Length)
+                        if (i + 1 == prefixFields.Length)
                         {
                             switch (token)
                             {
