@@ -50,7 +50,6 @@ namespace FastTests.Client.Indexing
                     {
                         Start = q.Start,
                         CutoffEtag = q.CutoffEtag,
-                        DisableCaching = q.DisableCaching,
                         ExplainScores = q.ExplainScores,
                         PageSize = q.PageSize,
                         ShowTimings = q.ShowTimings,

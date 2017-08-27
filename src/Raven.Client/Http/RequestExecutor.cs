@@ -398,10 +398,10 @@ namespace Raven.Client.Http
                 try
                 {
                     await UpdateTopologyAsync(new ServerNode
-                        {
-                            Url = url,
-                            Database = _databaseName
-                        }, Timeout.Infinite)
+                    {
+                        Url = url,
+                        Database = _databaseName
+                    }, Timeout.Infinite)
                         .ConfigureAwait(false);
 
                     InitializeUpdateTopologyTimer();
@@ -525,10 +525,10 @@ namespace Raven.Client.Http
                 if (cachedChangeVector != null)
                 {
                     var aggressiveCacheOptions = AggressiveCaching.Value;
-                    if (aggressiveCacheOptions != null && 
-                        cachedItem.Age < aggressiveCacheOptions.Duration && 
-                        cachedItem.MightHaveBeenModified == false && 
-                        command.AggressiveCacheAllowed)
+                    if (aggressiveCacheOptions != null &&
+                        cachedItem.Age < aggressiveCacheOptions.Duration &&
+                        cachedItem.MightHaveBeenModified == false &&
+                        command.CanCacheAggressively)
                     {
                         command.SetResponse(cachedValue, fromCache: true);
                         return;
@@ -554,7 +554,7 @@ namespace Raven.Client.Http
                     {
                         if (timeout > GlobalHttpClientTimeout)
                             ThrowTimeoutTooLarge(timeout);
-                        
+
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
                             cts.CancelAfter(timeout.Value);
@@ -631,7 +631,7 @@ namespace Raven.Client.Http
                     if (response.IsSuccessStatusCode == false)
                     {
                         if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionId, shouldRetry).ConfigureAwait(false) == false)
-                        {   
+                        {
                             if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
                             {
                                 var name = databaseMissing.FirstOrDefault();
@@ -738,7 +738,7 @@ namespace Raven.Client.Http
                         {
                             // there is really nothing we can do here
                         }
-                        finally 
+                        finally
                         {
                             disposable?.Dispose();
                         }
@@ -779,7 +779,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }

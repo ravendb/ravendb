@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -15,7 +14,11 @@ namespace Raven.Client.Documents.Queries
     /// </summary>
     public class IndexQuery : IndexQuery<Parameters>
     {
-      
+        /// <summary>
+        /// Whether we should disable caching of query results
+        /// </summary>
+        public bool DisableCaching { get; set; }
+
         public ulong GetQueryHash(JsonOperationContext ctx)
         {
             using (var hasher = new QueryHashCalculator(ctx))
@@ -24,7 +27,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(DisableCaching);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
                 hasher.Write(ExplainScores);
@@ -33,19 +35,35 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(Start);
                 hasher.Write(PageSize);
                 hasher.Write(QueryParameters);
-                
+
                 return hasher.GetHash();
+            }
+        }
+
+        public override bool Equals(IndexQuery<Parameters> other)
+        {
+            if (base.Equals(other) == false)
+                return false;
+
+            if (other is IndexQuery iq && DisableCaching.Equals(iq.DisableCaching))
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                return hashCode;
             }
         }
     }
 
     public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
-        /// <summary>
-        /// Whether we should disable caching of query results
-        /// </summary>
-        public bool DisableCaching { get; set; }
-
         /// <summary>
         /// Allow to skip duplicate checking during queries
         /// </summary>
@@ -85,14 +103,15 @@ namespace Raven.Client.Documents.Queries
 
             return base.Equals(other) &&
                    ShowTimings == other.ShowTimings &&
-                   DisableCaching.Equals(other.DisableCaching) &&
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
             return obj.GetType() == GetType() && Equals((IndexQuery)obj);
         }
 
@@ -103,7 +122,6 @@ namespace Raven.Client.Documents.Queries
                 var hashCode = base.GetHashCode();
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
-                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
                 return hashCode;
             }
         }
@@ -205,8 +223,10 @@ namespace Raven.Client.Documents.Queries
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
             return obj.GetType() == GetType() && Equals((IndexQuery)obj);
         }
 
