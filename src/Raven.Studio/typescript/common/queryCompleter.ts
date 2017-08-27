@@ -23,7 +23,7 @@ interface autoCompleteLastKeyword {
 interface queryCompleterProviders {
     terms: (indexName: string, field: string, pageSize: number, callback: (terms: Array<string>) => void) => void;
     indexFields: (indexName: string, callback: (fields: Array<string>) => void) => void;
-    collectionFields: (collectionName: string, prefix: string, callback: (fields: object) => void) => void;
+    collectionFields: (collectionName: string, prefix: string, callback: (fields: dictionary<string>) => void) => void;
     collections: (callback: (collectionNames: Array<string>) => void) => void;
     indexNames: (callback: (indexNames: Array<string>) => void) => void;
 }
