@@ -14,10 +14,8 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using Raven.Client.Documents.Conventions;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
@@ -28,7 +26,7 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     ///   A query against a Raven index
     /// </summary>
-    public abstract class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
+    public abstract partial class AbstractDocumentQuery<T, TSelf> : IDocumentQueryCustomization, IAbstractDocumentQuery<T>
                                                             where TSelf : AbstractDocumentQuery<T, TSelf>
     {
         private readonly Dictionary<string, string> _aliasToGroupByFieldName = new Dictionary<string, string>();
@@ -36,7 +34,6 @@ namespace Raven.Client.Documents.Session
         protected QueryOperator DefaultOperator;
 
         private readonly LinqPathProvider _linqPathProvider;
-        protected Action<IndexQuery> BeforeQueryExecutionAction;
 
         protected readonly HashSet<Type> RootTypes = new HashSet<Type>
         {
@@ -57,8 +54,6 @@ namespace Raven.Client.Documents.Session
 
         public string CollectionName { get; }
 
-        protected Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> TransformResultsFunc;
-
         private int _currentClauseDepth;
 
         protected string QueryRaw;
@@ -76,31 +71,9 @@ namespace Raven.Client.Documents.Session
         protected readonly InMemoryDocumentSessionOperations TheSession;
 
         /// <summary>
-        ///   The fields to highlight
-        /// </summary>
-        protected List<HighlightedField> HighlightedFields = new List<HighlightedField>();
-
-        /// <summary>
-        ///   Highlighter pre tags
-        /// </summary>
-        protected string[] HighlighterPreTags = new string[0];
-
-        /// <summary>
-        ///   Highlighter post tags
-        /// </summary>
-        protected string[] HighlighterPostTags = new string[0];
-
-        /// <summary>
-        ///   Highlighter key
-        /// </summary>
-        protected string HighlighterKeyName;
-
-        /// <summary>
         ///   The page size to use when querying the index
         /// </summary>
         protected int? PageSize;
-
-        public QueryOperation QueryOperation { get; protected set; }
 
         protected LinkedList<QueryToken> SelectTokens = new LinkedList<QueryToken>();
 
@@ -141,11 +114,6 @@ namespace Raven.Client.Documents.Session
         /// Holds the query stats
         /// </summary>
         protected QueryStatistics QueryStats = new QueryStatistics();
-
-        /// <summary>
-        /// Holds the query highlights
-        /// </summary>
-        protected QueryHighlightings Highlightings = new QueryHighlightings();
 
         /// <summary>
         /// Determines if entities should be tracked and kept in memory
@@ -220,78 +188,12 @@ namespace Raven.Client.Documents.Session
 
         #region TSelf Members
 
-        /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">The path.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.Include(string path)
-        {
-            Include(path);
-            return this;
-        }
-
-        /// <summary>
-        ///   EXPERT ONLY: Instructs the query to wait for non stale results for the specified wait timeout.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResults(waitTimeout);
-            return this;
-        }
-
-        /// <summary>
-        ///   EXPERT ONLY: Instructs the query to wait for non stale results.
-        ///   This shouldn't be used outside of unit tests unless you are well aware of the implications
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResults()
-        {
-            WaitForNonStaleResults();
-            return this;
-        }
-
         public void UsingDefaultOperator(QueryOperator @operator)
         {
             if (WhereTokens.Count != 0)
                 throw new InvalidOperationException("Default operator can only be set before any where clause is added.");
 
             DefaultOperator = @operator;
-        }
-
-        /// <summary>
-        ///   Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name = "path">The path.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.Include<TResult>(Expression<Func<TResult, object>> path)
-        {
-            var body = path.Body as UnaryExpression;
-            if (body != null)
-            {
-                switch (body.NodeType)
-                {
-                    case ExpressionType.Convert:
-                    case ExpressionType.ConvertChecked:
-                        throw new InvalidOperationException("You cannot use Include<TResult> on value type. Please use the Include<TResult, TInclude> overload.");
-                }
-            }
-
-            Include(path.ToPropertyPath());
-            return this;
-        }
-
-        public IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path)
-        {
-            var idPrefix = Conventions.GetCollectionName(typeof(TInclude));
-            if (idPrefix != null)
-            {
-                idPrefix = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(idPrefix);
-                idPrefix += Conventions.IdentityPartsSeparator;
-            }
-
-            var id = path.ToPropertyPath() + "(" + idPrefix + ")";
-            Include(id);
-            return this;
         }
 
         /// <summary>
@@ -316,7 +218,6 @@ namespace Raven.Client.Documents.Session
                 FieldsToFetchToken?.Projections,
                 TheWaitForNonStaleResults,
                 Timeout,
-                TransformResultsFunc,
                 DisableEntitiesTracking);
         }
 
@@ -371,41 +272,6 @@ namespace Raven.Client.Documents.Session
             }
 
             OrderBy(Constants.Documents.Indexing.Fields.CustomSortFieldName + ";" + typeName);
-        }
-
-        public IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action)
-        {
-            BeforeQueryExecutionAction += action;
-            return this;
-        }
-
-        public IDocumentQueryCustomization TransformResults(Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> resultsTransformer)
-        {
-            TransformResultsFunc = resultsTransformer;
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
-        {
-            Highlight(fieldName, fragmentLength, fragmentCount, fragmentsField);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
-        {
-            Highlight(fieldName, fragmentLength, fragmentCount, out fieldHighlightings);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
-        {
-            Highlight(fieldName, fieldKeyName, fragmentLength, fragmentCount, out fieldHighlightings);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val)
-        {
-            return this;
         }
 
         internal void AddGroupByAlias(string fieldName, string projectedName)
@@ -497,69 +363,6 @@ namespace Raven.Client.Documents.Session
             NegateIfNeeded(null);
 
             WhereTokens.AddLast(TrueToken.Instance);
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string preTag, string postTag)
-        {
-            SetHighlighterTags(preTag, postTag);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.SetHighlighterTags(string[] preTags, string[] postTags)
-        {
-            SetHighlighterTags(preTags, postTags);
-            return this;
-        }
-
-        public IDocumentQueryCustomization NoTracking()
-        {
-            DisableEntitiesTracking = true;
-            return this;
-        }
-
-        public IDocumentQueryCustomization NoCaching()
-        {
-            DisableCaching = true;
-            return this;
-        }
-
-        public IDocumentQueryCustomization ShowTimings()
-        {
-            ShowQueryTimings = true;
-            return this;
-        }
-
-        public void SetHighlighterTags(string preTag, string postTag)
-        {
-            SetHighlighterTags(new[] { preTag }, new[] { postTag });
-        }
-
-        public void Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, fragmentsField));
-        }
-
-        public void Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
-            //fieldHighlightings = Highlightings.AddField(fieldName);
-        }
-
-        public void Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings fieldHighlightings)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //HighlighterKeyName = fieldKeyName;
-            //HighlightedFields.Add(new HighlightedField(fieldName, fragmentLength, fragmentCount, null));
-            //fieldHighlightings = Highlightings.AddField(fieldName);
-        }
-
-        public void SetHighlighterTags(string[] preTags, string[] postTags)
-        {
-            throw new NotImplementedException("This feature is not yet implemented");
-            //HighlighterPreTags = preTags;
-            //HighlighterPostTags = postTags;
         }
 
         /// <summary>
@@ -1055,48 +858,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name = "waitTimeout">The wait timeout.</param>
         /// <returns></returns>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOfNow(waitTimeout);
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff etag.
-        /// </summary>
-        /// <param name="cutOffEtag">The cut off etag.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long cutOffEtag)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag);
-            return this;
-        }
-
-        /// <summary>
-        /// Instructs the query to wait for non stale results as of the cutoff etag for the specified timeout.
-        /// </summary>
-        /// <param name="cutOffEtag">The cut off etag.</param>
-        /// <param name="waitTimeout">The wait timeout.</param>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOf(long cutOffEtag, TimeSpan waitTimeout)
-        {
-            WaitForNonStaleResultsAsOf(cutOffEtag, waitTimeout);
-            return this;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now.
-        /// </summary>
-        /// <returns></returns>
-        IDocumentQueryCustomization IDocumentQueryCustomization.WaitForNonStaleResultsAsOfNow()
-        {
-            WaitForNonStaleResultsAsOfNow();
-            return this;
-        }
-
-        /// <summary>
-        ///   Instructs the query to wait for non stale results as of now for the specified timeout.
-        /// </summary>
-        /// <param name = "waitTimeout">The wait timeout.</param>
-        /// <returns></returns>
         public void WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout)
         {
             TheWaitForNonStaleResults = true;
@@ -1188,10 +949,6 @@ If you really want to do in memory filtering on the data returned from the query
                 WaitForNonStaleResultsAsOfNow = TheWaitForNonStaleResultsAsOfNow,
                 WaitForNonStaleResults = TheWaitForNonStaleResults,
                 WaitForNonStaleResultsTimeout = Timeout,
-                HighlightedFields = HighlightedFields.Select(x => x.Clone()).ToArray(),
-                HighlighterPreTags = HighlighterPreTags.ToArray(),
-                HighlighterPostTags = HighlighterPostTags.ToArray(),
-                HighlighterKeyName = HighlighterKeyName,
                 QueryParameters = QueryParameters,
                 DisableCaching = DisableCaching,
                 ShowTimings = ShowQueryTimings,
@@ -1351,58 +1108,6 @@ If you really want to do in memory filtering on the data returned from the query
         public void AddRootType(Type type)
         {
             RootTypes.Add(type);
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder(string fieldName, bool descending, OrderingType ordering)
-        {
-            if (descending)
-                OrderByDescending(fieldName, ordering);
-            else
-                OrderBy(fieldName, ordering);
-
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending, OrderingType ordering)
-        {
-            var fieldName = GetMemberQueryPath(propertySelector.Body);
-            if (descending)
-                OrderByDescending(fieldName, ordering);
-            else
-                OrderBy(fieldName, ordering);
-
-            return this;
-        }
-
-        /// <summary>
-        /// Order the search results randomly
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering()
-        {
-            RandomOrdering();
-            return this;
-        }
-
-        /// <summary>
-        /// Order the search results randomly using the specified seed
-        /// this is useful if you want to have repeatable random queries
-        /// </summary>
-        IDocumentQueryCustomization IDocumentQueryCustomization.RandomOrdering(string seed)
-        {
-            RandomOrdering(seed);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName)
-        {
-            CustomSortUsing(typeName, false);
-            return this;
-        }
-
-        IDocumentQueryCustomization IDocumentQueryCustomization.CustomSortUsing(string typeName, bool descending)
-        {
-            CustomSortUsing(typeName, descending);
-            return this;
         }
 
         public string GetMemberQueryPathForOrderBy(Expression expression)
@@ -1817,76 +1522,6 @@ If you really want to do in memory filtering on the data returned from the query
                 if (replaced == false)
                     SelectTokens.AddLast(fieldsToFetch);
             }
-        }
-
-        protected void WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits, double distErrorPercent)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
-
-            WhereTokens.AddLast(WhereToken.Within(fieldName, ShapeToken.Circle(AddQueryParameter(radius), AddQueryParameter(latitude), AddQueryParameter(longitude), radiusUnits), distErrorPercent));
-        }
-
-        protected void Spatial(string fieldName, string shapeWKT, SpatialRelation relation, double distErrorPercent)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
-
-            var wktToken = ShapeToken.Wkt(AddQueryParameter(shapeWKT));
-            QueryToken relationToken;
-            switch (relation)
-            {
-                case SpatialRelation.Within:
-                    relationToken = WhereToken.Within(fieldName, wktToken, distErrorPercent);
-                    break;
-                case SpatialRelation.Contains:
-                    relationToken = WhereToken.Contains(fieldName, wktToken, distErrorPercent);
-                    break;
-                case SpatialRelation.Disjoint:
-                    relationToken = WhereToken.Disjoint(fieldName, wktToken, distErrorPercent);
-                    break;
-                case SpatialRelation.Intersects:
-                    relationToken = WhereToken.Intersects(fieldName, wktToken, distErrorPercent);
-                    break;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(relation), relation, null);
-            }
-
-            WhereTokens.AddLast(relationToken);
-        }
-
-        public void Spatial(string fieldName, SpatialCriteria criteria)
-        {
-            fieldName = EnsureValidFieldName(fieldName, isNestedPath: false);
-
-            AppendOperatorIfNeeded(WhereTokens);
-            NegateIfNeeded(fieldName);
-
-            WhereTokens.AddLast(criteria.ToQueryToken(fieldName, AddQueryParameter));
-        }
-
-        public void OrderByDistance(string fieldName, double latitude, double longitude)
-        {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
-        }
-
-        public void OrderByDistance(string fieldName, string shapeWkt)
-        {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceAscending(fieldName, AddQueryParameter(shapeWkt)));
-        }
-
-        public void OrderByDistanceDescending(string fieldName, double latitude, double longitude)
-        {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(latitude), AddQueryParameter(longitude)));
-        }
-
-        public void OrderByDistanceDescending(string fieldName, string shapeWkt)
-        {
-            OrderByTokens.AddLast(OrderByToken.CreateDistanceDescending(fieldName, AddQueryParameter(shapeWkt)));
         }
     }
 }

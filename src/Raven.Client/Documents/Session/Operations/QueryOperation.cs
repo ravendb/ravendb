@@ -21,7 +21,6 @@ namespace Raven.Client.Documents.Session.Operations
         private readonly bool _metadataOnly;
         private readonly bool _indexEntriesOnly;
         private readonly TimeSpan? _timeout;
-        private readonly Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> _transformResults;
         private QueryResult _currentQueryResults;
         private readonly string[] _projectionFields;
         private Stopwatch _sp;
@@ -31,7 +30,6 @@ namespace Raven.Client.Documents.Session.Operations
 
         public QueryOperation(InMemoryDocumentSessionOperations session, string indexName, IndexQuery indexQuery,
                               string[] projectionFields, bool waitForNonStaleResults, TimeSpan? timeout,
-                              Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> transformResults,
                               bool disableEntitiesTracking, bool metadataOnly = false, bool indexEntriesOnly = false)
         {
             _session = session;
@@ -39,7 +37,6 @@ namespace Raven.Client.Documents.Session.Operations
             _indexQuery = indexQuery;
             _waitForNonStaleResults = waitForNonStaleResults;
             _timeout = timeout;
-            _transformResults = transformResults;
             _projectionFields = projectionFields;
             DisableEntitiesTracking = disableEntitiesTracking;
             _metadataOnly = metadataOnly;
@@ -119,10 +116,7 @@ namespace Raven.Client.Documents.Session.Operations
             if (DisableEntitiesTracking == false)
                 _session.RegisterMissingIncludes(queryResult.Results, queryResult.IncludedPaths);
 
-            if (_transformResults == null)
-                return list;
-
-            return _transformResults(_indexQuery, list.Cast<object>()).Cast<T>().ToList();
+            return list;
         }
 
         internal static T Deserialize<T>(string id, BlittableJsonReaderObject document, BlittableJsonReaderObject metadata, string[] projectionFields, bool disableEntitiesTracking, InMemoryDocumentSessionOperations session)
@@ -144,7 +138,7 @@ namespace Raven.Client.Documents.Session.Operations
                 }
 
                 if (document.TryGetMember(projectionFields[0], out object inner) == false)
-                        return default(T);
+                    return default(T);
 
                 var innerJson = inner as BlittableJsonReaderObject;
                 if (innerJson != null)
@@ -170,7 +164,7 @@ namespace Raven.Client.Documents.Session.Operations
 
         public void EnsureIsAcceptableAndSaveResult(QueryResult result)
         {
-            if(result == null)
+            if (result == null)
                 throw new IndexDoesNotExistException("Could not find index " + _indexName);
 
             if (_waitForNonStaleResults && result.IsStale)
@@ -179,7 +173,7 @@ namespace Raven.Client.Documents.Session.Operations
                 {
                     _sp.Stop();
                     var msg = $"Waited for {_sp.ElapsedMilliseconds:#,#;;0}ms for the query to return non stale result.";
-                    
+
                     throw new TimeoutException(msg);
                 }
             }

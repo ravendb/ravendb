@@ -353,10 +353,6 @@ namespace Raven.Server.Documents.Queries
                 Start = query.Start,
                 WaitForNonStaleResultsTimeout = options.StaleTimeout,
                 PageSize = int.MaxValue,
-                HighlighterPreTags = query.HighlighterPreTags,
-                HighlighterPostTags = query.HighlighterPostTags,
-                HighlightedFields = query.HighlightedFields,
-                HighlighterKeyName = query.HighlighterKeyName,
                 QueryParameters = query.QueryParameters
             };
         }
