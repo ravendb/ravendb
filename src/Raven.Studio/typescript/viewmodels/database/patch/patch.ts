@@ -354,10 +354,11 @@ class patch extends viewModelBase {
     private initValidation() {
         const doc = this.patchDocument();
 
+        /* TODO
         doc.script.extend({
             required: true,
             aceValidation: true
-        });
+        });*/
         
         doc.query.extend({
             required: {
@@ -475,6 +476,7 @@ class patch extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        /* TODO
 
         const grid = this.gridController();
         grid.withEvaluationContext(this.customFunctionsContext);
@@ -527,6 +529,7 @@ class patch extends viewModelBase {
         });
 
         this.fetcher.subscribe(() => grid.reset());
+        */
     }
 
     private showPreview(doc: document) {
