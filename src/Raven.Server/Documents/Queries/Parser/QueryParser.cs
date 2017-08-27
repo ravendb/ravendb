@@ -303,30 +303,7 @@ namespace Raven.Server.Documents.Queries.Parser
             QueryExpression filter = null;
             bool index = false;
             bool isQuoted;
-            if (Scanner.TryScan('(')) // FROM ( Collection, filter )
-            {
-                isQuoted = false;
-                if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
-                    ThrowParseException("Expected FROM source");
-
-                field = new FieldToken
-                {
-                    TokenLength = Scanner.TokenLength,
-                    TokenStart = Scanner.TokenStart,
-                    EscapeChars = Scanner.EscapeChars,
-                    IsQuoted = isQuoted
-                };
-
-                if (Scanner.TryScan(',') == false)
-                    ThrowParseException("Expected COMMA in filtered FORM clause after source");
-
-                if (Expression(out filter) == false)
-                    ThrowParseException("Expected filter in filtered FORM clause");
-
-                if (Scanner.TryScan(')') == false)
-                    ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
-            }
-            else if (Scanner.TryScan("INDEX"))
+            if (Scanner.TryScan("INDEX"))
             {
                 isQuoted = false;
                 if (!Scanner.Identifier() && !(isQuoted = Scanner.String()))
@@ -355,6 +332,17 @@ namespace Raven.Server.Documents.Queries.Parser
                     EscapeChars = Scanner.EscapeChars,
                     IsQuoted = isQuoted
                 };
+
+                if (Scanner.TryScan('(')) // FROM  Collection ( filter )
+                {
+                    if (Expression(out filter) == false)
+                        ThrowParseException("Expected filter in filtered FORM clause");
+
+                    if (Scanner.TryScan(')') == false)
+                        ThrowParseException("Expected closing parenthesis in filtered FORM clause after filter");
+                }
+
+             
             }
 
 
