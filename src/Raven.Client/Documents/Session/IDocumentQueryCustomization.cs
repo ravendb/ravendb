@@ -138,14 +138,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 
         /// <summary>
-        ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
-        ///     them)
-        ///     to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be
-        ///     called just once for each document in the result set
-        /// </summary>
-        IDocumentQueryCustomization SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
-        /// <summary>
         ///     Sets the tags to highlight matches with.
         /// </summary>
         /// <param name="preTag">Prefix tag.</param>
@@ -164,11 +156,6 @@ namespace Raven.Client.Documents.Session
         ///     results). Default: false
         /// </summary>
         IDocumentQueryCustomization ShowTimings();
-
-        /// <summary>
-        ///     Execute the transformation function on the results of this query.
-        /// </summary>
-        IDocumentQueryCustomization TransformResults(Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 
         /// <summary>
         ///     EXPERT ONLY: Instructs the query to wait for non stale results.

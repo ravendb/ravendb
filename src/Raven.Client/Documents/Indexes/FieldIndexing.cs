@@ -30,11 +30,6 @@ namespace Raven.Client.Documents.Indexes
         /// <summary>
         /// Index this field using the default internal analyzer: LowerCaseKeywordAnalyzer
         /// </summary>
-        Default,
-
-        [Obsolete("This value is only here so we can deserialize old values from Smuggler", true)]
-        NotAnalyzed = Exact,
-        [Obsolete("This value is only here so we can deserialize old values from Smuggler", true)]
-        Analyzed = Search
+        Default
     }
 }

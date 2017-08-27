@@ -278,10 +278,8 @@ namespace Voron
                 {
                     tx.UpdateRootsIfNeeded(root);
 
-                    string _dbIdBuffer = null;
                     using (var treesTx = new Transaction(tx))
                     {
-
                         var metadataTree = treesTx.ReadTree(Constants.MetadataTreeNameSlice);
                         if (metadataTree == null)
                             VoronUnrecoverableErrorException.Raise(this,
@@ -300,7 +298,7 @@ namespace Voron
 
                         var databseGuidId = _options.GenerateNewDatabaseId == false ? new Guid(buffer) : Guid.NewGuid();
                         DbId = databseGuidId;
-                        
+
                         FillBase64Id(databseGuidId);
 
                         if (_options.GenerateNewDatabaseId)
@@ -339,7 +337,7 @@ namespace Voron
             }
         }
 
-        public string Base64Id { get; } = new string (' ', 22);
+        public string Base64Id { get; } = new string(' ', 22);
 
         private void CreateNewDatabase()
         {
@@ -1009,7 +1007,7 @@ namespace Voron
             {
                 try
                 {
-                    if(_env.Options.EncryptionEnabled)
+                    if (_env.Options.EncryptionEnabled)
                         Sodium.ZeroMemory(_tmp.TempPagePointer, _tmp.PageSize);
                     _env._tempPagesPool.Enqueue(_tmp);
                 }

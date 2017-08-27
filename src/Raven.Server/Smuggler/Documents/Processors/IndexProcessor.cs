@@ -7,6 +7,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Json;
+using Raven.Server.Smuggler.Documents.Data;
 using Sparrow.Json;
 
 namespace Raven.Server.Smuggler.Documents.Processors
@@ -149,7 +150,26 @@ namespace Raven.Server.Smuggler.Documents.Processors
                 if (indexDefinition.Fields.ContainsKey(kvp.Key) == false)
                     indexDefinition.Fields[kvp.Key] = new IndexFieldOptions();
 
-                indexDefinition.Fields[kvp.Key].Indexing = kvp.Value;
+                FieldIndexing indexing;
+                switch (kvp.Value)
+                {
+                    case LegacyIndexDefinition.LegacyFieldIndexing.No:
+                        indexing = FieldIndexing.No;
+                        break;
+                    case LegacyIndexDefinition.LegacyFieldIndexing.Analyzed:
+                        indexing = FieldIndexing.Search;
+                        break;
+                    case LegacyIndexDefinition.LegacyFieldIndexing.NotAnalyzed:
+                        indexing = FieldIndexing.Exact;
+                        break;
+                    case LegacyIndexDefinition.LegacyFieldIndexing.Default:
+                        indexing = FieldIndexing.Default;
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+
+                indexDefinition.Fields[kvp.Key].Indexing = indexing;
             }
 
             foreach (var kvp in legacyIndexDefinition.SpatialIndexes)

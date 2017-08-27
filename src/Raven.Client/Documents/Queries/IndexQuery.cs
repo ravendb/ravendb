@@ -32,10 +32,6 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(CutoffEtag);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
-                hasher.Write(HighlighterKeyName);
-                hasher.Write(HighlighterPreTags);
-                hasher.Write(HighlighterPostTags);
-                hasher.Write(HighlightedFields);
                 hasher.Write(QueryParameters);
                 
                 return hasher.GetHash();
@@ -45,26 +41,6 @@ namespace Raven.Client.Documents.Queries
 
     public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
-        /// <summary>
-        /// Array of fields containing highlighting information.
-        /// </summary>
-        public HighlightedField[] HighlightedFields { get; set; }
-
-        /// <summary>
-        /// Array of highlighter pre tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPreTags { get; set; }
-
-        /// <summary>
-        /// Array of highlighter post tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPostTags { get; set; }
-
-        /// <summary>
-        /// Highlighter key name.
-        /// </summary>
-        public string HighlighterKeyName { get; set; }
-
         /// <summary>
         /// Whether we should disable caching of query results
         /// </summary>
@@ -108,10 +84,6 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-                   EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
-                   EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
-                   EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
-                   Equals(HighlighterKeyName, other.HighlighterKeyName) &&
                    ShowTimings == other.ShowTimings &&
                    DisableCaching.Equals(other.DisableCaching) &&
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
@@ -129,10 +101,6 @@ namespace Raven.Client.Documents.Queries
             unchecked
             {
                 var hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterKeyName?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
                 hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();

@@ -430,13 +430,6 @@ namespace Raven.Server.Json
             writer.WriteBool(query.ExplainScores);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.HighlighterKeyName));
-            if (query.HighlighterKeyName != null)
-                writer.WriteString(query.HighlighterKeyName);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.PageSize));
             writer.WriteInteger(query.PageSize);
             writer.WriteComma();
@@ -473,78 +466,6 @@ namespace Raven.Server.Json
                 writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());
             else
                 writer.WriteNull();
-            writer.WriteComma();
-
-            var isFirstInternal = true;
-
-            writer.WritePropertyName(nameof(query.HighlightedFields));
-            writer.WriteStartArray();
-            if (query.HighlightedFields != null)
-            {
-                foreach (var field in query.HighlightedFields)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(field.Field));
-                    writer.WriteString(field.Field);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentCount));
-                    writer.WriteInteger(field.FragmentCount);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentLength));
-                    writer.WriteInteger(field.FragmentLength);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentsField));
-                    writer.WriteString(field.FragmentsField);
-
-                    writer.WriteEndObject();
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.HighlighterPostTags));
-            writer.WriteStartArray();
-            if (query.HighlighterPostTags != null)
-            {
-                isFirstInternal = true;
-                foreach (var tag in query.HighlighterPostTags)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(tag);
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.HighlighterPreTags));
-            writer.WriteStartArray();
-            if (query.HighlighterPreTags != null)
-            {
-                isFirstInternal = true;
-                foreach (var tag in query.HighlighterPreTags)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(tag);
-                }
-            }
-            writer.WriteEndArray();
 
             writer.WriteEndObject();
         }
