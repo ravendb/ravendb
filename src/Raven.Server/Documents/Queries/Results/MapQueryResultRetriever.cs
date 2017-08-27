@@ -1,6 +1,7 @@
 ﻿using System;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Results
@@ -10,8 +11,8 @@ namespace Raven.Server.Documents.Queries.Results
 
         private readonly DocumentsOperationContext _context;
 
-        public MapQueryResultRetriever(DocumentDatabase database,IndexQueryServerSide query, DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(database,query, fieldsToFetch, documentsStorage, context, false)
+        public MapQueryResultRetriever(DocumentDatabase database,IndexQueryServerSide query, DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+            : base(database,query, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand)
         {
             _context = context;
         }
@@ -40,12 +41,12 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
         {
-            return _documentsStorage.Get(_context, id);
+            return DocumentsStorage.Get(_context, id);
         }
 
         protected override Document LoadDocument(string id)
         {
-            return _documentsStorage.Get(_context, id);
+            return DocumentsStorage.Get(_context, id);
         }
     }
 }

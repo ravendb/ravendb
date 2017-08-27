@@ -123,6 +123,14 @@ namespace SlowTests.Queries
         [InlineData("from Employees where FirstName = 'Phoebe' include ReportsTo")]
         [InlineData("from Employees as e where e.FirstName = 'Phoebe' include e.ReportsTo")]
         [InlineData("from Employees where FirstName = 'Oscar' include ReportsTo")]
+        [InlineData(@"
+declare function project(e){
+    include(e.ReportsTo)
+    return e;
+}
+from Employees as e 
+where e.FirstName = 'Oscar'
+select project(e)")]
         public void Includes(string q)
         {
             using (var store = GetLoadedStore())

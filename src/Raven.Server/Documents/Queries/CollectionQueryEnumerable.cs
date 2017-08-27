@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Linq;
 using Lucene.Net.Search;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Results;
 using Raven.Server.ServerWide.Context;
@@ -20,11 +21,12 @@ namespace Raven.Server.Documents.Queries
         private readonly DocumentsStorage _documents;
         private readonly FieldsToFetch _fieldsToFetch;
         private readonly DocumentsOperationContext _context;
+        private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly string _collection;
         private readonly IndexQueryServerSide _query;
         private readonly bool _isAllDocsCollection;
 
-        public CollectionQueryEnumerable(DocumentDatabase database,DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context)
+        public CollectionQueryEnumerable(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
             _documents = documents;
@@ -33,11 +35,12 @@ namespace Raven.Server.Documents.Queries
             _isAllDocsCollection = collection == Constants.Documents.Collections.AllDocumentsCollection;
             _query = query;
             _context = context;
+            _includeDocumentsCommand = includeDocumentsCommand;
         }
 
         public IEnumerator<Document> GetEnumerator()
         {
-            return new Enumerator(_database,_documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context);
+            return new Enumerator(_database, _documents, _fieldsToFetch, _collection, _isAllDocsCollection, _query, _context, _includeDocumentsCommand);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -66,7 +69,7 @@ namespace Raven.Server.Documents.Queries
             private readonly Sort _sort;
             private readonly MapQueryResultRetriever _resultsRetriever;
 
-            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context)
+            public Enumerator(DocumentDatabase database, DocumentsStorage documents, FieldsToFetch fieldsToFetch, string collection, bool isAllDocsCollection, IndexQueryServerSide query, DocumentsOperationContext context, IncludeDocumentsCommand includeDocumentsCommand)
             {
                 _documents = documents;
                 _fieldsToFetch = fieldsToFetch;
@@ -85,7 +88,7 @@ namespace Raven.Server.Documents.Queries
 
                 _sort = ExtractSortFromQuery(query);
 
-                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch);
+                _resultsRetriever = new MapQueryResultRetriever(database, query, documents, context, fieldsToFetch,includeDocumentsCommand);
             }
 
             private static Sort ExtractSortFromQuery(IndexQueryServerSide query)

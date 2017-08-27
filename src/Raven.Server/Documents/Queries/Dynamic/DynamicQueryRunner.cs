@@ -120,30 +120,27 @@ namespace Raven.Server.Documents.Queries.Dynamic
             resultToFill.IncludedPaths = query.Metadata.Includes;
 
             var includeDocumentsCommand = new IncludeDocumentsCommand(_documents, _context, query.Metadata.Includes);
+            var fieldsToFetch = new FieldsToFetch(query, null);
+            var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context, includeDocumentsCommand);
+            var cancellationToken = _token.Token;
 
+            try
             {
-                var fieldsToFetch = new FieldsToFetch(query, null);
-                var documents = new CollectionQueryEnumerable(_database, _documents, fieldsToFetch, collection, query, _context);
-                var cancellationToken = _token.Token;
-
-                try
+                foreach (var document in documents)
                 {
-                    foreach (var document in documents)
-                    {
-                        cancellationToken.ThrowIfCancellationRequested();
+                    cancellationToken.ThrowIfCancellationRequested();
 
-                        resultToFill.AddResult(document);
+                    resultToFill.AddResult(document);
 
-                        includeDocumentsCommand.Gather(document);
-                    }
+                    includeDocumentsCommand.Gather(document);
                 }
-                catch (Exception e)
-                {
-                    if (resultToFill.SupportsExceptionHandling == false)
-                        throw;
+            }
+            catch (Exception e)
+            {
+                if (resultToFill.SupportsExceptionHandling == false)
+                    throw;
 
-                    resultToFill.HandleException(e);
-                }
+                resultToFill.HandleException(e);
             }
 
             includeDocumentsCommand.Fill(resultToFill.Includes);

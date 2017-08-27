@@ -1711,19 +1711,24 @@ namespace Raven.Server.Documents.Indexes
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
                             IEnumerable<Document> documents;
 
+                            var includeDocumentsCommand = new IncludeDocumentsCommand(
+                                DocumentDatabase.DocumentsStorage, documentsContext,
+                                query.Metadata.Includes);
+
+                            var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
+
                             if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
+                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
+                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
 
-                            var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                DocumentDatabase.DocumentsStorage, documentsContext, query.Metadata.Includes);
+                         
 
                             try
                             {
@@ -1930,7 +1935,7 @@ namespace Raven.Server.Documents.Indexes
                         var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
                             documentsContext, query.Includes);
                         var documents = reader.MoreLikeThis(query, stopWords,
-                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition)), documentsContext,
+                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition), includeDocumentsCommand), documentsContext,
                             GetOrAddSpatialField, token.Token);
 
                         foreach (var document in documents)
@@ -2249,7 +2254,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract IQueryResultRetriever
-            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
+            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
 
         protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {

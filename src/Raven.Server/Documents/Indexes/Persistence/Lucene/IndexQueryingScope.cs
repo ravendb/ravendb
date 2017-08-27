@@ -122,8 +122,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool TryIncludeInResults(Document document)
         {
-            //if (shouldIncludeInResults(indexQueryResult) == false)
-            //    return false;
             if (document == null)
                 return false;
 

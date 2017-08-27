@@ -60,10 +60,11 @@ namespace Raven.Server.Documents.Queries
             }
             if (selectField.Function != null)
             {
-
-                var fieldToFetch = new FieldToFetch(string.Empty, selectField, selectField.Alias,
-                    canExtractFromIndex: false, isDocumentId: false);
-                fieldToFetch.FunctionArgs = new FieldToFetch[selectField.FunctionArgs.Length];
+                var fieldToFetch = new FieldToFetch(selectField.Name, selectField, selectField.Alias,
+                    canExtractFromIndex: false, isDocumentId: false)
+                {
+                    FunctionArgs = new FieldToFetch[selectField.FunctionArgs.Length]
+                };
                 for (int j = 0; j < selectField.FunctionArgs.Length; j++)
                 {
                     bool ignored = false;

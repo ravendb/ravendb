@@ -10,6 +10,7 @@ using Raven.Server.Json;
 using System.IO;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.ServerWide.Context;
@@ -23,20 +24,22 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly DocumentDatabase _database;
         private readonly IndexQueryServerSide _query;
         private readonly JsonOperationContext _context;
+        private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
         private Dictionary<string, (Document Doc, BlittableJsonReaderObject ConvertedCache)> _loadedDocuments;
         private HashSet<string> _loadedDocumentIds;
 
-        protected readonly DocumentsStorage _documentsStorage;
+        protected readonly DocumentsStorage DocumentsStorage;
 
         protected readonly FieldsToFetch FieldsToFetch;
 
-        protected QueryResultRetrieverBase(DocumentDatabase database,IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults)
+        protected QueryResultRetrieverBase(DocumentDatabase database, IndexQueryServerSide query, FieldsToFetch fieldsToFetch, DocumentsStorage documentsStorage, JsonOperationContext context, bool reduceResults, IncludeDocumentsCommand includeDocumentsCommand)
         {
             _database = database;
             _query = query;
             _context = context;
-            _documentsStorage = documentsStorage;
+            _includeDocumentsCommand = includeDocumentsCommand;
+            DocumentsStorage = documentsStorage;
 
             FieldsToFetch = fieldsToFetch;
             _blittableTraverser = reduceResults ? BlittableJsonTraverser.FlatMapReduceResults : BlittableJsonTraverser.Default;
@@ -139,15 +142,19 @@ namespace Raven.Server.Documents.Queries.Results
             {
                 if (TryGetValue(fieldToFetch, doc, out var fieldVal))
                 {
-                    if (fieldsToFetch.SingleBodyOrMethodWithNoAlias && fieldVal is BlittableJsonReaderObject nested)
+                    if (fieldsToFetch.SingleBodyOrMethodWithNoAlias)
                     {
-                        doc.Data = nested;
+                        if (fieldVal is BlittableJsonReaderObject nested)
+                            doc.Data = nested;
+                        else
+                            ThrowInvalidQueryBodyResponse(fieldVal);
                         doc.IndexScore = score;
                         return doc;
                     }
                     if (fieldVal is List<object> list)
                         fieldVal = new DynamicJsonArray(list);
-                    result[fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value] = fieldVal;
+                    var key = fieldToFetch.ProjectedName ?? fieldToFetch.Name.Value;
+                    result[key] = fieldVal;
                 }
             }
 
@@ -155,6 +162,11 @@ namespace Raven.Server.Documents.Queries.Results
                 result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Id;
 
             return ReturnProjection(result, doc, score, context);
+        }
+
+        private static void ThrowInvalidQueryBodyResponse(object fieldVal)
+        {
+            throw new InvalidOperationException("Query returning a single function call result must return an object, but got: " + (fieldVal ?? "null"));
         }
 
         private static Document ReturnProjection(DynamicJsonValue result, Document doc, float score, JsonOperationContext context)
@@ -423,11 +435,12 @@ namespace Raven.Server.Documents.Queries.Results
             using (_database.Scripts.GetScriptRunner(key, true, out var run))
             using(var result = run.Run(_context as DocumentsOperationContext, methodName, args))
             {
+                _includeDocumentsCommand?.AddRange(run.Includes);
+
                 if (result.IsNull)
                     return null;
 
                 return run.Translate(result, _context);
-                
             }
         }
 

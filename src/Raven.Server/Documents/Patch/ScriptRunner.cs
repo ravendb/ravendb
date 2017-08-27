@@ -73,6 +73,7 @@ namespace Raven.Server.Documents.Patch
             public bool DebugMode;
             public List<string> DebugOutput;
             public bool PutOrDeleteCalled;
+            public HashSet<string> Includes;
 
             public bool ReadOnly;
 
@@ -114,9 +115,11 @@ namespace Raven.Server.Documents.Patch
                 });
                 ScriptEngine.SetValue("output", new ClrFunctionInstance(ScriptEngine, OutputDebug));
 
+                ScriptEngine.SetValue("include", new ClrFunctionInstance(ScriptEngine, IncludeDoc));
                 ScriptEngine.SetValue("load", new ClrFunctionInstance(ScriptEngine, LoadDocument));
                 ScriptEngine.SetValue("del", new ClrFunctionInstance(ScriptEngine, DeleteDocument));
                 ScriptEngine.SetValue("put", new ClrFunctionInstance(ScriptEngine, PutDocument));
+
 
                 ScriptEngine.SetValue("id", new ClrFunctionInstance(ScriptEngine, GetDocumentId));
                 ScriptEngine.SetValue("lastModified", new ClrFunctionInstance(ScriptEngine, GetLastModified));
@@ -132,6 +135,38 @@ namespace Raven.Server.Documents.Patch
                         throw new JavaScriptParseException("Failed to parse: " + Environment.NewLine + script, e);
                     }
                 }
+            }
+
+            private JsValue IncludeDoc(JsValue self, JsValue[] args)
+            {
+                if (args.Length != 1)
+                    throw new InvalidOperationException("include(id) must be called with a single argument");
+
+                if (args[0].IsNull() || args[0].IsUndefined())
+                    return args[0];
+
+                if (args[0].IsArray())// recursive call ourselves
+                {
+                    var array = args[0].AsArray();
+                    foreach (var pair in array.GetOwnProperties())
+                    {
+                        args[0] = pair.Value.Value;
+                        if (args[0].IsString())
+                            IncludeDoc(self, args);
+                    }
+                    return self;
+                }
+
+                if (args[0].IsString() == false)
+                    throw new InvalidOperationException("include(doc) must be called with an string or string array argument");
+
+                var id = args[0].AsString();
+
+                if(Includes == null)
+                    Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                Includes.Add(id);
+                
+                return self;
             }
 
             public override string ToString()
@@ -345,16 +380,7 @@ namespace Raven.Server.Documents.Patch
             public ScriptRunnerResult Run(DocumentsOperationContext ctx, string method, object[] args)
             {
                 _context = ctx;
-                if (DebugMode)
-                {
-                    if (DebugOutput == null)
-                        DebugOutput = new List<string>();
-                    if (DebugActions == null)
-                        DebugActions = new PatchDebugActions();
-                }
-                PutOrDeleteCalled = false;
-                ScriptEngine.ResetStatementsCount();
-                ScriptEngine.ResetTimeoutTicks();
+                Reset();
                 if (_args.Length != args.Length)
                     _args = new JsValue[args.Length];
                 for (var i = 0; i < args.Length; i++)
@@ -367,18 +393,39 @@ namespace Raven.Server.Documents.Patch
                 }
                 catch (JavaScriptException e)
                 {
-                    string msg;
-                    if (e.Error.IsString())
-                        msg = e.Error.AsString();
-                    else if (e.Error.IsObject())
-                        msg = JsBlittableBridge.Translate(ctx, e.Error.AsObject()).ToString();
-                    else
-                        msg = e.Error.ToString();
-
-                    msg = "At " + e.Column + ":" + e.LineNumber + Environment.NewLine + msg;
-                    throw new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
+                    throw CreateFullError(ctx, e);
                 }
                 return new ScriptRunnerResult(this, result);
+            }
+
+            private static Client.Exceptions.Documents.Patching.JavaScriptException CreateFullError(DocumentsOperationContext ctx, JavaScriptException e)
+            {
+                string msg;
+                if (e.Error.IsString())
+                    msg = e.Error.AsString();
+                else if (e.Error.IsObject())
+                    msg = JsBlittableBridge.Translate(ctx, e.Error.AsObject()).ToString();
+                else
+                    msg = e.Error.ToString();
+
+                msg = "At " + e.Column + ":" + e.LineNumber + Environment.NewLine + msg;
+                var javaScriptException = new Client.Exceptions.Documents.Patching.JavaScriptException(msg, e);
+                return javaScriptException;
+            }
+
+            private void Reset()
+            {
+                if (DebugMode)
+                {
+                    if (DebugOutput == null)
+                        DebugOutput = new List<string>();
+                    if (DebugActions == null)
+                        DebugActions = new PatchDebugActions();
+                }
+                Includes?.Clear();
+                PutOrDeleteCalled = false;
+                ScriptEngine.ResetStatementsCount();
+                ScriptEngine.ResetTimeoutTicks();
             }
 
             public object Translate(JsonOperationContext context, object o)

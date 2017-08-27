@@ -1,5 +1,6 @@
 ﻿using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -9,17 +10,17 @@ namespace Raven.Server.Documents.Queries.Results
     {
         private readonly JsonOperationContext _context;
 
-        public MapReduceQueryResultRetriever(DocumentDatabase database,IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(database, query, fieldsToFetch, documentsStorage, context, true)
+        public MapReduceQueryResultRetriever(DocumentDatabase database, IndexQueryServerSide query, DocumentsStorage documentsStorage, JsonOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+            : base(database, query, fieldsToFetch, documentsStorage, context, true, includeDocumentsCommand)
         {
             _context = context;
         }
 
         protected override Document LoadDocument(string id)
         {
-            if(_documentsStorage != null && 
+            if(DocumentsStorage != null && 
                 _context is DocumentsOperationContext ctx)
-                return _documentsStorage.Get(ctx, id);
+                return DocumentsStorage.Get(ctx, id);
             // can happen during some debug endpoints that should never load a document
             return null; 
 
