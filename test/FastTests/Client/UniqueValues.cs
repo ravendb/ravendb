@@ -15,7 +15,7 @@ namespace FastTests.Client
             var putCmd = new CompareExchangeOperation<string>("test", "Karmel", 0);
             var serverOperationExecutor = new ServerOperationExecutor(store);
             serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetCompareValue<string>("test");
+            var getCmd = new GetClusterValue<string>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value);
         }
@@ -31,7 +31,7 @@ namespace FastTests.Client
             }, 0);
             var serverOperationExecutor = new ServerOperationExecutor(store);
             serverOperationExecutor.Send(putCmd);
-            var getCmd = new GetCompareValue<User>("test");
+            var getCmd = new GetClusterValue<User>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
         }
@@ -54,8 +54,8 @@ namespace FastTests.Client
             serverOperationExecutor.Send(putCmd);
             serverOperationExecutor2.Send(putCmd2);
 
-            var getCmd = new GetCompareValue<User>("test");
-            var getCmd2 = new GetCompareValue<User>("test2");
+            var getCmd = new GetClusterValue<User>("test");
+            var getCmd2 = new GetClusterValue<User>("test2");
             var res = serverOperationExecutor.Send(getCmd);
             var res2 = serverOperationExecutor.Send(getCmd2);
             Assert.Equal("Karmel", res.Value.Name);
@@ -82,7 +82,7 @@ namespace FastTests.Client
             {
                 serverOperationExecutor2.Send(putCmd2);
             });
-            var getCmd = new GetCompareValue<User>("test");
+            var getCmd = new GetClusterValue<User>("test");
             var res = serverOperationExecutor.Send(getCmd);
             Assert.Equal("Karmel", res.Value.Name);
         }

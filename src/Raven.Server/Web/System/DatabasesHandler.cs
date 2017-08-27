@@ -195,22 +195,22 @@ namespace Raven.Server.Web.System
             return Task.CompletedTask;
         }
 
-        [RavenAction("/cluster/cmpxchg", "GET", AuthorizationStatus.ValidUser)]
-        public Task GetUniqueValue()
+        [RavenAction("/cluster/cmpxchg", "GET", AuthorizationStatus.ClusterAdmin)]
+        public Task GetCmpXchgValue()
         {
             var key = GetStringQueryString("key");
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var res = ServerStore.Cluster.GetUniqueItem(context, key);
+                var res = ServerStore.Cluster.GetCmpXchg(context, key);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
-                        [nameof(GetRawCompareValueResult.Index)] = res.Index,
-                        [nameof(GetRawCompareValueResult.Value)] = res.Value
+                        [nameof(RawClusterValueResult.Index)] = res.Index,
+                        [nameof(RawClusterValueResult.Value)] = res.Value
                     });
                     writer.Flush();
                 }
@@ -218,8 +218,8 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/cluster/cmpxchg", "PUT", AuthorizationStatus.ValidUser)]
-        public async Task PutUniqueValue()
+        [RavenAction("/cluster/cmpxchg", "PUT", AuthorizationStatus.ClusterAdmin)]
+        public async Task PutCmpXchgValue()
         {
             var key = GetStringQueryString("key");
             // ReSharper disable once PossibleInvalidOperationException

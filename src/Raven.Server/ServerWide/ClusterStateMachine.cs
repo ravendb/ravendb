@@ -50,7 +50,7 @@ namespace Raven.Server.ServerWide
         private const string LocalNodeStateTreeName = "LocalNodeState";
         private static readonly TableSchema ItemsSchema;
 
-        private static readonly TableSchema UniqueItemsSchema;
+        private static readonly TableSchema CmpXchgItemsSchema;
         private enum UniqueItems
         {
             Key,
@@ -60,12 +60,12 @@ namespace Raven.Server.ServerWide
 
         private static readonly Slice EtagIndexName;
         private static readonly Slice Items;
-        private static readonly Slice Unique;
+        private static readonly Slice CmpXchg;
 
         static ClusterStateMachine()
         {
             Slice.From(StorageEnvironment.LabelsContext, "Items", out Items);
-            Slice.From(StorageEnvironment.LabelsContext, "Unique", out Unique);
+            Slice.From(StorageEnvironment.LabelsContext, "CmpXchg", out CmpXchg);
             Slice.From(StorageEnvironment.LabelsContext, "EtagIndexName", out EtagIndexName);
 
             ItemsSchema = new TableSchema();
@@ -85,8 +85,8 @@ namespace Raven.Server.ServerWide
                 StartIndex = 3
             });
 
-            UniqueItemsSchema = new TableSchema();
-            UniqueItemsSchema.DefineKey(new TableSchema.SchemaIndexDef
+            CmpXchgItemsSchema = new TableSchema();
+            CmpXchgItemsSchema.DefineKey(new TableSchema.SchemaIndexDef
             {
                 StartIndex = 0,
                 Count = 1
@@ -649,14 +649,14 @@ namespace Raven.Server.ServerWide
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
-            return slice.Content.Match(Items.Content) || slice.Content.Match(Unique.Content);
+            return slice.Content.Match(Items.Content) || slice.Content.Match(CmpXchg.Content);
         }
 
         public override void Initialize(RachisConsensus parent, TransactionOperationContext context)
         {
             base.Initialize(parent, context);
             ItemsSchema.Create(context.Transaction.InnerTransaction, Items, 32);
-            UniqueItemsSchema.Create(context.Transaction.InnerTransaction, Unique, 32);
+            CmpXchgItemsSchema.Create(context.Transaction.InnerTransaction, CmpXchg, 32);
             context.Transaction.InnerTransaction.CreateTree(LocalNodeStateTreeName);
         }
 
@@ -720,7 +720,7 @@ namespace Raven.Server.ServerWide
 
         public unsafe void CompareExchange(TransactionOperationContext context, string type, BlittableJsonReaderObject cmd, long index)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Unique);
+            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
             cmd.TryGet(nameof(CompareExchangeCommand.Key), out string key);
             cmd.TryGet(nameof(CompareExchangeCommand.Index), out long cmdIndex);
             var dbKey = key.ToLowerInvariant();
@@ -763,9 +763,9 @@ namespace Raven.Server.ServerWide
             };
         }
 
-        public unsafe (long Index, BlittableJsonReaderObject Value) GetUniqueItem(TransactionOperationContext context, string key)
+        public unsafe (long Index, BlittableJsonReaderObject Value) GetCmpXchg(TransactionOperationContext context, string key)
         {
-            var items = context.Transaction.InnerTransaction.OpenTable(UniqueItemsSchema, Unique);
+            var items = context.Transaction.InnerTransaction.OpenTable(CmpXchgItemsSchema, CmpXchg);
             var dbKey = key.ToLowerInvariant();
             using (Slice.From(context.Allocator, dbKey, out Slice keySlice))
             {

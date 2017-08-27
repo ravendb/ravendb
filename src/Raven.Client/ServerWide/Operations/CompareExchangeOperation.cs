@@ -11,38 +11,38 @@ using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Operations
 {
-    public class GetRawCompareValueResult
+    public class RawClusterValueResult
     {
         public BlittableJsonReaderObject Value;
         public long Index;
     }
 
-    public class GetCompareValueResult<T>
+    public class ClusterValueResult<T>
     {
         public T Value;
         public long Index;
     }
 
-    public class GetCompareValue<T> : IServerOperation<GetCompareValueResult<T>>
+    public class GetClusterValue<T> : IServerOperation<ClusterValueResult<T>>
     {
         private readonly string _key;
 
-        public GetCompareValue(string key)
+        public GetClusterValue(string key)
         {
             _key = key;
         }
 
-        public RavenCommand<GetCompareValueResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ClusterValueResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new GetCompareValueCommand(_key, conventions);
+            return new GetClusterValueCommand(_key, conventions);
         }
 
-        private class GetCompareValueCommand : RavenCommand<GetCompareValueResult<T>>
+        private class GetClusterValueCommand : RavenCommand<ClusterValueResult<T>>
         {
             private readonly string _key;
             private readonly DocumentConventions _conventions;
             
-            public GetCompareValueCommand(string key, DocumentConventions conventions = null)
+            public GetClusterValueCommand(string key, DocumentConventions conventions = null)
             {
                 if (string.IsNullOrEmpty(key))
                     throw new ArgumentNullException(nameof(key), "The key argument must have value");
@@ -51,7 +51,7 @@ namespace Raven.Client.ServerWide.Operations
                 _conventions = conventions ?? DocumentConventions.Default;
             }
 
-            public override bool IsReadRequest { get; }
+            public override bool IsReadRequest => true;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
@@ -66,10 +66,10 @@ namespace Raven.Client.ServerWide.Operations
             public override void SetResponse(BlittableJsonReaderObject response, bool fromCache)
             {
 
-                if (response.TryGet(nameof(GetRawCompareValueResult.Index), out long index) == false)
+                if (response.TryGet(nameof(RawClusterValueResult.Index), out long index) == false)
                     ThrowInvalidResponse();
 
-                response.TryGet(nameof(GetRawCompareValueResult.Value), out BlittableJsonReaderObject raw);
+                response.TryGet(nameof(RawClusterValueResult.Value), out BlittableJsonReaderObject raw);
 
                 T result;
                 object val = null;
@@ -77,24 +77,23 @@ namespace Raven.Client.ServerWide.Operations
 
                 if (val == null)
                 {
-                    Result = new GetCompareValueResult<T>
+                    Result = new ClusterValueResult<T>
                     {
                         Index = index,
                         Value = default(T)
                     };
                     return;
                 }
-                var type = val.GetType();
-                if (typeof(BlittableJsonReaderObject) == type)
+                if (val is BlittableJsonReaderObject obj)
                 {
-                    result = (T)EntityToBlittable.ConvertToEntity(typeof(T), "asd", (BlittableJsonReaderObject)val, _conventions);
+                    result = (T)EntityToBlittable.ConvertToEntity(typeof(T), "cluster-value", obj, _conventions);
                 }
                 else
                 {
                     raw.TryGet("Object", out result);
                 }
 
-                Result = new GetCompareValueResult<T>
+                Result = new ClusterValueResult<T>
                 {
                     Index = index,
                     Value = result
@@ -141,7 +140,7 @@ namespace Raven.Client.ServerWide.Operations
                 _conventions = conventions ?? DocumentConventions.Default;
             }
 
-            public override bool IsReadRequest { get; }
+            public override bool IsReadRequest => false;
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
