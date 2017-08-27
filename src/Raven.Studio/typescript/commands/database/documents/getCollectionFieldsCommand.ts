@@ -8,7 +8,7 @@ class getCollectionFieldsCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<object> {
+    execute(): JQueryPromise<dictionary<string>> {
         const args = {
             collection: this.collectionName,
             prefix: this.prefix

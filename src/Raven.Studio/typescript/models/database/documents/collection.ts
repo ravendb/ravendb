@@ -61,7 +61,7 @@ class collection {
             .execute();
     }
 
-    fetchFields(prefix: string): JQueryPromise<object> {
+    fetchFields(prefix: string): JQueryPromise<dictionary<string>> {
         const collection = this.isAllDocuments ? undefined : this.name;
         return new getCollectionFieldsCommand(this.db, collection, prefix)
             .execute();
