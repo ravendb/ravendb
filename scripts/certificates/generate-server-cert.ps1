@@ -5,24 +5,24 @@ param(
     $CertPassphrase = "test",
     $CN = $null,
     $CertFile = "server.pfx",
-    [switch]$SelfSigned = $false
+    $SignerName = "RavenDB Server CA"
 )
 
 $ErrorActionPreference = "Stop"
 
-$rootStore = new-object System.Security.Cryptography.X509Certificates.X509Store([System.Security.Cryptography.X509Certificates.StoreName]::My, "LocalMachine")
-$rootStore.Open("MaxAllowed")
+$rootStore = new-object System.Security.Cryptography.X509Certificates.X509Store(
+    [System.Security.Cryptography.X509Certificates.StoreName]::AuthRoot,
+    "localmachine"
+)
 
-$rootCert = $($rootStore.Certificates | Where-Object { $_.FriendlyName -eq "RavenDB Server CA" }) | Select-Object -First 1
-if ($rootCert -ne $null) {
-    write-host "Found RavenDB Server CA. Using it as certificate issuer..."
-}
-else {
-    write-host "RavenDB Server CA cert - producing self-signed certificate."
-}
+$rootStore.Open("MaxAllowed")
 
 if ([string]::IsNullOrEmpty($CN)) {
     $CN = [System.Environment]::MachineName
+}
+
+if ([string]::IsNullOrEmpty($DNS)) {
+    $DNS = [System.Environment]::MachineName
 }
 
 if ([string]::IsNullOrEmpty($CertName)) {
@@ -30,28 +30,50 @@ if ([string]::IsNullOrEmpty($CertName)) {
     $CertName = "ravendb-server-$certId"; 
 }
 
-$signer = if ($SelfSigned) { $null } else { "cert:\LocalMachine\My\$($rootCert.Thumbprint)" }
-Write-Host "Signing with $signer cert."
+$existingCert = $($rootStore.Certificates | Where-Object { $_.FriendlyName -eq $SignerName }) | Select-Object -First 1
 
-$subject = "C=IL,L=Hadera,OU=Ops,O=Hibernating Rhinos, CN=$CN"
+if ($existingCert -eq $null) {
+   
+    $existingCert = New-SelfSignedCertificate `
+        -CertStoreLocation "cert:\LocalMachine\My" `
+        -HashAlgorithm sha256 `
+        -NotAfter ([DateTime]::Today).AddYears(3) `
+        -NotBefore ([DateTime]::Today).AddDays(-1) `
+        -FriendlyName $SignerName `
+        -Subject "CN=ca.hrhinos.local,O=Hibernating Rhinos,OU=Ops" `
+        -Type Custom `
+        -KeySpec Signature `
+        -KeyUsageProperty All `
+        -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
+        -KeyExportPolicy Exportable 
 
-Write-Host "Remember to make your CN match server url."
+    $rootStore.Add($existingCert);
+    write-host "Added self signed certificate $SignerName to Trusted Root Certification Authorities collection: $($existingCert.Thumbprint)"
+}
+
+
+
+$subject = "O=operations.ravendb.local, CN=$CN"
+
+Write-Host "Remember to make your Common Name (CN) match the server url."
+Write-Host
 Write-Host "Friendly name is $CertName"
 Write-Host "Subject is $subject"
 
 $cert = New-SelfSignedCertificate `
-     -Verbose `
-     -NotAfter ([DateTime]::Today).AddYears(3) `
-     -NotBefore ([DateTime]::Today).AddDays(-1) `
-     -FriendlyName "$CertName" `
-     -Subject $subject `
-     -HashAlgorithm SHA256 `
-     -CertStoreLocation Cert:\LocalMachine\My\ `
-     -KeySpec Signature `
-     -KeyUsageProperty All `
-     -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
-     -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1' `
-     -Signer $signer
+        -Verbose `
+        -NotAfter ([DateTime]::Today).AddYears(3) `
+        -NotBefore ([DateTime]::Today).AddDays(-1) `
+        -FriendlyName "$CertName" `
+        -Subject $subject `
+        -Dnsname $DNS `
+        -HashAlgorithm SHA256 `
+        -CertStoreLocation Cert:\LocalMachine\My\ `
+        -KeySpec Signature `
+        -KeyUsageProperty All `
+        -KeyUsage CertSign, CRLSign, DigitalSignature, KeyEncipherment `
+        -TextExtension '2.5.29.37={text}1.3.6.1.5.5.7.3.2,1.3.6.1.5.5.7.3.1' `
+        -Signer $existingCert
 
 $certThumbprint = $cert.Thumbprint
 $pfxPath = [io.path]::combine(".", $CertFile)
