@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Queries
     public class IndexQuery : IndexQuery<Parameters>
     {
         /// <summary>
-        /// Whether we should disable caching of query results
+        /// Indicates if query results should be read from cache (if cached previously) or added to cache (if there were no cached items prior)
         /// </summary>
         public bool DisableCaching { get; set; }
 
