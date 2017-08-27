@@ -5,18 +5,14 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Server;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
-using Raven.Server.ServerWide.Commands;
-using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 

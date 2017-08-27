@@ -1119,12 +1119,7 @@ namespace Raven.Server.ServerWide
                 }
             }
         }
-
-        public Task<(long Etag, object Result)> PutCommandAsync(CommandBase cmd)
-        {
-            return _engine.PutAsync(cmd);
-        }
-
+        
         public bool IsLeader()
         {
             return _engine.CurrentState == RachisConsensus.State.Leader;
