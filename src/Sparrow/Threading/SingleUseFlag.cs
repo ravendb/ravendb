@@ -17,12 +17,18 @@ namespace Sparrow.Threading
     /// own, see http://blog.alexrp.com/2014/03/30/dot-net-atomics-and-memory-model-semantics/
     /// and http://issues.hibernatingrhinos.com/issue/RavenDB-8260 .
     /// 
-    /// PERF: This is a struct instead of a class so that its usage may be 
-    /// made invisible. Do NOT change this without good reason, could have
-    /// sizeable impact.
-    public struct SingleUseFlag
+    /// PERF: This is a class instead of a struct simply because we can not
+    /// verify that it won't be copied, and we don't trust our users not to
+    /// copy it. It is kept so that we can move all usages back at once into
+    /// structs should this be a perf issue in the future.
+    public class SingleUseFlag
     {
         private int _state;
+
+        public SingleUseFlag(SingleUseFlag other)
+        {
+            throw new InvalidOperationException($"Copy of {nameof(SingleUseFlag)} is forbidden");
+        }
 
         /// <summary>
         /// Creates a flag.
