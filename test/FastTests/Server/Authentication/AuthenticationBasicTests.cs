@@ -251,7 +251,7 @@ namespace FastTests.Server.Authentication
                 });
             });
             
-            Assert.IsType<InvalidOperationException>(e.InnerException);
+            Assert.IsType<ArgumentException>(e.InnerException);
         }
 
         [Fact]

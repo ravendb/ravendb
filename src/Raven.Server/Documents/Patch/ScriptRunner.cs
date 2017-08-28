@@ -344,13 +344,7 @@ namespace Raven.Server.Documents.Patch
                 if (objectInstance is BlittableObjectInstance doc && doc.DocumentId != null)
                     return new JsValue(doc.DocumentId);
 
-                var jsValue = objectInstance.Get(Constants.Documents.Metadata.Key);
-                if (jsValue.IsObject() == false)
-                    return JsValue.Null;
-                var value = jsValue.AsObject().Get(Constants.Documents.Metadata.Id);
-                if (value.IsString() == false)
-                    return JsValue.Null;
-                return value;
+                return JsValue.Null;
             }
 
             private JsValue LoadDocument(JsValue self, JsValue[] args)
