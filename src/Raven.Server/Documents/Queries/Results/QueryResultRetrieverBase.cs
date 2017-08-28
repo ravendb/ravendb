@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Queries.Results
         private readonly JsonOperationContext _context;
         private readonly IncludeDocumentsCommand _includeDocumentsCommand;
         private readonly BlittableJsonTraverser _blittableTraverser;
-        private Dictionary<string, (Document Doc, BlittableJsonReaderObject ConvertedCache)> _loadedDocuments;
+        private Dictionary<string, Document> _loadedDocuments;
         private HashSet<string> _loadedDocumentIds;
 
         protected readonly DocumentsStorage DocumentsStorage;
@@ -312,12 +312,12 @@ namespace Raven.Server.Documents.Queries.Results
             if (_loadedDocumentIds == null)
             {
                 _loadedDocumentIds = new HashSet<string>();
-                _loadedDocuments = new Dictionary<string, (Document Doc, BlittableJsonReaderObject ConvertedCache)>();
+                _loadedDocuments = new Dictionary<string, Document>();
             }
             _loadedDocumentIds.Clear();
 
             //_loadedDocuments.Clear(); - explicitly not clearing this, we want to cahce this for the duration of the query
-            _loadedDocuments[document.Id] = (document, null);
+            _loadedDocuments[document.Id] = document;
             if (fieldToFetch.QueryField.SourceAlias != null)
                 IncludeUtil.GetDocIdFromInclude(document.Data, fieldToFetch.QueryField.SourceAlias, _loadedDocumentIds);
             else
@@ -336,24 +336,18 @@ namespace Raven.Server.Documents.Queries.Results
                 if (docId == null)
                     continue;
 
-                if (_loadedDocuments.TryGetValue(docId, out var tuple) == false)
+                if (_loadedDocuments.TryGetValue(docId, out var doc) == false)
                 {
-                    _loadedDocuments[docId] = tuple = (LoadDocument(docId), null);
+                    _loadedDocuments[docId] = doc = LoadDocument(docId);
                 }
-                if (tuple.Doc == null)
+                if (doc == null)
                     continue;
                 if (string.IsNullOrEmpty(fieldToFetch.Name)) // we need the whole document here
                 {
-                    if (tuple.ConvertedCache == null)
-                    {
-                        tuple.Doc.EnsureMetadata();
-                        tuple.ConvertedCache = _context.ReadObject(tuple.Doc.Data, tuple.Doc.Id);
-                        _loadedDocuments[docId] = tuple;
-                    }
-                    buffer.Add(tuple.ConvertedCache);
+                    buffer.Add(doc.Data);
                     continue;
                 }
-                if (TryGetFieldValueFromDocument(tuple.Doc, fieldToFetch, out var val))
+                if (TryGetFieldValueFromDocument(doc, fieldToFetch, out var val))
                     buffer.Add(val);
             }
 

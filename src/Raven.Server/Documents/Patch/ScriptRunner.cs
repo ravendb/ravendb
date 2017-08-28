@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public SingleRun(DocumentDatabase database, ScriptRunner runner, List<string> scriptsSource)
-            {
+            {                
                 _database = database;
                 _runner = runner;
                 ScriptEngine = new Engine(options =>
@@ -452,11 +452,11 @@ namespace Raven.Server.Documents.Patch
                 }
 
                 if (o is Document doc)
-                    return new BlittableObjectInstance(engine, Clone(doc.Data), doc.Id, doc.LastModified);
+                    return new BlittableObjectInstance(engine, null, Clone(doc.Data), doc.Id, doc.LastModified);
                 if (o is DocumentConflict dc)
-                    return new BlittableObjectInstance(engine, Clone(dc.Doc), dc.Id, dc.LastModified);
+                    return new BlittableObjectInstance(engine, null, Clone(dc.Doc), dc.Id, dc.LastModified);
                 if (o is BlittableJsonReaderObject json)
-                    return new BlittableObjectInstance(engine, json, null, null);
+                    return new BlittableObjectInstance(engine, null, json, null, null);
                 if (o == null)
                     return Undefined.Instance;
                 if (o is long lng)

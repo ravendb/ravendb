@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Jint;
 using Jint.Native;
 using Jint.Native.Object;
+using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Sparrow.Json;
 
@@ -11,12 +12,20 @@ namespace Raven.Server.Documents.Patch
 {
     public class BlittableObjectInstance : ObjectInstance
     {
+        public bool Changed;
+        private readonly BlittableObjectInstance _parent;
         public readonly DateTime? LastModified;
         public readonly BlittableJsonReaderObject Blittable;
         public readonly string DocumentId;
         public HashSet<string> Deletes;
         public Dictionary<string, BlittableObjectProperty> OwnValues = new Dictionary<string, BlittableObjectProperty>();
         public Dictionary<string, BlittableJsonToken> OriginalPropertiesTypes;
+
+        private void MarkChanged()
+        {
+            Changed = true;
+            _parent?.MarkChanged();
+        }
 
         public ObjectInstance GetOrCreate(string key)
         {
@@ -39,6 +48,8 @@ namespace Raven.Server.Documents.Patch
         {
             private readonly BlittableObjectInstance _parent;
             private readonly string _property;
+            private JsValue _value;
+            public bool Changed;
 
             public override string ToString()
             {
@@ -61,7 +72,18 @@ namespace Raven.Server.Documents.Patch
                 }
             }
 
-            public override JsValue Value { get; set; }
+            public override JsValue Value
+            {
+                get => _value;
+                set
+                {
+                    if (Equals(value, _value))
+                        return;
+                    _value = value;
+                    _parent.MarkChanged();
+                    Changed = true;
+                }
+            }
 
             private JsValue GetPropertyValue(string key, int propertyIndex)
             {
@@ -72,8 +94,7 @@ namespace Raven.Server.Documents.Patch
                 return TranslateToJs(_parent, key, propertyDetails.Token, propertyDetails.Value);
             }
 
-            private static JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)
-            {
+            private  JsValue TranslateToJs(BlittableObjectInstance owner, string key, BlittableJsonToken type, object value)            {
                 switch (type & BlittableJsonReaderBase.TypesMask)
                 {
                     case BlittableJsonToken.Null:
@@ -91,9 +112,14 @@ namespace Raven.Server.Documents.Patch
                     case BlittableJsonToken.CompressedString:
                         return new JsValue(((LazyCompressedStringValue)value).ToString());
                     case BlittableJsonToken.StartObject:
+                        Changed = true;
+                        _parent.MarkChanged();
                         return new JsValue(new BlittableObjectInstance(owner.Engine,
+                            owner,
                             (BlittableJsonReaderObject)value, null, null));
                     case BlittableJsonToken.StartArray:
+                        Changed = true;
+                        _parent.MarkChanged();
                         var blitArray = (BlittableJsonReaderArray)value;
                         var array = new object[blitArray.Length];
                         for (int i = 0; i < array.Length; i++)
@@ -108,8 +134,13 @@ namespace Raven.Server.Documents.Patch
             }
         }
 
-        public BlittableObjectInstance(Engine engine, BlittableJsonReaderObject blittable, string docId, DateTime? lastModified) : base(engine)
+        public BlittableObjectInstance(Engine engine,
+            BlittableObjectInstance parent, 
+            BlittableJsonReaderObject blittable, 
+            string docId, 
+            DateTime? lastModified) : base(engine)
         {
+            _parent = parent;
             LastModified = lastModified;
             Blittable = blittable;
             DocumentId = docId;
