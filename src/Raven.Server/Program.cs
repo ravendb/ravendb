@@ -90,7 +90,7 @@ namespace Raven.Server
                         {
                             try
                             {
-                                server.OpenPipe();
+                                server.OpenPipes();
                             }
                             catch (Exception e)
                             {

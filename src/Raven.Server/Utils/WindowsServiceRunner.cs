@@ -53,7 +53,7 @@ namespace Raven.Server.Utils
 
             try
             {
-                _ravenServer.OpenPipe();
+                _ravenServer.OpenPipes();
             }
             catch (Exception e)
             {

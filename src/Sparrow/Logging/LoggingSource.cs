@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
@@ -36,6 +37,8 @@ namespace Sparrow.Logging
         public bool IsInfoEnabled;
         public bool IsOperationsEnabled;
         private Stream _additionalOutput;
+
+        private Stream _pipeSink;
 
         public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
@@ -406,12 +409,31 @@ namespace Sparrow.Logging
             }
         }
 
+        public void AttachPipeSink(Stream stream)
+        {
+            _pipeSink = stream;
+        }
+
+        public void DetachPipeSink()
+        {
+            _pipeSink = null;
+        }
+
         private int ActualWriteToLogTargets(WebSocketMessageEntry item, Stream file)
         {
             ArraySegment<byte> bytes;
             item.Data.TryGetBuffer(out bytes);
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
+
+            try
+            {
+                _pipeSink?.Write(bytes.Array, bytes.Offset, bytes.Count);
+            }
+            catch
+            {
+                // broken pipe
+            }
 
             if (!_listeners.IsEmpty)
             {

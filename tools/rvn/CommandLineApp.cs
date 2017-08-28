@@ -61,28 +61,32 @@ namespace rvn
                 cmd.ExtendedHelpText = "Tail server logs.";
                 cmd.HelpOption(HelpOptionString);
 
-                var serverAddressOption = cmd.Option("--server-url | -s", "RavenDB server URL", CommandOptionType.SingleValue);
-                var certOption = cmd.Option("--client-cert-path | -c", "client certificate", CommandOptionType.SingleValue);
+                var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
 
                 cmd.OnExecute(() =>
                 {
-                    if (serverAddressOption.HasValue() == false)
-                        ExitWithError("Server url is required.", cmd);
+                    LogStream logStream;
+                    if (string.IsNullOrEmpty(pidArg.Value))
+                    {
+                        logStream = new LogStream();
+                    }
+                    else
+                    {
+                        if (int.TryParse(pidArg.Value, out var pid))
+                        {
+                            logStream = new LogStream(pid);
+                        }
+                        else
+                        {
+                            return ExitWithError("RavenDB server PID argument is invalid.", cmd);
+                        }
+                    }
 
-                    var serverUrl = serverAddressOption.Value();
-                    if (serverUrl.StartsWith("wss:", StringComparison.OrdinalIgnoreCase) && certOption.HasValue() == false)
-                        ExitWithError("Client certificate path is required when server operates is secured.", cmd);
+                    Console.CancelKeyPress += (sender, args) => logStream?.Stop();
 
-                    if (certOption.HasValue() && File.Exists(certOption.Value()) == false)
-                        ExitWithError($"Certificate file not found: {certOption.Value()}", cmd);
+                    using (logStream)
+                        logStream.Connect().Wait();
 
-                    var logStream = new LogStream(
-                        serverAddressOption.Value(), 
-                        certOption.HasValue() == false ? null : certOption.Value());
-
-                    Console.CancelKeyPress += (sender, args) => logStream.Stop();
-
-                    logStream.PrintAsync(Console.OpenStandardOutput()).Wait();
                     return 0;
                 });
             });
@@ -97,17 +101,19 @@ namespace rvn
                 var pidArg = cmd.Argument("[pid]", "RavenDB Server process ID", cmdWithArg => { });
                 cmd.OnExecute(() =>
                 {
-                    if (string.IsNullOrEmpty(pidArg.Value)) 
+                    if (string.IsNullOrEmpty(pidArg.Value))
                     {
                         AdminChannel.Connect(null);
                     }
-                    else 
+                    else
                     {
-                        if (int.TryParse(pidArg.Value, out var pid)) {
+                        if (int.TryParse(pidArg.Value, out var pid))
+                        {
                             AdminChannel.Connect(pid);
                         }
-                        else {
-                            return ExitWithError("RavenDB server PID argument is mandatory.", cmd);
+                        else
+                        {
+                            return ExitWithError("RavenDB server PID argument is invalid.", cmd);
                         }
                     }
 
@@ -115,7 +121,7 @@ namespace rvn
                 });
             });
         }
-        
+
         private static void ConfigureWindowsServiceCommand()
         {
             const string defaultServiceName = "RavenDB";
@@ -143,8 +149,8 @@ namespace rvn
                     subcmd.OnExecute(() =>
                     {
                         WindowsService.Register(
-                            serviceNameOpt.Value() ?? defaultServiceName, 
-                            serverDirOpt.Value(), 
+                            serviceNameOpt.Value() ?? defaultServiceName,
+                            serverDirOpt.Value(),
                             subcmd.RemainingArguments);
 
                         return 0;
@@ -321,31 +327,33 @@ namespace rvn
             return cmd.Option("--service-name", "RavenDB Server Windows Service name", CommandOptionType.SingleValue);
         }
 
-        private static CommandOption ConfigureServerDirOption(CommandLineApplication cmd) {
+        private static CommandOption ConfigureServerDirOption(CommandLineApplication cmd)
+        {
             return cmd.Option("--server-dir", "RavenDB Server directory", CommandOptionType.SingleValue);
         }
 
-        private static void ValidateRavenSystemDir(CommandArgument systemDirArg) 
+        private static void ValidateRavenSystemDir(CommandArgument systemDirArg)
         {
             if (string.IsNullOrEmpty(systemDirArg.Value))
             {
                 throw new InvalidOperationException("RavenDB system directory argument is mandatory.");
             }
 
-            if (Directory.Exists(systemDirArg.Value) == false) 
+            if (Directory.Exists(systemDirArg.Value) == false)
             {
                 throw new InvalidOperationException($"Directory does not exist: { systemDirArg.Value }.");
             }
         }
 
-        private static int PerformOfflineOperation(Action offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd) {
-            try 
+        private static int PerformOfflineOperation(Action offlineOperation, CommandArgument systemDirArg, CommandLineApplication cmd)
+        {
+            try
             {
                 ValidateRavenSystemDir(systemDirArg);
                 offlineOperation();
                 return 0;
             }
-            catch (InvalidOperationException e) 
+            catch (InvalidOperationException e)
             {
                 return ExitWithError(e.Message, cmd);
             }
