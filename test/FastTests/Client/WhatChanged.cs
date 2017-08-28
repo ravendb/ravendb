@@ -90,6 +90,114 @@ namespace FastTests.Client
                 }
             }
         }
+
+        [Fact]
+        public void What_Changed_Array_Value_Changed()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Arr()
+                        {
+                            Array = new [] { (dynamic)"a", 1, "b"}
+                        }
+                        , "users/1");
+                    var changes = newSession.Advanced.WhatChanged();
+
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(1, changes["users/1"].Length);
+                    Assert.Equal(DocumentsChanges.ChangeType.DocumentAdded, changes["users/1"][0].Change);
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var arr = newSession.Load<Arr>("users/1");
+                    arr.Array = new[] {(dynamic)"a", 2, "c"};
+
+                    var changes = newSession.Advanced.WhatChanged();
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(2, changes["users/1"].Length);
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueChanged, changes["users/1"][0].Change);
+                    Assert.Equal(1L, changes["users/1"][0].FieldOldValue);
+                    Assert.Equal(2L, changes["users/1"][0].FieldNewValue);
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueChanged, changes["users/1"][1].Change);
+                    Assert.Equal("b", changes["users/1"][1].FieldOldValue.ToString());
+                    Assert.Equal("c", changes["users/1"][1].FieldNewValue.ToString());
+                }
+            }
+        }
+
+        [Fact]
+        public void What_Changed_Array_Value_Added()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Arr
+                    {
+                        Array = new[] {(dynamic)"a", 1, "b"}
+                    }, "arr/1");
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var arr = newSession.Load<Arr>("arr/1");
+                    arr.Array = new[] {(dynamic)"a", 1, "b", "c", 2};
+
+                    var changes = newSession.Advanced.WhatChanged();
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(2, changes["arr/1"].Length);
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueAdded, changes["arr/1"][0].Change);
+                    Assert.Null(changes["arr/1"][0].FieldOldValue);
+                    Assert.Equal("c", changes["arr/1"][0].FieldNewValue.ToString());
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueAdded, changes["arr/1"][1].Change);
+                    Assert.Null(changes["arr/1"][1].FieldOldValue);
+                    Assert.Equal(2L, changes["arr/1"][1].FieldNewValue);
+                }
+            }
+        }
+
+        [Fact]
+        public void What_Changed_Array_Value_Removed()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var newSession = store.OpenSession())
+                {
+                    newSession.Store(new Arr
+                    {
+                        Array = new[] { (dynamic)"a", 1, "b" }
+                    }, "arr/1");
+                    newSession.SaveChanges();
+                }
+
+                using (var newSession = store.OpenSession())
+                {
+                    var arr = newSession.Load<Arr>("arr/1");
+                    arr.Array = new[] { (dynamic)"a"};
+
+                    var changes = newSession.Advanced.WhatChanged();
+                    Assert.Equal(1, changes.Count);
+                    Assert.Equal(2, changes["arr/1"].Length);
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueRemoved, changes["arr/1"][0].Change);
+                    Assert.Equal(1L, changes["arr/1"][0].FieldOldValue);
+                    Assert.Null(changes["arr/1"][0].FieldNewValue);
+
+                    Assert.Equal(DocumentsChanges.ChangeType.ArrayValueRemoved, changes["arr/1"][1].Change);
+                    Assert.Equal("b", changes["arr/1"][1].FieldOldValue.ToString());
+                    Assert.Null(changes["arr/1"][0].FieldNewValue);
+                }
+            }
+        }
     }
 
     public class BasicName
@@ -111,5 +219,10 @@ namespace FastTests.Client
     public class Number
     {
         public int Num { set; get; }
+    }
+
+    public class Arr
+    {
+        public dynamic[] Array { set; get; }
     }
 }
