@@ -342,7 +342,27 @@ namespace Raven.Server.Documents.Queries
 
                 public override void VisitMethodTokens(QueryExpression expression, BlittableJsonReaderObject parameters)
                 {
-                    throw new NotSupportedException();
+                    expression = (QueryExpression)expression.Arguments[expression.Arguments.Count - 1];
+
+                    switch (expression.Type)
+                    {
+                        case OperatorType.Equal:
+                        case OperatorType.LessThan:
+                        case OperatorType.GreaterThan:
+                        case OperatorType.LessThanEqual:
+                        case OperatorType.GreaterThanEqual:
+                            VisitFieldToken(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Value, parameters);
+                            break;
+                        case OperatorType.Between:
+                            VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.First, expression.Second, parameters);
+                            break;
+                        case OperatorType.In:
+                        case OperatorType.AllIn:
+                            VisitFieldTokens(Constants.Documents.Indexing.Fields.DocumentIdFieldName, expression.Values, parameters);
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException();
+                    }
                 }
 
                 private void AddId(string id)

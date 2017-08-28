@@ -170,7 +170,7 @@ namespace Raven.Server.Documents.Queries
                 case OperatorType.AllIn:
                     {
                         var fieldName = ExtractIndexFieldName(query.QueryText, expression.Field, metadata);
-                        LuceneTermType termType =LuceneTermType.Null;
+                        LuceneTermType termType = LuceneTermType.Null;
                         var hasGotTheRealType = false;
 
                         var allInQuery = new BooleanQuery();
@@ -211,6 +211,8 @@ namespace Raven.Server.Documents.Queries
 
                     switch (methodType)
                     {
+                        case MethodType.Id:
+                            return HandleId(context, query, expression, metadata, parameters, exact);
                         case MethodType.Search:
                             return HandleSearch(query, expression, metadata, parameters, analyzer);
                         case MethodType.Boost:
@@ -252,9 +254,9 @@ namespace Raven.Server.Documents.Queries
 
         private static IEnumerable<(string Value, ValueTokenType Type)> GetValuesForIn(
             JsonOperationContext context,
-            Query query, 
-            QueryExpression expression, 
-            QueryMetadata metadata, 
+            Query query,
+            QueryExpression expression,
+            QueryMetadata metadata,
             BlittableJsonReaderObject parameters,
             string fieldName)
         {
@@ -295,6 +297,64 @@ namespace Raven.Server.Documents.Queries
         private static string ExtractIndexFieldName(string queryText, ValueToken field, QueryMetadata metadata)
         {
             return metadata.GetIndexFieldName(QueryExpression.Extract(queryText, field));
+        }
+
+        private static Lucene.Net.Search.Query HandleId(JsonOperationContext context, Query query, QueryExpression expression, QueryMetadata metadata, BlittableJsonReaderObject parameters, bool exact)
+        {
+            expression = (QueryExpression)expression.Arguments[expression.Arguments.Count - 1];
+
+            switch (expression.Type)
+            {
+                case OperatorType.Equal:
+                    var equal = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Value);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, equal.Type);
+
+                    return LuceneQueryHelper.Equal(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, equal.Value as string, exact);
+                case OperatorType.LessThan:
+                    var lessThan = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Value);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, lessThan.Type);
+
+                    return LuceneQueryHelper.LessThan(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, lessThan.Value as string, exact);
+                case OperatorType.GreaterThan:
+                    var greaterThan = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Value);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, greaterThan.Type);
+
+                    return LuceneQueryHelper.GreaterThan(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, greaterThan.Value as string, exact);
+                case OperatorType.LessThanEqual:
+                    var lessThanEqual = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Value);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, lessThanEqual.Type);
+
+                    return LuceneQueryHelper.LessThanOrEqual(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, lessThanEqual.Value as string, exact);
+                case OperatorType.GreaterThanEqual:
+                    var greaterThanEqual = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Value);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, greaterThanEqual.Type);
+
+                    return LuceneQueryHelper.GreaterThanOrEqual(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, greaterThanEqual.Value as string, exact);
+                case OperatorType.Between:
+                    var valueFirst = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.First);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, valueFirst.Type);
+
+                    var valueSecond = GetValue(Constants.Documents.Indexing.Fields.DocumentIdFieldName, query, metadata, parameters, expression.Second);
+                    AssertValueIsString(Constants.Documents.Indexing.Fields.DocumentIdFieldName, valueSecond.Type);
+                    return LuceneQueryHelper.Between(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, valueFirst.Value as string, valueSecond.Value as string, exact);
+                case OperatorType.In:
+                    var matches = new List<string>();
+                    foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, Constants.Documents.Indexing.Fields.DocumentIdFieldName))
+                        matches.Add(LuceneQueryHelper.GetTermValue(value.Value, LuceneTermType.String, exact));
+
+                    return new TermsMatchQuery(Constants.Documents.Indexing.Fields.DocumentIdFieldName, matches);
+                case OperatorType.AllIn:
+                    var allInQuery = new BooleanQuery();
+                    foreach (var value in GetValuesForIn(context, query, expression, metadata, parameters, Constants.Documents.Indexing.Fields.DocumentIdFieldName))
+                        allInQuery.Add(LuceneQueryHelper.Equal(Constants.Documents.Indexing.Fields.DocumentIdFieldName, LuceneTermType.String, value.Value, exact), Occur.MUST);
+
+                    return allInQuery;
+                default:
+                    ThrowUnhandledExpressionOperatorType(expression.Type, metadata.QueryText, parameters);
+                    break;
+            }
+
+            return null; // not reachable
         }
 
         private static Lucene.Net.Search.Query HandleExists(Query query, QueryExpression expression, QueryMetadata metadata)
@@ -566,7 +626,6 @@ namespace Raven.Server.Documents.Queries
             {
                 var parameterName = QueryExpression.Extract(query.QueryText, value);
 
-
                 if (parameters == null)
                     ThrowParametersWereNotProvided(metadata.QueryText);
 
@@ -576,7 +635,7 @@ namespace Raven.Server.Documents.Queries
                 var array = parameterValue as BlittableJsonReaderArray;
                 if (array != null)
                 {
-                    ValueTokenType? expectedValueType = null; ;
+                    ValueTokenType? expectedValueType = null;
                     foreach (var item in UnwrapArray(array, metadata.QueryText, parameters))
                     {
                         if (expectedValueType == null)

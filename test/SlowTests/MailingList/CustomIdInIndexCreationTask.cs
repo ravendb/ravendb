@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
                 Conventions = convention
             }.CreateIndexDefinition();
 
-            Assert.Contains("__document_id", indexDefinition.Maps.First());
+            Assert.Contains("Id(", indexDefinition.Maps.First());
         }
 
 
@@ -66,7 +66,7 @@ namespace SlowTests.MailingList
                 new Task_Index().Execute(store);
 
                 var indexDefinition = store.Admin.Send(new GetIndexOperation("Task/Index"));
-                Assert.Contains("__document_id", indexDefinition.Maps.First());
+                Assert.Contains("Id(", indexDefinition.Maps.First());
             }
         }
     }

@@ -57,6 +57,12 @@ namespace Raven.Server.Documents.Indexes.Static
             set.Add(referencedCollectionName);
         }
 
+        public dynamic Id(dynamic doc)
+        {
+            var json = (DynamicBlittableJson)doc;
+            return json.GetId();
+        }
+
         public IEnumerable<dynamic> Recurse(object item, Func<dynamic, dynamic> func)
         {
             return new RecursiveFunction(item, func).Execute();
