@@ -67,7 +67,7 @@ namespace FastTests
 
             for (var i = 0; i < tasks.Count; i++)
             {
-                message += $"{Environment.NewLine}Url: {Servers[i].WebUrls[0]}. Applied: {tasks[i].IsCompleted}.";
+                message += $"{Environment.NewLine}Url: {Servers[i].WebUrl}. Applied: {tasks[i].IsCompleted}.";
                 if (tasks[i].IsCompleted == false)
                 {
                     using (Servers[i].ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -138,7 +138,7 @@ namespace FastTests
 
                     var store = new DocumentStore
                     {
-                        Urls = UseFiddler(defaultServer.WebUrls),
+                        Urls = UseFiddler(defaultServer.WebUrl),
                         Database = name,
                         Certificate = userCertificate
                     };
@@ -163,7 +163,7 @@ namespace FastTests
                         {
                             using (var adminStore = new DocumentStore
                             {
-                                Urls = UseFiddler(defaultServer.WebUrls),
+                                Urls = UseFiddler(defaultServer.WebUrl),
                                 Database = name,
                                 Certificate = adminCertificate
                             }.Initialize())
@@ -193,7 +193,7 @@ namespace FastTests
                             if (server.Disposed)
                                 continue;
 
-                            if (store.Urls.Any(url => server.WebUrls.Contains(url)) == false)
+                            if (store.Urls.Any(url => server.WebUrl.Contains(url)) == false)
                                 continue;
 
                             try
@@ -218,7 +218,7 @@ namespace FastTests
                                     {
                                         using (var adminStore = new DocumentStore
                                         {
-                                            Urls = UseFiddler(defaultServer.WebUrls),
+                                            Urls = UseFiddler(defaultServer.WebUrl),
                                             Database = name,
                                             Certificate = adminCertificate
                                         }.Initialize())

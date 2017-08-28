@@ -47,12 +47,12 @@ namespace RachisTests
 
             var defaultDatabase = "ContinueFromThePointIStopped";
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             string tag1, tag2, tag3;
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -101,11 +101,11 @@ namespace RachisTests
 
             var defaultDatabase = "ContinueFromThePointIStopped";
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -169,11 +169,11 @@ namespace RachisTests
 
             var defaultDatabase = "DistributedRevisionsSubscription";
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -201,12 +201,12 @@ namespace RachisTests
 
             var defaultDatabase = "DistributedRevisionsSubscription";
 
-            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrls[0]).ConfigureAwait(false);
+            await CreateDatabaseInCluster(defaultDatabase, nodesAmount, leader.WebUrl).ConfigureAwait(false);
 
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = defaultDatabase
             }.Initialize())
             {
@@ -365,7 +365,7 @@ namespace RachisTests
             IReadOnlyList<ServerNode> nodes;
             using (var store = new DocumentStore
             {
-                Urls = Servers[0].WebUrls,
+                Urls = new[] {Servers[0].WebUrl},
                 Database = defaultDatabase
             })
             {
@@ -385,7 +385,7 @@ namespace RachisTests
                 {
                     using (var curStore = new DocumentStore
                     {
-                        Urls = server.WebUrls,
+                        Urls = new[] {server.WebUrl},
                         Database = defaultDatabase,
                         Conventions = new DocumentConventions
                         {

@@ -26,7 +26,7 @@ namespace SlowTests.Issues
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore()
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -61,17 +61,17 @@ namespace SlowTests.Issues
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerA = new DocumentStore
             {
-                Urls = followers[0].WebUrls,
+                Urls = new[] {followers[0].WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerB = new DocumentStore
             {
-                Urls = followers[1].WebUrls,
+                Urls = new[] {followers[1].WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -161,17 +161,17 @@ namespace SlowTests.Issues
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerA = new DocumentStore
             {
-                Urls = followers[0].WebUrls,
+                Urls = new[] {followers[0].WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerB = new DocumentStore
             {
-                Urls = followers[1].WebUrls,
+                Urls = new[] {followers[1].WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -241,17 +241,17 @@ namespace SlowTests.Issues
             var followers = Servers.Where(s => s != leaderServer).ToList();
             using (var leaderStore = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerA = new DocumentStore
             {
-                Urls = followers[0].WebUrls,
+                Urls = new[] {followers[0].WebUrl},
                 Database = databaseName
             }.Initialize())
             using (var followerB = new DocumentStore
             {
-                Urls = followers[1].WebUrls,
+                Urls = new[] {followers[1].WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -330,7 +330,7 @@ namespace SlowTests.Issues
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore()
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             }.Initialize())
             {

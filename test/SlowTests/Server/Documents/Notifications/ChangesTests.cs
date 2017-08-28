@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.Notifications
             using (var server = GetNewServer())
             using (var store = new DocumentStore
             {
-                Urls = UseFiddler(server.WebUrls),
+                Urls = UseFiddler(server.WebUrl),
                 Database = name,
                 Certificate = null
             }.Initialize())

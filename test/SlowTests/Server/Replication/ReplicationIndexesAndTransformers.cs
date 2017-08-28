@@ -78,12 +78,12 @@ namespace SlowTests.Server.Replication
             var follower = Servers.First(srv => ReferenceEquals(srv, leader) == false);
             var source = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = caller
             };
             var destination = new DocumentStore
             {
-                Urls = follower.WebUrls,
+                Urls = new[] {follower.WebUrl},
                 Database = caller
             };
 

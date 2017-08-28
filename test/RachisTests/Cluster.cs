@@ -31,7 +31,7 @@ namespace RachisTests
             var databaseName = "test";
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {

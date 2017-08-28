@@ -57,7 +57,7 @@ namespace FastTests.Server.Basic
             Server.Configuration.Server.MaxTimeForTaskToWaitForDatabaseToLoad = new TimeSetting(0, TimeUnit.Milliseconds);
             Server.ServerStore.DatabasesLandlord.OnDatabaseLoaded += s => Thread.Sleep(100); // force timeout          
 
-            var url = Server.WebUrls[0];
+            var url = Server.WebUrl;
             var name = Guid.NewGuid().ToString();
             var doc = GenerateDatabaseDoc(name);
 

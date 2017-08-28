@@ -1375,9 +1375,9 @@ namespace Raven.Server.ServerWide
                 if (_nodeHttpServerUrl != null)
                     return _nodeHttpServerUrl;
 
-                Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _ravenServer.WebUrls != null && _ravenServer.WebUrls.Length > 0);
+                Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _ravenServer.WebUrl != null);
                 return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
-                    Configuration.Core.PublicServerUrl?.UriValue ?? Configuration.Core.ServerUrl ?? _ravenServer.WebUrls[0]
+                    Configuration.Core.PublicServerUrl?.UriValue ?? _ravenServer.WebUrl
                     );
             }
         }
@@ -1389,11 +1389,10 @@ namespace Raven.Server.ServerWide
                 if (_nodeTcpServerUrl != null)
                     return _nodeTcpServerUrl;
 
-                var webUrls = _ravenServer.WebUrls;
-                Debug.Assert(webUrls != null && webUrls.Length > 0);
+                Debug.Assert(_ravenServer.WebUrl != null);
                 var tcpStatusTask = _ravenServer.GetTcpServerStatusAsync();
                 Debug.Assert(tcpStatusTask.IsCompleted);
-                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(webUrls[0], tcpStatusTask.Result.Port);
+                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(_ravenServer.WebUrl, tcpStatusTask.Result.Port);
             }
         }
 

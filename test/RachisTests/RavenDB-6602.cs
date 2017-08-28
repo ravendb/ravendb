@@ -28,7 +28,7 @@ namespace RachisTests
             using (var store = new DocumentStore
             {
                 Database = databaseName,
-                Urls = leader.WebUrls
+                Urls = new[] {leader.WebUrl}
             }.Initialize())
             {
                 var doc = new DatabaseRecord(databaseName);

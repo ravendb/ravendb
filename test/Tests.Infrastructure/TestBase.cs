@@ -186,7 +186,7 @@ namespace FastTests
                     if (_globalServer == null || _globalServer.Disposed)
                     {
                         var globalServer = GetNewServer();
-                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrls[0]}");
+                        Console.WriteLine($"\tTo attach debugger to test process ({(PlatformDetails.Is32Bits ? "x86" : "x64")}), use proc-id: {Process.GetCurrentProcess().Id}. Url {globalServer.WebUrl}");
 
                         AssemblyLoadContext.Default.Unloading += UnloadServer;
                         _globalServer = globalServer;
@@ -266,24 +266,20 @@ namespace FastTests
             }
         }
 
-        protected static string UseFiddler(string url)
+        protected static string UseFiddlerUrl(string url)
         {
             if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
-                return url.Replace("127.0.0.1", "localhost.fiddler");
+                url = url.Replace("127.0.0.1", "localhost.fiddler");
 
             return url;
         }
 
-        protected static string[] UseFiddler(string[] urls)
+        protected static string[] UseFiddler(string url)
         {
-            if (!Debugger.IsAttached || !Process.GetProcessesByName("fiddler").Any())
-                return urls;
+            if (Debugger.IsAttached && Process.GetProcessesByName("fiddler").Any())
+                url = url.Replace("127.0.0.1", "localhost.fiddler");
 
-            for (var i = 0; i < urls.Length; i++)
-            {
-                urls[i] = urls[i].Replace("127.0.0.1", "localhost.fiddler");
-            }
-            return urls;
+            return new[] { url };
         }
 
         protected static void OpenBrowser(string url)

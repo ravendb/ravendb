@@ -21,7 +21,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = new DatabaseRecord(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name }.Initialize())
+            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrl), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 
@@ -49,7 +49,7 @@ namespace SlowTests.Bugs.Metadata
             var doc = new DatabaseRecord(name);
 
             DoNotReuseServer();
-            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrls), Database = name }.Initialize())
+            using (var store = new DocumentStore { Urls = UseFiddler(Server.WebUrl), Database = name }.Initialize())
             {
                 store.Admin.Server.Send(new CreateDatabaseOperation(doc));
 

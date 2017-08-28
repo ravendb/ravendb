@@ -87,7 +87,7 @@ namespace SlowTests.Issues
         {
             var store = new DocumentStore
             {
-                Urls = server.WebUrls,
+                Urls = new[] {server.WebUrl},
                 Database = _database
             };
 

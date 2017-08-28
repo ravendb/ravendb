@@ -24,7 +24,7 @@ namespace RachisTests
             var raft1 = await CreateRaftClusterAndGetLeader(1);
             var raft2 = await CreateRaftClusterAndGetLeader(1);
             
-            var url = raft2.WebUrls[0];
+            var url = raft2.WebUrl;
             await raft1.ServerStore.AddNodeToClusterAsync(url);
             Assert.True(await WaitForValueAsync(() => raft1.ServerStore.GetClusterErrors().Count > 0,true));
         }
@@ -37,27 +37,27 @@ namespace RachisTests
             var fromSeconds = TimeSpan.FromSeconds(5);
 
             var leader = await CreateRaftClusterAndGetLeader(5);
-            var db = await CreateDatabaseInCluster("MainDB", 5, leader.WebUrls[0]);
-            var watcherDb = await CreateDatabaseInCluster("WatcherDB", 1, leader.WebUrls[0]);
+            var db = await CreateDatabaseInCluster("MainDB", 5, leader.WebUrl);
+            var watcherDb = await CreateDatabaseInCluster("WatcherDB", 1, leader.WebUrl);
             
             var leaderStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = leader.WebUrls
+                Urls = new[] {leader.WebUrl}
             }.Initialize();
             leaderStore.Conventions.DisableTopologyUpdates = true;
 
             var watcherStore = new DocumentStore
             {
                 Database = "WatcherDB",
-                Urls = watcherDb.Item2.Single().WebUrls
+                Urls = new[] {watcherDb.Item2.Single().WebUrl}
             }.Initialize();
             watcherStore.Conventions.DisableTopologyUpdates = true;
 
             var watcher = new ExternalReplication
             {
                 Database = "WatcherDB",
-                Url = watcherDb.Item2.Single().WebUrls[0]
+                Url = watcherDb.Item2.Single().WebUrl
             };
 
             var watcherRes = await AddWatcherToReplicationTopology((DocumentStore)leaderStore, watcher);
@@ -73,7 +73,7 @@ namespace RachisTests
             var responsibleStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = responsibleServer.WebUrls
+                Urls = new[] {responsibleServer.WebUrl}
             }.Initialize();
             responsibleStore.Conventions.DisableTopologyUpdates = true;
 
@@ -81,7 +81,7 @@ namespace RachisTests
             {
                 ClusterTag = s.ServerStore.NodeTag,
                 Database = "MainDB",
-                Url = s.WebUrls[0]
+                Url = s.WebUrl
             }).ToList();
 
             // check that replication works.
@@ -134,7 +134,7 @@ namespace RachisTests
 
             // rejoin the node
             var newLeader = Servers.Single(s => s.ServerStore.IsLeader());
-            Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrls[0], watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
+            Assert.True(await newLeader.ServerStore.AddNodeToClusterAsync(responsibleServer.WebUrl, watcherRes.ResponsibleNode).WaitAsync(fromSeconds));
             Assert.True(await responsibleServer.ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(fromSeconds));
 
             using (var session = responsibleStore.OpenSession())

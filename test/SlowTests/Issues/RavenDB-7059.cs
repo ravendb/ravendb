@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             var leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             })
             {
@@ -66,7 +66,7 @@ namespace SlowTests.Issues
             leaderServer = await CreateRaftClusterAndGetLeader(clusterSize);
             using (var leaderStore = new DocumentStore
             {
-                Urls = leaderServer.WebUrls,
+                Urls = new[] {leaderServer.WebUrl},
                 Database = databaseName
             })
             {

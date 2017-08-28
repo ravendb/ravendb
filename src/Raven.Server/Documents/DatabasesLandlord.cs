@@ -483,14 +483,10 @@ namespace Raven.Server.Documents
 
                 if (databaseRecord.Encrypted)
                 {
-                    if (_serverStore.RavenServer.WebUrls != null && _serverStore.RavenServer.WebUrls.Length > 0)
+                    if (_serverStore.RavenServer.WebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
                     {
-                        var ravenServerWebUrl = _serverStore.RavenServer.WebUrls[0];
-                        if (ravenServerWebUrl?.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false)
-                        {
-                            throw new DatabaseDisabledException(
-                                $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {ravenServerWebUrl}");
-                        }
+                        throw new DatabaseDisabledException(
+                            $"The database {databaseName.Value} is encrypted, and must be accessed only via HTTPS, but the web url used is {_serverStore.RavenServer.WebUrl}");
                     }
                 }
 

@@ -28,7 +28,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -75,7 +75,7 @@ namespace RachisTests.DatabaseCluster
             DatabasePutResult databaseResult;
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -92,7 +92,7 @@ namespace RachisTests.DatabaseCluster
             {
                 await server.ServerStore.Cluster.WaitForIndexNotification(databaseResult.RaftCommandIndex);
             }
-            foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrls[0])))
+            foreach (var server in Servers.Where(s => databaseResult.NodesAddedTo.Any(n => n == s.WebUrl)))
             {
                 await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
             }
@@ -143,7 +143,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -180,7 +180,7 @@ namespace RachisTests.DatabaseCluster
                 {
                     doc = new DatabaseRecord($"Watcher{i}");
                     var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
-                    var server = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                    var server = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                     await server.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                     await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore($"Watcher{i}");
 
@@ -224,7 +224,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {
@@ -258,7 +258,7 @@ namespace RachisTests.DatabaseCluster
 
                 doc = new DatabaseRecord("Watcher");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
-                var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                var node = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher");
 
@@ -296,7 +296,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {
@@ -306,7 +306,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var doc = new DatabaseRecord("Watcher2");
                 var res = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc));
-                var node = Servers.Single(x => x.WebUrls[0] == res.NodesAddedTo[0]);
+                var node = Servers.Single(x => x.WebUrl == res.NodesAddedTo[0]);
                 await node.ServerStore.Cluster.WaitForIndexNotification(res.RaftCommandIndex);
                 await node.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore("Watcher2");
 
@@ -341,7 +341,7 @@ namespace RachisTests.DatabaseCluster
             //delete watcher
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {
@@ -373,7 +373,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -443,7 +443,7 @@ namespace RachisTests.DatabaseCluster
             var doc = new DatabaseRecord(databaseName);
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Certificate = adminCertificate,
                 Conventions =
@@ -479,7 +479,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = Servers[1].WebUrls,
+                Urls = new[] {Servers[1].WebUrl},
                 Database = databaseName,
                 Certificate = clientCertificate,
                 Conventions =

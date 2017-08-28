@@ -42,7 +42,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -142,7 +142,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {
@@ -199,7 +199,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -239,7 +239,7 @@ loadToOrders(orderData);
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
                 Conventions =
                 {

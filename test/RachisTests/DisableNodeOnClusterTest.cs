@@ -18,12 +18,12 @@ namespace RachisTests
         public async Task BackToFirstNodeAfterRevive()
         {
             var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
-            await CreateDatabaseInCluster("MainDB", 3, leader.WebUrls[0]);
+            await CreateDatabaseInCluster("MainDB", 3, leader.WebUrl);
 
             var leaderStore = new DocumentStore
             {
                 Database = "MainDB",
-                Urls = leader.WebUrls
+                Urls = new[] {leader.WebUrl}
             }.Initialize();
 
             await WaitForDatabaseTopology(leaderStore, leaderStore.Database, 3);
@@ -39,7 +39,7 @@ namespace RachisTests
             }
 
             var firstNodeUrl = re.Url;
-            var firstNode = Servers.Single(s => s.WebUrls[0] == firstNodeUrl);
+            var firstNode = Servers.Single(s => s.WebUrl == firstNodeUrl);
             var nodePath = firstNode.Configuration.Core.DataDirectory;
 
             firstNode.Dispose();

@@ -200,10 +200,10 @@ namespace Raven.Server
                 _webHost.Start();
 
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
-                WebUrls = serverAddressesFeature.Addresses.ToArray();
+                WebUrl = GetWebUrl(serverAddressesFeature.Addresses.First());
 
                 if (Logger.IsInfoEnabled)
-                    Logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
+                    Logger.Info($"Initialized Server... {WebUrl}");
 
                 ServerStore.TriggerDatabases();
                 _tcpListenerTask = StartTcpListener();
@@ -214,6 +214,20 @@ namespace Raven.Server
                     Logger.Operations("Could not start server", e);
                 throw;
             }
+        }
+
+        private string GetWebUrl(string kestrelUrl)
+        {
+            var serverUri = new Uri(Configuration.Core.ServerUrl);
+            if (serverUri.IsDefaultPort == false && serverUri.Port == 0)
+            {
+                var kestrelUri = new Uri(kestrelUrl);
+                return new UriBuilder(serverUri)
+                {
+                    Port = kestrelUri.Port
+                }.Uri.ToString();
+            }
+            return Configuration.Core.ServerUrl;
         }
 
         private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
@@ -422,8 +436,7 @@ namespace Raven.Server
             return authenticationStatus;
         }
 
-
-        public string[] WebUrls { get; set; }
+        public string WebUrl { get; set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 

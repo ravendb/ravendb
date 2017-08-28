@@ -28,7 +28,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -52,7 +52,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -67,7 +67,7 @@ namespace RachisTests.DatabaseCluster
                 await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
                 using (var dbStore = new DocumentStore
                 {
-                    Urls = dbServer.WebUrls,
+                    Urls = new[] {dbServer.WebUrl},
                     Database = databaseName
                 }.Initialize())
                 {
@@ -100,7 +100,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, true, 0);
             using (var store = new DocumentStore()
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -114,7 +114,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore()
             {
-                Urls = Servers[1].WebUrls,
+                Urls = new[] {Servers[1].WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -133,7 +133,7 @@ namespace RachisTests.DatabaseCluster
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -146,7 +146,7 @@ namespace RachisTests.DatabaseCluster
                     await session.StoreAsync(new IndexMerging.User());
                     await session.SaveChangesAsync();
                 }
-                var urls = Servers[1].WebUrls;
+                var urls = new[] {Servers[1].WebUrl};
                 var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
 
@@ -172,7 +172,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -186,7 +186,7 @@ namespace RachisTests.DatabaseCluster
                     await session.SaveChangesAsync();
                 }
                 var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
-                var urls = Servers[1].WebUrls;
+                var urls = new[] {Servers[1].WebUrl};
                 var nodeTag = Servers[1].ServerStore.NodeTag;
                 // kill the process and remove the node from topology
                 DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
@@ -232,7 +232,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -273,7 +273,7 @@ namespace RachisTests.DatabaseCluster
 
             using (var store = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName
             }.Initialize())
             {
@@ -314,13 +314,13 @@ namespace RachisTests.DatabaseCluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
             })
             {
                 leaderStore.Initialize();
 
-                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
@@ -356,13 +356,13 @@ namespace RachisTests.DatabaseCluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
             })
             {
                 leaderStore.Initialize();
 
-                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrls[0]);
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrl);
                 await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
                 var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
 
@@ -392,12 +392,12 @@ namespace RachisTests.DatabaseCluster
 
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
             })
             {
                 leaderStore.Initialize();
-                await CreateDatabaseInCluster(databaseName, 1, leader.WebUrls[0]);
+                await CreateDatabaseInCluster(databaseName, 1, leader.WebUrl);
                 var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(1, dbToplogy.Members.Count);
             }
@@ -413,7 +413,7 @@ namespace RachisTests.DatabaseCluster
             using (var leaderStore = new DocumentStore
             {
                 Certificate = adminCert,
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
             })
             {
@@ -432,12 +432,12 @@ namespace RachisTests.DatabaseCluster
             var groupSize = 3;
             using (var leaderStore = new DocumentStore
             {
-                Urls = leader.WebUrls,
+                Urls = new[] {leader.WebUrl},
                 Database = databaseName,
             })
             {
                 leaderStore.Initialize();
-                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, groupSize, leader.WebUrls[0]);
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, groupSize, leader.WebUrl);
                 await Task.Delay(TimeSpan.FromSeconds(10));
                 var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
                 Assert.Equal(groupSize, dbToplogy.Members.Count);

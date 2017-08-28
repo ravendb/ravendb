@@ -95,17 +95,17 @@ namespace SlowTests.Server.Replication
             using (var store1 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[0].WebUrls
+                Urls = new[] {Servers[0].WebUrl}
             }.Initialize())
             using (var store2 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[1].WebUrls
+                Urls = new[] {Servers[1].WebUrl}
             }.Initialize())
             using (var store3 = new DocumentStore
             {
                 Database = databaseName,
-                Urls = Servers[2].WebUrls
+                Urls = new[] {Servers[2].WebUrl}
             }.Initialize())
             {
                 await CreateAndWaitForClusterDatabase(databaseName, store1);
