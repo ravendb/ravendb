@@ -215,6 +215,7 @@ namespace Raven.Server.Documents
                 );
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
+            options.OnRecoveryError += _documentDatabase.HandleOnRecoveryError;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.CompressTxAboveSizeInBytes = _documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
