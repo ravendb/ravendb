@@ -23,18 +23,9 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Server.Replication.ReplicationWithRevisions())
+                using (var test = new RavenDB_8288())
                 {
-                    try
-                    {
-                        test.CreateConflictAndResolveItIncreaseTheRevisions().Wait();
-                    }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e);
-                        Console.Beep();
-                        return;
-                    }
+                    test.Queries_will_work_during_index_replacements().Wait();
                 }
             }
         }
