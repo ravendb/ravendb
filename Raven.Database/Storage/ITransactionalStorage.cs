@@ -16,6 +16,7 @@ using Raven.Database.Impl.DTC;
 using Raven.Database.Indexing;
 using Raven.Database.Plugins;
 using Raven.Json.Linq;
+using Voron;
 
 namespace Raven.Database.Storage
 {
@@ -34,7 +35,7 @@ namespace Raven.Database.Storage
         bool SkipConsistencyCheck { get;}
         void Batch(Action<IStorageActionsAccessor> action);
         void ExecuteImmediatelyOrRegisterForSynchronization(Action action);
-        void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null);
+        void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null, Action<object, Exception> onError = null);
         Task StartBackupOperation(DocumentDatabase database, string backupDestinationDirectory, bool incrementalBackup, DatabaseDocument documentDatabase, ResourceBackupState state, CancellationToken cts);
         void Restore(DatabaseRestoreRequest restoreRequest, Action<string> output, InMemoryRavenConfiguration globalConfiguration);
         DatabaseSizeInformation GetDatabaseSize();
