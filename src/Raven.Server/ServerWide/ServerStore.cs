@@ -1377,7 +1377,7 @@ namespace Raven.Server.ServerWide
 
                 Debug.Assert(Configuration.Core.PublicServerUrl.HasValue || _ravenServer.WebUrls != null && _ravenServer.WebUrls.Length > 0);
                 return _nodeHttpServerUrl = Configuration.Core.GetNodeHttpServerUrl(
-                    Configuration.Core.PublicServerUrl?.UriValue ?? _ravenServer.WebUrls[0]
+                    Configuration.Core.PublicServerUrl?.UriValue ?? Configuration.Core.ServerUrl ?? _ravenServer.WebUrls[0]
                     );
             }
         }

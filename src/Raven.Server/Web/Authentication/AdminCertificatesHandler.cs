@@ -7,13 +7,16 @@ using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Authentication
@@ -35,7 +38,7 @@ namespace Raven.Server.Web.Authentication
 
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                ValidateCertificate(certificate);
+                ValidateCertificate(certificate, ServerStore);
 
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                 {
@@ -87,7 +90,7 @@ namespace Raven.Server.Web.Authentication
             {
                 var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                ValidateCertificate(certificate);
+                ValidateCertificate(certificate, ServerStore);
 
                 if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                 {
@@ -230,7 +233,7 @@ namespace Raven.Server.Web.Authentication
             {
                 var newPermissions = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                ValidatePermissions(newPermissions);
+                ValidatePermissions(newPermissions, ServerStore);
 
                 var key = Constants.Certificates.Prefix + newPermissions.Thumbprint;
 
@@ -274,35 +277,26 @@ namespace Raven.Server.Web.Authentication
             }
         }
 
-        private static void ValidateCertificate(CertificateDefinition certificate)
+        private static void ValidateCertificate(CertificateDefinition certificate, ServerStore serverStore)
         {
             if (string.IsNullOrWhiteSpace(certificate.Name))
                 throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
 
-            ValidatePermissions(certificate);
+            ValidatePermissions(certificate, serverStore);
         }
 
-        private static void ValidatePermissions(CertificateDefinition certificate)
+        private static void ValidatePermissions(CertificateDefinition certificate, ServerStore serverStore)
         {
             if (certificate.Permissions == null)
                 throw new ArgumentException($"{nameof(certificate.Permissions)} is a required field in the certificate definition");
-
-            const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
 
             foreach (var kvp in certificate.Permissions)
             {
                 if (string.IsNullOrWhiteSpace(kvp.Key))
                     throw new ArgumentException("Error in permissions in the certificate definition, database name is empty");
 
-                if (kvp.Key.Length > Constants.Documents.MaxDatabaseNameLength)
-                    throw new InvalidOperationException($"Database name '{kvp.Key}' exceeds {Constants.Documents.MaxDatabaseNameLength} characters.");
-
-                var result = Regex.Matches(kvp.Key, validDbNameChars);
-                if (result.Count == 0 || result[0].Value != kvp.Key)
-                {
-                    throw new InvalidOperationException(
-                        "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" chars but was: '" + kvp.Key + "'");
-                }
+                if (ResourceNameValidator.IsValidResourceName(kvp.Key, serverStore.Configuration.Core.DataDirectory.FullPath, out var errorMessage) == false)
+                    throw new ArgumentException("Error in permissions in the certificate definition:" + errorMessage);
 
                 if (kvp.Value != DatabaseAccess.ReadWrite && kvp.Value != DatabaseAccess.Admin)
                     throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
