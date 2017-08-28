@@ -17,7 +17,7 @@ interface autoCompleteLastKeyword {
     readonly getFieldPrefix: string,
     identifiers: string[],
     text: string,
-    paren: number
+    parentheses: number
 }
 
 interface queryCompleterProviders {
@@ -48,7 +48,7 @@ class queryCompleter {
             for (let i = 0; i < lineTokens.length; i++) {
                 const token = lineTokens[i];
                 switch (token.type) {
-                    case "keyword": {
+                    case "keyword.clause": {
                         keyword = token.value.toLowerCase();
                         break;
                     }
@@ -140,7 +140,7 @@ class queryCompleter {
         
         while (iterator.stepBackward()){
             const token = iterator.getCurrentToken();
-            if (token.type ==="keyword"){
+            if (token.type ==="keyword.clause"){
                 const keyword = token.value.toLowerCase();
                 keywords.push(keyword);
             }
@@ -161,7 +161,7 @@ class queryCompleter {
             },
             identifiers: [],
             text: undefined,
-            paren: 0
+            parentheses: 0
         };
             
         let liveAutoCompleteSkippedTriggerToken = false;
@@ -190,25 +190,13 @@ class queryCompleter {
             }
 
             switch (token.type) {
-                case "keyword":
+                case "keyword.clause":
+                    const keyword = token.value.toLowerCase();
                     if (result.keyword === "by") {
-                        result.keyword = token.value.toLowerCase() + " by";
+                        result.keyword = keyword + " by";
                     }
                     else {
-                        result.keyword = token.value.toLowerCase();
-                    }
-
-                    if (result.keyword === "desc" ||
-                        result.keyword === "asc" ||
-                        result.keyword === "and" ||
-                        result.keyword === "or" ||
-                        result.keyword === "as") {
-
-                        if (result.identifiers.length > 0 || !result.keywordModifier) {
-                            result.keywordModifier = result.keyword;
-                        }
-
-                        continue;
+                        result.keyword = keyword;
                     }
 
                     if (result.keyword === "by") {
@@ -217,9 +205,14 @@ class queryCompleter {
 
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
                     return result;
-                case "support.function":
+                case "keyword.insideClause":
+                    if (result.identifiers.length > 0 || !result.keywordModifier) {
+                        result.keywordModifier = token.value.toLowerCase();
+                    }
+                    break;
+                case "function":
                     result.keywordsBefore = this.getKeywordsBefore(iterator);
-                    result.keyword = "__support.function";
+                    result.keyword = "__function";
                     return result;
                 case "keyword.operator":
                     result.operator = token.value;
@@ -236,10 +229,10 @@ class queryCompleter {
                     result.identifiers.push(indexName);
                     break;
                 case "paren.lparen":
-                    result.paren++;
+                    result.parentheses++;
                     break;
                 case "paren.rparen":
-                    result.paren--;
+                    result.parentheses--;
                     break;
                 case "text":
                     const text = token.value.trim();
@@ -266,7 +259,7 @@ class queryCompleter {
         return null;
     }
 
-    private completeFields(session: AceAjax.IEditSession, prefix: string, callback: (errors: any[], wordList: autoCompleteWordList[]) => void): void {
+    private completeFields(session: AceAjax.IEditSession, prefix: string, callback: (errors: any[], wordList: autoCompleteWordList[]) => void, functions: autoCompleteWordList[] = null): void {
         const queryIndexName = queryCompleter.extractIndexOrCollectionName(session);
         if (!queryIndexName) {
             return;
@@ -274,6 +267,9 @@ class queryCompleter {
         
         this.getIndexFields(queryIndexName.name, queryIndexName.type, prefix)
             .done((wordList) => {
+                if (functions) {
+                    wordList = wordList.concat(functions);
+                }
                 callback(null, wordList);
             });
     }
@@ -286,20 +282,14 @@ class queryCompleter {
 
         const lastKeyword = this.getLastKeyword(session, pos);
         if (!lastKeyword || !lastKeyword.keyword) {
-
-            const keywords = [
-                {value: "from", score: 1, meta: "keyword"},
-                {value: "select", score: 0, meta: "keyword"}
-            ];
-            this.completeWords(callback, keywords);
-
+            this.completeEmpty(callback);
             return;
         }
         
         switch (lastKeyword.keyword) {
             case "from": {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) {
-                    if (lastKeyword.paren > 0) {
+                    if (lastKeyword.parentheses > 0) {
                         // from (Collection, {show fields here})
                         this.completeFields(session, lastKeyword.getFieldPrefix, callback);
                         return;
@@ -327,12 +317,22 @@ class queryCompleter {
                 });
                 break;
             }
-            case "__support.function":
+            case "__function":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text) { // field already specified
                     return;
                 }
                 
                 this.completeFields(session, lastKeyword.getFieldPrefix, callback);
+                break;
+            case "declare":
+                this.completeWords(callback, [
+                    {value: "function", score: 0, meta: "keyword"}
+                ]);
+                break;
+            case "function":
+                if (lastKeyword.parentheses === 0 && lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
+                    this.completeEmpty(callback);
+                }
                 break;
             case "select":
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text && !lastKeyword.text.trim()) {
@@ -355,9 +355,9 @@ class queryCompleter {
                 if (lastKeyword.identifiers.length > 0 && lastKeyword.text !== ",") { // field already specified but there is not comma separator for next field
                     if (!lastKeyword.keywordModifier){
                         const keywords = [
-                            {value: ",", score: 2, meta: "separator"},
-                            {value: "asc", score: 0, meta: "keyword"},
-                            {value: "desc", score: 1, meta: "keyword"}
+                            {value: ",", score: 5, meta: "separator"},
+                            {value: "asc", score: 4, meta: "keyword"},
+                            {value: "desc", score: 3, meta: "keyword"}
                         ];
                         this.completeWords(callback, keywords);
                     }
@@ -365,7 +365,10 @@ class queryCompleter {
                     return;
                 }
                 
-                this.completeFields(session, lastKeyword.getFieldPrefix, callback);
+                this.completeFields(session, lastKeyword.getFieldPrefix, callback, [
+                    {caption: "random", value: "random(", score: 0, meta: "function"},
+                    {caption: "score", value: "score(", score: 0, meta: "function"}
+                ]);
                 break;
                 
             case "where": {
@@ -456,9 +459,24 @@ class queryCompleter {
             if (keyword.value.includes(" ")){
                 keyword.value = "'" + keyword.value + "'"; // wrap collection name in 'collection name' if it has spaces. Also used for other values.
             }
-            keyword.value += " "; // insert space after each completed keyword or other value.
+            if (keyword.meta === "function"){
+                keyword.value += "(";
+            } else {
+                keyword.value += " "; // insert space after each completed keyword or other value.
+            }
             return word;
         }))
+    }
+
+    private completeEmpty(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
+        this.providers.collections(collections => {
+            const keywords = [
+                {value: "from", score: 2, meta: "keyword"},
+                {value: "declare", score: 1, meta: "keyword"},
+                {value: "select", score: 0, meta: "keyword"}
+            ];
+            this.completeWords(callback, keywords);
+        });
     }
 
     private completeFrom(callback: (errors: any[], wordList: autoCompleteWordList[]) => void) {
@@ -485,17 +503,19 @@ class queryCompleter {
         }
 
         const keywords = [
-            {value: "order", score: 1, meta: "keyword"},
-            {value: "where", score: 0, meta: "keyword"}
+            {value: "load", score: 7, meta: "keyword"},
+            {value: "where", score: 6, meta: "keyword"},
+            {value: "order", score: 9, meta: "keyword"},
+            {value: "include", score: 10, meta: "keyword"},
         ];
         if (!isStaticIndex) {
-            keywords.push({value: "group", score: 2, meta: "keyword"})
+            keywords.push({value: "group", score: 5, meta: "keyword"})
         }
         if (!lastKeyword.keywordModifier) {
             keywords.push({value: "as", score: 4, meta: "keyword"})
         }
         if (!lastKeyword.keywordsBefore.find(keyword => keyword === "select")) {
-            keywords.push({value: "select", score: 3, meta: "keyword"})
+            keywords.push({value: "select", score: 8, meta: "keyword"})
         }
 
         this.completeWords(callback, keywords);

@@ -6,16 +6,28 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 
 var RqlHighlightRules = function() {
 
-    var keywords = (
-        "select|from|where|and|or|group|by|order|as|desc|asc|not|null|index|in"
+    var clausesKeywords = (
+        "declare|function|from|index|where|select|group|order|by|desc|asc|load|include"
+    );
+    var insideClauseKeywords = (
+        "as|and|or|not|all"
+    );
+    var functions = (
+        "count|sum|id|key"
+    );
+    var whereFunctions = (
+        "in|search|boost|startsWith|endsWith|lucene|exact"
+    );
+    var orderByFunctions = (
+        "random|score"
     );
 
-    var builtinConstants = (
+    var constants = (
+        "null"
+    );
+
+    var constantsBoolean = (
         "true|false"
-    );
-
-    var builtinFunctions = (
-        "count|sum|key|search|boost|startsWith|endsWith|lucene|exists|exact|random|score"
     );
 
     var dataTypes = (
@@ -23,9 +35,13 @@ var RqlHighlightRules = function() {
     );
 
     var keywordMapper = this.createKeywordMapper({
-        "support.function": builtinFunctions,
-        "keyword": keywords,
-        "constant.language": builtinConstants,
+        "keyword.clause": clausesKeywords,
+        "keyword.insideClause": insideClauseKeywords,
+        "function": functions,
+        "function.where": whereFunctions,
+        "function.orderBy": orderByFunctions,
+        "constant.language": constants,
+        "constant.language.boolean": constantsBoolean,
         "storage.type": dataTypes
     }, "identifier", true);
 
@@ -57,10 +73,10 @@ var RqlHighlightRules = function() {
             regex : "\\+|\\-|\\/|\\/\\/|%|<@>|@>|<@|&|\\^|~|<|>|<=|=>|==|!=|<>|="
         }, {
             token : "paren.lparen",
-            regex : "[\\(]"
+            regex : /[\[({]/
         }, {
             token : "paren.rparen",
-            regex : "[\\)]"
+            regex : /[\])}]/
         }, {
             token : "text",
             regex : "\\s+"
