@@ -49,6 +49,7 @@ using Raven.Database.Common;
 using Raven.Database.Json;
 using Raven.Database.Raft;
 using Raven.Database.Server.WebApi;
+using Voron;
 using ThreadState = System.Threading.ThreadState;
 
 namespace Raven.Database
@@ -102,7 +103,7 @@ namespace Raven.Database
 
         public RavenThreadPool ThreadPool { get; set; }
 
-        public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null)
+        public DocumentDatabase(InMemoryRavenConfiguration configuration, DocumentDatabase systemDatabase, TransportState recievedTransportState = null, Action<object, Exception> onError = null)
         {
             TimerManager = new ResourceTimerManager();
             DocumentLock = new PutSerialLock();
@@ -110,7 +111,7 @@ namespace Raven.Database
             Name = configuration.DatabaseName;
             ResourceName = Name;
             Configuration = configuration;
-
+            
             // initialize thread pool
             if (systemDatabase == null)
             {
@@ -161,7 +162,7 @@ namespace Raven.Database
                 try
                 {
                     uuidGenerator = new SequentialUuidGenerator();
-                    initializer.InitializeTransactionalStorage(uuidGenerator);
+                    initializer.InitializeTransactionalStorage(uuidGenerator, onError);
                     lastCollectionEtags = new LastCollectionEtags(WorkContext);
                 }
                 catch (Exception ex)
@@ -1480,7 +1481,7 @@ namespace Raven.Database
                 configuration.Container.SatisfyImportsOnce(database);
             }
 
-            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator)
+            public void InitializeTransactionalStorage(IUuidGenerator uuidGenerator, Action<object, Exception> onErrorAction = null)
             {
                 string storageEngineTypeName = configuration.SelectDatabaseStorageEngineAndFetchTypeName();
                 database.TransactionalStorage = configuration.CreateTransactionalStorage(storageEngineTypeName, database.WorkContext.HandleWorkNotifications, () =>
@@ -1499,7 +1500,7 @@ namespace Raven.Database
 
                     if (File.Exists(resourceTypeFile) == false)
                         using (File.Create(resourceTypeFile)) { }
-                });
+                },onErrorAction);
             }
 
             public Dictionary<int, IndexFailDetails> InitializeIndexDefinitionStorage()

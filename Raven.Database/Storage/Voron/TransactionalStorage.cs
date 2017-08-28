@@ -410,7 +410,11 @@ namespace Raven.Storage.Voron
             current.Value.OnStorageCommit += action;
         }
 
-        public void Initialize(IUuidGenerator generator, OrderedPartCollection<AbstractDocumentCodec> documentCodecs, Action<string> putResourceMarker = null)
+        public void Initialize(
+            IUuidGenerator generator, 
+            OrderedPartCollection<AbstractDocumentCodec> documentCodecs, 
+            Action<string> putResourceMarker = null,
+            Action<object,Exception> onError = null)
         {
             if (generator == null) throw new ArgumentNullException("generator");
             if (documentCodecs == null) throw new ArgumentNullException("documentCodecs");
@@ -420,9 +424,14 @@ namespace Raven.Storage.Voron
 
             Log.Info("Starting to initialize Voron storage. Path: " + configuration.DataDirectory);
 
-            StorageEnvironmentOptions options = configuration.RunInMemory ?
+            var options = configuration.RunInMemory ?
                 CreateMemoryStorageOptionsFromConfiguration(configuration) :
                 CreateStorageOptionsFromConfiguration(configuration);
+
+            if (onError != null)
+            {
+                options.OnRecoveryError += (sender, args) => onError(sender,args.Exception);
+            }
 
             options.OnScratchBufferSizeChanged += size =>
             {
