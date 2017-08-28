@@ -225,7 +225,7 @@ namespace Raven.Client.Documents.Session
         {
             var query = ToString();
             var indexQuery = GenerateIndexQuery(query);
-            BeforeQueryExecutionAction?.Invoke(indexQuery);
+            BeforeQueryExecutedAction?.Invoke(indexQuery);
 
             return indexQuery;
         }

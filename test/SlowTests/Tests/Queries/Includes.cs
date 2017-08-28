@@ -144,7 +144,7 @@ namespace SlowTests.Tests.Queries
                 {
                     var orders =
                         session.Query<Order>()
-                            .Customize(x => x.Include<Order>(o => o.CustomerId))
+                            .Include(x => x.CustomerId)
                             .Where(x => x.TotalPrice > 100)
                             .ToList();
 
@@ -183,7 +183,7 @@ namespace SlowTests.Tests.Queries
                 {
                     var orders =
                         session.Query<Order2>()
-                            .Customize(x => x.Include<Order2, Customer2>(o => o.Customer2Id))
+                            .Include(x => x.Customer2Id)
                             .Where(x => x.TotalPrice > 100)
                             .ToList();
 

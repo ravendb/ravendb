@@ -107,8 +107,7 @@ namespace Raven.Client.Documents.Session.Operations
             {
                 var metadata = document.GetMetadata();
 
-                string id;
-                metadata.TryGetId(out id);
+                metadata.TryGetId(out var id);
 
                 list.Add(Deserialize<T>(id, document, metadata, _projectionFields, DisableEntitiesTracking, _session));
             }

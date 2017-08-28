@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Allows you to modify the index query before it is sent to the server
         /// </summary>
-        TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
+        TSelf BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted);
 
         /// <summary>
         ///     Specifies a boost weight to the last where clause.

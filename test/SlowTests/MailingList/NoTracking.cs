@@ -8,7 +8,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Xunit;
 
@@ -59,7 +58,7 @@ namespace SlowTests.MailingList
                 {
                     var result = session.Query<A>()
                         .Customize(c => c.NoTracking())
-                        .Include<A, B>(a => a.Bs);
+                        .Include(a => a.Bs);
 
                     foreach (var res in result)
                     {
@@ -87,7 +86,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var result = session.Query<A>()
-                        .Include<A, B>(a => a.Bs);
+                        .Include(a => a.Bs);
 
                     foreach (var res in result)
                     {

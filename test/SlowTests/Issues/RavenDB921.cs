@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var enumerator = session.Advanced
-                        .Stream(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+                        .Stream(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
 
                     var count = 0;
                     while (enumerator.MoveNext())
@@ -164,7 +165,7 @@ namespace SlowTests.Issues
                 using (var session = store.OpenSession())
                 {
                     var enumerator = session.Advanced
-                        .Stream(session.Query<User, Users_ByActive>().Customize(x => x.AddOrder(Constants.Documents.Indexing.Fields.DocumentIdFieldName)));
+                        .Stream(session.Query<User, Users_ByActive>().OrderBy(Constants.Documents.Indexing.Fields.DocumentIdFieldName));
 
                     var count = 0;
                     while (enumerator.MoveNext())
