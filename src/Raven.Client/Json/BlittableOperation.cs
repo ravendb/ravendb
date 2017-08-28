@@ -108,14 +108,13 @@ namespace Raven.Client.Json
                         if ((newArray == null) || (oldArray == null))
                             throw new InvalidDataException("Invalid blittable");
 
-                        var changed = CompareBlittableArray(newArray, oldArray);
-                        if (!(changed))
+                        var changed = CompareBlittableArray(id, oldArray, newArray, changes, docChanges, newProp.Name);
+                        if (changed == false)
                             break;
 
                         if (changes == null)
                             return true;
-                        NewChange(newProp.Name, newProp.Value, oldProp.Value, docChanges,
-                            DocumentsChanges.ChangeType.FieldChanged);
+
                         break;
                     case BlittableJsonToken.StartObject:
                         {
@@ -136,43 +135,76 @@ namespace Raven.Client.Json
             return true;
         }
 
-        private static bool CompareBlittableArray(BlittableJsonReaderArray newArray, BlittableJsonReaderArray oldArray)
+        private static bool CompareBlittableArray(string id, BlittableJsonReaderArray oldArray, BlittableJsonReaderArray newArray, IDictionary<string, DocumentsChanges[]> changes, List<DocumentsChanges> docChanges, LazyStringValue propName)
         {
-            if (newArray.Length != oldArray.Length)
+            // if we don't care about the changes
+            if (oldArray.Length != newArray.Length && changes == null)
                 return true;
-            if (newArray.Length == 0)
-                return false;
-            var type = newArray.GetArrayType();
-            switch (type)
+
+            var position = 0;
+            var changed = false;
+            while (position < oldArray.Length && position < newArray.Length)
             {
-                case BlittableJsonToken.StartObject:
-                    foreach (var item in newArray.Items)
-                    {
-                        return oldArray.Items.Select(oldItem =>
-                        CompareBlittable("", (BlittableJsonReaderObject)item, (BlittableJsonReaderObject)oldItem, null, null))
-                        .All(change => change);
-                    }
-                    break;
-                case BlittableJsonToken.StartArray:
-                    foreach (var item in newArray.Items)
-                    {
-                        return oldArray.Items.Select(oldItem =>
-                        CompareBlittableArray((BlittableJsonReaderArray)item, (BlittableJsonReaderArray)oldItem))
-                        .All(change => change);
-                    }
-                    break;
-                case BlittableJsonToken.Integer:
-                case BlittableJsonToken.LazyNumber:
-                case BlittableJsonToken.String:
-                case BlittableJsonToken.CompressedString:
-                case BlittableJsonToken.Boolean:
-                    return (!(!(newArray.Except(oldArray).Any()) && newArray.Length == oldArray.Length));
-                default:
-                    throw new ArgumentOutOfRangeException();
+                switch (oldArray[position])
+                {
+                    case BlittableJsonReaderObject bjro1:
+                        if (newArray[position] is BlittableJsonReaderObject bjro2)
+                        {
+                            changed |= CompareBlittable(id, bjro1, bjro2, changes, docChanges);
+                        }
+                        else
+                        {
+                            changed = true;
+                        }
+                        break;
+                    case BlittableJsonReaderArray bjra1:
+                        if (newArray[position] is BlittableJsonReaderArray bjra2)
+                        {
+                            changed |= CompareBlittableArray(id, bjra1, bjra2, changes, docChanges, propName);
+                        }
+                        else
+                        {
+                            changed = true;
+                        }
+                        break;
+                    case null:
+                        changed |= newArray[position] != null;
+                        break;
+                    default:
+                        if (oldArray[position].Equals(newArray[position]) == false)
+                        {
+                            if (changes != null)
+                            {
+                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                    DocumentsChanges.ChangeType.ArrayValueChanged);
+                            }
+                            changed = true;
+                        }
+                        break;
+                }
+
+                position++;
             }
 
-            return false;
+            if (changes == null)
+                return changed;
 
+            // if one of the arrays is larger than the other
+            while (position < oldArray.Length)
+            {
+                NewChange(propName, null, oldArray[position], docChanges,
+                    DocumentsChanges.ChangeType.ArrayValueRemoved);
+                position++;
+            }
+
+            while (position < newArray.Length)
+            {
+                NewChange(propName, newArray[position], null, docChanges,
+                    DocumentsChanges.ChangeType.ArrayValueAdded);
+                position++;
+            }
+
+            return changed;
         }
 
         private static void NewChange(string name, object newValue, object oldValue, List<DocumentsChanges> docChanges, DocumentsChanges.ChangeType change)
