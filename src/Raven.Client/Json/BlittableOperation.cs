@@ -155,6 +155,12 @@ namespace Raven.Client.Json
                         else
                         {
                             changed = true;
+                            if (changes != null)
+                            {
+                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                    DocumentsChanges.ChangeType.ArrayValueChanged);
+                            }
+
                         }
                         break;
                     case BlittableJsonReaderArray bjra1:
@@ -165,10 +171,23 @@ namespace Raven.Client.Json
                         else
                         {
                             changed = true;
+                            if (changes != null)
+                            {
+                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                    DocumentsChanges.ChangeType.ArrayValueChanged);
+                            }
                         }
                         break;
                     case null:
-                        changed |= newArray[position] != null;
+                        if (newArray[position] != null)
+                        {
+                            changed = true;
+                            if (changes != null)
+                            {
+                                NewChange(propName, newArray[position], oldArray[position], docChanges,
+                                    DocumentsChanges.ChangeType.ArrayValueChanged);
+                            }
+                        }
                         break;
                     default:
                         if (oldArray[position].Equals(newArray[position]) == false)
