@@ -163,9 +163,12 @@ namespace Raven.Server.Documents.Subscriptions
             if (_subscriptionConnectionStates.TryGetValue(subscriptionId, out SubscriptionConnectionState subscriptionConnectionState) == false)
                 return false;
 
-            subscriptionConnectionState.Connection.ConnectionException = ex;
-            subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
-            subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+            if (subscriptionConnectionState.Connection != null)
+            {
+                subscriptionConnectionState.RegisterRejectedConnection(subscriptionConnectionState.Connection, ex);
+                subscriptionConnectionState.Connection.ConnectionException = ex;
+                subscriptionConnectionState.Connection.CancellationTokenSource.Cancel();
+            }
 
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Subscription with id {subscriptionId} connection was dropped. Reason: {ex.Message}");
