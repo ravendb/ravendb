@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Indexes
 
         public override IQueryResultRetriever GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
         {
-            return new MapQueryResultRetriever(DocumentDatabase,query, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
+            return new MapQueryResultRetriever(DocumentDatabase, query, DocumentDatabase.DocumentsStorage, documentsContext, fieldsToFetch, includeDocumentsCommand);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
