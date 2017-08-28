@@ -23,7 +23,7 @@ class collectionsTracker {
         changed: [] as Array<(coll: collection, changeVector: string) => void>,
         removed: [] as Array<(coll: collection) => void>,
         globalChangeVector: [] as Array<(changeVector: string) => void>
-    }
+    };
 
     onDatabaseChanged(db: database) {
         this.db = db;
@@ -46,6 +46,8 @@ class collectionsTracker {
 
     private collectionsLoaded(collectionsStats: collectionsStats, db: database) {
         let collections = collectionsStats.collections;
+
+        _.remove(collections, c => !c.documentCount());
         collections = _.sortBy(collections, x => x.name.toLocaleLowerCase());
 
         //TODO: starred
@@ -150,6 +152,11 @@ class collectionsTracker {
         item.documentCount(incomingData.Count);
 
         this.events.changed.forEach(handler => handler(item, incomingData.LastDocumentChangeVector));
+
+        // If no documents - remove collection on studio side - server doesn't actually have a way to delete collections      
+        if (!incomingData.Count) {
+            this.onCollectionRemoved(item);
+        }
     }
     
 }

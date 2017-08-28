@@ -46,9 +46,8 @@ namespace Voron
             Debug.Assert(cacheSize > 0);
             Debug.Assert(cacheSize <= 1024);
 
-            cacheSize = Bits.NextPowerOf2(cacheSize);
-            if (cacheSize > 1024)
-                cacheSize = 1024;
+            if (!Bits.IsPowerOfTwo(cacheSize))
+                cacheSize = Bits.NextPowerOf2(cacheSize);
 
             int shiftRight = Bits.CeilLog2(cacheSize);
             _andMask = (int) (0xFFFFFFFF >> (sizeof(uint) * 8 - shiftRight));

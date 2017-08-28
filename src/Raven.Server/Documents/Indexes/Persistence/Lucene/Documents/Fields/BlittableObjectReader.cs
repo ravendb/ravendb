@@ -49,7 +49,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
             else
                 _sb.Clear();
 
-            var read = 0;
+            int read;
 
             do
             {

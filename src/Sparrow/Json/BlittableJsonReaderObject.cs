@@ -660,6 +660,24 @@ namespace Sparrow.Json
             return _propCount;
         }
 
+        public ulong GetHashOfPropertyNames()
+        {
+            ulong hash = (ulong)_propCount;
+            for (int i = 0; i < _propCount; i++)
+            {
+                var propertyNameOffsetPtr = _propNames + sizeof(byte) + i * _propNamesDataOffsetSize;
+                var propertyNameOffset = ReadNumber(propertyNameOffsetPtr, _propNamesDataOffsetSize);
+
+                // Get the relative "In Document" position of the property Name
+                var propRelativePos = (int)(_propNames - propertyNameOffset - _mem);
+                byte offset;
+                var size = ReadVariableSizeInt(propRelativePos, out offset);
+
+                hash = Hashing.XXHash64.Calculate( _mem + propRelativePos + offset, (ulong)size, hash);
+            }
+            return hash;
+        }
+
         public int[] GetPropertiesByInsertionOrder()
         {
             //TODO: Move all callers to use the other overload

@@ -150,22 +150,19 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/hilo/return", "PUT", AuthorizationStatus.ValidUser)]
         public async Task HiLoReturn()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
+            var end = GetLongQueryString("end");
+            var last = GetLongQueryString("last");
+
+            var cmd = new MergedHiLoReturnCommand
             {
-                var tag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("tag");
-                var end = GetLongQueryString("end");
-                var last = GetLongQueryString("last");
+                Database = Database,
+                Key = tag,
+                End = end,
+                Last = last
+            };
 
-                var cmd = new MergedHiLoReturnCommand
-                {
-                    Database = Database,
-                    Key = tag,
-                    End = end,
-                    Last = last
-                };
-
-                await Database.TxMerger.Enqueue(cmd);
-            }
+            await Database.TxMerger.Enqueue(cmd);
 
             NoContentStatus();
         }
@@ -190,9 +187,9 @@ namespace Raven.Server.Documents.Handlers
                 if (oldMax != End || Last > oldMax)
                     return 1;
 
-                document.Data.Modifications = new DynamicJsonValue()
+                document.Data.Modifications = new DynamicJsonValue
                 {
-                    ["Max"] = Last,
+                    ["Max"] = Last
                 };
 
                 using (var hiloReader = context.ReadObject(document.Data, hiLoDocumentId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))

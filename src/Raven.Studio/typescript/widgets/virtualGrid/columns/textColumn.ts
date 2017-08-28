@@ -24,8 +24,7 @@ class textColumn<T> implements virtualColumn {
 
     getCellValue(item: T) {
         return _.isFunction(this.valueAccessor)
-            ? this.gridController.wrapWithEvaluationContext(this.valueAccessor.bind(item))
-                (item) // item is available as this, as well as first argument
+            ? this.valueAccessor.bind(item)(item) // item is available as this, as well as first argument
             : (item as any)[this.valueAccessor as string];
     }
 

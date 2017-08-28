@@ -145,7 +145,7 @@ namespace SlowTests.Issues
                         .Where(x => x.PersonId == "people/1")
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
 
                 using (var session = store.OpenSession())
@@ -155,7 +155,7 @@ namespace SlowTests.Issues
                         .ProjectFromIndexFieldsInto<Family_MultiMap.Result>()
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                 }
             }
         }

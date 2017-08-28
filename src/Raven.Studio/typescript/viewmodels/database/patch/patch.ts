@@ -12,8 +12,6 @@ import getDocumentWithMetadataCommand = require("commands/database/documents/get
 import getDocumentsMetadataByIDPrefixCommand = require("commands/database/documents/getDocumentsMetadataByIDPrefixCommand");
 import savePatchCommand = require('commands/database/patch/savePatchCommand');
 import patchByQueryCommand = require("commands/database/patch/patchByQueryCommand");
-import patchByCollectionCommand = require("commands/database/patch/patchByCollectionCommand");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 import queryUtil = require("common/queryUtil");
 import getPatchesCommand = require('commands/database/patch/getPatchesCommand');
 import eventsCollector = require("common/eventsCollector");
@@ -34,10 +32,10 @@ import patchDocumentCommand = require("commands/database/documents/patchDocument
 import showDataDialog = require("viewmodels/common/showDataDialog");
 import verifyDocumentsIDsCommand = require("commands/database/documents/verifyDocumentsIDsCommand");
 import generalUtils = require("common/generalUtils");
-import customFunctions = require("models/database/documents/customFunctions");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import getDocumentsPreviewCommand = require("commands/database/documents/getDocumentsPreviewCommand");
+import defaultAceCompleter = require("common/defaultAceCompleter");
+import queryCompleter = require("common/queryCompleter");
 
 type fetcherType = (skip: number, take: number, previewCols: string[], fullCols: string[]) => JQueryPromise<pagedResult<document>>;
 
@@ -81,7 +79,7 @@ class patchList {
 
     filters = {
         searchText: ko.observable<string>()
-    }
+    };
 
     previewPatch(item: patchDocument) {
         this.previewItem(item);
@@ -125,14 +123,14 @@ class patchTester extends viewModelBase {
         loadDocument: ko.observableArray<string>(),
         putDocument: ko.observableArray<any>(),
         info: ko.observableArray<string>()
-    }
+    };
 
     showObjectsInPutSection = ko.observable<boolean>(false);
 
     spinners = {
         testing: ko.observable<boolean>(false),
         loadingDocument: ko.observable<boolean>(false)
-    }
+    };
 
     documentIdSearchResults = ko.observableArray<string>([]);
 
@@ -234,7 +232,7 @@ class patchTester extends viewModelBase {
         this.loadDocument();
     }
 
-    runTest() {
+    runTest(): void {
         eventsCollector.default.reportEvent("patch", "test");
 
         this.afterAsyncValidationCompleted(this.validationGroup, () => {
@@ -273,6 +271,7 @@ class patchTester extends viewModelBase {
 class patch extends viewModelBase {
 
     static readonly $body = $("body");
+    static readonly ContainerSelector = "#patchContainer";
 
     inSaveMode = ko.observable<boolean>();
     patchSaveName = ko.observable<string>();
@@ -280,8 +279,11 @@ class patch extends viewModelBase {
     spinners = {
         save: ko.observable<boolean>(false),
         preview: ko.observable<boolean>(false)
-    }
+    };
 
+    jsCompleter = defaultAceCompleter.completer();
+    queryCompleter: queryCompleter;
+    
     gridController = ko.observable<virtualGridController<document>>();
     private documentsProvider: documentBasedColumnsProvider;
     private columnPreview = new columnPreviewPlugin<document>();
@@ -289,17 +291,12 @@ class patch extends viewModelBase {
     private fullDocumentsProvider: documentPropertyProvider;
     private fetcher = ko.observable<fetcherType>();
 
-    private customFunctionsContext: object;
+    private indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     patchDocument = ko.observable<patchDocument>(patchDocument.empty());
 
-    indexNames = ko.observableArray<string>();
-    indexFields = ko.observableArray<string>();
-    collections = collectionsTracker.default.collections;
-
     isDocumentMode: KnockoutComputed<boolean>;
-    isCollectionMode: KnockoutComputed<boolean>;
-    isIndexMode: KnockoutComputed<boolean>;
+    isQueryMode: KnockoutComputed<boolean>;
 
     documentIdSearchResults = ko.observableArray<string>();
 
@@ -316,15 +313,17 @@ class patch extends viewModelBase {
         if ($(e.target).closest(".patch-save").length === 0) {
             this.inSaveMode(false);
         }
-    }
+    };
 
     constructor() {
         super();
         aceEditorBindingHandler.install();
 
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
+
         this.initValidation();
 
-        this.bindToCurrentInstance("usePatchOption", "useIndex", "useCollection", "previewDocument");
+        this.bindToCurrentInstance("usePatchOption", "previewDocument");
         this.initObservables();
     }
 
@@ -351,12 +350,23 @@ class patch extends viewModelBase {
     private initValidation() {
         const doc = this.patchDocument();
 
+        /* TODO
         doc.script.extend({
-            required: true
+            required: true,
+            aceValidation: true
+        });*/
+        
+        doc.query.extend({
+            required: {
+                onlyIf: () => this.patchDocument().patchOnOption() === "Query"
+            },
+            aceValidation: true
         });
 
         doc.selectedItem.extend({
-            required: true
+            required: {
+                onlyIf: () => this.patchDocument().patchOnOption() !== "Query"
+            }
         });
 
         patch.setupDocumentIdValidation(doc.selectedItem,
@@ -369,10 +379,12 @@ class patch extends viewModelBase {
 
         this.runPatchValidationGroup = ko.validatedObservable({
             script: doc.script,
-            selectedItem: doc.selectedItem
+            selectedItem: doc.selectedItem,
+            query: doc.query
         });
         this.runQueryValidationGroup = ko.validatedObservable({
-            selectedItem: doc.selectedItem
+            selectedItem: doc.selectedItem,
+            query: doc.query
         });
 
         this.savePatchValidationGroup = ko.validatedObservable({
@@ -386,8 +398,7 @@ class patch extends viewModelBase {
 
     private initObservables() {
         this.isDocumentMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Document");
-        this.isCollectionMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Collection");
-        this.isIndexMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Index");
+        this.isQueryMode = ko.pureComputed(() => this.patchDocument().patchOnOption() === "Query");
 
         this.patchDocument().selectedItem.throttle(250).subscribe(item => {
             if (this.patchDocument().patchOnOption() === "Document") {
@@ -421,12 +432,20 @@ class patch extends viewModelBase {
 
         this.fullDocumentsProvider = new documentPropertyProvider(this.activeDatabase());
 
-        return $.when<any>(this.fetchCustomFunctions(), this.fetchAllIndexes(), this.savedPatches.loadAll(this.activeDatabase()));
+        return $.when<any>(this.fetchAllIndexes(this.activeDatabase()), this.savedPatches.loadAll(this.activeDatabase()));
     }
 
     attached() {
         super.attached();
 
+        this.createKeyboardShortcut("ctrl+enter", () => {
+            if (this.test.testMode()) {
+                this.test.runTest();
+            } else {
+                this.runPatch();
+            }
+        }, patch.ContainerSelector);
+        
         const jsCode = Prism.highlight("this.NewProperty = this.OldProperty + myParameter;\r\n" +
             "delete this.UnwantedProperty;\r\n" +
             "this.Comments.RemoveWhere(function(comment){\r\n" +
@@ -434,6 +453,7 @@ class patch extends viewModelBase {
             "});",
             (Prism.languages as any).javascript);
 
+        //TODO: don't use lucene syntax - use RQL
         popoverUtils.longWithHover($(".query-label small"), {
             content: '<p>Queries use Lucene syntax. Examples:</p><pre><span class="token keyword">Name</span>: Hi?berna*<br/><span class="token keyword">Count</span>: [0 TO 10]<br/><span class="token keyword">Title</span>: "RavenDb Queries 1010" <span class="token keyword">AND Price</span>: [10.99 TO *]</pre>'
         });
@@ -452,10 +472,10 @@ class patch extends viewModelBase {
 
     compositionComplete() {
         super.compositionComplete();
+        /* TODO
 
         const grid = this.gridController();
-        grid.withEvaluationContext(this.customFunctionsContext);
-        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
+        this.documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             showRowSelectionCheckbox: false,
             showSelectAllCheckbox: false,
             createHyperlinks: false,
@@ -479,10 +499,8 @@ class patch extends viewModelBase {
             switch (this.patchDocument().patchOnOption()) {
                 case "Document":
                     return [];
-                case "Index":
+                case "Query":
                     return documentBasedColumnsProvider.extractUniquePropertyNames(results);
-                case "Collection":
-                    return results.availableColumns;
             }
         };
 
@@ -506,6 +524,7 @@ class patch extends viewModelBase {
         });
 
         this.fetcher.subscribe(() => grid.reset());
+        */
     }
 
     private showPreview(doc: document) {
@@ -532,60 +551,19 @@ class patch extends viewModelBase {
         const patchDoc = this.patchDocument();
         patchDoc.selectedItem(null);
         patchDoc.patchOnOption(option);
-        patchDoc.patchAll(option === "Index" || option === "Collection");
+        patchDoc.patchAll(option === "Query");
 
-        if (option !== "Index") {
+        if (option !== "Query") {
             patchDoc.query(null);
         }
 
         this.runPatchValidationGroup.errors.showAllMessages(false);
     }
 
-    useIndex(indexName: string) {
-        const patchDoc = this.patchDocument();
-        patchDoc.selectedItem(indexName);
-        patchDoc.patchAll(true);
-
-        this.columnsSelector.reset();
-
-        queryUtil.fetchIndexFields(this.activeDatabase(), indexName, this.indexFields);
-
-        this.runQuery();
-    }
-
-    useCollection(collectionToUse: collection) {
-        this.columnsSelector.reset();
-
-        const fetcher = (skip: number, take: number, previewCols: string[], fullCols: string[]) => collectionToUse.fetchDocuments(skip, take, previewCols, fullCols);
-        this.fetcher(fetcher);
-
-        const patchDoc = this.patchDocument();
-        patchDoc.selectedItem(collectionToUse.name);
-        patchDoc.patchAll(true);
-    }
-
-    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.patchDocument().selectedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
-    }
-
     usePatch(item: patchDocument) {
         const patchDoc = this.patchDocument();
 
-        //TODO: handle case when saved patch has collection which no longer exist, or index which is not available
-
         patchDoc.copyFrom(item);
-
-        switch (patchDoc.patchOnOption()) {
-            case "Index":
-                this.useIndex(patchDoc.selectedItem());
-                break;
-            case "Collection":
-                const matchedCollection = this.collections().find(x => x.name === patchDoc.selectedItem());
-                if (matchedCollection) {
-                    this.useCollection(matchedCollection);
-                }
-                break;
-        }
     }
 
     removePatch(item: patchDocument) {
@@ -605,20 +583,17 @@ class patch extends viewModelBase {
 
     runQuery(): void {
         if (this.isValid(this.runQueryValidationGroup)) {
-            const selectedIndex = this.patchDocument().selectedItem();
-            if (selectedIndex) {
-                const database = this.activeDatabase();
-                const query = this.patchDocument().query();
+            const database = this.activeDatabase();
+            const query = this.patchDocument().query();
 
-                const resultsFetcher = (skip: number, take: number) => {
-                    const criteria = queryCriteria.empty();
-                    criteria.queryText(query);
+            const resultsFetcher = (skip: number, take: number) => {
+                const criteria = queryCriteria.empty();
+                criteria.queryText(query);
 
-                    return new queryCommand(database, skip, take, criteria)
-                        .execute();
-                };
-                this.fetcher(resultsFetcher);
-            }
+                return new queryCommand(database, skip, take, criteria)
+                    .execute();
+            };
+            this.fetcher(resultsFetcher);
         }
     }
 
@@ -631,21 +606,14 @@ class patch extends viewModelBase {
             case "Document":
                 this.patchOnDocuments([patchDoc.selectedItem()]);
                 break;
-            case "Index":
+            case "Query":
                 if (patchDoc.patchAll()) {
-                    this.patchOnIndex();
+                    this.patchOnQuery();
                 } else {
                     const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
                     this.patchOnDocuments(selectedIds);
                 }
                 break;
-            case "Collection":
-                if (patchDoc.patchAll()) {
-                    this.patchOnCollection();
-                } else {
-                    const selectedIds = this.gridController().getSelectedItems().map(x => x.getId());
-                    this.patchOnDocuments(selectedIds);
-                }
             }
         }
     }
@@ -698,9 +666,8 @@ class patch extends viewModelBase {
             });
     }
 
-    private patchOnIndex() {
-        eventsCollector.default.reportEvent("patch", "run", "index");
-        const indexToPatch = this.patchDocument().selectedItem();
+    private patchOnQuery() {
+        eventsCollector.default.reportEvent("patch", "run", "query");
         const query = this.patchDocument().query();
         const message = `Are you sure you want to apply this patch to matching documents?`;
 
@@ -711,29 +678,7 @@ class patch extends viewModelBase {
                         Script: this.patchDocument().script()
                     } as Raven.Server.Documents.Patch.PatchRequest;
 
-                    new patchByQueryCommand(indexToPatch, query, patch, this.activeDatabase())
-                        .execute()
-                        .done((operationIdDto) => {
-                            notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operationIdDto.OperationId);
-                        });
-                }
-            });
-    }
-
-    private patchOnCollection() {
-        eventsCollector.default.reportEvent("patch", "run", "collection");
-        const collectionToPatch = this.patchDocument().selectedItem();
-        const message = `Are you sure you want to apply this patch to all documents in '${collectionToPatch}' collection?`;
-
-        this.confirmationMessage("Patch", message, ["Cancel", "Patch all"])
-            .done(result => {
-                if (result.can) {
-
-                    const patch = {
-                        Script: this.patchDocument().script()
-                    } as Raven.Server.Documents.Patch.PatchRequest;
-
-                    new patchByCollectionCommand(collectionToPatch, patch, this.activeDatabase())
+                    new patchByQueryCommand(query, patch, this.activeDatabase())
                         .execute()
                         .done((operationIdDto) => {
                             notificationCenter.instance.openDetailsForOperationById(this.activeDatabase(), operationIdDto.OperationId);
@@ -754,23 +699,14 @@ class patch extends viewModelBase {
         }
     }
 
-    private fetchCustomFunctions(): JQueryPromise<customFunctions> {
-        return new getCustomFunctionsCommand(this.activeDatabase())
+    private fetchAllIndexes(db: database): JQueryPromise<any> {
+        return new getDatabaseStatsCommand(db)
             .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
+            .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
+                this.indexes(results.Indexes);
             });
     }
-
-    private fetchAllIndexes(): JQueryPromise<Raven.Client.Documents.Operations.DatabaseStatistics> {
-        return new getDatabaseStatsCommand(this.activeDatabase())
-            .execute()
-            .done((results) => {
-                this.indexNames(results.Indexes.filter(x => x.Type === "Map").map(x => x.Name)); 
-                this.indexNames(_.sortBy(this.indexNames(), x => x.toUpperCase()));
-            });
-    }
-
+    
     previewDocument() {
         this.spinners.preview(true);
 
@@ -800,8 +736,7 @@ class patch extends viewModelBase {
             case "Document":
                 documentIdToUse = patchDoc.selectedItem();
                 break;
-            case "Collection":
-            case "Index":
+            case "Query":
                 const selection = this.gridController().getSelectedItems();
                 if (selection.length > 0) {
                     documentIdToUse = selection[0].getId();

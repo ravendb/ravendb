@@ -170,5 +170,45 @@ namespace FastTests.Client.Indexing
 
             }
         }
+
+        [Fact]
+        public async Task Can_start_and_stop_index()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new UserAndAge { Name = "Boki", Age = 14 });
+                    await session.StoreAsync(new UserAndAge { Name = "Toli", Age = 5 });
+
+                    await session.SaveChangesAsync();
+                }
+
+                var input = new IndexDefinition
+                {
+                    Maps = { "from user in docs.UserAndAges select new { user.Name }" },
+                    Type = IndexType.Map,
+                    Name = "Users_ByName"
+                };
+
+                await store
+                    .Admin
+                    .SendAsync(new PutIndexesOperation(new[] { input }));
+
+                await store
+                    .Admin
+                    .SendAsync(new StopIndexingOperation());
+
+                await store
+                    .Admin
+                    .SendAsync(new StartIndexingOperation());
+
+                WaitForIndexing(store);
+
+                var errors = store.Admin.Send(new GetIndexErrorsOperation());
+
+                Assert.Equal(0, errors[0].Errors.Length);
+            }
+        }
     }
 }

@@ -19,14 +19,16 @@ namespace Sparrow.Json.Parsing
     // should never be visible externally
     public enum JsonParserTokenContinuation
     {
-        None                =   0,
-        PartialNaN          =   1 << 23,
-        PartialNull         =   1 << 24,
-        PartialTrue         =   1 << 26,
-        PartialString       =   1 << 27,
-        PartialNumber       =   1 << 28,
-        PartialPreamble     =   1 << 29,
-        PartialFalse        =   1 << 30, 
-        PleaseRefillBuffer  =   1 << 31,
+        None                    =   0,
+        PartialNaN              =   1 << 23,
+        PartialPositiveInfinity =   1 << 24,
+        PartialNegativeInfinity =   1 << 25,
+        PartialNull             =   1 << 26,
+        PartialTrue             =   1 << 27,
+        PartialString           =   1 << 28,
+        PartialNumber           =   1 << 29,
+        PartialPreamble         =   1 << 30,
+        PartialFalse            =   1 << 31, 
+        PleaseRefillBuffer      =   1 << 32,
     }
 }

@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Expiration
             }
             catch (Exception e)
             {
-                var msg = "Cannot enable expired documents cleaner as the configuration record is not valid.";
+                const string msg = "Cannot enable expired documents cleaner as the configuration record is not valid.";
                 database.NotificationCenter.Add(AlertRaised.Create($"Expiration error in {database.Name}", msg,
                     AlertType.RevisionsConfigurationNotValid, NotificationSeverity.Error, database.Name));
 
@@ -186,7 +186,7 @@ namespace Raven.Server.Documents.Expiration
                 return;
 
             if (DateTime.TryParseExact(expirationDate, "O", CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out DateTime date) == false)
-                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow().ToString("O")}");
+                throw new InvalidOperationException($"The expiration date format is not valid: '{expirationDate}'. Use the following format: {_database.Time.GetUtcNow():O}");
 
             // We explicitly enable adding documents that have already been expired, we have to, because if the time lag is short, it is possible
             // that we add a document that expire in 1 second, but by the time we process it, it already expired. The user did nothing wrong here

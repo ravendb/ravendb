@@ -89,7 +89,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(2, result.Count);
                     Assert.Equal("creative/1", result.First().CreativeId);

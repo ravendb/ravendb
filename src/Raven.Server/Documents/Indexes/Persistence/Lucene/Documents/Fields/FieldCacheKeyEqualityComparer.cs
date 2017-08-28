@@ -17,16 +17,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents.Fields
                 return false;
 
             // We are thinking it is possible to have collisions. This may not be true ever!
-            if (x.index != y.index || x.store != y.store || x.termVector != y.termVector || !string.Equals(x.name, y.name))
+            if (x._index != y._index || x._store != y._store || x._termVector != y._termVector || !string.Equals(x._name, y._name))
                 return false;
 
-            if (x.multipleItemsSameField.Length != y.multipleItemsSameField.Length)
+            if (x._multipleItemsSameField.Length != y._multipleItemsSameField.Length)
                 return false;
 
-            int count = x.multipleItemsSameField.Length;
+            int count = x._multipleItemsSameField.Length;
             for (int i = 0; i < count; i++)
             {
-                if (x.multipleItemsSameField[i] != y.multipleItemsSameField[i])
+                if (x._multipleItemsSameField[i] != y._multipleItemsSameField[i])
                     return false;
             }
 

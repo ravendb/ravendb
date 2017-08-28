@@ -16,7 +16,6 @@ namespace FastTests.Issues
         {
             nameof(RavenCommand<object>.Result),
             nameof(RavenCommand<object>.FailedNodes),
-            nameof(RavenCommand<object>.AuthenticationRetries),
             nameof(RavenCommand<object>.StatusCode),
             nameof(RavenCommand<object>.CancellationToken)
         };
@@ -26,7 +25,7 @@ namespace FastTests.Issues
         {
             var sb = new StringBuilder();
 
-            foreach (var commandType in GetCommands(new[] { typeof(RavenCommand<>).Assembly(), typeof(RavenServer).Assembly() }))
+            foreach (var commandType in GetCommands(new[] { typeof(RavenCommand<>).Assembly, typeof(RavenServer).Assembly }))
             {
                 foreach (var property in commandType.GetProperties(BindingFlags.Instance | BindingFlags.Public))
                 {

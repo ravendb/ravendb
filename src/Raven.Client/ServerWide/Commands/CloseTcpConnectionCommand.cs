@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
+using Sparrow.Json;
 
 namespace Raven.Client.ServerWide.Commands
 {
@@ -13,8 +14,7 @@ namespace Raven.Client.ServerWide.Commands
         }
 
         
-
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/tcp?id={_id}";
 
@@ -23,5 +23,5 @@ namespace Raven.Client.ServerWide.Commands
                 Method = HttpMethod.Delete
             };
         }
-        }
+    }
 }

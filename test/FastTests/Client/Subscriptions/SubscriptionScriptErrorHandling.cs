@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Text;
 using System.Threading;
 using Raven.Client.ServerWide.Revisions;
+using Raven.Client.Util;
 using Xunit;
 
 namespace FastTests.Client.Subscriptions
@@ -27,7 +28,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>()
                     {
-                        Script = "reta fsd"
+                        Script = "throw 'a party'"
                     }
                 });
 
@@ -77,7 +78,7 @@ namespace FastTests.Client.Subscriptions
         {
             using (var store = GetDocumentStore())
             {
-
+                Server.ServerStore.Observer.Suspended = true;
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var configuration = new RevisionsConfiguration
@@ -111,7 +112,7 @@ namespace FastTests.Client.Subscriptions
                 {
                     Criteria = new SubscriptionCriteria<User>()
                     {
-                        Script = "reta   fsd",
+                        Script = "throw 'nice'",
                         IncludeRevisions = true
                     }
                 });

@@ -25,12 +25,7 @@
                                         <li>
                                             <a href="#" data-bind="click: _.partial($root.runRecentQuery, $data)">
                                                 <span data-bind="visible: queryText">
-                                                    <span class="text-muted">|</span>
                                                     <span data-bind="text: queryText"></span>
-                                                </span>
-                                                <span data-bind="with: transformerQuery">
-                                                    <span class="text-muted">|</span>
-                                                    <span data-bind="text: 'transform by ' + transformerName + ' ' + $root.getStoredQueryTransformerParameters(queryParams)"></span>
                                                 </span>
                                                 <span data-bind="visible: showFields">
                                                     <span class="text-muted">|</span>
@@ -54,7 +49,12 @@
                                 </div>
                             </div>
                         </div>
-                        <pre class="form-control editor query-source" data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, typeName:'query', lang:'ace/mode/sql', completer:queryCompleter, completerHostObject: $root }"></pre>
+                        <pre class="form-control editor query-source" 
+                             data-bind="aceEditor: { code: criteria().queryText, allowResize: false, minHeight: 180, maxHeight: 180, lang:'ace/mode/rql', completer: queryCompleter.complete }, validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText"></pre>
+                        
+                        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: criteria().queryText">
+                            <div class="help-block" data-bind="validationMessage: criteria().queryText"></div>
+                        </div>
                     </div>
                     <div class="query-controls">
                         <button class="btn btn-primary btn-block btn-lg text-center run-query" data-bind="click: runQuery, css: { 'btn-spinner': isLoading }">
@@ -87,7 +87,7 @@
                             
                             <li>
                                 <a href="#" data-bind="attr: { href: editIndexUrl }">
-                                    <strong><i class="icon-edit"></i> <span>Edit index</span></strong>
+                                    <strong><i data-bind="attr: { class: isAutoIndex() ? 'icon-preview' : 'icon-edit' }"></i> <span data-bind="text: isAutoIndex() ? 'View index' : 'Edit index'"></span></strong>
                                 </a>
                             </li>
 
@@ -130,47 +130,8 @@
                     <div class="btn-group has-disable-reason" data-bind="attr: { 'data-original-title': !canDeleteDocumentsMatchingQuery() ? 'Available only for map indexes' : '' }">
                         <button type="button" class="btn btn-danger btn-sm" data-bind="enable: canDeleteDocumentsMatchingQuery, click: deleteDocsMatchingQuery"><i class="icon-trash"></i> <span>Delete documents</span></button>
                     </div>
-                    <div class="btn-group dropdown-right">
-                        <button class="btn btn-sm btn-default dropdown-toggle btn-checkable" id="transform-results-btn" type="button" data-toggle="dropdown"
-                            data-bind="css: { 'btn-info active': criteria().transformer }">
-                            <i class="icon-transform-results"></i>
-                            <span>Transform results</span>
-                            <span class="caret"></span>
-                        </button>
-                        <div class="dropdown-menu settings-menu padding padding-sm" role="menu" data-bind="dropdownPanel: true">
-                            <div class="row row-sm margin-bottom">
-                                <div class="col-xs-12">
-                                    <div class="dropdown btn-block">
-                                        <button class="btn btn-block text-left dropdown-toggle" type="button" data-toggle="dropdown">
-                                            <span data-bind="text: uiTransformer() || 'None'"></span>
-                                            <span class="caret"></span>
-                                        </button>
-                                        <ul class="dropdown-menu">
-                                            <li><a href="#" data-bind="click: _.partial($root.selectTransformer, null)">None</a></li>
-                                            <!-- ko foreach: $root.allTransformers -->
-                                            <li><a href="#" data-bind="click: _.partial($root.selectTransformer, $data), text: Name"></a></li>
-                                            <!-- /ko -->
-                                        </ul>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div data-bind="foreach: uiTransformerParameters">
-                                <div class="row row-sm margin-bottom form-group" data-bind="validationElement: value">
-                                    <div class="col-xs-4">
-                                        <div class="control-label" data-bind="text: name + (hasDefault?'':'*')"></div>
-                                    </div>
-                                    <div class="col-xs-8">
-                                        <input type="text" class="form-control" placeholder="value" data-bind="textInput: value">
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button class="btn btn-success btn-sm pull-right close-panel" data-bind="click: applyTransformer"><i class="icon-check"></i> <span>Apply</span></button>
-                        </div>
-                    </div>
                     <!-- TODO: csv enabled for: isStaticIndexSelected -->
-                    <button type="button" class="btn btn-default btn-upcoming" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>
+                    <!-- TODO <button type="button" class="btn btn-default" disabled="disabled"><i class="icon-csv-export"></i> <span>Export CSV</span></button>-->
                     <button class="btn btn-default statistics" data-bind="click: openQueryStats">
                         <i class="icon-stats"></i><span>Statistics</span>
                     </button>

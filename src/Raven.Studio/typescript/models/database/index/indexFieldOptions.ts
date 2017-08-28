@@ -32,19 +32,22 @@ class indexFieldOptions {
         }
     ];
 
-    static readonly Indexing: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldIndexing, string>> = [{
-            label: "Analyzed", 
-            value: "Analyzed"
-        }, {
+    static readonly Indexing: Array<valueAndLabelItem<Raven.Client.Documents.Indexes.FieldIndexing, string>> = [
+        {
             label: "Default",
             value: "Default"
         }, {
-            label: "Not analyzed",
-            value: "NotAnalyzed"
-        }, {
             label: "No",
             value: "No"
-    }];
+            
+        }, {
+            label: "Exact",
+            value: "Exact"
+            
+        }, {
+            label: "Search",
+            value: "Search"
+        }];
 
     name = ko.observable<string>();
 
@@ -76,7 +79,7 @@ class indexFieldOptions {
 
     hasSpatialOptions = ko.observable<boolean>(false);
     showAdvancedOptions = ko.observable<boolean>(false);
-    canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Analyzed");
+    canProvideAnalyzer = ko.pureComputed(() => this.indexing() === "Search");
 
     validationGroup: KnockoutObservable<any>;
 
@@ -109,21 +112,21 @@ class indexFieldOptions {
                 fullTextChangeInProgress = true;
                 if (newValue) {
                     this.analyzer(null);
-                    this.indexing("Analyzed");
+                    this.indexing("Search");
                 } else {
                     this.analyzer(null);
                     this.indexing("Default");
                 }
                 fullTextChangeInProgress = false;
             }
-        }
+        };
 
         this.fullTextSearch.subscribe(() => onFullTextChanged());
 
         this.indexing.subscribe(newIndexing => {
             if (!fullTextChangeInProgress) {
                 indexingChangeInProgess = true;
-                this.fullTextSearch(newIndexing === "Analyzed" && !this.fullTextSearch() && !this.analyzer());
+                this.fullTextSearch(newIndexing === "Search" && !this.fullTextSearch() && !this.analyzer());
                 indexingChangeInProgess = false;
             }
         });
@@ -131,7 +134,7 @@ class indexFieldOptions {
         this.analyzer.subscribe(newAnalyzer => {
             if (!fullTextChangeInProgress) {
                 indexingChangeInProgess = true;
-                this.fullTextSearch(!newAnalyzer && !this.fullTextSearch() && this.indexing() == "Analyzed");
+                this.fullTextSearch(!newAnalyzer && !this.fullTextSearch() && this.indexing() == "Search");
                 indexingChangeInProgess = false;
             }
         });

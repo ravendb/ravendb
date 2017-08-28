@@ -34,7 +34,7 @@ namespace Sparrow.Json
 
             public PropertySorter(CachedProperties props)
             {
-                this.properties = props;
+                properties = props;
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]

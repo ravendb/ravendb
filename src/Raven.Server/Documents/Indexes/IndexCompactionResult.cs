@@ -3,9 +3,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Indexes
 {
-    public class IndexCompactionResult : IOperationResult
+    public sealed class IndexCompactionResult : IOperationResult
     {
-        public static IndexCompactionResult Instance = new IndexCompactionResult();
+        public static readonly IndexCompactionResult Instance = new IndexCompactionResult();
 
         private IndexCompactionResult()
         {

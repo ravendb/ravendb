@@ -149,7 +149,7 @@ namespace Raven.Server.ServerWide.Maintenance
                 try
                 {
                     tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor", 
-                        _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                        _parent._server.RavenServer.ClusterCertificateHolder?.Certificate);
                 }
                 catch (Exception e)
                 {
@@ -167,7 +167,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             await TimeoutManager.WaitFor(onErrorDelayTime, _token);
 
                             tcpConnection = await ReplicationUtils.GetTcpInfoAsync(Url, null, "Supervisor",
-                                _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                                _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
                         }
 
                         if (tcpConnection == null)
@@ -247,7 +247,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 TcpUtils.SetTimeouts(tcpClient, _parent._server.Engine.TcpConnectionTimeout);
                 await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, _log);
-                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ServerCertificateHolder.Certificate);
+                var connection = await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, _parent._server.RavenServer.ClusterCertificateHolder.Certificate);
                 using (_contextPool.AllocateOperationContext(out JsonOperationContext ctx))
                 using (var writer = new BlittableJsonTextWriter(ctx, connection))
                 {
@@ -255,11 +255,16 @@ namespace Raven.Server.ServerWide.Maintenance
                     using (var responseJson = await ctx.ReadForMemoryAsync(connection, _readStatusUpdateDebugString + "/Read-Handshake-Response", _token))
                     {
                         var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-                        if (headerResponse.AuthorizationSuccessful == false)
+                        switch (headerResponse.Status)
                         {
-                            throw new UnauthorizedAccessException(
-                                $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
-                        }
+                            case TcpConnectionStatus.Ok:
+                                break;
+                            case TcpConnectionStatus.AuthorizationFailed:
+                                throw new UnauthorizedAccessException(
+                                    $"Node with ClusterTag = {ClusterTag} replied to initial handshake with authorization failure {headerResponse.Message}");
+                            case TcpConnectionStatus.TcpVersionMissmatch:
+                                throw new InvalidOperationException($"Node with ClusterTag = {ClusterTag} replied to initial handshake with missmatching tcp version {headerResponse.Message}");
+                        }                        
                     }
 
                     WriteClusterMaintenanceConnectionHeader(writer);
@@ -274,6 +279,10 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                     writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
+                    writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
+                    writer.WriteComma();
                     writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                     writer.WriteString((string)null);
                 }

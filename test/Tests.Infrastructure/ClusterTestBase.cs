@@ -98,7 +98,7 @@ namespace Tests.Infrastructure
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<DatabaseRecord>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 
@@ -366,7 +366,7 @@ namespace Tests.Infrastructure
             }
             // ReSharper disable once PossibleNullReferenceException
             Assert.True(await leader.ServerStore.WaitForState(RachisConsensus.State.Leader).WaitAsync(numberOfNodes * ElectionTimeoutInMs),
-                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.ClusterStatus());
+                "The leader has changed while waiting for cluster to become stable. Status: " + leader.ServerStore.LastStateChangeReason());
             return leader;
         }
 

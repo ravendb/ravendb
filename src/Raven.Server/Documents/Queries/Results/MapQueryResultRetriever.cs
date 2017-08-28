@@ -1,20 +1,19 @@
 ﻿using System;
 using Lucene.Net.Store;
 using Raven.Client;
+using Raven.Server.Documents.Includes;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Queries.Results
 {
     public class MapQueryResultRetriever : QueryResultRetrieverBase
     {
-        private readonly DocumentsStorage _documentsStorage;
 
         private readonly DocumentsOperationContext _context;
 
-        public MapQueryResultRetriever(DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch)
-            : base(fieldsToFetch, context, false)
+        public MapQueryResultRetriever(DocumentDatabase database,IndexQueryServerSide query, DocumentsStorage documentsStorage, DocumentsOperationContext context, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand)
+            : base(database,query, fieldsToFetch, documentsStorage, context, false, includeDocumentsCommand)
         {
-            _documentsStorage = documentsStorage;
             _context = context;
         }
 
@@ -23,7 +22,7 @@ namespace Raven.Server.Documents.Queries.Results
             if (TryGetKey(input, state, out string id) == false)
                 throw new InvalidOperationException($"Could not extract '{Constants.Documents.Indexing.Fields.DocumentIdFieldName}' from index.");
 
-            if (FieldsToFetch.IsProjection || FieldsToFetch.IsTransformation)
+            if (FieldsToFetch.IsProjection)
                 return GetProjection(input, score, id, state);
 
             var doc = DirectGet(null, id, state);
@@ -42,11 +41,12 @@ namespace Raven.Server.Documents.Queries.Results
 
         protected override Document DirectGet(Lucene.Net.Documents.Document input, string id, IState state)
         {
-            var doc = _documentsStorage.Get(_context, id);
-            if (doc == null)
-                return null;
+            return DocumentsStorage.Get(_context, id);
+        }
 
-            return doc;
+        protected override Document LoadDocument(string id)
+        {
+            return DocumentsStorage.Get(_context, id);
         }
     }
 }

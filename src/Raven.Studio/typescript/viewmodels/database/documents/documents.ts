@@ -7,7 +7,6 @@ import deleteCollection = require("viewmodels/database/documents/deleteCollectio
 import messagePublisher = require("common/messagePublisher");
 import collectionsTracker = require("common/helpers/database/collectionsTracker");
 import documentPropertyProvider = require("common/helpers/database/documentPropertyProvider");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
 
 import notificationCenter = require("common/notifications/notificationCenter");
 
@@ -25,7 +24,6 @@ import checkedColumn = require("widgets/virtualGrid/columns/checkedColumn");
 import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import showDataDialog = require("viewmodels/common/showDataDialog");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
 import continueTest = require("common/shell/continueTest");
 
 class documents extends viewModelBase {
@@ -44,8 +42,6 @@ class documents extends viewModelBase {
     dirtyCurrentCollection = ko.observable<boolean>(false);
 
     copyDisabledReason: KnockoutComputed<disabledReason>;
-
-    private customFunctionsContext: object;
 
     private collectionToSelectName: string;
     private gridController = ko.observable<virtualGridController<document>>();
@@ -114,20 +110,11 @@ class documents extends viewModelBase {
 
         this.configureDirtyCollectionDetection();
 
-        const loadStatsTask = collectionsTracker.default.loadStatsTask;
-        const customFunctionsTask = new getCustomFunctionsCommand(this.activeDatabase())
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
-
-
-        return $.when<any>(loadStatsTask, customFunctionsTask)
+        return collectionsTracker.default.loadStatsTask
             .done(() => {
                 const collectionToSelect = this.tracker.collections().find(x => x.name === this.collectionToSelectName) || this.tracker.getAllDocumentsCollection();
                 this.currentCollection(collectionToSelect);
-            })
-            
+            });
     }
 
     private configureDirtyCollectionDetection() {
@@ -186,9 +173,8 @@ class documents extends viewModelBase {
         const grid = this.gridController();
 
         grid.headerVisible(true);
-        grid.withEvaluationContext(this.customFunctionsContext);
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.tracker.getCollectionNames(),
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, 
             { showRowSelectionCheckbox: true, enableInlinePreview: false, showSelectAllCheckbox: true });
 
         this.columnsSelector.init(grid, (s, t, previewCols, fullCols) => this.fetchDocs(s, t, previewCols, fullCols), (w, r) => {

@@ -5,6 +5,8 @@ using System.IO;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.ServerWide.Context;
 
 using Sparrow.Json;
@@ -26,7 +28,18 @@ namespace Raven.Server.Documents.Indexes
         {
             Name = name;
             Collections = collections;
-            MapFields = mapFields.ToDictionary(x => x.Name, x => x, StringComparer.Ordinal);
+
+            MapFields = mapFields.ToDictionary(x => x.Name, x =>
+            {
+                if ((this is AutoMapIndexDefinition || this is AutoMapReduceIndexDefinition) && x.Indexing == FieldIndexing.Search)
+                {
+                    x.OriginalName = x.Name;
+                    x.Name = IndexField.GetSearchAutoIndexFieldName(x.Name);
+                }
+
+                return x;
+            }, StringComparer.Ordinal);
+
             LockMode = lockMode;
             Priority = priority;
         }
@@ -343,8 +356,10 @@ namespace Raven.Server.Documents.Indexes
 
             if (name.Length < 64)
                 return name;
-
-            return name.Substring(0, 64);
+            // RavenDB-8220 To avoid giving the same path to indexes with the 
+            // same 64 chars prefix, we hash the full name. Note that this is
+            // a persistent value and should NOT be changed. 
+            return name.Substring(0, 64) + "." + Hashing.XXHash32.Calculate(name);
         }
 
         protected static string ReadName(BlittableJsonReaderObject reader)

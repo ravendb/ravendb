@@ -4,6 +4,7 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
@@ -21,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class RachisAdminHandler : RequestHandler
     {
-        [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/rachis/send", "POST", AuthorizationStatus.Operator)]
         public async Task ApplyCommand()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -30,7 +31,11 @@ namespace Raven.Server.Documents.Handlers.Admin
 
                 var command = CommandBase.CreateFrom(commandJson);
 
-                var (etag, result) = await ServerStore.PutCommandAsync(command);
+                var isClusterAdmin = IsClusterAdmin();
+
+                command.VerifyCanExecuteCommand(ServerStore, context, isClusterAdmin);
+
+                var (etag, result) = await ServerStore.Engine.PutAsync(command);
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
@@ -59,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             }
         }
 
-        [RavenAction("/admin/cluster/observer/suspend", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/suspend", "GET", AuthorizationStatus.ClusterAdmin)]
         public Task SuspendObserver()
         {
             SetupCORSHeaders();
@@ -69,7 +74,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var suspend = GetBoolValueQueryString("value"); // in seconds
                 if (suspend.HasValue)
                 {
-                    Server.ServerStore.Observer.Suspened = suspend.Value;
+                    Server.ServerStore.Observer.Suspended = suspend.Value;
                 }
                 return Task.CompletedTask;
             }
@@ -77,7 +82,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/observer/decisions", "GET", AuthorizationStatus.Operator)]
         public Task GetObserverDecisions()
         {
             SetupCORSHeaders();
@@ -91,7 +96,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     var json = new DynamicJsonValue{
                         ["LeaderNode"] = Server.ServerStore.NodeTag,
                         ["Term"] = Server.ServerStore.Engine.CurrentTerm,
-                        ["Suspended"] = Server.ServerStore.Observer.Suspened,
+                        ["Suspended"] = Server.ServerStore.Observer.Suspended,
                         ["Iteration"] = res.Iteration,
                         ["ObserverLog"] = new DynamicJsonArray(res.List)
                     };
@@ -105,7 +110,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/log", "GET",AuthorizationStatus.Operator)]
         public Task GetLogs()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -129,8 +134,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                 {
                     json[nameof(NodeInfo.NodeTag)] = ServerStore.NodeTag;
                     json[nameof(NodeInfo.TopologyId)] = ServerStore.GetClusterTopology(context).TopologyId;
-                    json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ServerCertificateHolder.CertificateForClients;
-                    json[nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus();
+                    json[nameof(NodeInfo.Certificate)] = ServerStore.RavenServer.ClusterCertificateHolder.CertificateForClients;
+                    json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
                 }
                 context.Write(writer, json);
                 writer.Flush();
@@ -176,7 +181,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         ["CurrentState"] = ServerStore.CurrentState,
                         ["NodeTag"] = nodeTag,
                         ["CurrentTerm"] = ServerStore.Engine.CurrentTerm,
-                        [nameof(ServerStore.ClusterStatus)] = ServerStore.ClusterStatus()
+                        [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)
@@ -193,7 +198,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]
         public Task ClusterMaintenanceStats()
         {
             if (ServerStore.LeaderTag == null)
@@ -214,23 +219,13 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        private void SetupCORSHeaders()
-        {
-            // TODO: handle this properly when using https
-            // https://developer.mozilla.org/en-US/docs/Web/HTTP/Access_control_CORS
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Origin", HttpContext.Request.Headers["Origin"]);
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Methods", "POST, GET, OPTIONS, DELETE");
-            HttpContext.Response.Headers.Add("Access-Control-Allow-Headers", HttpContext.Request.Headers["Access-Control-Request-Headers"]);
-            HttpContext.Response.Headers.Add("Access-Control-Max-Age", "86400");
-        }
-
-        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.ServerAdmin)]
-        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/reelect", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/timeout", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/promote", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/demote", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/suspend", "OPTIONS", AuthorizationStatus.Operator)]
+        [RavenAction("/admin/cluster/observer/decisions", "OPTIONS", AuthorizationStatus.Operator)]
         public Task AllowPreflightRequest()
         {
             SetupCORSHeaders();
@@ -238,7 +233,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "PUT", AuthorizationStatus.ClusterAdmin)]
         public async Task AddNode()
         {
             SetupCORSHeaders();
@@ -246,18 +241,41 @@ namespace Raven.Server.Documents.Handlers.Admin
             var nodeUrl = GetStringQueryString("url");
             var watcher = GetBoolValueQueryString("watcher", false);
 
+            var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
+
+            if (HttpContext.Request.IsHttps != remoteIsHttps)
+            {
+                throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
+            }
+
+            NodeInfo nodeInfo;
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ClusterCertificateHolder.Certificate))
+            {
+                var infoCmd = new GetNodeInfoCommand();
+
+                try
+                {
+                    await requestExecutor.ExecuteAsync(infoCmd, ctx);
+                }
+                catch (AllTopologyNodesDownException e)
+                {
+                    throw new InvalidOperationException($"Couldn't contact node at {nodeUrl}", e);
+                }
+
+                nodeInfo = infoCmd.Result;
+
+                if (ServerStore.IsPassive() && nodeInfo.TopologyId != null)
+                {
+                    throw new TopologyMismatchException("You can't add new node to an already existing cluster");
+                }
+            }
+
             ServerStore.EnsureNotPassive();
             if (ServerStore.IsLeader())
             {
                 using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                 {
-                    var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
-
-                    if (HttpContext.Request.IsHttps != remoteIsHttps)
-                    {
-                        throw new InvalidOperationException($"Cannot add node '{nodeUrl}' to cluster because it will create invalid mix of HTTPS & HTTP endpoints. A cluster must be only HTTPS or only HTTP.");
-                    }
-
                     string topologyId;
                     using (ctx.OpenReadTransaction())
                     {
@@ -269,62 +287,55 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
                         topologyId = clusterTopology.TopologyId;
                     }
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(nodeUrl, Server.ServerCertificateHolder.Certificate))
+                    
+                    if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
                     {
-                        var infoCmd = new GetNodeInfoCommand();
-                        await requestExecutor.ExecuteAsync(infoCmd, ctx);
-                        var nodeInfo = infoCmd.Result;
-
-                        if (nodeInfo.TopologyId != null && topologyId != nodeInfo.TopologyId)
-                        {
-                            throw new TopologyMismatchException(
-                                $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
-                        }
-
-                        var nodeTag = nodeInfo.NodeTag == "?" 
-                            ? null : nodeInfo.NodeTag;
-
-                        if (remoteIsHttps)
-                        {
-                            if (nodeInfo.Certificate == null)
-                                throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
-
-                            var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
-                            
-                            if (certificate.NotBefore > DateTime.UtcNow)
-                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
-
-                            if (certificate.NotAfter < DateTime.UtcNow)
-                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
-
-                            var expected = GetStringQueryString("expectedThumbrpint", required: false);
-                            if (expected != null)
-                            {
-                                if (certificate.Thumbprint != expected)
-                                    throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
-                            }
-
-                            var certificateDefinition = new CertificateDefinition
-                            {
-                                Certificate = nodeInfo.Certificate,
-                                Thumbprint = certificate.Thumbprint
-                            };
-
-                            var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
-                            await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
-                        }
-
-                        
-                        await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
-                        NoContentStatus();
-                        return;
+                        throw new TopologyMismatchException(
+                            $"Adding a new node to cluster failed. The new node is already in another cluster. Expected topology id: {topologyId}, but we get {nodeInfo.TopologyId}");
                     }
+
+                    var nodeTag = nodeInfo.NodeTag == RachisConsensus.InitialTag
+                        ? null : nodeInfo.NodeTag;
+
+                    if (remoteIsHttps)
+                    {
+                        if (nodeInfo.Certificate == null)
+                            throw  new InvalidOperationException($"Cannot add node {nodeTag} to cluster because it has no certificate while trying to use HTTPS");
+
+                        var certificate = new X509Certificate2(Convert.FromBase64String(nodeInfo.Certificate));
+                            
+                        if (certificate.NotBefore > DateTime.UtcNow)
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' is not yet valid. It starts on {certificate.NotBefore}");
+
+                        if (certificate.NotAfter < DateTime.UtcNow)
+                            throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate '{certificate.FriendlyName}' expired on {certificate.NotAfter}");
+
+                        var expected = GetStringQueryString("expectedThumbrpint", required: false);
+                        if (expected != null)
+                        {
+                            if (certificate.Thumbprint != expected)
+                                throw new InvalidOperationException($"Cannot add node {nodeTag} to cluster because its certificate thumbprint '{certificate.Thumbprint}' doesn't match the expected thumbprint '{expected}'.");
+                        }
+
+                        var certificateDefinition = new CertificateDefinition
+                        {
+                            Certificate = nodeInfo.Certificate,
+                            Thumbprint = certificate.Thumbprint
+                        };
+
+                        var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint, certificateDefinition));
+                        await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
+                    }
+                        
+                    await ServerStore.AddNodeToClusterAsync(nodeUrl, nodeTag, validateNotInTopology:false, asWatcher:watcher?? false);
+                    NoContentStatus();
+                    return;
                 }
             }
             RedirectToLeader();
         }
 
-        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/node", "DELETE", AuthorizationStatus.ClusterAdmin)]
         public async Task DeleteNode()
         {
             SetupCORSHeaders();
@@ -340,7 +351,7 @@ namespace Raven.Server.Documents.Handlers.Admin
             RedirectToLeader();
         }
         
-        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/timeout", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task TimeoutNow()
         {
             SetupCORSHeaders();
@@ -351,7 +362,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
 
-        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/reelect", "POST", AuthorizationStatus.ClusterAdmin)]
         public Task EnforceReelection()
         {
             SetupCORSHeaders();
@@ -367,7 +378,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Promote a non-voter to a promotable */
-        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/promote", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task PromoteNode()
         {
             if (ServerStore.LeaderTag == null)
@@ -402,7 +413,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         }
 
         /* Demote a voter (member/promotable) node to a non-voter  */
-        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/cluster/demote", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task DemoteNode()
         {
             if (ServerStore.LeaderTag == null)

@@ -141,7 +141,12 @@ class clusterGraph {
         enteringGroups
             .append("circle")
             .attr("class", "leader-stroke")
-            .attr("r", clusterGraph.circleRadius + 6);
+            .attr("r", clusterGraph.circleRadius + 4);
+
+        enteringGroups
+            .append("circle")
+            .attr("class", "voting-stroke spin-style-noease")
+            .attr("r", clusterGraph.circleRadius + 4);
 
         enteringGroups
             .append("text")
@@ -215,7 +220,7 @@ class clusterGraph {
 
         const nodeIcon = (node: clusterNodeWithLayout) => {
             if (node.tag() === leaderTag) {
-                return "&#xe959;";
+                return "&#xe9d5;";
             }
 
             switch (node.type()) {

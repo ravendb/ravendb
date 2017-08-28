@@ -41,7 +41,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void CanIndexValuesForDictionaryAsPartOfDictionary()
         {
             using (var store = GetDocumentStore())
@@ -62,16 +62,17 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var users = s.Advanced.DocumentQuery<User>()
-                        .WhereEquals("Items,Key", "Color")
+                        .WhereEquals("Items[].Key", "Color")
                         .AndAlso()
-                        .WhereEquals("Items,Value", "Red")
+                        .WhereEquals("Items[].Value", "Red")
                         .ToArray();
+
                     Assert.NotEmpty(users);
                 }
             }
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void CanIndexNestedValuesForDictionaryAsPartOfDictionary()
         {
             using (var store = GetDocumentStore())
@@ -91,16 +92,16 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var users = s.Advanced.DocumentQuery<User>()
-                        .WhereEquals("NestedItems,Key", "Color")
+                        .WhereEquals("NestedItems[].Key", "Color")
                         .AndAlso()
-                        .WhereEquals("NestedItems,Value.Name", "Red")
+                        .WhereEquals("NestedItems[].Name", "Red")
                         .ToArray();
                     Assert.NotEmpty(users);
                 }
             }
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void CanIndexValuesForIDictionaryAsPartOfIDictionary()
         {
             using (var store = GetDocumentStore())
@@ -120,16 +121,16 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var users = s.Advanced.DocumentQuery<UserWithIDictionary>()
-                        .WhereEquals("Items,Key", "Color")
+                        .WhereEquals("Items[].Key", "Color")
                         .AndAlso()
-                        .WhereEquals("Items,Value", "Red")
+                        .WhereEquals("Items[].Value", "Red")
                         .ToArray();
                     Assert.NotEmpty(users);
                 }
             }
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void CanIndexNestedValuesForIDictionaryAsPartOfIDictionary()
         {
             using (var store = GetDocumentStore())
@@ -149,16 +150,16 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var users = s.Advanced.DocumentQuery<UserWithIDictionary>()
-                        .WhereEquals("NestedItems,Key", "Color")
+                        .WhereEquals("NestedItems[].Key", "Color")
                         .AndAlso()
-                        .WhereEquals("NestedItems,Value.Name", "Red")
+                        .WhereEquals("NestedItems[].Name", "Red")
                         .ToArray();
                     Assert.NotEmpty(users);
                 }
             }
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6155 ")]
+        [Fact]
         public void CanIndexValuesForDictionaryWithNumberForIndex()
         {
             using (var store = GetDocumentStore())
@@ -179,7 +180,7 @@ namespace SlowTests.Bugs.Indexing
                 using (var s = store.OpenSession())
                 {
                     var users = s.Advanced.DocumentQuery<User>()
-                        .WhereEquals("Items._3", "Red")
+                        .WhereEquals("Items[].3", "Red")
                         .ToArray();
                     Assert.NotEmpty(users);
                 }

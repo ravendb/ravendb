@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Net;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -30,7 +31,7 @@ namespace Raven.Server.Documents.TcpHandlers
             _remoteEndpoint = remoteEndpoint;
         }
 
-        public IEnumerable<(Document Doc,Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, SubscriptionPatchDocument patch, long startEtag)
+        public IEnumerable<(Document Doc, Exception Exception)> GetDataToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, SubscriptionPatchDocument patch, long startEtag)
         {
             if (string.IsNullOrEmpty(subscription.Criteria?.Collection))
                 throw new ArgumentException("The collection name must be specified");
@@ -39,7 +40,7 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 if (_db.DocumentsStorage.RevisionsStorage.Configuration == null ||
                     _db.DocumentsStorage.RevisionsStorage.GetRevisionsConfiguration(subscription.Criteria.Collection).Active == false)
-                    throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration."); 
+                    throw new SubscriptionInvalidStateException($"Cannot use a revisions subscription, database {_db.Name} does not have revisions configuration.");
 
                 return GetRevisionsToSend(docsContext, subscription, startEtag, patch);
             }
@@ -48,79 +49,74 @@ namespace Raven.Server.Documents.TcpHandlers
             return GetDocumentsToSend(docsContext, subscription, startEtag, patch);
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, 
+        private IEnumerable<(Document Doc, Exception Exception)> GetDocumentsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription,
             long startEtag, SubscriptionPatchDocument patch)
         {
-            foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
-                docsContext,
-                subscription.Criteria.Collection,
-                startEtag + 1,
-                0,
-                _maxBatchSize))
+            using (_db.Scripts.GetScriptRunner(patch?.Key,true, out var run))
             {
-                using (doc.Data)
+                foreach (var doc in _db.DocumentsStorage.GetDocumentsFrom(
+                    docsContext,
+                    subscription.Criteria.Collection,
+                    startEtag + 1,
+                    0,
+                    _maxBatchSize))
                 {
-                    if (ShouldSendDocument(subscription, patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
+                    using (doc.Data)
                     {
-                        if (exception != null)
+                        if (ShouldSendDocument(subscription, run, patch, docsContext, doc, out BlittableJsonReaderObject transformResult, out var exception) == false)
                         {
-                            yield return (doc, exception);
+                            if (exception != null)
+                            {
+                                yield return (doc, exception);
+                            }
+                            else
+                            {
+                                doc.Data = null;
+                                yield return (doc, null);
+                            }
+                            doc.Data = null;
                         }
                         else
                         {
-                            doc.Data = null;
-                            yield return (doc, null);
-                        }
-                        doc.Data = null;
-                    }
-                    else
-                    {
-                        using (transformResult)
-                        {
-                            if (transformResult == null)
+                            using (transformResult)
                             {
-                                yield return (doc, null);
-                                continue;
-                            }
+                                if (transformResult == null)
+                                {
+                                    yield return (doc, null);
+                                    continue;
+                                }
 
-                            yield return (new Document
-                            {
-                                Id = doc.Id,
-                                Etag = doc.Etag,
-                                Data = transformResult,
-                                LowerId = doc.LowerId,
-                                ChangeVector = doc.ChangeVector
-                            }, null);
+                                yield return (new Document
+                                {
+                                    Id = doc.Id,
+                                    Etag = doc.Etag,
+                                    Data = transformResult,
+                                    LowerId = doc.LowerId,
+                                    ChangeVector = doc.ChangeVector
+                                }, null);
+                            }
                         }
                     }
                 }
             }
         }
 
-        private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription, 
+        private IEnumerable<(Document Doc, Exception Exception)> GetRevisionsToSend(DocumentsOperationContext docsContext, SubscriptionState subscription,
             long startEtag, SubscriptionPatchDocument patch)
         {
             var collectionName = new CollectionName(subscription.Criteria.Collection);
-            foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
+            using (_db.Scripts.GetScriptRunner(patch?.Key, true, out var run))
             {
-                var item = (revisionTuple.current ?? revisionTuple.previous);
-                Debug.Assert(item != null);
-
-                var dynamicValue = new DynamicJsonValue();
-
-                if (revisionTuple.current != null)
-                    dynamicValue["Current"] = revisionTuple.current.Data;
-
-                if (revisionTuple.previous != null)
-                    dynamicValue["Previous"] = revisionTuple.previous.Data;
-
-                using (var revision = docsContext.ReadObject(dynamicValue, item.Id))
+                foreach (var revisionTuple in _db.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(docsContext, collectionName, startEtag + 1, _maxBatchSize))
                 {
-                    if (ShouldSendDocumentWithRevisions(subscription, patch, docsContext, item, revision, out var transformResult, out var exception) == false)
+                    var item = (revisionTuple.current ?? revisionTuple.previous);
+                    Debug.Assert(item != null);
+
+                    if (ShouldSendDocumentWithRevisions(subscription, run, patch, docsContext, item, revisionTuple, out var transformResult, out var exception) == false)
                     {
                         if (exception != null)
                         {
-                            yield return (revisionTuple.current, exception);
+                            yield return (item, exception);
                         }
                         else
                         {
@@ -130,7 +126,7 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Data = null,
                                 ChangeVector = item.ChangeVector,
                                 Etag = item.Etag
-                            }, null );
+                            }, null);
                         }
                     }
                     else
@@ -139,7 +135,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         {
                             if (transformResult == null)
                             {
-                                yield return (revisionTuple.current,null);
+                                yield return (revisionTuple.current, null);
                                 continue;
                             }
 
@@ -150,21 +146,26 @@ namespace Raven.Server.Documents.TcpHandlers
                                 Data = transformResult,
                                 LowerId = item.LowerId,
                                 ChangeVector = item.ChangeVector
-                            },null);
+                            }, null);
                         }
                     }
                 }
             }
         }
-        
-        private bool ShouldSendDocument(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document doc, out BlittableJsonReaderObject transformResult, out Exception exception)
+
+        private bool ShouldSendDocument(SubscriptionState subscriptionState,
+            ScriptRunner.SingleRun run,
+            SubscriptionPatchDocument patch,
+            DocumentsOperationContext dbContext,
+            Document doc,
+            out BlittableJsonReaderObject transformResult,
+            out Exception exception)
         {
             transformResult = null;
             exception = null;
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                 remoteAsString: doc.ChangeVector,
-                localAsString: subscriptionState.ChangeVector);
+                localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
 
             if (conflictStatus == ConflictStatus.AlreadyMerged)
                 return false;
@@ -174,7 +175,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             try
             {
-                return patch.MatchCriteria(dbContext, doc, out transformResult);
+                return patch.MatchCriteria(run, dbContext, doc, ref transformResult);
             }
             catch (Exception ex)
             {
@@ -188,37 +189,49 @@ namespace Raven.Server.Documents.TcpHandlers
                 return false;
             }
         }
-        
-        
-        private bool ShouldSendDocumentWithRevisions(SubscriptionState subscriptionState, SubscriptionPatchDocument patch, DocumentsOperationContext dbContext,
-            Document item, BlittableJsonReaderObject revision, out BlittableJsonReaderObject transformResult, out Exception exception)
+
+
+        private bool ShouldSendDocumentWithRevisions(SubscriptionState subscriptionState,
+            ScriptRunner.SingleRun run,
+            SubscriptionPatchDocument patch,
+            DocumentsOperationContext dbContext,
+            Document item,
+            (Document Previous, Document Current) revision,
+            out BlittableJsonReaderObject transformResult,
+            out Exception exception)
         {
             exception = null;
             transformResult = null;
             var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                 remoteAsString: item.ChangeVector,
-                localAsString: subscriptionState.ChangeVector);
+                localAsString: subscriptionState.ChangeVectorForNextBatchStartingPoint);
 
             if (conflictStatus == ConflictStatus.AlreadyMerged)
                 return false;
 
             if (patch == null)
                 return true;
-            
+
+            revision.Current?.EnsureMetadata();
+            revision.Previous?.EnsureMetadata();
+
+            transformResult = dbContext.ReadObject(new DynamicJsonValue
+            {
+                ["Current"] = revision.Current?.Data,
+                ["Previous"] = revision.Previous?.Data
+            }, item.Id);
+
+            revision.Current?.ResetModifications();
+            revision.Previous?.ResetModifications();
+
+
             if (patch.FilterJavaScript == SubscriptionCreationOptions.DefaultRevisionsScript)
             {
-                transformResult = revision;
                 return true;
             }
             try
             {
-                var docToProccess = new Document
-                {
-                    Data = revision,
-                    Id = item.Id,
-                };
-
-                return patch.MatchCriteria(dbContext, docToProccess, out transformResult);
+                return patch.MatchCriteria(run, dbContext, transformResult, ref transformResult);
             }
             catch (Exception ex)
             {
@@ -233,7 +246,7 @@ namespace Raven.Server.Documents.TcpHandlers
             }
         }
 
-      
+
 
 
     }

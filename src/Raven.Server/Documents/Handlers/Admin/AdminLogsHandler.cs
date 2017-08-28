@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 {
     public class AdminLogsHandler : RequestHandler
     {
-        [RavenAction("/admin/logs/watch", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/logs/watch", "GET", AuthorizationStatus.Operator)]
         public async Task RegisterForLogs()
         {
             using (var socket = await HttpContext.WebSockets.AcceptWebSocketAsync())

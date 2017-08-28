@@ -19,6 +19,16 @@ using Voron.Global;
 
 namespace Raven.Server.Rachis
 {
+    public enum AmbassadorStatus
+    {
+        None,
+        Started,
+        Connected,
+        FailedToConnect,
+        Disconnected,
+        Closed,
+    }
+
     public class FollowerAmbassador : IDisposable
     {
         private readonly RachisConsensus _engine;
@@ -27,19 +37,20 @@ namespace Raven.Server.Rachis
         private readonly string _tag;
         private readonly string _url;
         private readonly X509Certificate2 _certificate;
-        private string _status;
+        private string _statusMessage;
 
-        public string Status
+        public string StatusMessage
         {
-            get => _status;
+            get => _statusMessage;
             set
             {
-                if (_status == value)
+                if (_statusMessage == value)
                     return;
-                _status = value;
+                _statusMessage = value;
                 _leader?.NotifyAboutNodeStatusChange();
             }
         }
+        public AmbassadorStatus Status;
 
         private long _followerMatchIndex;
         private long _lastReplyFromFollower;
@@ -82,7 +93,8 @@ namespace Raven.Server.Rachis
             _tag = tag;
             _url = url;
             _certificate = certificate;
-            Status = "Started";
+            Status = AmbassadorStatus.Started;
+            StatusMessage = $"Started Follower Ambassador for {_engine.Tag} > {_tag} in term {_engine.CurrentTerm}";
         }
 
         public void UpdateLeaderWake(ManualResetEvent wakeLeader)
@@ -113,7 +125,8 @@ namespace Raven.Server.Rachis
                         }
                         catch (Exception e)
                         {
-                            Status = "Failed - " + e.Message;
+                            Status = AmbassadorStatus.FailedToConnect;
+                            StatusMessage = $"Failed to connect with {_tag}.{Environment.NewLine}" + e.Message;
                             if (_engine.Log.IsInfoEnabled)
                             {
                                 _engine.Log.Info($"FollowerAmbassador {_engine.Tag}: Failed to connect to remote follower: {_tag} {_url}", e);
@@ -122,7 +135,8 @@ namespace Raven.Server.Rachis
                             _leader.WaitForNewEntries().Wait(TimeSpan.FromMilliseconds(_engine.ElectionTimeout.TotalMilliseconds / 2));
                             continue; // we'll retry connecting
                         }
-                        Status = "Connected";
+                        Status = AmbassadorStatus.Connected;
+                        StatusMessage = $"Connected with {_tag}";
                         _connection = new RemoteConnection(_tag, _engine.Tag, stream);
                         using (_connection)
                         {
@@ -134,7 +148,7 @@ namespace Raven.Server.Rachis
                             {
                                 // we are no longer the leader, but we'll not abort the thread here, we'll 
                                 // go to the top of the while loop and exit from there if needed
-                                continue; 
+                                continue;
                             }
 
                             var matchIndex = InitialNegotiationWithFollower();
@@ -238,7 +252,8 @@ namespace Raven.Server.Rachis
                     }
                     catch (Exception e)
                     {
-                        Status = "Failed - " + e.Message;
+                        Status = AmbassadorStatus.FailedToConnect;
+                        StatusMessage = $"Failed to talk with {_tag}.{Environment.NewLine}" + e;
                         if (_engine.Log.IsInfoEnabled)
                         {
                             _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
@@ -250,29 +265,39 @@ namespace Raven.Server.Rachis
                     finally
                     {
                         stream?.Dispose();
-                        if (Status == "Connected")                        
-                            Status = "Disconnected";                    
+                        if (Status == AmbassadorStatus.Connected)
+                        {
+                            StatusMessage = "Disconnected";
+                        }
                         else
-                            Status = "Disconnected " + Status;
+                        {
+                            StatusMessage = "Disconnected due to :" + StatusMessage;
+                        }
+                        Status = AmbassadorStatus.Disconnected;
                     }
                 }
             }
             catch (OperationCanceledException)
             {
-                Status = "Closed";
+                StatusMessage = "Closed";
+                Status = AmbassadorStatus.Closed;
             }
             catch (ObjectDisposedException)
             {
-                Status = "Closed";
+                StatusMessage = "Closed";
+                Status = AmbassadorStatus.Closed;
             }
             catch (AggregateException ae)
                 when (ae.InnerException is OperationCanceledException || ae.InnerException is ObjectDisposedException)
             {
-                Status = "Closed";
+                StatusMessage = "Closed";
+                Status = AmbassadorStatus.Closed;
             }
             catch (Exception e)
             {
-                Status = "Failed - " + e.Message;
+                StatusMessage = $"Failed to talk with {_tag}.{Environment.NewLine}" + e.Message;
+                Status = AmbassadorStatus.FailedToConnect;
+
                 if (_engine.Log.IsInfoEnabled)
                 {
                     _engine.Log.Info("Failed to talk to remote follower: " + _tag, e);
@@ -302,7 +327,7 @@ namespace Raven.Server.Rachis
                     {
                         LastIncludedIndex = earliestIndexEtry,
                         LastIncludedTerm = _engine.GetTermForKnownExisting(context, earliestIndexEtry),
-                        Topology = _engine.GetTopologyRaw(context),
+                        Topology = _engine.GetTopologyRaw(context)
                     });
                     using (var binaryWriter = new BinaryWriter(stream, Encoding.UTF8, leaveOpen: true))
                     {
@@ -324,7 +349,7 @@ namespace Raven.Server.Rachis
                     {
                         LastIncludedIndex = index,
                         LastIncludedTerm = term,
-                        Topology = _engine.GetTopologyRaw(context),
+                        Topology = _engine.GetTopologyRaw(context)
                     });
                     WriteSnapshotToFile(context, new BufferedStream(stream));
 
@@ -448,15 +473,12 @@ namespace Raven.Server.Rachis
         {
             private readonly byte[] _buffer = new byte[1024];
 
-            public byte[] Buffer => _buffer;
-
             private readonly Stream _stream;
 
             public UnmanagedMemoryToStream(Stream stream)
             {
                 _stream = stream;
             }
-
 
             public void Copy(byte* ptr, int size)
             {
@@ -535,7 +557,7 @@ namespace Raven.Server.Rachis
                     {
                         Term = engineCurrentTerm,
                         PrevLogIndex = lastIndexEntry,
-                        PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry),
+                        PrevLogTerm = _engine.GetTermForKnownExisting(context, lastIndexEntry)
                     };
                 }
                 UpdateLastSend("Hello");
@@ -548,7 +570,7 @@ namespace Raven.Server.Rachis
                     TopologyId = clusterTopology.TopologyId,
                     InitialMessageType = InitialMessageType.AppendEntries,
                     DebugDestinationIdentifier = _tag,
-                    DebugSourceIdentifier = _engine.Tag,
+                    DebugSourceIdentifier = _engine.Tag
                 });
 
                 UpdateLastSend("Negotiation");

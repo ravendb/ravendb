@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,6 +18,7 @@ using Sparrow.Logging;
 using Raven.Server.Utils;
 using Sparrow.Utils;
 using Raven.Client.Exceptions.Documents.Subscriptions;
+using Raven.Server.Documents.Replication;
 
 namespace Raven.Server.Documents.TcpHandlers
 {
@@ -25,7 +27,6 @@ namespace Raven.Server.Documents.TcpHandlers
         private static readonly StringSegment DataSegment = new StringSegment("Data");
         private static readonly StringSegment ExceptionSegment = new StringSegment("Exception");
         private static readonly StringSegment TypeSegment = new StringSegment("Type");
-
 
         public readonly TcpConnectionOptions TcpConnection;
         public readonly string ClientUri;
@@ -49,8 +50,9 @@ namespace Raven.Server.Documents.TcpHandlers
         private bool _isDisposed;
         public SubscriptionState SubscriptionState;
 
-        public long SubscriptionId => _options.SubscriptionId;
+        public long SubscriptionId { get; set; }
         public SubscriptionOpeningStrategy Strategy => _options.Strategy;
+        
 
         public SubscriptionConnection(TcpConnectionOptions connectionOptions)
         {
@@ -62,6 +64,7 @@ namespace Raven.Server.Documents.TcpHandlers
 
             _waitForMoreDocuments = new AsyncManualResetEvent(CancellationTokenSource.Token);
             Stats = new SubscriptionConnectionStats();
+            
         }
 
         private async Task ParseSubscriptionOptionsAsync()
@@ -87,13 +90,9 @@ namespace Raven.Server.Documents.TcpHandlers
 
                 if (translation.TryGet(nameof(Client.Documents.Subscriptions.SubscriptionState.SubscriptionId), out long id) == false)
                     throw new SubscriptionClosedException("Could not figure out the subscription id for subscription named " + _options.SubscriptionName);
-
-                if (_options.SubscriptionId > 0 && _options.SubscriptionId != id)
-                    throw new SubscriptionClosedException("Subscription named " + _options.SubscriptionName + " has id of " + id + " but the subscription expected " + _options.SubscriptionId);
-
-                _options.SubscriptionId = id;
+                
+                SubscriptionId = id;
             }
-
         }
 
         public async Task InitAsync()
@@ -105,6 +104,7 @@ namespace Raven.Server.Documents.TcpHandlers
                 _logger.Info(
                     $"Subscription connection for subscription ID: {SubscriptionId} received from {TcpConnection.TcpClient.Client.RemoteEndPoint}");
             }
+            
             _options.SubscriptionName = _options.SubscriptionName ?? SubscriptionId.ToString();
             SubscriptionState = await TcpConnection.DocumentDatabase.SubscriptionStorage.AssertSubscriptionIdIsApplicable(SubscriptionId,_options.SubscriptionName, TimeSpan.FromSeconds(15));
 
@@ -124,6 +124,8 @@ namespace Raven.Server.Documents.TcpHandlers
                     });
 
                     Stats.ConnectedAt = DateTime.UtcNow;
+                    await TcpConnection.DocumentDatabase.SubscriptionStorage.UpdateClientConnectionTime(SubscriptionState.SubscriptionId,
+                        SubscriptionState.SubscriptionName);
                     return;
                 }
                 catch (TimeoutException)
@@ -175,15 +177,31 @@ namespace Raven.Server.Documents.TcpHandlers
                 {
                     try
                     {
-                        await connection.InitAsync();
-                        await connection.ProcessSubscriptionAsync();
+                        bool gotSemaphore;
+                        if ((gotSemaphore = tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.TryEnterSemaphore()) == false)
+                        {
+                            throw new SubscriptionClosedException(
+                                $"Cannot open new subscription connection, max amount of concurrent connections reached ({tcpConnectionOptions.DocumentDatabase.Configuration.Subscriptions.ConcurrentConnections})");
+                        }
+                        try
+                        {
+                            await connection.InitAsync();
+                            await connection.ProcessSubscriptionAsync();
+                        }
+                        finally
+                        {
+                            if (gotSemaphore)
+                            {
+                                tcpConnectionOptions.DocumentDatabase.SubscriptionStorage.ReleaseSubscriptionsSemaphore();
+                            }
+                        }
                     }
                     catch (Exception e)
                     {                        
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Failed to process subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}",
+                                $"Failed to process subscription {connection.SubscriptionId} / from client {remoteEndPoint}",
                                 e);
                         }
                         try
@@ -200,7 +218,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         if (connection._logger.IsInfoEnabled)
                         {
                             connection._logger.Info(
-                                $"Finished processing subscription {connection._options?.SubscriptionId} / from client {remoteEndPoint}");
+                                $"Finished processing subscription {connection.SubscriptionId} / from client {remoteEndPoint}");
                         }
                     }
                 }
@@ -262,7 +280,7 @@ namespace Raven.Server.Documents.TcpHandlers
                         [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
                         [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
                         [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue()
+                        [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
                         {
                             [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode
                         }
@@ -290,7 +308,25 @@ namespace Raven.Server.Documents.TcpHandlers
             void RegisterNotification(DocumentChange notification)
             {
                 if (notification.CollectionName == criteria.Collection)
-                    _waitForMoreDocuments.Set();
+                {
+                    try
+                    {
+                        _waitForMoreDocuments.Set();
+                    }
+                    catch
+                    {
+                        if (this.CancellationTokenSource.IsCancellationRequested)
+                            return;
+                        try
+                        {
+                            this.CancellationTokenSource.Cancel();
+                        }
+                        catch
+                        {
+                            // ignored
+                        }
+                    }
+                }
             }
 
             TcpConnection.DocumentDatabase.Changes.OnDocumentChange += RegisterNotification;
@@ -376,9 +412,9 @@ namespace Raven.Server.Documents.TcpHandlers
                             foreach (var result in fetcher.GetDataToSend(docsContext, SubscriptionState, patch, startEtag))
                             {
                                 startEtag = result.Doc.Etag;
-                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVector)
+                                lastChangeVector = string.IsNullOrEmpty(SubscriptionState.ChangeVectorForNextBatchStartingPoint)
                                     ? result.Doc.ChangeVector
-                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVector);
+                                    : ChangeVectorUtils.MergeVectors(result.Doc.ChangeVector, SubscriptionState.ChangeVectorForNextBatchStartingPoint);
 
                                 if (result.Doc.Data == null)
                                 {
@@ -402,10 +438,11 @@ namespace Raven.Server.Documents.TcpHandlers
 
                                 if (result.Exception != null)
                                 {
+                                    var metadata = result.Doc.Data[Client.Constants.Documents.Metadata.Key];
                                     writer.WriteValue(BlittableJsonToken.StartObject,
-                                        docsContext.ReadObject(new DynamicJsonValue()
+                                        docsContext.ReadObject(new DynamicJsonValue
                                         {
-                                            [Raven.Client.Constants.Documents.Metadata.Key] = result.Doc.Data[Raven.Client.Constants.Documents.Metadata.Key]
+                                            [Client.Constants.Documents.Metadata.Key] = metadata
                                         }, result.Doc.Id)
                                     );
                                     writer.WriteComma();
@@ -446,11 +483,21 @@ namespace Raven.Server.Documents.TcpHandlers
                             });
 
                             await FlushDocsToClient(writer, docsToFlush, true);
+                            if (_logger.IsInfoEnabled)
+                            {
+                                _logger.Info(
+                                    $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                            }
                         }
                     }
 
                     if (anyDocumentsSentInCurrentIteration == false)
-                    {                            
+                    {
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info(
+                                $"Finished sending a batch with {docsToFlush} documents for subscription {Options.SubscriptionName}");
+                        }
                         await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(SubscriptionId,Options.SubscriptionName, startEtag, lastChangeVector);
 
                         if (sendingCurrentBatchStopwatch.ElapsedMilliseconds > 1000)
@@ -488,14 +535,14 @@ namespace Raven.Server.Documents.TcpHandlers
                         }
                         await SendHeartBeat();
                     }
-                        
+
                     CancellationTokenSource.Token.ThrowIfCancellationRequested();
 
                     switch (clientReply.Type)
                     {
                         case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
                             await TcpConnection.DocumentDatabase.SubscriptionStorage.AcknowledgeBatchProcessed(
-                                Options.SubscriptionId,
+                                SubscriptionId,
                                 Options.SubscriptionName,
                                 startEtag,
                                 lastChangeVector);
@@ -516,7 +563,6 @@ namespace Raven.Server.Documents.TcpHandlers
                             throw new ArgumentException("Unknown message type from client " +
                                                         clientReply.Type);
                     }
-                    
                 }
             }
         }
@@ -527,22 +573,31 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 long startEtag = 0;
 
-                if (subscription.LastEtagReachedInServer?.TryGetValue(TcpConnection.DocumentDatabase.DbId.ToString(), out startEtag) == true)
-                {
+                if (string.IsNullOrEmpty(subscription.ChangeVectorForNextBatchStartingPoint))
                     return startEtag;
-                }
 
-                if (string.IsNullOrEmpty(subscription.ChangeVector))
-                {
+                var changeVector = subscription.ChangeVectorForNextBatchStartingPoint.ToChangeVector();
+                
+                var matchingCV = changeVector.FirstOrDefault(
+                    x => x.NodeTag == TcpConnection.DocumentDatabase.ServerStore.NodeTag.ParseNodeTag() &&
+                    x.DbId == TcpConnection.DocumentDatabase.DbBase64Id);
+
+                if (matchingCV.DbId == "" && matchingCV.Etag ==0 && matchingCV.NodeTag == 0)
                     return startEtag;
-                }
-                return startEtag;
+
+                return matchingCV.Etag;
             }
         }
 
         private async Task SendHeartBeat()
         {
-            await TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            // Todo: this is temporary, we should try using TcpConnection's receive and send timeout properties
+            var writeAsync = TcpConnection.Stream.WriteAsync(Heartbeat, 0, Heartbeat.Length);
+            if (writeAsync != await Task.WhenAny(writeAsync, TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(3000))).ConfigureAwait(false))
+            {
+                throw new SubscriptionClosedException($"Cannot contact client anymore, closing subscription ({Options?.SubscriptionName})");
+            }
+            
             TcpConnection.RegisterBytesSent(Heartbeat.Length);
         }
 
@@ -613,8 +668,22 @@ namespace Raven.Server.Documents.TcpHandlers
             {
                 // ignored
             }
-
             CancellationTokenSource.Dispose();
+        }
+    }
+
+    public class SubscriptionConnectionDetails
+    {
+        public string ClientUri { get; set; }
+        public SubscriptionOpeningStrategy? Strategy { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            return new DynamicJsonValue
+            {
+                [nameof(ClientUri)] = ClientUri,
+                [nameof(Strategy)] = Strategy
+            };
         }
     }
 }

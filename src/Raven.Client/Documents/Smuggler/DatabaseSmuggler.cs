@@ -96,10 +96,10 @@ namespace Raven.Client.Documents.Smuggler
             if (files.Length == 0)
                 return;
 
-            // When we do incremental import, we import the indexes and transformers from the last file only, 
+            // When we do incremental import, we import the indexes from the last file only, 
             // as the previous files can hold indexes and transformers which were deleted and shouldn't be imported.
             var oldOperateOnTypes = options.OperateOnTypes;
-            options.OperateOnTypes = options.OperateOnTypes & ~(DatabaseItemType.Indexes | DatabaseItemType.Transformers);
+            options.OperateOnTypes = options.OperateOnTypes & ~DatabaseItemType.Indexes;
             for (var i = 0; i < files.Length - 1; i++)
             {
                 var filePath = Path.Combine(fromDirectory, files[i]);
@@ -149,7 +149,6 @@ namespace Raven.Client.Documents.Smuggler
 
         private class ExportCommand : RavenCommand
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject _options;
             private readonly Func<Stream, Task> _handleStreamResponse;
             private readonly long _operationId;
@@ -160,14 +159,14 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(conventions));
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
                 _handleStreamResponse = handleStreamResponse ?? throw new ArgumentNullException(nameof(handleStreamResponse));
-                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
+                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
                 _operationId = operationId;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/export?operationId={_operationId}";
 
@@ -176,7 +175,7 @@ namespace Raven.Client.Documents.Smuggler
                     Method = HttpMethod.Post,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        _context.Write(stream, _options);
+                        ctx.Write(stream, _options);
                     })
                 };
             }
@@ -195,7 +194,6 @@ namespace Raven.Client.Documents.Smuggler
         private class ImportCommand : RavenCommand
         {
             private readonly BlittableJsonReaderObject _options;
-            private readonly JsonOperationContext _context;
             private readonly Stream _stream;
             private readonly long _operationId;
 
@@ -208,19 +206,19 @@ namespace Raven.Client.Documents.Smuggler
                     throw new ArgumentNullException(nameof(conventions));
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
-
-                _context = context ?? throw new ArgumentNullException(nameof(context));
-                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, _context);
+                if (context == null)
+                     throw new ArgumentNullException(nameof(context));
+                _options = EntityToBlittable.ConvertEntityToBlittable(options, conventions, context);
                 _operationId = operationId;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/smuggler/import/async?operationId={_operationId}";
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(stream => { _context.Write(stream, _options); }), "importOptions"},
+                    {new BlittableJsonContent(stream => { ctx.Write(stream, _options); }), "importOptions"},
                     {new StreamContent(_stream), "file", "name"}
                 };
 

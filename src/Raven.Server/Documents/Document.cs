@@ -38,7 +38,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public void EnsureMetadata(DocumentsOperationContext context = null)
+        public void EnsureMetadata()
         {
             if (_metadataEnsured)
                 return;
@@ -94,6 +94,12 @@ namespace Raven.Server.Documents
 
             var expirationDateTime = DateTime.ParseExact(expirationDate, new[] {"o", "r"}, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind);
             return expirationDateTime < currentDate;
+        }
+
+        public void ResetModifications()
+        {
+            _metadataEnsured = false;
+            Data.Modifications = null;
         }
     }
 }

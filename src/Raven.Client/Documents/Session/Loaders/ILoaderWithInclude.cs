@@ -7,7 +7,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Transformers;
 
 namespace Raven.Client.Documents.Session.Loaders
 {
@@ -94,25 +93,5 @@ namespace Raven.Client.Documents.Session.Loaders
         /// <param name="id">The id.</param>
         /// <returns></returns>
         TResult Load<TResult>(string id);
-
-        /// <summary>
-        /// Loads the specified id with a specific transformer.
-        /// </summary>
-        /// <typeparam name="TTransformer"></typeparam>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="id">The id.</param>
-        /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-        /// <returns></returns>
-        TResult Load<TTransformer, TResult>(string id, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
-
-        /// <summary>
-        /// Loads the specified ids with a specific transformer.
-        /// </summary>
-        /// <typeparam name="TTransformer"></typeparam>
-        /// <typeparam name="TResult"></typeparam>
-        /// <param name="ids">The id.</param>
-        /// <param name="configure">additional configuration options for operation e.g. AddTransformerParameter</param>
-        /// <returns></returns>
-        Dictionary<string, TResult> Load<TTransformer, TResult>(IEnumerable<string> ids, Action<ILoadConfiguration> configure = null) where TTransformer : AbstractTransformerCreationTask, new();
-    }
+   }
 }

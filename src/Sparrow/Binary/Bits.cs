@@ -1,9 +1,4 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sparrow.Binary
 {
@@ -356,6 +351,12 @@ namespace Sparrow.Binary
         public static int TrailingZeroes(int value)
         {
             return DeBruijnBytePos32[((uint)(value & -value) * 0x077CB531U) >> 27];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool IsPowerOfTwo(int value)
+        {
+            return value != 0 && (value & (value - 1)) == 0;
         }
     }
 }

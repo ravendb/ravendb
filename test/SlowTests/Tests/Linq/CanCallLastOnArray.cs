@@ -28,7 +28,7 @@ namespace SlowTests.Tests.Linq
                 Map = students => from student in students
                                   select new
                                   {
-                                      EmailDomain = student.Email.Split('@').Last(), // does not work
+                                      EmailDomain = student.Email.Split('@', StringSplitOptions.None).Last(), // does not work
                                       // EmailDomain = student.Email.Split('@')[1],		// DOES WORK
                                       Count = 1
                                   };
@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Linq
                         .Customize(customization => customization.WaitForNonStaleResults())
                         .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, results.Count);
                 }
             }
@@ -75,9 +75,7 @@ namespace SlowTests.Tests.Linq
             var indexDefinition = new Students_ByEmailDomain { Conventions = new DocumentConventions { PrettifyGeneratedLinqExpressions = false } }.CreateIndexDefinition();
 
             Assert.Equal(@"docs.Students.Select(student => new {
-    EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split(new char[] {
-        '@'
-    })),
+    EmailDomain = DynamicEnumerable.LastOrDefault(student.Email.Split('@', System.StringSplitOptions.None)),
     Count = 1
 })".Replace("\r\n", Environment.NewLine), indexDefinition.Maps.First());
 

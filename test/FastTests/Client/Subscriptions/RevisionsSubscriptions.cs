@@ -198,7 +198,7 @@ namespace FastTests.Client.Subscriptions
                         Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
-                            return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
+                            return { Id: id(this.Current), Age: this.Current.Age }
                         }
                         else return false;
                         ",
@@ -290,7 +290,7 @@ namespace FastTests.Client.Subscriptions
                         Script = @"
                         if(!!this.Current && !!this.Previous && this.Current.Age > this.Previous.Age)
                         {
-                            return { Id: this.Current[""@metadata""][""@id""], Age: this.Current.Age }
+                            return { Id: id(this.Current), Age: this.Current.Age }
                         }
                         else return false;
                         ",

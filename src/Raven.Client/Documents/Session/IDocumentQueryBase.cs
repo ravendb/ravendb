@@ -342,16 +342,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf CustomSortUsing(string typeName, bool descending);
 
         /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWKT will be returned
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="shapeWKT">WKT formatted shape</param>
-        /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
-        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
-
-        /// <summary>
         ///     Perform a search for documents which fields that match the searchTerms.
         ///     If there is more than a single term, each of them will be checked independently.
         /// </summary>
@@ -374,14 +364,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf Search<TValue>(Expression<Func<T, TValue>> propertySelector, string searchTerms, SearchOperator @operator = SearchOperator.Or);
 
         /// <summary>
-        ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
-        ///     them)
-        ///     to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be
-        ///     called just once for each document in the result set
-        /// </summary>
-        TSelf SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
-        /// <summary>
         ///     Sets the tags to highlight matches with.
         /// </summary>
         /// <param name="preTag">Prefix tag.</param>
@@ -396,12 +378,6 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf SetHighlighterTags(string[] preTags, string[] postTags);
 
         /// <summary>
-        ///     Sets a transformer to use after executing a query
-        /// </summary>
-        /// <param name="transformer"></param>
-        TSelf SetTransformer(string transformer);
-
-        /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming
         ///     results). Default: false
         /// </summary>
@@ -412,11 +388,6 @@ If you really want to do in memory filtering on the data returned from the query
         /// </summary>
         /// <param name="count">Number of items to skip.</param>
         TSelf Skip(int count);
-
-        /// <summary>
-        ///     Sorts the query results by distance.
-        /// </summary>
-        TSelf SortByDistance();
 
         /// <summary>
         ///     Provide statistics about the query, such as total count of matching records
@@ -561,6 +532,21 @@ If you really want to do in memory filtering on the data returned from the query
         TSelf WhereEquals(WhereParams whereParams);
 
         /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals(string fieldName, object value, bool exact = false);
+
+        /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals<TValue>(Expression<Func<T, TValue>> propertySelector, TValue value, bool exact = false);
+
+        /// <summary>
+        ///     Not matches value
+        /// </summary>
+        TSelf WhereNotEquals(WhereParams whereParams);
+
+        /// <summary>
         ///     Matches fields where the value is greater than the specified value
         /// </summary>
         /// <param name="fieldName">Name of the field.</param>
@@ -655,11 +641,12 @@ If you really want to do in memory filtering on the data returned from the query
         /// <summary>
         ///     Filter matches to be inside the specified radius
         /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
         /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        TSelf WithinRadiusOf<TValue>(Expression<Func<T, TValue>> propertySelector, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         ///     Filter matches to be inside the specified radius
@@ -669,16 +656,66 @@ If you really want to do in memory filtering on the data returned from the query
         /// <param name="latitude">Latitude pointing to a circle center.</param>
         /// <param name="longitude">Longitude pointing to a circle center.</param>
         /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits = SpatialUnits.Kilometers);
+        TSelf WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWKT will be returned
+        /// </summary>
+        /// <param name="propertySelector">Property selector for the field.</param>
+        /// <param name="shapeWKT">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
+
+        /// <summary>
+        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
+        ///     have a relation rel with the given shapeWKT will be returned
+        /// </summary>
+        /// <param name="fieldName">Spatial field name.</param>
+        /// <param name="shapeWKT">WKT formatted shape</param>
+        /// <param name="relation">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
+        /// <param name="distanceErrorPct">The allowed error percentage. By default: 0.025</param>
+        TSelf RelatesToShape(string fieldName, string shapeWKT, SpatialRelation relation, double distanceErrorPct = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct);
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf SortByDistance(double lat, double lng);
+        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
 
         /// <summary>
         /// Sorts the query results by distance.
         /// </summary>
-        TSelf SortByDistance(double lat, double lng, string fieldName);
+        TSelf OrderByDistance(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistance(string fieldName, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, double latitude, double longitude);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending<TValue>(Expression<Func<T, TValue>> propertySelector, string shapeWkt);
+
+        /// <summary>
+        /// Sorts the query results by distance.
+        /// </summary>
+        TSelf OrderByDistanceDescending(string fieldName, string shapeWkt);
     }
 }

@@ -64,7 +64,7 @@ namespace Raven.Server.Utils.Metrics
             _lastCount = current;
             var lastTime = _lastTick;
             _lastTick = Clock.Nanoseconds;
-            var timeDiff = ((double)(_lastTick - lastTime) / Clock.NanosecondsInSecond); ;
+            var timeDiff = ((double)(_lastTick - lastTime) / Clock.NanosecondsInSecond);
             if (timeDiff <= 0)
             {
                 OneSecondRate = 0;
@@ -121,7 +121,7 @@ namespace Raven.Server.Utils.Metrics
                 ["MeanRate"] = Math.Round(meterValue.MeanRate, 1),
                 ["OneMinuteRate"] = Math.Round(meterValue.OneMinuteRate, 1),
                 ["FiveMinuteRate"] = Math.Round(meterValue.FiveMinuteRate, 1),
-                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 1),
+                ["FifteenMinuteRate"] = Math.Round(meterValue.FifteenMinuteRate, 1)
             };
 
             if (allResults == false)
@@ -133,10 +133,10 @@ namespace Raven.Server.Utils.Metrics
             var current = DateTime.UtcNow;
             var now = new TimeSpan(current.Hour, current.Minute, current.Second);
             var oneSec = TimeSpan.FromSeconds(1);
-            for (int i = index; i >= 0 ; i--)
+            for (int i = index; i >= 0; i--)
             {
                 var d = _m15Rate[i];
-                if(filterEmpty == false || Math.Abs(d) > double.Epsilon)
+                if (filterEmpty == false || Math.Abs(d) > double.Epsilon)
                     results[now.ToString()] = Math.Round(d, 1);
                 now = now - oneSec;
             }

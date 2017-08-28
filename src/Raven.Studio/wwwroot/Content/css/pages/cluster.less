@@ -1,6 +1,8 @@
-@cluster-member-color: #6ebf3a;
-@cluster-promotable-color: #6ebf3a;
-@cluster-watcher-color: #6f9574;
+@cluster-member-color: #6dbe3b;
+@cluster-promotable-color: #488c5d;
+@cluster-watcher-color: #4b7a70;
+@cluster-leader-bg-color: #a4f012;
+@cluster-leader-fg-color: #3ea704;
 
 @cluster-voting-color: #266cb3;
 @cluster-voting-text-color: #74b4f7;
@@ -10,7 +12,7 @@
 
 @cluster-disconnected-color: #f93e3a;
 
-@leader-color: #ffc533;
+@leader-color: #ffc330;
 
 #clusterGraphContainer {
     min-height: 400px;
@@ -37,9 +39,16 @@
 
             .leader-stroke {
                 fill: none;
+                stroke-width: 2px;
                 stroke: @leader-color;
-                stroke-width: 3px;
-                stroke-dasharray: 20,3;
+                opacity: 0;
+            }
+
+            .voting-stroke {
+                fill: none;
+                stroke-width: 2px;
+                stroke: #5886a8;
+                stroke-dasharray: 30,17;
                 opacity: 0;
             }
 
@@ -63,13 +72,19 @@
                 }
 
                 .node-icon {
-                    fill: @brand-warning;
+                    fill: @cluster-leader-fg-color;
                 }
             }
 
             &.Member {
                 .node-bg {
                     fill: @cluster-member-color;
+                }
+            }
+
+            &.Member.leader {
+                .node-bg {
+                    fill: @cluster-leader-bg-color;
                 }
             }
 
@@ -96,7 +111,7 @@
             .node-icon {
                 display: none;
             }
-
+            
             .Member, .Promotable {
                 .node-bg {
                     fill: @cluster-voting-color;
@@ -104,6 +119,10 @@
 
                 .state {
                     fill: @cluster-voting-text-color;
+                }
+
+                .voting-stroke {
+                    opacity: 1;
                 }
             }
 
@@ -122,11 +141,29 @@
                     font-size: 22px;
                     transform: translate(0,-13px);
                 }
+
+                .voting-stroke {
+                    opacity: 0;
+                }
             }
 
             .node {
                 .node-tag {
                     fill: white;
+                }
+
+                &.disconnected {
+                    .node-bg {
+                        fill: @cluster-disconnected-color;
+                    }
+                    
+                    .voting-stroke {
+                        opacity: 0;
+                    }
+                    
+                    .state {
+                        fill: white;
+                    }
                 }
             }
         }
@@ -157,6 +194,14 @@
         &.voting {
             .edge-line {
                 stroke-opacity: 1;
+            }
+            
+            .with-error {
+                stroke: @cluster-disconnected-color;
+            }
+            
+            .with-watcher {
+                stroke-opacity: 0;
             }
         }
     }

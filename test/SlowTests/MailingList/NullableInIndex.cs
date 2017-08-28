@@ -60,7 +60,7 @@ namespace SlowTests.MailingList
                     Assert.Equal(1, x);
                 }
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
     }

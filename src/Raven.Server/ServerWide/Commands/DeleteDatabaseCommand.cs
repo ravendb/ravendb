@@ -1,13 +1,16 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public class DeleteDatabaseCommand : UpdateDatabaseCommand
     {
+        public string[] _clusterNodes;
         public bool HardDelete;
         public string[] FromNodes;
         public bool UpdateReplicationFactor = true;
@@ -22,9 +25,14 @@ namespace Raven.Server.ServerWide.Commands
             ErrorOnDatabaseDoesNotExists = true;
         }
 
+        public override void Initialize(ServerStore serverStore, TransactionOperationContext context)
+        {
+            _clusterNodes = serverStore.GetClusterTopology(context).AllNodes.Keys.ToArray();
+        }
+
         public override string UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
-            var deletionInProgressStatus = HardDelete? DeletionInProgressStatus.HardDelete
+            var deletionInProgressStatus = HardDelete ? DeletionInProgressStatus.HardDelete
                 : DeletionInProgressStatus.SoftDelete;
             if (record.DeletionInProgress == null)
             {
@@ -43,7 +51,8 @@ namespace Raven.Server.ServerWide.Commands
                     {
                         record.Topology.ReplicationFactor--;
                     }
-                    record.DeletionInProgress[node] = deletionInProgressStatus;
+                    if(_clusterNodes.Contains(node))
+                        record.DeletionInProgress[node] = deletionInProgressStatus;
                 }
             }
             else
@@ -51,9 +60,12 @@ namespace Raven.Server.ServerWide.Commands
                 var allNodes = record.Topology.Members.Select(m => m)
                     .Concat(record.Topology.Promotables.Select(p => p))
                     .Concat(record.Topology.Rehabs.Select(r => r));
-                  
+
                 foreach (var node in allNodes)
-                    record.DeletionInProgress[node] = deletionInProgressStatus;
+                {
+                    if (_clusterNodes.Contains(node))
+                        record.DeletionInProgress[node] = deletionInProgressStatus;
+                }
 
                 record.Topology.ReplicationFactor = 0;
                 record.Topology = new DatabaseTopology

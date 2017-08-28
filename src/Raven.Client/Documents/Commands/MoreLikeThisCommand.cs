@@ -14,32 +14,30 @@ namespace Raven.Client.Documents.Commands
     public class MoreLikeThisCommand : RavenCommand<MoreLikeThisQueryResult>
     {
         private readonly DocumentConventions _conventions;
-        private readonly JsonOperationContext _context;
         private readonly MoreLikeThisQuery _query;
 
-        public MoreLikeThisCommand(DocumentConventions conventions, JsonOperationContext context, MoreLikeThisQuery query)
+        public MoreLikeThisCommand(DocumentConventions conventions, MoreLikeThisQuery query)
         {
             _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-            _context = context ?? throw new ArgumentNullException(nameof(context));
             _query = query ?? throw new ArgumentNullException(nameof(query));
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var path = new StringBuilder(node.Url)
                 .Append("/databases/")
                 .Append(node.Database)
                 .Append("/queries?op=morelikethis&query-hash=")
-                .Append(_query.GetQueryHash(_context));
+                .Append(_query.GetQueryHash(ctx));
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
-                            writer.WriteMoreLikeThisQuery(_conventions, _context, _query);
+                            writer.WriteMoreLikeThisQuery(_conventions, ctx, _query);
                         }
                     }
                 )

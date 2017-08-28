@@ -9,15 +9,19 @@ class testPeriodicBackupCredentialsCommand extends commandBase {
         super();
     }
  
-    execute(): JQueryPromise<any> {
+    execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         const url = endpoints.global.adminDatabases.adminPeriodicBackupTestCredentials +
             this.urlEncodeArgs({
                 name: this.db.name,
                 type: this.type
             });
 
-        return this.post(url, JSON.stringify(this.connectionConfiguration))
-            .done(() => this.reportSuccess(`Connection to ${this.type} was successful`))
+        return this.post(url, JSON.stringify(this.connectionConfiguration), null, { dataType: undefined })
+            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+                if (!result.Success) {
+                    this.reportError(`Failed to test connection`, result.Error);
+                }
+            })
             .fail(response => this.reportError(`Connection to ${this.type} failed`,
                     response.responseText, response.statusText));
     }

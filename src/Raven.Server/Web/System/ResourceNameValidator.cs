@@ -8,8 +8,7 @@ namespace Raven.Server.Web.System
 {
     public class ResourceNameValidator
     {
-        public static readonly string[] WindowsReservedFileNames = new string[23]
-        {
+        public static readonly string[] WindowsReservedFileNames = {
             "con",
             "prn",
             "aux",
@@ -70,7 +69,7 @@ namespace Raven.Server.Web.System
                 errorMessage = $"Invalid name! Name cannot exceed {maxfileNameLength} characters";
                 return false;
             }
-            if ((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) && 
+            if ((RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)) &&
                 ((name.Length > LinuxMaxFileNameLength) ||
                 (dataDirectory.Length + name.Length > LinuxMaxPath)))
             {

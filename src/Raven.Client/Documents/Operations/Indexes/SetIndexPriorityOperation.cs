@@ -34,7 +34,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _priority = priority;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/set-priority?name={Uri.EscapeDataString(_indexName)}&priority={_priority}";
 

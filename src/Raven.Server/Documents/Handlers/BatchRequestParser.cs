@@ -23,7 +23,9 @@ namespace Raven.Server.Documents.Handlers
             public string Id;
             public BlittableJsonReaderObject Document;
             public PatchRequest Patch;
+            public BlittableJsonReaderObject PatchArgs;
             public PatchRequest PatchIfMissing;
+            public BlittableJsonReaderObject PatchIfMissingArgs;
             public LazyStringValue ChangeVector;
             public bool IdPrefixed;
 
@@ -41,7 +43,7 @@ namespace Raven.Server.Documents.Handlers
         private static Stack<CommandData[]> _cache;
 
         private static readonly CommandData[] Empty = new CommandData[0];
-        private static int MaxSizeOfCommandsInBatchToCache = 128;
+        private static readonly int MaxSizeOfCommandsInBatchToCache = 128;
 
         public static void ReturnBuffer(ArraySegment<CommandData> cmds)
         {
@@ -75,7 +77,7 @@ namespace Raven.Server.Documents.Handlers
 
                 if (state.CurrentTokenType != JsonParserToken.StartObject)
                     ThrowUnexpectedToken(JsonParserToken.StartObject, state);
-                
+
                 while (parser.Read() == false)
                     await RefillParserBuffer(stream, buffer, parser);
 
@@ -109,17 +111,23 @@ namespace Raven.Server.Documents.Handlers
 
                     if (commandData.Type == CommandType.PATCH)
                     {
-                        commandData.PatchCommand = database.Patcher.GetPatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector, commandData.Patch,
-                            commandData.PatchIfMissing,
-                            skipPatchIfChangeVectorMismatch: false, debugMode: false);
+                        commandData.PatchCommand =
+                            new PatchDocumentCommand(ctx, commandData.Id, commandData.ChangeVector,
+                                false,
+                                (commandData.Patch, commandData.PatchArgs),
+                                (commandData.PatchIfMissing, commandData.PatchIfMissingArgs),
+                                database,
+                                false,
+                                false
+                            );
                     }
 
-                    if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '/')
+                    if (commandData.Type == CommandType.PUT && string.IsNullOrEmpty(commandData.Id) == false && commandData.Id[commandData.Id.Length - 1] == '|')
                     {
                         var (_, id) = await serverStore.GenerateClusterIdentityAsync(commandData.Id, database.Name);
                         commandData.Id = id;
                     }
-                    
+
                     cmds[index] = commandData;
                 }
             }
@@ -135,10 +143,10 @@ namespace Raven.Server.Documents.Handlers
         public class ReadMany : IDisposable
         {
             private readonly Stream _stream;
-            private UnmanagedJsonParser _parser;
-            private JsonOperationContext.ManagedPinnedBuffer _buffer;
-            private JsonParserState _state;
-            private CancellationToken _token;
+            private readonly UnmanagedJsonParser _parser;
+            private readonly JsonOperationContext.ManagedPinnedBuffer _buffer;
+            private readonly JsonParserState _state;
+            private readonly CancellationToken _token;
 
             public ReadMany(JsonOperationContext ctx, Stream stream, JsonOperationContext.ManagedPinnedBuffer buffer, CancellationToken token)
             {
@@ -186,7 +194,7 @@ namespace Raven.Server.Documents.Handlers
 
                 } while (_parser.Read() == false);
                 if (_state.CurrentTokenType == JsonParserToken.EndArray)
-                    return new CommandData{Type = CommandType.None};
+                    return new CommandData { Type = CommandType.None };
 
                 return await ReadSingleCommand(ctx, _stream, _state, _parser, _buffer, _token);
             }
@@ -194,10 +202,10 @@ namespace Raven.Server.Documents.Handlers
 
 
         private static async Task<CommandData> ReadSingleCommand(
-            JsonOperationContext ctx, 
-            Stream stream, 
-            JsonParserState state, 
-            UnmanagedJsonParser parser, 
+            JsonOperationContext ctx,
+            Stream stream,
+            JsonParserState state,
+            UnmanagedJsonParser parser,
             JsonOperationContext.ManagedPinnedBuffer buffer,
             CancellationToken token)
         {
@@ -287,13 +295,13 @@ namespace Raven.Server.Documents.Handlers
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.Patch = PatchRequest.Parse(patch);
+                        commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token);
                         var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, token);
-                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing);
+                        commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
                     case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
@@ -436,7 +444,7 @@ namespace Raven.Server.Documents.Handlers
             return Encoding.UTF8.GetString(state.StringBuffer, state.StringSize);
         }
 
-        private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext ctx,JsonParserState state)
+        private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext ctx, JsonParserState state)
         {
             return ctx.GetLazyString(Encodings.Utf8.GetString(state.StringBuffer, state.StringSize));
         }
@@ -493,8 +501,8 @@ namespace Raven.Server.Documents.Handlers
                     return CommandPropertyName.Patch;
 
                 case 14:
-                    if (*(int*)state.StringBuffer != 1668571472 || 
-                        *(long*)(state.StringBuffer + 4) != 7598543892411468136 || 
+                    if (*(int*)state.StringBuffer != 1668571472 ||
+                        *(long*)(state.StringBuffer + 4) != 7598543892411468136 ||
                         *(short*)(state.StringBuffer + 12) != 26478)
                         return CommandPropertyName.NoSuchProperty;
                     return CommandPropertyName.PatchIfMissing;
@@ -511,12 +519,12 @@ namespace Raven.Server.Documents.Handlers
                         state.StringBuffer[sizeof(long) + sizeof(short)] == (byte)'e')
                         return CommandPropertyName.ContentType;
                     return CommandPropertyName.NoSuchProperty;
-                    
+
                 case 12:
                     if (*(long*)state.StringBuffer == 7302135340735752259 &&
                         *(int*)(state.StringBuffer + sizeof(long)) == 1919906915)
                         return CommandPropertyName.ChangeVector;
-                    
+
                     return CommandPropertyName.NoSuchProperty;
                 default:
                     return CommandPropertyName.NoSuchProperty;

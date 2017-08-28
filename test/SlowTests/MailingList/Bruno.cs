@@ -82,7 +82,7 @@ namespace SlowTests.MailingList
                             .Customize(c => c.WaitForNonStaleResults())
                             .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
 
                     Assert.Equal(tasksForUserA, result.Single(s => s.OwnerId == userA.Id).Count);
                     Assert.Equal(tasksForUserB, result.Single(s => s.OwnerId == userB.Id).Count);

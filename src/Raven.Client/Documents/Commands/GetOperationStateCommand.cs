@@ -39,7 +39,7 @@ namespace Raven.Client.Documents.Commands
             _isServerStoreOperation = isServerStoreOperation;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = _isServerStoreOperation == false ? 
                 $"{node.Url}/databases/{node.Database}/operations/state?id={_id}" : 

@@ -23,7 +23,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = $p0)", q.ToString());
             Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = :p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE exact(Name = $p0)", q.ToString());
             Assert.Equal("ayende1", query.QueryParameters["p0"]);
         }
 
@@ -48,7 +48,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] { "ayende" }, query.QueryParameters["p0"]);
         }
 
@@ -60,7 +60,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
@@ -73,7 +73,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
@@ -86,7 +86,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] { "ryan", "heath here" }, query.QueryParameters["p0"]);
         }
 
@@ -99,7 +99,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object [] {"ryan"}, query.QueryParameters["p0"]);
         }
 
@@ -112,7 +112,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[0], query.QueryParameters["p0"]);
         }
 
@@ -125,7 +125,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] {"ryan", "heath"}, query.QueryParameters["p0"]);
         }
 
@@ -138,7 +138,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN (:p0)", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name IN ($p0)", q.ToString());
             Assert.Equal(new object[] { "ayende1" }, query.QueryParameters["p0"]);
         }
 
@@ -160,7 +160,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0 AND Email = :p1", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = $p0 AND Email = $p1", q.ToString());
             Assert.Equal("ayende", query.QueryParameters["p0"]);
             Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
@@ -175,7 +175,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = :p0 OR Email = :p1", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Name = $p0 OR Email = $p1", q.ToString());
             Assert.Equal("ayende", query.QueryParameters["p0"]);
             Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
@@ -189,7 +189,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday < :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday < $p0", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -202,7 +202,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday = :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday = $p0", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -215,7 +215,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday <= :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday <= $p0", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -228,7 +228,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday > :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday > $p0", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -241,7 +241,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= $p0", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -255,7 +255,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("SELECT Name FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= $p0 SELECT Name", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -269,7 +269,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("SELECT Name, Age FROM INDEX 'IndexName' WHERE Birthday >= :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Birthday >= $p0 SELECT Name, Age", q.ToString());
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
@@ -281,7 +281,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Age = :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Age = $p0", q.ToString());
             Assert.Equal(3, query.QueryParameters["p0"]);
         }
 
@@ -293,7 +293,7 @@ namespace SlowTests.Tests.Querying
 
             var query = q.GetIndexQuery();
 
-            Assert.Equal("FROM INDEX 'IndexName' WHERE Age > :p0", q.ToString());
+            Assert.Equal("FROM INDEX 'IndexName' WHERE Age > $p0", q.ToString());
             Assert.Equal(3, query.QueryParameters["p0"]);
         }
 

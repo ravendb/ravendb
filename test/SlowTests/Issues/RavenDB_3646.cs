@@ -10,7 +10,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3646 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void QueryWithCustomize()
         {
             using (var store = GetDocumentStore())
@@ -23,9 +23,9 @@ namespace SlowTests.Issues
                     QueryStatistics stats;
                     var rq = session.Query<Events_SpatialIndex.ReduceResult, Events_SpatialIndex>()
                         .Statistics(out stats)
-                        .Customize(
-                            x => x.WithinRadiusOf("Coordinates", 10000, 1, 1,
-                                SpatialUnits.Miles));
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(10000, 1, 1, SpatialUnits.Miles))
+                        .OfType<Events_SpatialIndex.ReduceResult>();
+
                     var t = 0;
 
                     using (var enumerator = session.Advanced.Stream(rq.ProjectFromIndexFieldsInto<Event>()))
@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void QueryWithoutCustomize()
         {
             using (var store = GetDocumentStore())
@@ -73,6 +73,8 @@ namespace SlowTests.Issues
             public class ReduceResult
             {
                 public string Name { get; set; }
+
+                public string Coordinates { get; set; }
             }
 
             public Events_SpatialIndex()
@@ -81,8 +83,11 @@ namespace SlowTests.Issues
                                 select new
                                 {
                                     Name = e.Name,
-                                    __ = SpatialGenerate("Coordinates", e.Latitude, e.Longitude)
+                                    Coordinates = CreateSpatialField(e.Latitude, e.Longitude)
                                 };
+
+
+                SpatialIndexesStrings.Add("Coordinates", new SpatialOptions());
             }
         }
 

@@ -10,7 +10,6 @@ using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Raven.Client.Util.Helpers;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -76,7 +75,7 @@ namespace FastTests.Server
                 this.databaseDocument = databaseDocument;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 
@@ -106,7 +105,7 @@ namespace FastTests.Server
 
         public class GetDatabaseDocumentTestCommand : RavenCommand<BlittableJsonReaderObject>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases?name={node.Database}";
 
@@ -138,7 +137,7 @@ namespace FastTests.Server
                     {
                         Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                         Permissions = new Dictionary<string, DatabaseAccess>(),
-                        ServerAdmin = true,
+                        SecurityClearance = SecurityClearance.ClusterAdmin,
                         Thumbprint = certificate.Thumbprint
                     }));
                 }
@@ -172,7 +171,7 @@ namespace FastTests.Server
                         {
                             Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             Permissions = null,
-                            ServerAdmin = true,
+                            SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint
                         }));
                     }
@@ -186,7 +185,7 @@ namespace FastTests.Server
                         {
                             Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
                             Permissions = null,
-                            ServerAdmin = true,
+                            SecurityClearance = SecurityClearance.ClusterAdmin,
                             Thumbprint = certificate.Thumbprint
                         }));
                     }
@@ -203,7 +202,6 @@ namespace FastTests.Server
                     using (var blittableObj = context.ReadObject(foo, "read test stuff"))
                     {
                         //TODO: Restore this.
-                        DevelopmentHelper.TimeBomb();
 
                         ////this shouldn't throw, since expected etag == null
                         //Server.ServerStore.PutValueInClusterAsync(context, "foo/bar", blittableObj).Wait();

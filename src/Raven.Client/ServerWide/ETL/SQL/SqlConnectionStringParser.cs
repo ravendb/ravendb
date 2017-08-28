@@ -4,7 +4,7 @@ using System.IO;
 
 namespace Raven.Client.ServerWide.ETL.SQL
 {
-    internal class SqlConnectionStringParser
+    internal static class SqlConnectionStringParser
     {
         internal static (string Database, string Server) GetDatabaseAndServerFromConnectionString(string factoryName, string connectionString)
         {

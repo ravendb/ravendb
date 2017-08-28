@@ -54,7 +54,7 @@ namespace SlowTests.Tests.Linq
                         .Where(ar => ar.StringArray.ContainsAny(items) && ar.SomeProperty == "somethingElse");
 
                     var iq = RavenTestHelper.GetIndexQuery(test);
-                    Assert.Equal("FROM TestDocs WHERE StringArray IN (:p0) AND SomeProperty = :p1", iq.Query);
+                    Assert.Equal("FROM TestDocs WHERE StringArray IN ($p0) AND SomeProperty = $p1", iq.Query);
                     Assert.Equal(items, iq.QueryParameters["p0"]);
                     Assert.Equal("somethingElse", iq.QueryParameters["p1"]);
 
@@ -89,7 +89,7 @@ namespace SlowTests.Tests.Linq
                         .Where(ar => ar.StringArray.ContainsAll(items) && ar.SomeProperty == "somethingElse");
 
                     var iq = RavenTestHelper.GetIndexQuery(test);
-                    Assert.Equal("FROM TestDocs WHERE StringArray ALL IN (:p0) AND SomeProperty = :p1", iq.Query);
+                    Assert.Equal("FROM TestDocs WHERE StringArray ALL IN ($p0) AND SomeProperty = $p1", iq.Query);
                     Assert.Equal(items, iq.QueryParameters["p0"]);
                     Assert.Equal("somethingElse", iq.QueryParameters["p1"]);
 

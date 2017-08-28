@@ -6,13 +6,11 @@
 
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using Lambda2Js;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Util;
 
 namespace Raven.Client.Documents.Session
 {
@@ -21,65 +19,6 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public partial class DocumentSession
     {
-        private class CustomMethods : JavascriptConversionExtension
-        {
-            public readonly Dictionary<string, object> Parameters = new Dictionary<string, object>();
-            public int Suffix { get; set;}
-
-            public override void ConvertToJavascript(JavascriptConversionContext context)
-            {
-                var methodCallExpression = context.Node as MethodCallExpression;
-
-                var nameAttribute = methodCallExpression?
-                    .Method
-                    .GetCustomAttributes(typeof(JavascriptMethodNameAttribute), false)
-                    .OfType<JavascriptMethodNameAttribute>()
-                    .FirstOrDefault();
-
-                if (nameAttribute == null)
-                    return;
-                context.PreventDefault();
-
-                var javascriptWriter = context.GetWriter();
-                javascriptWriter.Write(".");
-                javascriptWriter.Write(nameAttribute.Name);
-                javascriptWriter.Write("(");
-
-                var args = new List<Expression>();
-                foreach (var expr in methodCallExpression.Arguments)
-                {
-                    var expression = expr as NewArrayExpression;
-                    if (expression != null)
-                        args.AddRange(expression.Expressions);
-                    else
-                        args.Add(expr);
-                }
-
-                for (var i = 0; i < args.Count; i++)
-                {
-                    var name = $"arg_{Parameters.Count}_{Suffix}";
-                    if (i != 0)
-                        javascriptWriter.Write(", ");
-                    javascriptWriter.Write(name);
-                    object val;
-                    if (LinqPathProvider.GetValueFromExpressionWithoutConversion(args[i], out val))
-                        Parameters[name] = val;
-                }
-                if (nameAttribute.PositionalArguments != null)
-                {
-                    for (int i = args.Count;
-                        i < nameAttribute.PositionalArguments.Length;
-                        i++)
-                    {
-                        if (i != 0)
-                            javascriptWriter.Write(", ");
-                        context.Visitor.Visit(Expression.Constant(nameAttribute.PositionalArguments[i]));
-                    }
-                }
-
-                javascriptWriter.Write(")");
-            }
-        }
 
         private int _valsCount;
         private int _customCount;
@@ -97,7 +36,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} += val_{_valsCount};",
+                Script = $"this.{pathScript} += args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = valToAdd} 
             };
 
@@ -122,7 +61,7 @@ namespace Raven.Client.Documents.Session
 
             var patchRequest = new PatchRequest
             {
-                Script = $"this.{pathScript} = val_{_valsCount};",
+                Script = $"this.{pathScript} = args.val_{_valsCount};",
                 Values = {[$"val_{_valsCount}"] = value}
             };
 
@@ -145,7 +84,7 @@ namespace Raven.Client.Documents.Session
         public void Patch<T, U>(string id, Expression<Func<T, IEnumerable<U>>> path,
             Expression<Func<JavaScriptArray<U>, object>> arrayAdder)
         {
-            var extension = new CustomMethods
+            var extension = new JavascriptConversionExtensions.CustomMethods
             {
                 Suffix = _customCount++
             };

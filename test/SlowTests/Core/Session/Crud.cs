@@ -11,7 +11,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Client.Extensions;
-using SlowTests.Core.Utils.Transformers;
 
 using Xunit;
 
@@ -77,35 +76,6 @@ namespace SlowTests.Core.Session
         }
 
         [Fact]
-        public void CanLoadWithTransformer()
-        {
-            using (var store = GetDocumentStore())
-            {
-                new PostWithContentTransformer().Execute(store);
-
-                using (var session = store.OpenSession())
-                {
-                    session.Store(new Post
-                    {
-                        Id = "posts/1"
-                    });
-
-                    session.Store(new PostContent
-                    {
-                        Id = "posts/1/content",
-                        Text = "Lorem ipsum..."
-                    });
-
-                    session.SaveChanges();
-
-                    var result = session.Load<PostWithContentTransformer, PostWithContentTransformer.Result>("posts/1");
-
-                    Assert.Equal("Lorem ipsum...", result.Content);
-                }
-            }
-        }
-
-        [Fact]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +100,8 @@ namespace SlowTests.Core.Session
 
                     var users = await session.LoadAsync<User>(new[] { "users/1", "users/2", "users/3" });
 
-                    users.ForEach(kvp => Assert.Null(kvp.Value));
+                    foreach (var user in users)
+                        Assert.Null(user.Value);
                 }
             }
         }

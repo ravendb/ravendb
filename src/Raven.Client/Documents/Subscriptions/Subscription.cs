@@ -191,16 +191,13 @@ namespace Raven.Client.Documents.Subscriptions
         {
             _options = options;
             _logger = LoggingSource.Instance.GetLogger<Subscription<T>>(dbName);
-            if (_options.SubscriptionId <= 0 && string.IsNullOrEmpty(options.SubscriptionName))
-                throw new ArgumentException(
-                    "SubscriptionConnectionOptions must specify the SubscriptionId if the SubscriptionName is not set, but was set to " + _options.SubscriptionId,
-                    nameof(options));
+            if (string.IsNullOrEmpty(options.SubscriptionName))
+                throw new ArgumentException("SubscriptionConnectionOptions must specify the SubscriptionName",nameof(options));
             _store = documentStore;
             _dbName = dbName ?? documentStore.Database;
 
-        }
 
-        public long SubscriptionId => _options.SubscriptionId;
+        }
 
         public void Dispose()
         {
@@ -283,6 +280,7 @@ namespace Raven.Client.Documents.Subscriptions
         private RequestExecutor _subscriptionLocalRequestExecutor;
 
         public string CurrentNodeTag => _redirectNode?.ClusterTag;
+        public string SubscriptionName => _options?.SubscriptionName;
 
         private async Task<Stream> ConnectToServer()
         {
@@ -327,11 +325,13 @@ namespace Raven.Client.Documents.Subscriptions
                 _stream = await TcpUtils.WrapStreamWithSslAsync(_tcpClient,command.Result, _store.Certificate).ConfigureAwait(false);
 
                 var databaseName = _dbName ?? _store.Database;
-                var header = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
+                var serializeObject = JsonConvert.SerializeObject(new TcpConnectionHeaderMessage
                 {
                     Operation = TcpConnectionHeaderMessage.OperationTypes.Subscription,
-                    DatabaseName = databaseName
-                }));
+                    DatabaseName = databaseName,
+                    OperationVersion = TcpConnectionHeaderMessage.SubscriptionTcpVersion
+                });
+                var header = Encodings.Utf8.GetBytes(serializeObject);
 
                 var options = Encodings.Utf8.GetBytes(JsonConvert.SerializeObject(_options));
 
@@ -341,8 +341,16 @@ namespace Raven.Client.Documents.Subscriptions
                 using (var response = context.ReadForMemory(_stream, "Subscription/tcp-header-response"))
                 {
                     var reply = JsonDeserializationClient.TcpConnectionHeaderResponse(response);
-                    if (reply.AuthorizationSuccessful == false)
-                        throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
+                    switch (reply.Status)
+                    {
+                        case TcpConnectionStatus.Ok:
+                            break;
+                        case TcpConnectionStatus.AuthorizationFailed:
+                            throw new AuthorizationException($"Cannot access database {databaseName} because " + reply.Message);
+                        case TcpConnectionStatus.TcpVersionMissmatch:
+                            throw new InvalidOperationException($"Can't connect to database {databaseName} because: {reply.Message}");
+                    }
+                        
                 }
                 await _stream.WriteAsync(options, 0, options.Length).ConfigureAwait(false);
 
@@ -371,26 +379,27 @@ namespace Raven.Client.Documents.Subscriptions
                     break;
                 case SubscriptionConnectionServerMessage.ConnectionStatus.InUse:
                     throw new SubscriptionInUseException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it's in use and the connection strategy is {_options.Strategy}");
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Closed:
                     throw new SubscriptionClosedException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it was closed.  " + connectionStatus.Exception);
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it was closed.  " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Invalid:
                     throw new SubscriptionInvalidStateException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it is in invalid state. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.NotFound:
                     throw new SubscriptionDoesNotExistException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be opened, because it does not exist. " + connectionStatus.Exception);
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be opened, because it does not exist. " + connectionStatus.Exception);
                 case SubscriptionConnectionServerMessage.ConnectionStatus.Redirect:
+                    var appropriateNode = connectionStatus.Data?[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]?.ToString();
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription With Id {_options.SubscriptionId} cannot be processed by current node, it will be redirected to {connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)]}"
+                        $"Subscription With Id '{_options.SubscriptionName}' cannot be processed by current node, it will be redirected to {appropriateNode}"
                     )
                     {
-                        AppropriateNode = connectionStatus.Data[nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)].ToString()
+                        AppropriateNode = appropriateNode
                     };
                 default:
                     throw new ArgumentException(
-                        $"Subscription {_options.SubscriptionId} could not be opened, reason: {connectionStatus.Status}");
+                        $"Subscription '{_options.SubscriptionName}' could not be opened, reason: {connectionStatus.Status}");
             }
         }
 
@@ -475,11 +484,11 @@ namespace Raven.Client.Documents.Subscriptions
                                         if (_logger.IsInfoEnabled)
                                         {
                                             _logger.Info(
-                                                $"Subscription #{_options.SubscriptionId}. Subscriber threw an exception on document batch", ex);
+                                                $"Subscription '{_options.SubscriptionName}'. Subscriber threw an exception on document batch", ex);
                                         }
 
                                         if (_options.IgnoreSubscriberErrors == false)
-                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription {SubscriptionId}",ex);
+                                            throw new SubscriberErrorException($"Subscriber threw an exception in subscription '{_options.SubscriptionName}'",ex);
                                     }
 
                                 }
@@ -607,7 +616,7 @@ namespace Raven.Client.Documents.Subscriptions
                     CloseTcpClient();
                     if (_logger.IsInfoEnabled)
                     {
-                        _logger.Info($"Subscription #{_options.SubscriptionId}. Connecting to server...");
+                        _logger.Info($"Subscription '{_options.SubscriptionName}'. Connecting to server...");
                     }
 
                     await ProcessSubscriptionAsync().ConfigureAwait(false);
@@ -622,7 +631,7 @@ namespace Raven.Client.Documents.Subscriptions
                         if (_logger.IsInfoEnabled)
                         {
                             _logger.Info(
-                                $"Subscription #{_options.SubscriptionId}. Pulling task threw the following exception", ex);
+                                $"Subscription '{_options.SubscriptionName}'. Pulling task threw the following exception", ex);
                         }
                         if (ShouldTryToReconnect(ex))
                         {
@@ -631,7 +640,7 @@ namespace Raven.Client.Documents.Subscriptions
                         else
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info($"Connection to subscription #{_options.SubscriptionId} have been shut down because of an error", ex);
+                                _logger.Info($"Connection to subscription '{_options.SubscriptionName}' have been shut down because of an error", ex);
 
                             throw;
                         }

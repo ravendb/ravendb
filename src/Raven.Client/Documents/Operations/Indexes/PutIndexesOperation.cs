@@ -29,7 +29,6 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class PutIndexesCommand : RavenCommand<PutIndexResult[]>
         {
-            private readonly JsonOperationContext _context;
             private readonly BlittableJsonReaderObject[] _indexToAdd;
 
             public PutIndexesCommand(DocumentConventions conventions, JsonOperationContext context, IndexDefinition[] indexesToAdd)
@@ -38,27 +37,28 @@ namespace Raven.Client.Documents.Operations.Indexes
                     throw new ArgumentNullException(nameof(conventions));
                 if (indexesToAdd == null)
                     throw new ArgumentNullException(nameof(indexesToAdd));
+                if (context == null)
+                    throw new ArgumentNullException(nameof(context));
 
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _indexToAdd = new BlittableJsonReaderObject[indexesToAdd.Length];
                 for (var i = 0; i < indexesToAdd.Length; i++)
                 {
                     if (indexesToAdd[i].Name == null)
                         throw new ArgumentNullException(nameof(IndexDefinition.Name));
-                    _indexToAdd[i] = EntityToBlittable.ConvertEntityToBlittable(indexesToAdd[i], conventions, _context);
+                    _indexToAdd[i] = EntityToBlittable.ConvertEntityToBlittable(indexesToAdd[i], conventions, context);
                 }
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/indexes";
+                url = $"{node.Url}/databases/{node.Database}/admin/indexes";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(stream =>
                     {
-                        using (var writer = new BlittableJsonTextWriter(_context, stream))
+                        using (var writer = new BlittableJsonTextWriter(ctx, stream))
                         {
                             writer.WriteStartObject();
                             writer.WriteArray("Indexes", _indexToAdd);

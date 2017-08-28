@@ -1,7 +1,6 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
@@ -11,7 +10,7 @@ namespace SlowTests.MailingList
 {
     public class AsyncSpatial : RavenTestBase
     {
-        [Fact(Skip = "Missing feature: Spatial")]
+        [Fact]
         public async Task SpatialIndexTest()
         {
             using (var db = GetDocumentStore())
@@ -40,12 +39,8 @@ namespace SlowTests.MailingList
                     WaitForIndexing(db);
 
                     var result = await session.Query<Promo, Promos_Index>()
-                                              .Customize(
-                                                  x => x.WithinRadiusOf(
-                                                      radius: 3.0,
-                                                      latitude: 41.145556,
-                                                      longitude: -73.995))
-                                              .ToListAsync();
+                        .Spatial("Coordinates", x => x.WithinRadius(3.0, 41.145556, -73.995))
+                        .ToListAsync();
 
                     Assert.Equal(2, result.Count);
                 }
@@ -79,7 +74,7 @@ namespace SlowTests.MailingList
                                 {
                                     p.Title,
                                     p.Coordinate,
-                                    __ = SpatialGenerate(p.Coordinate.latitude, p.Coordinate.longitude)
+                                    Coordinates = CreateSpatialField(p.Coordinate.latitude, p.Coordinate.longitude)
                                 };
             }
         }

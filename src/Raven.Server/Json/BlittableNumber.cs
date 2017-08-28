@@ -24,6 +24,14 @@ namespace Raven.Server.Json
                 return NumberParseResult.Double;
             }
 
+            if (value is float)
+            {
+                longResult = long.MinValue;
+                doubleResult = (double)(decimal)(float)value;
+
+                return NumberParseResult.Double;
+            }
+
             if (value is decimal)
             {
                 var d = (decimal)value;
@@ -50,7 +58,7 @@ namespace Raven.Server.Json
                 return NumberParseResult.Double;
             }
 
-            throw new InvalidOperationException($"Could not parse numeric field for the value '{value}' of the given type: {value.GetType().FullName}");
+            throw new InvalidOperationException($"Could not parse numeric field for the value '{value ?? "null" }' of the given type: {value?.GetType().FullName ?? "null value"}");
         }
     }
 

@@ -8,8 +8,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collectors
 {
     public class NonSortingCollector : Collector
     {
-        private int _numberOfDocsToCollect;
-        private List<ScoreDoc> _docs;
+        private readonly int _numberOfDocsToCollect;
+        private readonly List<ScoreDoc> _docs;
         private int _totalHits;
 
 

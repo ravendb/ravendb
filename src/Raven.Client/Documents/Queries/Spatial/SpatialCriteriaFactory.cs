@@ -4,39 +4,40 @@ namespace Raven.Client.Documents.Queries.Spatial
 {
     public class SpatialCriteriaFactory
     {
-        public SpatialCriteria RelatesToShape(object shape, SpatialRelation relation, double distErrorPercent = 0.025)
+        public static SpatialCriteriaFactory Instance = new SpatialCriteriaFactory();
+
+        private SpatialCriteriaFactory()
         {
-            return new SpatialCriteria
-                   {
-                       Relation = relation,
-                       Shape = shape,
-                       DistanceErrorPct = distErrorPercent
-                   };
         }
 
-        public SpatialCriteria Intersects(object shape, double distErrorPercent = 0.025)
+        public SpatialCriteria RelatesToShape(string shapeWKT, SpatialRelation relation, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shape, SpatialRelation.Intersects, distErrorPercent);
+            return new WktCriteria(shapeWKT, relation, distErrorPercent);
         }
 
-        public SpatialCriteria Contains(object shape, double distErrorPercent = 0.025)
+        public SpatialCriteria Intersects(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shape, SpatialRelation.Contains, distErrorPercent);
+            return RelatesToShape(shapeWKT, SpatialRelation.Intersects, distErrorPercent);
         }
 
-        public SpatialCriteria Disjoint(object shape, double distErrorPercent = 0.025)
+        public SpatialCriteria Contains(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shape, SpatialRelation.Disjoint, distErrorPercent);
+            return RelatesToShape(shapeWKT, SpatialRelation.Contains, distErrorPercent);
         }
 
-        public SpatialCriteria Within(object shape, double distErrorPercent = 0.025)
+        public SpatialCriteria Disjoint(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(shape, SpatialRelation.Within, distErrorPercent);
+            return RelatesToShape(shapeWKT, SpatialRelation.Disjoint, distErrorPercent);
         }
 
-        public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, double distErrorPercent=0.025)
+        public SpatialCriteria Within(string shapeWKT, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
         {
-            return RelatesToShape(SpatialIndexQuery.GetQueryShapeFromLatLon(latitude, longitude, radius), SpatialRelation.Within,distErrorPercent);
+            return RelatesToShape(shapeWKT, SpatialRelation.Within, distErrorPercent);
+        }
+
+        public SpatialCriteria WithinRadius(double radius, double latitude, double longitude, SpatialUnits? radiusUnits = null, double distErrorPercent = Constants.Documents.Indexing.Spatial.DefaultDistanceErrorPct)
+        {
+            return new CircleCriteria(radius, latitude, longitude, radiusUnits, SpatialRelation.Within, distErrorPercent);
         }
     }
 }

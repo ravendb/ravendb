@@ -1,4 +1,7 @@
-﻿namespace Raven.Client.ServerWide.Tcp
+﻿using System;
+using System.Collections.Generic;
+
+namespace Raven.Client.ServerWide.Tcp
 {
     public class TcpConnectionHeaderMessage
     {
@@ -16,5 +19,31 @@
         public string SourceNodeTag { get; set; }
 
         public OperationTypes Operation { get; set; }
+
+        public int OperationVersion { get; set; }
+
+        public static readonly int ClusterTcpVersion = 10;
+        public static readonly int HeartbeatsTcpVersion = 20;
+        public static readonly int ReplicationTcpVersion = 30;
+        public static readonly int SubscriptionTcpVersion = 40;
+
+        public static int GetOperationTcpVersion(OperationTypes operationType)
+        {
+            switch (operationType)
+            {
+                case OperationTypes.None:
+                    return -1;
+                case OperationTypes.Subscription:
+                    return SubscriptionTcpVersion;
+                case OperationTypes.Replication:
+                    return ReplicationTcpVersion;
+                case OperationTypes.Cluster:
+                    return  ClusterTcpVersion;
+                case OperationTypes.Heartbeats:
+                    return  HeartbeatsTcpVersion;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(operationType), operationType, null);
+            }
+        }
     }
 }

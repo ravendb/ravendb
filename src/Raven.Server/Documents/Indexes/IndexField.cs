@@ -1,11 +1,14 @@
 ﻿using System;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Indexes.Spatial;
 
 namespace Raven.Server.Documents.Indexes
 {
     public class IndexField
     {
         public string Name { get; set; }
+
+        internal string OriginalName { get; set; }
 
         public string Analyzer { get; set; }
 
@@ -16,7 +19,9 @@ namespace Raven.Server.Documents.Indexes
         public FieldIndexing Indexing { get; set; }
 
         public FieldTermVector TermVector { get; set; }
-        
+
+        public SpatialOptions Spatial { get; set; }
+
         public bool HasSuggestions { get; set; }
 
         public IndexField()
@@ -36,7 +41,7 @@ namespace Raven.Server.Documents.Indexes
             if (options.Indexing.HasValue)
                 field.Indexing = options.Indexing.Value;
             else if (string.IsNullOrWhiteSpace(field.Analyzer) == false)
-                field.Indexing = FieldIndexing.Analyzed;
+                field.Indexing = FieldIndexing.Search;
 
             if (options.Storage.HasValue)
                 field.Storage = options.Storage.Value;
@@ -50,8 +55,9 @@ namespace Raven.Server.Documents.Indexes
 
             if (options.Suggestions.HasValue)
                 field.HasSuggestions = options.Suggestions.Value;
-                        
-            // options.Spatial // TODO [ppekrol]
+
+            if (options.Spatial != null)
+                field.Spatial = new SpatialOptions(options.Spatial);
 
             return field;
         }
@@ -107,6 +113,11 @@ namespace Raven.Server.Documents.Indexes
                 Storage = Storage,
                 TermVector = TermVector
             };
+        }
+
+        public static string GetSearchAutoIndexFieldName(string name)
+        {
+            return $"search({name})";
         }
     }
 }

@@ -26,7 +26,7 @@ namespace Raven.Server.Web.System
             try
             {
                 var timeout = TimeoutManager.WaitFor(ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan);
-                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ServerCertificateHolder.Certificate);
+                var connectionInfo = ReplicationUtils.GetTcpInfoAsync(url, null, "Test-Connection", Server.ClusterCertificateHolder.Certificate);
                 if (await Task.WhenAny(timeout, connectionInfo) == timeout)
                 {
                     throw new TimeoutException($"Waited for {ServerStore.Configuration.Cluster.ClusterOperationTimeout.AsTimeSpan} to receive tcp info from {url} and got no response");
@@ -42,7 +42,7 @@ namespace Raven.Server.Web.System
                 result = new DynamicJsonValue
                 {
                     [nameof(NodeConnectionTestResult.Success)] = false,
-                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}",
+                    [nameof(NodeConnectionTestResult.Error)] = $"An exception was thrown while trying to connect to {url} : {e}"
                 };
             }
 
@@ -57,7 +57,7 @@ namespace Raven.Server.Web.System
         private async Task<Stream> ConnectAndGetNetworkStreamAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
         {
             await TcpUtils.ConnectSocketAsync(tcpConnectionInfo, tcpClient, log);
-            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ServerCertificateHolder.Certificate);
+            return await TcpUtils.WrapStreamWithSslAsync(tcpClient, tcpConnectionInfo, Server.ClusterCertificateHolder.Certificate);
         }
 
         private async Task<DynamicJsonValue> ConnectToClientNodeAsync(TcpConnectionInfo tcpConnectionInfo, TcpClient tcpClient, Logger log)
@@ -72,15 +72,19 @@ namespace Raven.Server.Web.System
                 using (var responseJson = await ctx.ReadForMemoryAsync(connection, $"TestConnectionHandler/{tcpConnectionInfo.Url}/Read-Handshake-Response"))
                 {
                     var headerResponse = JsonDeserializationServer.TcpConnectionHeaderResponse(responseJson);
-
-                    if(headerResponse.AuthorizationSuccessful == false)
+                    switch (headerResponse.Status)
                     {
-                        result["Success"] = false;
-                        result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
-                    }
-                    else
-                    {
-                        result["Success"] = true;
+                        case TcpConnectionStatus.Ok:
+                            result["Success"] = true;
+                            break;
+                        case TcpConnectionStatus.AuthorizationFailed:
+                            result["Success"] = false;
+                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of authorization failure: {headerResponse.Message}";
+                            break;
+                        case TcpConnectionStatus.TcpVersionMissmatch:
+                            result["Success"] = false;
+                            result["Error"] = $"Connection to {tcpConnectionInfo.Url} failed because of missmatching tcp version {headerResponse.Message}";
+                            break;
                     }
                 }
 
@@ -94,6 +98,8 @@ namespace Raven.Server.Web.System
             {
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.Operation));
                 writer.WriteString(TcpConnectionHeaderMessage.OperationTypes.Heartbeats.ToString());
+                writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.OperationVersion));
+                writer.WriteInteger(TcpConnectionHeaderMessage.HeartbeatsTcpVersion);
                 writer.WritePropertyName(nameof(TcpConnectionHeaderMessage.DatabaseName));
                 writer.WriteNull();
             }

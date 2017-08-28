@@ -8,7 +8,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.ServerWide.Expiration;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
@@ -29,19 +28,6 @@ namespace FastTests.Smuggler
                                };
 
                 Stores.Add(x => x.Name, FieldStorage.Yes);
-            }
-        }
-
-        private class Users_Address : AbstractTransformerCreationTask<User>
-        {
-            public Users_Address()
-            {
-                TransformResults = results => from r in results
-                                              let address = LoadDocument<Address>(r.AddressId)
-                                              select new
-                                              {
-                                                  address.City
-                                              };
             }
         }
 
@@ -91,7 +77,6 @@ namespace FastTests.Smuggler
                     }
 
                     new Users_ByName().Execute(store1);
-                    new Users_Address().Execute(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -107,7 +92,6 @@ namespace FastTests.Smuggler
                     var stats = await store2.Admin.SendAsync(new GetStatisticsOperation());
                     Assert.Equal(3, stats.CountOfDocuments);
                     Assert.Equal(3, stats.CountOfIndexes);
-                    Assert.Equal(1, stats.CountOfTransformers);
                 }
             }
             finally
@@ -139,7 +123,6 @@ namespace FastTests.Smuggler
                     }
 
                     new Users_ByName().Execute(store1);
-                    new Users_Address().Execute(store1);
 
                     using (var session = store1.OpenAsyncSession())
                     {
@@ -156,7 +139,6 @@ namespace FastTests.Smuggler
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
-                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
 
                     var importOperation = await store2.Smuggler.ImportAsync(new DatabaseSmugglerOptions(), file);
                     var importResult = (SmugglerResult)importOperation.WaitForCompletion();
@@ -166,7 +148,6 @@ namespace FastTests.Smuggler
 
                     Assert.Equal(stats.CountOfDocuments, progress.Documents.ReadCount);
                     Assert.Equal(stats.CountOfIndexes, progress.Indexes.ReadCount);
-                    Assert.Equal(stats.CountOfTransformers, progress.Transformers.ReadCount);
                 }
             }
             finally

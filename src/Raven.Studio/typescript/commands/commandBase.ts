@@ -23,8 +23,8 @@ class commandBase {
         return longWait ? 60000 : 9000;
     }
 
-    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
-        const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert);
+    query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<T> {
+        const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert, baseUrl);
         if (resultsSelector) {
             const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
@@ -88,7 +88,7 @@ class commandBase {
         return this.ajax<T>(relativeUrl, args, "PATCH", db, options);
     }
 
-    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000): JQueryPromise<T> {
+    protected ajax<T>(relativeUrl: string, args: any, method: string, db?: database, options?: JQueryAjaxSettings, timeToAlert: number = 9000, baseUrl?: string): JQueryPromise<T> {
         const requestExecution = protractedCommandsDetector.instance.requestStarted(4000, timeToAlert);
 
         // ContentType:
@@ -102,8 +102,11 @@ class commandBase {
         const contentType = method === "GET" ?
             "text/plain; charset=utf-8" :
             "application/json; charset=utf-8";
+
+        const url = baseUrl ? baseUrl + appUrl.forDatabaseQuery(db) + relativeUrl : appUrl.forDatabaseQuery(db) + relativeUrl;
+
         const defaultOptions = {
-            url: appUrl.forDatabaseQuery(db) + relativeUrl,
+            url: url,
             data: args,
             dataType: "json",
             contentType: contentType, 

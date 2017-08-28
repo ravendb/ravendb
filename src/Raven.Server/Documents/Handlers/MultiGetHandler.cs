@@ -201,7 +201,7 @@ namespace Raven.Server.Documents.Handlers
 
         private class MultiGetHttpResponseFeature : IHttpResponseFeature
         {
-            public MultiGetHttpResponseFeature(MultiGetHttpResponseStream body)
+            public MultiGetHttpResponseFeature(Stream body)
             {
                 Body = body;
                 Headers = new HeaderDictionary();
@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.Handlers
             public override void WriteByte(byte value)
             {
                 BytesWritten += 1;
-               _stream.WriteByte(value);
+                _stream.WriteByte(value);
             }
 
             public override bool CanTimeout => _stream.CanTimeout;

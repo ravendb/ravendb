@@ -71,7 +71,7 @@ namespace SlowTests.Bugs
 
             yield return new PatchCommandData(edge1Profile.Id, null, new PatchRequest
             {
-                Script = "addRelation(relationClrType, relation);",
+                Script = "addRelation(args.relationClrType, args.relation);",
                 Values = new Dictionary<string, object>
                 {
                     {"relation", edge1},
@@ -83,7 +83,7 @@ namespace SlowTests.Bugs
 
             yield return new PatchCommandData(edgeNProfile.Id, null, new PatchRequest
             {
-                Script = "addRelation(relationClrType, relation);",
+                Script = "addRelation(args.relationClrType, args.relation);",
                 Values = new Dictionary<string, object>
                 {
                     {"relation", edgeN},
@@ -119,7 +119,8 @@ namespace SlowTests.Bugs
                     {
                         Script = "var _this = this;" +
                                  "function addRelation(clrType, relation, thisArg) {" +
-                                 "   (thisArg || _this).Relations.push(_.extend({ '$type': clrType }, relation));" +
+                                 "    relation['$type'] = clrType; " + 
+                                 "   (thisArg || _this).Relations.push(relation);" +
                                  "}" +
                                  string.Join("\n\n", g.Select(cmd => cmd.Patch.Script)),
                         Values = g.SelectMany(cmd => cmd.Patch.Values).ToDictionary(kv => kv.Key, kv => kv.Value)

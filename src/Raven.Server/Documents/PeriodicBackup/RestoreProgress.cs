@@ -3,11 +3,11 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public class RestoreProgress: SmugglerResult.SmugglerProgress
+    public class RestoreProgress : SmugglerResult.SmugglerProgress
     {
         public long RestoredFilesInSnapshotCount { get; set; }
 
-        public RestoreProgress(RestoreResult result) : base((SmugglerResult)result)
+        public RestoreProgress(RestoreResult result) : base(result)
         {
         }
 

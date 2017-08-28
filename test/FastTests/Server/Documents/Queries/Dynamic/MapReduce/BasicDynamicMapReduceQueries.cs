@@ -295,18 +295,18 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
                 using (var commands = store.Commands())
                 {
                     // create auto map reduce index
-                    var command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    var command = new QueryCommand(store.Conventions, new IndexQuery
                     {
-                        Query = "SELECT count() as TotalCount FROM Addresses GROUP BY City",
+                        Query = "FROM Addresses GROUP BY City SELECT count() as TotalCount ",
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
                     commands.RequestExecutor.Execute(command, commands.Context);
 
                     // retrieve only City field
-                    command = new QueryCommand(store.Conventions, commands.Context, new IndexQuery
+                    command = new QueryCommand(store.Conventions, new IndexQuery
                     {
-                        Query = "SELECT City FROM Addresses GROUP BY City",
+                        Query = "FROM Addresses GROUP BY City SELECT City ",
                         WaitForNonStaleResultsAsOfNow = true
                     });
 
@@ -553,6 +553,36 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
                     Assert.Equal("Sweden", orders[1].Country);
                     Assert.Equal(1, orders[1].OrderedQuantity);
+                }
+            }
+        }
+
+        [Fact]
+        public void Group_by_number()
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User
+                    {
+                        Age = 30
+                    });
+
+                    session.Store(new User
+                    {
+                        Age = 30
+                    });
+
+                    session.SaveChanges();
+
+                    var results = session.Query<User>().GroupBy(x => x.Age).Select(x => new
+                    {
+                        Age = x.Key,
+                        Count = x.Count(),
+                    }).ToList();
+
+                    Assert.Equal(2, results[0].Count);
                 }
             }
         }

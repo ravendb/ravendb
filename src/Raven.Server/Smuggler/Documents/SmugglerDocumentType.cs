@@ -11,7 +11,7 @@ namespace Raven.Server.Smuggler.Documents
     public enum DocumentType : byte
     {
         Document = 1,
-        Attachment = 2,
+        Attachment = 2
     }
 
     public class DocumentItem

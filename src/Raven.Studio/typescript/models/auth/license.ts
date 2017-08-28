@@ -5,7 +5,6 @@ import getLicenseStatusCommand = require("commands/auth/getLicenseStatusCommand"
 class license {
     static licenseStatus = ko.observable<Raven.Server.Commercial.LicenseStatus>();
     static supportCoverage = ko.observable<supportCoverageDto>();
-    static hotSpare = ko.observable<HotSpareDto>();
 
     static fetchLicenseStatus(): JQueryPromise<Raven.Server.Commercial.LicenseStatus> {
         return new getLicenseStatusCommand()
@@ -20,10 +19,6 @@ class license {
 
     static licenseCssClass = ko.computed(() => {
         var status = license.licenseStatus();
-        var hotSpare = license.hotSpare();
-        if (hotSpare) {
-            return 'hot-spare';
-        }
         if (status == null || status.Type !== "Commercial") {
             return 'dev-only';
         }

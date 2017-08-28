@@ -2,6 +2,8 @@ using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Indexes;
+using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -78,6 +80,8 @@ namespace SlowTests.MailingList
                 {
                     session.Query<DailyActivity, DailyActivityIndex>().Customize(x => x.WaitForNonStaleResults()).ToArray();
                 }
+
+                RavenTestHelper.AssertNoIndexErrors(store);
             }
         }
     }

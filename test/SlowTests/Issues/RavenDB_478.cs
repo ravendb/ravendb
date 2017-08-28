@@ -48,9 +48,9 @@ namespace SlowTests.Issues
                                             });
 
 
-                Index(x => x.Slug, FieldIndexing.Analyzed);
-                Index(x => x.Title, FieldIndexing.Analyzed);
-                Index(x => x.Content, FieldIndexing.Analyzed);
+                Index(x => x.Slug, FieldIndexing.Search);
+                Index(x => x.Title, FieldIndexing.Search);
+                Index(x => x.Content, FieldIndexing.Search);
             }
         }
 

@@ -4,13 +4,13 @@ PORT="18123"
 
 LOGNAME="raven-wrk-test"
 LOG="/tmp/${LOGNAME}.log"
-RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/Server/Raven.Server"
+RAVENDB_PATH="../../artifacts/ubuntu.16.04-x64/package/RavenDB/Server/Raven.Server"
 # Warn: DATA_DIR is being removed rm -rf in this script
 DATA_DIR="$(pwd)/TestDataDir"
 RAVEN_CONF="--PublicServerUrl=http://${IP}:${PORT} --ServerUrl=http://0.0.0.0:${PORT} --DataDir=${DATA_DIR} --Security.UnsecuredAccessAllowed=PublicNetwork"
 TMP_FILE="/tmp/${LOGNAME}.out"
 RESULT_FILE="/tmp/${LOGNAME}.results"
-WRK_PATH="/home/adi/Sources/wrk/wrk"
+WRK_PATH="/usr/bin/wrk"
 WRK_CONF="-d30 -t4 -c128 http://127.0.0.1:${PORT}"
 WRK_SCRIPT_WRITES="-s writes.lua -- 4"
 RES_MIN_WRITE_PER_SEC=7500
@@ -115,7 +115,7 @@ fi
 PSNUM=$(jobs -p)
 
 log "About to createdb. Response:"
-curl -H "Content-Type: application/json" -X PUT -d '{"Settings": {"DataDir": "'${DATA_DIR}/Databases/'BenchmarkDB"}}' http://10.0.0.99:18123/admin/databases?name=BenchmarkDB &>> ${LOG}
+curl -H "Content-Type: application/json" -X PUT -d '{"Settings": {"DataDir": "'${DATA_DIR}/Databases/'BenchmarkDB"}}' http://${IP}:${PORT}/admin/databases?name=BenchmarkDB &>> ${LOG}
 echo "" >> ${LOG}
 
 # TODO:

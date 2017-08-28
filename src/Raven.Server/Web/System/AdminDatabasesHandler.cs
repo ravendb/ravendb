@@ -6,9 +6,11 @@
 
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using NCrontab.Advanced;
@@ -22,6 +24,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
 using Raven.Client.ServerWide.ETL;
 using Raven.Client.ServerWide.Operations;
+using Raven.Client.ServerWide.Operations.ConnectionStrings;
 using Raven.Client.ServerWide.PeriodicBackup;
 using Raven.Server.Documents;
 using Raven.Server.Json;
@@ -34,13 +37,14 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Sparrow.Utils;
 using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Web.System
 {
     public class AdminDatabasesHandler : RequestHandler
     {
-        [RavenAction("/admin/databases", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "GET", AuthorizationStatus.Operator)]
         public Task Get()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -54,6 +58,7 @@ namespace Raven.Server.Web.System
                     if (dbDoc == null)
                     {
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        HttpContext.Response.Headers["Database-Missing"] = name;
                         using (var writer = new BlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer,
@@ -71,7 +76,7 @@ namespace Raven.Server.Web.System
                         writer.WriteStartObject();
                         writer.WriteDocumentPropertiesWithoutMetdata(context, new Document
                         {
-                            Data = dbDoc,
+                            Data = dbDoc
                         });
                         writer.WriteComma();
                         writer.WritePropertyName("Etag");
@@ -85,7 +90,7 @@ namespace Raven.Server.Web.System
         }
 
         // add database to already existing database group
-        [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/node", "PUT", AuthorizationStatus.Operator)]
         public async Task AddDatabaseNode()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -138,18 +143,18 @@ namespace Raven.Server.Web.System
                         throw new InvalidOperationException($"Database {name} already exists on all the nodes of the cluster");
 
                     var rand = new Random().Next();
-                    var newNode = allNodes[rand % allNodes.Count];
+                    node = allNodes[rand % allNodes.Count];
 
-                    databaseRecord.Topology.Promotables.Add(newNode);
-                    databaseRecord.Topology.DemotionReasons[newNode] = "Joined the Db-Group as a new promotable node";
-                    databaseRecord.Topology.PromotablesStatus[newNode] = DatabasePromotionStatus.WaitingForFirstPromotion;
+                    databaseRecord.Topology.Promotables.Add(node);
+                    databaseRecord.Topology.DemotionReasons[node] = "Joined the Db-Group as a new promotable node";
+                    databaseRecord.Topology.PromotablesStatus[node] = DatabasePromotionStatus.WaitingForFirstPromotion;
                 }
 
                 databaseRecord.Topology.ReplicationFactor++;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
 
                 await WaitForExecutionOnSpecificNode(context, clusterTopology, node, newIndex);
-                
+
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
                 using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -170,7 +175,7 @@ namespace Raven.Server.Web.System
             return url.StartsWith("https:", StringComparison.OrdinalIgnoreCase) == false;
         }
 
-        [RavenAction("/admin/databases", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
@@ -224,7 +229,7 @@ namespace Raven.Server.Web.System
                 topology.ReplicationFactor = topology.Members.Count;
                 var (newIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
 
-                await WaitForExecutionOnRelevantNodes(context, clusterTopology, databaseRecord.Topology.Members, newIndex);
+                await WaitForExecutionOnRelevantNodes(context, name, clusterTopology, databaseRecord.Topology.Members, newIndex);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
@@ -242,30 +247,48 @@ namespace Raven.Server.Web.System
             }
         }
 
-        private async Task WaitForExecutionOnRelevantNodes(TransactionOperationContext context, ClusterTopology clusterTopology, List<string> members, long index)
+        private async Task WaitForExecutionOnRelevantNodes(JsonOperationContext context, string database, ClusterTopology clusterTopology, List<string> members, long index)
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
             var executors = new List<ClusterRequestExecutor>();
+            var timeoutTask = TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(10000));
+            var waitingTasks = new List<Task>
+            {
+                timeoutTask
+            };
+            var cts = CancellationTokenSource.CreateLinkedTokenSource(ServerStore.ServerShutdown);
             try
             {
-
-                var waitingTasks = new List<Task>();
                 foreach (var member in members)
                 {
                     var url = clusterTopology.GetUrlFromTag(member);
-                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ServerCertificateHolder.Certificate);
+                    var requester = ClusterRequestExecutor.CreateForSingleNode(url, ServerStore.RavenServer.ClusterCertificateHolder.Certificate);
                     executors.Add(requester);
-                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context));
+                    waitingTasks.Add(requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context, cts.Token));
                 }
 
-                await Task.WhenAll(waitingTasks);
+                while (true)
+                {
+                    var task = await Task.WhenAny(waitingTasks);
+                    if (task == timeoutTask)
+                        throw new TimeoutException($"Waited too long for the raft command (number {index}) to be executed on any of the relevant nodes to this command.");
+                    if (task.IsCompletedSuccessfully)
+                    {
+                        break;
+                    }
+                    waitingTasks.Remove(task);
+                    if (waitingTasks.Count == 1) // only the timeout task is left
+                        throw new InvalidDataException($"The database '{database}' was create but is not accessible, because all of the nodes on which this database was supose to be created, had thrown an exception.", task.Exception);
+                }
             }
             finally
             {
+                cts.Cancel();
                 foreach (var clusterRequestExecutor in executors)
                 {
                     clusterRequestExecutor.Dispose();
                 }
+                cts.Dispose();
             }
         }
 
@@ -273,7 +296,7 @@ namespace Raven.Server.Web.System
         {
             await ServerStore.Cluster.WaitForIndexNotification(index); // first let see if we commit this in the leader
 
-            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ServerCertificateHolder.Certificate))
+            using (var requester = ClusterRequestExecutor.CreateForSingleNode(clusterTopology.GetUrlFromTag(node), ServerStore.RavenServer.ClusterCertificateHolder.Certificate))
             {
                 await requester.ExecuteAsync(new WaitForRaftIndexCommand(index), context);
             }
@@ -425,8 +448,11 @@ namespace Raven.Server.Web.System
             if (Enum.TryParse(type, out PeriodicBackupTestConnectionType connectionType) == false)
                 throw new ArgumentException($"Unkown backup connection: {type}");
 
+            DynamicJsonValue result;
+            
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
+                try {
                 var connectionInfo = await context.ReadForMemoryAsync(RequestBodyStream(), "test-connection");
                 switch (connectionType)
                 {
@@ -458,15 +484,42 @@ namespace Raven.Server.Web.System
                             await azureClient.TestConnection();
                         }
                         break;
+                    case PeriodicBackupTestConnectionType.FTP:
+                        var ftpSettings = JsonDeserializationClient.FtpSettings(connectionInfo);
+                        using (var ftpClient = new RavenFtpClient(ftpSettings.Url, ftpSettings.Port, ftpSettings.UserName,
+                            ftpSettings.Password, ftpSettings.CertificateAsBase64, ftpSettings.CertificateFileName))
+                        {
+                            await ftpClient.TestConnection();
+                        }
+                        break;
                     case PeriodicBackupTestConnectionType.Local:
                     case PeriodicBackupTestConnectionType.None:
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
+                    
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = true,
+                    };
+            }
+                catch (Exception e)
+                {
+                    result = new DynamicJsonValue
+                    {
+                        [nameof(NodeConnectionTestResult.Success)] = false,
+                        [nameof(NodeConnectionTestResult.Error)] = e.ToString()
+                    };
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result);
+        }
             }
         }
 
-        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/get-restore-points", "POST", AuthorizationStatus.Operator)]
         public async Task GetRestorePoints()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
@@ -498,7 +551,7 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/database-restore", "POST", AuthorizationStatus.Operator)]
         public async Task RestoreDatabase()
         {
             // we don't dispose this as operation is async
@@ -624,45 +677,15 @@ namespace Raven.Server.Web.System
             }
         }
 
-        [RavenAction("/admin/modify-custom-functions", "POST", AuthorizationStatus.ServerAdmin)]
-        public async Task ModifyCustomFunctions()
-        {
-            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            if (ResourceNameValidator.IsValidResourceName(name, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-
-            ServerStore.EnsureNotPassive();
-
-            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            {
-                var updateJson = await context.ReadForMemoryAsync(RequestBodyStream(), "read-modify-custom-functions");
-                if (updateJson.TryGet(nameof(CustomFunctions.Functions), out string functions) == false)
-                {
-                    throw new InvalidDataException("Functions property was not found.");
-                }
-
-                var (index, _) = await ServerStore.ModifyCustomFunctions(name, functions);
-                await ServerStore.Cluster.WaitForIndexNotification(index);
-
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
-
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(DatabasePutResult.RaftCommandIndex)] = index,
-                    });
-                    writer.Flush();
-                }
-            }
-        }
-
-        [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
             var names = GetStringValuesQueryString("name");
             var fromNodes = GetStringValuesQueryString("from-node", required: false);
             var isHardDelete = GetBoolValueQueryString("hard-delete", required: false) ?? false;
+            var confirmationTimeoutInSec = GetIntValueQueryString("confirmationTimeoutInSec", required: false) ?? 15;
+
+            var waitOnRecordDeletion = new List<string>();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 if (string.IsNullOrEmpty(fromNodes) == false)
@@ -671,13 +694,21 @@ namespace Raven.Server.Web.System
                     {
                         foreach (var databaseName in names)
                         {
+                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
+                            if (record == null)
+                                continue;
+
                             foreach (var node in fromNodes)
                             {
-                                if (ServerStore.Cluster.ReadDatabase(context, databaseName)?.Topology.RelevantFor(node) == false)
+                                if (record.Topology.RelevantFor(node) == false)
                                 {
                                     throw new InvalidOperationException($"Database={databaseName} doesn't reside in node={fromNodes} so it can't be deleted from it");
                                 }
+                                record.Topology.RemoveFromTopology(node);
                             }
+
+                            if (record.Topology.Count == 0)
+                                waitOnRecordDeletion.Add(databaseName);
                         }
                     }
                 }
@@ -689,36 +720,78 @@ namespace Raven.Server.Web.System
                     index = newIndex;
                 }
                 await ServerStore.Cluster.WaitForIndexNotification(index);
-                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
 
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                if (confirmationTimeoutInSec > 0)
                 {
-                    context.Write(writer, new DynamicJsonValue
+                    var sp = Stopwatch.StartNew();
+                    var timeout = TimeSpan.FromSeconds(confirmationTimeoutInSec);
+                    int databaseIndex = 0;
+                    while (waitOnRecordDeletion.Count > databaseIndex)
                     {
-                        ["RaftCommandIndex"] = index
-                    });
-                    writer.Flush();
+                        var databaseName = waitOnRecordDeletion[databaseIndex];
+                        using (context.OpenReadTransaction())
+                        {
+                            var record = ServerStore.Cluster.ReadDatabase(context, databaseName);
+                            if (record == null)
+                            {
+                                waitOnRecordDeletion.RemoveAt(databaseIndex);
+                                continue;
+                            }
+                        }
+                        // we'll now wait for the _next_ operation in the cluster
+                        // since deletion involve multiple operations in the cluster
+                        // we'll now wait for the next command to be applied and check
+                        // whatever that removed the db in question
+                        index++;
+                        var remaining = timeout - sp.Elapsed;
+                        try
+                        {
+                            if (remaining < TimeSpan.Zero)
+                            {
+                                databaseIndex++;
+                                continue; // we are done waiting, but still want to locally check the rest of the dbs
+                            }
+
+                            await ServerStore.Cluster.WaitForIndexNotification(index, remaining);
+                        }
+                        catch (TimeoutException)
+                        {
+                            databaseIndex++;
+                        }
+                    }
+
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                    {
+                        context.Write(writer, new DynamicJsonValue
+                        {
+                            [nameof(DeleteDatabaseResult.RaftCommandIndex)] = index,
+                            [nameof(DeleteDatabaseResult.PendingDeletes)] = new DynamicJsonArray(waitOnRecordDeletion)
+                        });
+                        writer.Flush();
+                    }
                 }
             }
         }
 
-        [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/disable", "POST", AuthorizationStatus.Operator)]
         public async Task DisableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: true);
         }
 
-        [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/enable", "POST", AuthorizationStatus.Operator)]
         public async Task EnableDatabases()
         {
             await ToggleDisableDatabases(disableRequested: false);
         }
 
-        [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/databases/dynamic-node-distribution", "POST", AuthorizationStatus.Operator)]
         public async Task ToggleDynamicNodeDistribution()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var enable = GetBoolValueQueryString("enable", required: true) ?? true;
+            var enable = GetBoolValueQueryString("enable") ?? true;
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
@@ -735,7 +808,7 @@ namespace Raven.Server.Web.System
 
                 var (commandResultIndex, _) = await ServerStore.WriteDatabaseRecordAsync(name, databaseRecord, index);
                 await ServerStore.Cluster.WaitForIndexNotification(commandResultIndex);
-                
+
                 NoContentStatus();
             }
         }
@@ -769,7 +842,7 @@ namespace Raven.Server.Web.System
                         {
                             ["Name"] = name,
                             ["Success"] = false,
-                            ["Reason"] = "database not found",
+                            ["Reason"] = "database not found"
                         });
                         continue;
                     }
@@ -782,7 +855,7 @@ namespace Raven.Server.Web.System
                             ["Name"] = name,
                             ["Success"] = true, //even if we have nothing to do, no reason to return failure status
                             ["Disabled"] = disableRequested,
-                            ["Reason"] = $"Database already {state}",
+                            ["Reason"] = $"Database already {state}"
                         });
                         continue;
                     }
@@ -807,6 +880,31 @@ namespace Raven.Server.Web.System
             }
         }
 
+        [RavenAction("/admin/databases/promote", "POST", AuthorizationStatus.Operator)]
+        public async Task PromoteImmediately()
+        {
+            var name = GetStringQueryString("name");
+            var nodeTag = GetStringQueryString("node");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                var (index, _) = await ServerStore.PromoteDatabaseNode(name, nodeTag);
+                await ServerStore.Cluster.WaitForIndexNotification(index);
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        [nameof(DatabasePutResult.Name)] = name,
+                        [nameof(DatabasePutResult.RaftCommandIndex)] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
         [RavenAction("/admin/etl", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task AddEtl()
         {
@@ -825,7 +923,7 @@ namespace Raven.Server.Web.System
                 fillJson: (json, _, index) => json[nameof(EtlConfiguration<ConnectionString>.TaskId)] = index);
         }
 
-        [RavenAction("/admin/console", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/console", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task AdminConsole()
         {
             var name = GetStringQueryString("database", false);
@@ -842,19 +940,18 @@ namespace Raven.Server.Web.System
                 }
 
                 var adminJsScript = JsonDeserializationCluster.AdminJsScript(content);
-                object result;
+                string result;
 
                 if (isServerScript)
                 {
-                    var console = new AdminJsConsole(Server);
+                    var console = new AdminJsConsole(Server, null);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
                     }
 
-                    result = console.ApplyServerScript(adminJsScript);
+                    result = console.ApplyScript(adminJsScript);
                 }
-
                 else if (string.IsNullOrWhiteSpace(name) == false)
                 {
                     //database script
@@ -864,7 +961,7 @@ namespace Raven.Server.Web.System
                         DatabaseDoesNotExistException.Throw(name);
                     }
 
-                    var console = new AdminJsConsole(database);
+                    var console = new AdminJsConsole(Server, database);
                     if (console.Log.IsOperationsEnabled)
                     {
                         console.Log.Operations($"The certificate that was used to initiate the operation: {clientCert ?? "None"}");
@@ -878,36 +975,10 @@ namespace Raven.Server.Web.System
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
-
-                if (result == null || result is DynamicJsonValue)
+                using (var textWriter = new StreamWriter(ResponseBodyStream()))
                 {
-                    using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                    {
-                        writer.WriteStartObject();
-
-                        writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
-
-                        if (result != null)
-                        {
-                            context.Write(writer, result as DynamicJsonValue);
-                        }
-                        else
-                        {
-                            writer.WriteNull();
-                        }
-
-                        writer.WriteEndObject();
-                        writer.Flush();
-                    }
-                }
-
-                else
-                {
-                    using (var textWriter = new StreamWriter(ResponseBodyStream()))
-                    {
-                        textWriter.Write(result.ToString());
-                        await textWriter.FlushAsync();
-                    }
+                    textWriter.Write(result);
+                    await textWriter.FlushAsync();
                 }
             }
         }
@@ -916,6 +987,140 @@ namespace Raven.Server.Web.System
         public async Task PutConnectionString()
         {
             await DatabaseConfigurations((_, databaseName, connectionString) => ServerStore.PutConnectionString(_, databaseName, connectionString), "put-connection-string");
+        }
+
+        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+        public async Task RemoveConnectionString()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+
+            if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
+                return;
+
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            ServerStore.EnsureNotPassive();
+
+            var (index, _) = await ServerStore.RemoveConnectionString(dbName, connectionStringName, type);
+            await ServerStore.Cluster.WaitForIndexNotification(index);
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, new DynamicJsonValue
+                    {
+                        ["RaftCommandIndex"] = index
+                    });
+                    writer.Flush();
+                }
+            }
+        }
+
+        [RavenAction("/admin/connection-strings", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConnectionStrings()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            if (TryGetAllowedDbs(dbName, out var allowedDbs, true) == false)
+                return Task.CompletedTask;
+
+            ServerStore.EnsureNotPassive();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
+                {
+                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
+                }
+                var ravenConnectionString = record.RavenConnectionStrings;
+                var sqlConnectionstring = record.SqlConnectionStrings;
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var result = new GetConnectionStringsResult
+                    {
+                        RavenConnectionStrings = ravenConnectionString,
+                        SqlConnectionStrings = sqlConnectionstring
+                    };
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
+        }
+
+        [RavenAction("/admin/connection-string", "GET", AuthorizationStatus.DatabaseAdmin)]
+        public Task GetConnectionString()
+        {
+            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionStringName");
+            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
+
+            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
+                throw new BadRequestException(errorMessage);
+
+            if (TryGetAllowedDbs(dbName, out var allowedDbs, true) == false)
+                return Task.CompletedTask;
+
+            ServerStore.EnsureNotPassive();
+            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            {
+                DatabaseRecord record;
+                using (context.OpenReadTransaction())
+                {
+                    record = ServerStore.Cluster.ReadDatabase(context, dbName);
+                }
+
+                if (Enum.TryParse<ConnectionStringType>(type, true, out var connectionStringType) == false)
+                    throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+
+                ConnectionString result;
+                switch (connectionStringType)
+                {
+                    case ConnectionStringType.Raven:
+                        record.RavenConnectionStrings.TryGetValue(connectionStringName, out var ravenConnectionString);
+                        result = new RavenConnectionString
+                        {
+                            Name = ravenConnectionString.Name,
+                            Url = ravenConnectionString.Url,
+                            Database = ravenConnectionString.Database
+                        };
+                        break;
+
+                    case ConnectionStringType.Sql:
+                        record.SqlConnectionStrings.TryGetValue(connectionStringName, out var sqlConnectionString);
+                        result = new SqlConnectionString
+                        {
+                            Name = sqlConnectionString.Name,
+                            ConnectionString = sqlConnectionString.ConnectionString
+                        };
+                        break;
+
+                    default:
+                        throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
+                }
+
+                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    context.Write(writer, result.ToJson());
+                    writer.Flush();
+                }
+            }
+
+            return Task.CompletedTask;
         }
 
         [RavenAction("/admin/update-resolver", "POST", AuthorizationStatus.DatabaseAdmin)]
@@ -957,35 +1162,47 @@ namespace Raven.Server.Web.System
                 }
             }
         }
-        [RavenAction("/admin/connection-strings", "DELETE", AuthorizationStatus.DatabaseAdmin)]
-        public async Task RemoveConnectionString()
+
+        [RavenAction("/admin/compact", "POST", AuthorizationStatus.Operator)]
+        public Task CompactDatabase()
         {
-            var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-
-            if (TryGetAllowedDbs(dbName, out var _, requireAdmin: true) == false)
-                return;
-
-            if (ResourceNameValidator.IsValidResourceName(dbName, ServerStore.Configuration.Core.DataDirectory.FullPath, out string errorMessage) == false)
-                throw new BadRequestException(errorMessage);
-            var connectionStringName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("connectionString");
-            var type = GetQueryStringValueAndAssertIfSingleAndNotEmpty("type");
-            ServerStore.EnsureNotPassive();
-
-            var (index, _) = await ServerStore.RemoveConnectionString(dbName, connectionStringName, type);
-            await ServerStore.Cluster.WaitForIndexNotification(index);
-            HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+            var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+            var operationId = GetLongQueryString("operationId");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (context.OpenReadTransaction())
             {
-                using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    context.Write(writer, new DynamicJsonValue
-                    {
-                        [nameof(ModifyOngoingTaskResult.RaftCommandIndex)] = index
-                    });
-                    writer.Flush();
-                }
+                var record = ServerStore.Cluster.ReadDatabase(context, name);
+                if (record == null)
+                    throw new InvalidOperationException($"Cannot compact database {name}, it doesn't exist.");
+                if (record.Topology.RelevantFor(ServerStore.NodeTag) == false)
+                    throw new InvalidOperationException($"Cannot compact database {name} on node {ServerStore.NodeTag}, because it doesn't reside on this node.");
             }
+
+            var token = new OperationCancelToken(ServerStore.ServerShutdown);
+            var compactDatabaseTask = new CompactDatabaseTask(
+                ServerStore,
+                name,
+                token.Token);
+
+            ServerStore.Operations.AddOperation(
+                null,
+                "Compacting database: " + name,
+                Documents.Operations.Operations.OperationType.DatabaseCompact,
+                taskFactory: onProgress => Task.Run(async () =>
+                {
+                    using (token)
+                        return await compactDatabaseTask.Execute(onProgress);
+                }, token.Token),
+                id: operationId, token: token);
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
+            {
+                writer.WriteOperationId(context, operationId);
+            }
+
+            return Task.CompletedTask;
         }
     }
 }

@@ -43,7 +43,7 @@ namespace FastTests.Server.Documents.Indexing
             {
                 Map = usersCollection => from user in usersCollection
                     select new { user.Name };
-                Index(x => x.Name, FieldIndexing.Analyzed);
+                Index(x => x.Name, FieldIndexing.Search);
 
             }
         }
@@ -170,7 +170,7 @@ namespace FastTests.Server.Documents.Indexing
                 var index = suggestion.MergedIndex;
 
                 Assert.Equal(3, suggestion.CanMerge.Count);
-                Assert.Equal(FieldIndexing.Analyzed, index.Fields["Name"].Indexing);
+                Assert.Equal(FieldIndexing.Search, index.Fields["Name"].Indexing);
                 Assert.Equal(@"docs.Users.Select(doc=>new{Age=doc.Age
 ,Email=doc.Email
 ,Name=doc.Name

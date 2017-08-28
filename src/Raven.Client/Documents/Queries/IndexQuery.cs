@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using Raven.Client.Extensions;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Queries
@@ -15,21 +14,19 @@ namespace Raven.Client.Documents.Queries
     /// </summary>
     public class IndexQuery : IndexQuery<Parameters>
     {
-        public override bool Equals(IndexQuery<Parameters> other)
-        {
-            return base.Equals(other) && DictionaryExtensions.ContentEquals(TransformerParameters, other.TransformerParameters);
-        }
+        /// <summary>
+        /// Indicates if query results should be read from cache (if cached previously) or added to cache (if there were no cached items prior)
+        /// </summary>
+        public bool DisableCaching { get; set; }
 
         public ulong GetQueryHash(JsonOperationContext ctx)
         {
             using (var hasher = new QueryHashCalculator(ctx))
             {
                 hasher.Write(Query);
-                hasher.Write (WaitForNonStaleResults);
+                hasher.Write(WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
-                hasher.Write(DisableCaching);
                 hasher.Write(SkipDuplicateChecking);
                 hasher.Write(ShowTimings);
                 hasher.Write(ExplainScores);
@@ -37,64 +34,36 @@ namespace Raven.Client.Documents.Queries
                 hasher.Write(CutoffEtag);
                 hasher.Write(Start);
                 hasher.Write(PageSize);
-                hasher.Write(Includes);
-                hasher.Write(HighlighterKeyName);
-                hasher.Write(HighlighterPreTags);
-                hasher.Write(HighlighterPostTags);
-                hasher.Write(HighlightedFields);
                 hasher.Write(QueryParameters);
-                hasher.Write(TransformerParameters);
-                hasher.Write(Transformer);
-                
+
                 return hasher.GetHash();
+            }
+        }
+
+        public override bool Equals(IndexQuery<Parameters> other)
+        {
+            if (base.Equals(other) == false)
+                return false;
+
+            if (other is IndexQuery iq && DisableCaching.Equals(iq.DisableCaching))
+                return true;
+
+            return false;
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                var hashCode = base.GetHashCode();
+                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
+                return hashCode;
             }
         }
     }
 
     public abstract class IndexQuery<T> : IndexQueryBase<T>, IEquatable<IndexQuery<T>>
     {
-        /// <summary>
-        /// Parameters that will be passed to transformer (if specified).
-        /// </summary>
-        public T TransformerParameters { get; set; }
-
-        /// <summary>
-        /// If set to <c>true</c>, this property will send multiple index entries from the same document (assuming the index project them)
-        /// <para>to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be </para>
-        /// <para>called just once for each document in the result set</para>
-        /// </summary>
-        public bool AllowMultipleIndexEntriesForSameDocumentToResultTransformer { get; set; }
-
-        /// <summary>
-        /// Array of fields containing highlighting information.
-        /// </summary>
-        public HighlightedField[] HighlightedFields { get; set; }
-
-        /// <summary>
-        /// Array of highlighter pre tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPreTags { get; set; }
-
-        /// <summary>
-        /// Array of highlighter post tags that will be applied to highlighting results.
-        /// </summary>
-        public string[] HighlighterPostTags { get; set; }
-
-        /// <summary>
-        /// Highlighter key name.
-        /// </summary>
-        public string HighlighterKeyName { get; set; }
-
-        /// <summary>
-        /// Name of transformer to use on query results.
-        /// </summary>
-        public string Transformer { get; set; }
-
-        /// <summary>
-        /// Whether we should disable caching of query results
-        /// </summary>
-        public bool DisableCaching { get; set; }
-
         /// <summary>
         /// Allow to skip duplicate checking during queries
         /// </summary>
@@ -110,11 +79,6 @@ namespace Raven.Client.Documents.Queries
         /// </summary>
         public bool ShowTimings { get; set; }
 
-        /// <summary>
-        /// An array of relative paths that specify related documents ids which should be included in a query result
-        /// </summary>
-        public string[] Includes { get; set; }
-        
         /// <summary>
         /// Indicates if it's intersect query
         /// </summary>
@@ -138,20 +102,16 @@ namespace Raven.Client.Documents.Queries
                 return true;
 
             return base.Equals(other) &&
-                   EnumerableExtension.ContentEquals(HighlightedFields, other.HighlightedFields) &&
-                   EnumerableExtension.ContentEquals(HighlighterPreTags, other.HighlighterPreTags) &&
-                   EnumerableExtension.ContentEquals(HighlighterPostTags, other.HighlighterPostTags) &&
-                   Equals(HighlighterKeyName, other.HighlighterKeyName) &&
-                   string.Equals(Transformer, other.Transformer) &&
                    ShowTimings == other.ShowTimings &&
-                   DisableCaching.Equals(other.DisableCaching) &&
                    SkipDuplicateChecking == other.SkipDuplicateChecking;
         }
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
             return obj.GetType() == GetType() && Equals((IndexQuery)obj);
         }
 
@@ -160,15 +120,8 @@ namespace Raven.Client.Documents.Queries
             unchecked
             {
                 var hashCode = base.GetHashCode();
-                hashCode = (hashCode * 397) ^ (TransformerParameters != null ? TransformerParameters.GetHashCode() : 0);
-                hashCode = (hashCode * 397) ^ (HighlightedFields?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPreTags?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterPostTags?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (HighlighterKeyName?.GetHashCode() ?? 0);
-                hashCode = (hashCode * 397) ^ (Transformer?.GetHashCode() ?? 0);
                 hashCode = (hashCode * 397) ^ (ShowTimings ? 1 : 0);
                 hashCode = (hashCode * 397) ^ (SkipDuplicateChecking ? 1 : 0);
-                hashCode = (hashCode * 397) ^ DisableCaching.GetHashCode();
                 return hashCode;
             }
         }
@@ -270,8 +223,10 @@ namespace Raven.Client.Documents.Queries
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
             return obj.GetType() == GetType() && Equals((IndexQuery)obj);
         }
 

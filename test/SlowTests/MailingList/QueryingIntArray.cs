@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
                                   Resolutions = doc.Resolutions
                               };
 
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
                 Stores.Add(x => x.Resolutions, FieldStorage.Yes);
             }
         }

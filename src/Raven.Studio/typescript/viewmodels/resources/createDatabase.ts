@@ -189,6 +189,10 @@ class createDatabase extends dialogViewModelBase {
         const allValid = globalValid && _.every(sectionsValidityList, x => !!x);
 
         if (allValid) {
+            // disable validation for name as it might display error: database already exists
+            // since we get async notifications during db creation
+            this.databaseModel.name.extend({ validatable: false });
+            
             if (this.databaseModel.isFromBackup) {
                 this.createDatabaseFromBackup();
             } else {

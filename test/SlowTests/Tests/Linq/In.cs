@@ -74,14 +74,14 @@ namespace SlowTests.Tests.Linq
                         .Where(se => se.PermittedUsers.In(new object[] { userId }));
 
                     var iq = RavenTestHelper.GetIndexQuery(query1);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Contains(userId, (object[])iq.QueryParameters["p0"]);
 
                     var query2 = session.Query<SearchableElement, SearchableElements>()
                         .Where(se => se.PermittedUsers.Any(u => u.In(new object[] { userId })));
 
                     iq = RavenTestHelper.GetIndexQuery(query2);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Contains(userId, (object[])iq.QueryParameters["p0"]);
                 }
             }
@@ -130,14 +130,14 @@ namespace SlowTests.Tests.Linq
                         .Where(se => se.PermittedUsers.In(new Guid[] { userId }.Cast<object>()));
 
                     var iq = RavenTestHelper.GetIndexQuery(query1);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Contains(userId, (object[])iq.QueryParameters["p0"]);
 
                     var query2 = session.Query<SearchableElement, SearchableElements>()
                         .Where(se => se.PermittedUsers.Any(u => u.In(new Guid[] { userId }.Cast<object>())));
 
                     iq = RavenTestHelper.GetIndexQuery(query2);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Contains(userId, (object[])iq.QueryParameters["p0"]);
                 }
             }
@@ -165,14 +165,14 @@ namespace SlowTests.Tests.Linq
                         .Where(se => se.PermittedUsers.In(new object[0]));
 
                     var iq = RavenTestHelper.GetIndexQuery(query1);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Empty((object[])iq.QueryParameters["p0"]);
 
                     var query2 = session.Query<SearchableElement, SearchableElements>()
                         .Where(se => se.PermittedUsers.Any(u => u.In(new object[0])));
 
                     iq = RavenTestHelper.GetIndexQuery(query2);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Empty((object[])iq.QueryParameters["p0"]);
                 }
             }
@@ -200,14 +200,14 @@ namespace SlowTests.Tests.Linq
                         .Where(se => se.PermittedUsers.In(new Guid[0].Cast<object>()));
 
                     var iq = RavenTestHelper.GetIndexQuery(query1);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Empty((object[])iq.QueryParameters["p0"]);
 
                     var query2 = session.Query<SearchableElement, SearchableElements>()
                         .Where(se => se.PermittedUsers.Any(u => u.In(new Guid[0].Cast<object>())));
 
                     iq = RavenTestHelper.GetIndexQuery(query2);
-                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN (:p0)", iq.Query);
+                    Assert.Equal("FROM INDEX 'SearchableElements' WHERE PermittedUsers IN ($p0)", iq.Query);
                     Assert.Empty((object[])iq.QueryParameters["p0"]);
                 }
             }

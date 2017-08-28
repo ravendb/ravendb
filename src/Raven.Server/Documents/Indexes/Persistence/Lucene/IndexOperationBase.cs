@@ -9,6 +9,7 @@ using Lucene.Net.Search;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Parser;
 using Sparrow.Json;
@@ -43,17 +44,17 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             var perFieldAnalyzerWrapper = new RavenPerFieldAnalyzerWrapper(defaultAnalyzer);
             foreach (var field in fields)
             {
-                var fieldName = field.Key;
+                var fieldName = field.Value.Name;
 
                 switch (field.Value.Indexing)
                 {
-                    case FieldIndexing.NotAnalyzed:
+                    case FieldIndexing.Exact:
                         if (keywordAnalyzer == null)
                             keywordAnalyzer = new KeywordAnalyzer();
 
                         perFieldAnalyzerWrapper.AddAnalyzer(fieldName, keywordAnalyzer);
                         break;
-                    case FieldIndexing.Analyzed:
+                    case FieldIndexing.Search:
                         var analyzer = GetAnalyzer(fieldName, field.Value, forQuerying);
                         if (analyzer != null)
                         {
@@ -101,12 +102,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return analyzerInstance;
         }
 
-        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
-            return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer);
+            return GetLuceneQuery(context, metadata, metadata.Query.Where, parameters, analyzer, getSpatialField);
         }
 
-        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer)
+        protected Query GetLuceneQuery(JsonOperationContext context, QueryMetadata metadata, QueryExpression whereExpression, BlittableJsonReaderObject parameters, Analyzer analyzer, Func<string, SpatialField> getSpatialField)
         {
             Query documentQuery;
 
@@ -137,7 +138,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     //    return parent.CreateAnalyzer(newAnalyzer, toDispose, true);
                     //});
 
-                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer);
+                    documentQuery = QueryBuilder.BuildQuery(context, metadata, whereExpression, parameters, analyzer, getSpatialField);
                 }
                 finally
                 {

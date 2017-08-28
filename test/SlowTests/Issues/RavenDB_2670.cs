@@ -49,7 +49,7 @@ namespace SlowTests.Issues
                                       product.Name
                                   };
 
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
                 Suggestion(x => x.Name);
             }
         }

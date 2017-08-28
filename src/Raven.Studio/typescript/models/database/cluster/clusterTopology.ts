@@ -5,12 +5,14 @@ class clusterTopology {
 
     leader = ko.observable<string>();
     nodeTag = ko.observable<string>();
-
+    currentTerm = ko.observable<number>();
+    
     nodes = ko.observableArray<clusterNode>([]);
 
     constructor(dto: clusterTopologyDto) {
         this.leader(dto.Leader);
         this.nodeTag(dto.NodeTag);
+        this.currentTerm(dto.CurrentTerm);
 
         const topologyDto = dto.Topology;
 
@@ -60,6 +62,7 @@ class clusterTopology {
 
         this.nodeTag(incomingChanges.NodeTag);
         this.leader(incomingChanges.Leader);
+        this.currentTerm(incomingChanges.CurrentTerm);
     }
 }
 

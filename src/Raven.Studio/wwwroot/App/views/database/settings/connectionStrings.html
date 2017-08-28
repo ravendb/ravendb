@@ -1,0 +1,135 @@
+<div class="flex-vertical absolute-fill content-margin">
+    <div class="row flex-row flex-grow flex-stretch-items">
+        <div class="col-sm-12 col-lg-6 flex-vertical">
+            <div class="scroll flex-grow">
+                <div class="hr-title">
+                    <h5>RavenDB Connection Strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddRavenEtl" title="Add a new RavenDB ETL connection string"><i class="icon-plus"></i><span>Add</span></button>
+                </div>
+                <div data-bind="if: ravenEtlConnectionStringsNames().length === 0">
+                    <div>
+                        <i class="icon-xl icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted">No RavenDB ETL connection strings have been defined.</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: ravenEtlConnectionStringsNames">
+                    <div class="panel padding padding-sm flex-horizontal destination-item" 
+                         data-bind="css: { 'panel-info': $root.editedRavenEtlConnectionString() && $data === $root.editedRavenEtlConnectionString().connectionStringName() }">
+                        <div class="flex-grow text-elipsis">
+                            <a href="#" data-bind="click: $parent.onEditRavenEtl, attr: { title: $data }">
+                                <h4 class="text-elipsis">
+                                    <span data-bind="text: $data"></span>
+                                </h4>
+                            </a>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditRavenEtl" title="Edit connection string"><i class="icon-edit"></i></button>
+                            <button class="btn btn-danger" data-bind="click: $parent.confirmDeleteRavenEtl" title="Remove connection string"><i class="icon-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+                <div class="hr-title">
+                    <h5>SQL Connection strings</h5><hr>
+                    <button class="btn btn-sm btn-primary" data-bind="click: onAddSqlEtl" title="Add a new SQL ETL connection string"><i class="icon-plus"></i><span>Add</span></button> 
+                </div>
+                <div data-bind="if: sqlEtlConnectionStringsNames().length === 0">
+                    <div>
+                        <i class="icon-xl icon-empty-set text-muted"></i>
+                        <h3 class="text-center text-muted">No SQL ETL connection strings have been defined.</h3>
+                    </div>
+                </div>
+                <div data-bind="foreach: sqlEtlConnectionStringsNames">
+                    <div class="panel padding padding-sm flex-horizontal destination-item" 
+                         data-bind="css: { 'panel-info': $root.editedSqlEtlConnectionString() && $data === $root.editedSqlEtlConnectionString().connectionStringName() }">
+                        <div class="flex-grow text-elipsis">
+                            <a href="#" data-bind="click: $parent.onEditSqlEtl, attr: { title: $data }">
+                                <h4 class="text-elipsis">
+                                    <span data-bind="text: $data"></span>
+                                </h4>
+                            </a>
+                        </div>
+                        <div class="actions">
+                            <button class="btn btn-default" data-bind="click: $parent.onEditSqlEtl" title="Edit connection string"><i class="icon-edit"></i></button>
+                            <button class="btn btn-danger" data-bind="click: $parent.confirmDeleteSqlEtl" title="Remove connection string"><i class="icon-trash"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-sm-12 col-lg-6 flex-vertical" data-bind="visible: editedRavenEtlConnectionString() || editedSqlEtlConnectionString()">
+            <div class="panel slidein-style">
+                <div class="flex-horizontal padding">
+                    <h3 class="flex-grow" data-bind="visible: editedRavenEtlConnectionString">RavenDB ETL Connection String</h3>
+                    <h3 class="flex-grow" data-bind="visible: editedSqlEtlConnectionString">SQL ETL Connection String</h3>
+                    <button class="close flex-start" data-bind="click: onCloseEdit"><i class="icon-cancel"></i></button>
+                </div>
+                <form class="flex-form padding">
+                    <div data-bind="with: editedRavenEtlConnectionString">
+                        <div class="form-group">
+                            <label class="control-label">Name</label>
+                            <div class="flex-grow" data-bind="validationElement: connectionStringName">
+                                <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">URL</label>
+                            <div class="flex-grow" data-bind="validationElement: url">
+                                <input type="text" class="form-control" data-bind="textInput: url" placeholder="Enter url for the connection string" title="Destination url">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Database</label>
+                            <div class="flex-grow" data-bind="validationElement: database">
+                                <input class="form-control" data-bind="textInput: database" placeholder="Enter database for the connection string" title="Destination database">
+                            </div>
+                        </div>
+                    </div>
+                    <div data-bind="with: editedSqlEtlConnectionString">
+                        <div class="form-group">
+                            <label class="control-label">Name</label>
+                            <div class="flex-grow" data-bind="validationElement: connectionStringName">
+                                <input class="form-control" data-bind="textInput: connectionStringName" placeholder="Enter a name for the connection string" title="Any name of your choice for this connection string">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="control-label">Connection string</label>
+                            <div class="flex-grow" data-bind="validationElement: connectionString">
+                                <textarea class="form-control" data-bind="textInput: connectionString" rows="3" title="The connecction string for the sql server" placeholder="Enter the complete connection string for the sql server"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex-horizontal">
+                        <div class="flex-grow">
+                            <!-- TODO: it is currenly hidden for SQL - since it isn't implemented server side -->
+                            <button type="submit" class="btn btn-info" title="Test url connection"
+                                    data-bind="click: onTestConnection, visible: editedRavenEtlConnectionString, disable: $root.spinners.test, css: { 'btn-spinner': $root.spinners.test }" >
+                                <i class="icon-rocket"></i>
+                                <span>Test connection</span>
+                            </button>
+                        </div>
+                        <div class="flex-grow">
+                        </div>
+                        <div>
+                            <button class="btn btn-default" data-bind="click: onCloseEdit"><i class="icon-cancel"></i><span>Cancel</span></button>
+                            <button class="btn btn-success" data-bind="click: onOk" title="Click to save this connection string"><i class="icon-check"></i><span>OK</span></button>
+                        </div>
+                    </div>
+                </form>
+                <div class="panel-addon" data-bind="with: $root.testConnectionResult">
+                    <div class="padding bg-success small" data-bind="visible: Success">
+                        <div>Successfully connected to node</div>
+                    </div>
+                    <div class="padding bg-danger small" data-bind="visible: !Success">
+                        Connection test failed: <span data-bind="text: $root.fullErrorDetailsVisible() ? Error : $root.shortErrorText()"></span>
+
+                        <div>
+                            <a href="#" data-bind="click: $root.fullErrorDetailsVisible.toggle.bind($root.fullErrorDetailsVisible), text: $root.fullErrorDetailsVisible() ? 'hide details' : 'show details'"></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+

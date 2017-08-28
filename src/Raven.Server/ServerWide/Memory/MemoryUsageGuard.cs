@@ -35,7 +35,7 @@ namespace Raven.Server.ServerWide.Memory
                 var memoryMappedSize = new Size(currentProcess.WorkingSet64 - currentProcess.PrivateMemorySize64, SizeUnit.Bytes);
 
                 currentUsage = new ProcessMemoryUsage(currentProcess.WorkingSet64, currentProcess.PrivateMemorySize64);
-                
+
                 if (memoryMappedSize < Size.Zero)
                 {
                     // in this case, we are likely paging, our working set is smaller than the memory we allocated
@@ -55,7 +55,7 @@ namespace Raven.Server.ServerWide.Memory
                         logger.Info(
                             $"{threadStats.Name} which is already using {currentlyAllocated}/{currentMaximumAllowedMemory} and the system has" +
                             $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
-                            $"files that can be cleanly released, not enough to proceed in batch.");
+                            "files that can be cleanly released, not enough to proceed in batch.");
                     }
 
                     return false;
@@ -68,13 +68,13 @@ namespace Raven.Server.ServerWide.Memory
                 {
                     // TODO: We probably need to make a note of this in log & expose in stats
                     // TODO: to explain why we aren't increasing the memory in use
-                    
+
                     if (logger.IsInfoEnabled)
                     {
                         logger.Info(
                             $"{threadStats} which is already using {currentlyAllocated}/{currentMaximumAllowedMemory} and the system has" +
                             $"{memoryInfoResult.AvailableMemory}/{memoryInfoResult.TotalPhysicalMemory} free RAM. Also have ~{memoryMappedSize} in mmap " +
-                            $"files that can be cleanly released, not enough to proceed in batch.");
+                            "files that can be cleanly released, not enough to proceed in batch.");
                     }
                     return false;
                 }

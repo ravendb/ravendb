@@ -7,27 +7,6 @@ namespace Raven.Client.Documents.Indexes.Spatial
         public GeographySpatialOptionsFactory Geography => new GeographySpatialOptionsFactory();
 
         public CartesianSpatialOptionsFactory Cartesian => new CartesianSpatialOptionsFactory();
-
-        public static SpatialOptions FromLegacy(SpatialSearchStrategy spatialSearchStrategy = SpatialSearchStrategy.GeohashPrefixTree, int maxTreeLevel = 0)
-        {
-            var factory = new GeographySpatialOptionsFactory();
-
-            SpatialOptions options;
-            switch (spatialSearchStrategy)
-            {
-                case SpatialSearchStrategy.QuadPrefixTree:
-                    options = factory.QuadPrefixTreeIndex(maxTreeLevel);
-                    break;
-                case SpatialSearchStrategy.BoundingBox:
-                    options = factory.BoundingBoxIndex();
-                    break;
-                default:
-                    options = factory.GeohashPrefixTreeIndex(maxTreeLevel);
-                    break;
-            }
-
-            return options;
-        }
     }
 
     public class GeographySpatialOptionsFactory

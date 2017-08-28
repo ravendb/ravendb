@@ -22,7 +22,11 @@ import saveDocumentCommand = require("commands/database/documents/saveDocumentCo
 import changeVectorUtils = require("common/changeVectorUtils");
 
 class conflictItem {
+    
+    private static readonly dateFormat = "DD/MM/YYYY HH:mm:ss";
 
+    originalValue = ko.observable<string>();
+    lastModified = ko.observable<string>();
     formattedValue = ko.observable<string>();
     deletedMarker = ko.observable<boolean>();
     changeVector = ko.observable<changeVectorItem[]>();
@@ -31,7 +35,8 @@ class conflictItem {
         //TODO: use change vector? probably yes - latest db id from change vector allows us to get information on which node the modification was made. 
         if (dto.Doc) {
             const json = JSON.stringify(dto.Doc, null, 4);
-            
+            this.originalValue(json);
+            this.lastModified(moment.utc(dto.LastModified).local().format(conflictItem.dateFormat));
             this.formattedValue(Prism.highlight(json, (Prism.languages as any).javascript));
             this.deletedMarker(false);
             
@@ -51,6 +56,7 @@ class conflicts extends viewModelBase {
     //TODO: spiners - block ace editor when saving/deleting?
 
     hasDetailsLoaded = ko.observable<boolean>(false);
+    changeVectorsVisible = ko.observable<boolean>(false);
 
     private isSaving = ko.observable<boolean>(false);
 
@@ -67,6 +73,8 @@ class conflicts extends viewModelBase {
 
     constructor() {
         super();
+        
+        this.bindToCurrentInstance("useThis");
 
         aceEditorBindingHandler.install();
         this.initValidation();
@@ -77,7 +85,7 @@ class conflicts extends viewModelBase {
 
         this.suggestedResolution.extend({
             required: true,
-            validJson: true,
+            aceValidation: true,
             validation: [{
                 validator: (val: string) => _.every(conflictTokens, t => !val.includes(t)),
                 message: "Document contains conflicts markers"
@@ -236,6 +244,10 @@ class conflicts extends viewModelBase {
         this.documentId(null);
         this.currentConflict(null);
         this.hasDetailsLoaded(false);
+    }
+    
+    useThis(itemToUse: conflictItem) {
+        this.suggestedResolution(itemToUse.originalValue());
     }
 }
 

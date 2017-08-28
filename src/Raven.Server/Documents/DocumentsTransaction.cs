@@ -52,7 +52,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool _isDisposed = false;
+        private bool _isDisposed;
 
         public override void Dispose()
         {

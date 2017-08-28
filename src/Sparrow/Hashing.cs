@@ -13,8 +13,8 @@ namespace Sparrow
 
         public Metro128Hash(ulong h1, ulong h2)
         {
-            this.H1 = h1;
-            this.H2 = h2;
+            H1 = h1;
+            H2 = h2;
         }
 
         public byte[] ToByteArray()

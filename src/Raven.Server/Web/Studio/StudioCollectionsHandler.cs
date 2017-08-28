@@ -48,23 +48,29 @@ namespace Raven.Server.Web.Studio
 
                 long totalResults;
                 string changeVector;
+                string etag = null;
 
                 if (string.IsNullOrEmpty(collection))
                 {
                     changeVector = DocumentsStorage.GetDatabaseChangeVector(context);
                     totalResults = Database.DocumentsStorage.GetNumberOfDocuments(context);
-                } else
+                    etag = $"{changeVector}/{totalResults}";
+                }
+                else
                 {
                     changeVector = Database.DocumentsStorage.GetLastDocumentChangeVector(context, collection);
                     totalResults = Database.DocumentsStorage.GetCollection(collection, context).Count;
+
+                    if (changeVector != null)
+                        etag = $"{changeVector}/{totalResults}";
                 }
-                
-                if (changeVector != null && GetStringFromHeaders("If-None-Match") == changeVector)
+
+                if (etag != null && GetStringFromHeaders("If-None-Match") == etag)
                 {
                     HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
                     return Task.CompletedTask;
                 }
-                HttpContext.Response.Headers["ETag"] = "\"" + changeVector + "\"";
+                HttpContext.Response.Headers["ETag"] = "\"" + etag + "\"";
 
                 if (string.IsNullOrEmpty(collection))
                 {
@@ -119,7 +125,7 @@ namespace Raven.Server.Web.Studio
             }
         }
 
-        private void WriteDocument(BlittableJsonTextWriter writer, DocumentsOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
+        private void WriteDocument(BlittableJsonTextWriter writer, JsonOperationContext context, Document document, HashSet<string> propertiesPreviewToSend, HashSet<string> fullPropertiesToSend)
         {
             if (_buffers == null)
                 _buffers = new BlittableJsonReaderObject.PropertiesInsertionBuffer();
@@ -205,12 +211,12 @@ namespace Raven.Server.Web.Studio
             {
                 case BlittableJsonToken.String:
                     var lazyString = (LazyStringValue)val;
-                    writer.WriteString(lazyString?.Substring(0, 
+                    writer.WriteString(lazyString?.Substring(0,
                         Math.Min(lazyString.Length, StringLengthLimit)));
                     break;
                 case BlittableJsonToken.CompressedString:
                     var lazyCompressedString = (LazyCompressedStringValue)val;
-                    writer.WriteString(lazyCompressedString?.Substring(0, 
+                    writer.WriteString(lazyCompressedString?.Substring(0,
                         Math.Min(lazyCompressedString.UncompressedSize, StringLengthLimit)));
                     break;
 
@@ -225,7 +231,7 @@ namespace Raven.Server.Web.Studio
             switch (token)
             {
                 case BlittableJsonToken.String:
-                    var lazyString = (LazyStringValue) val;
+                    var lazyString = (LazyStringValue)val;
                     return lazyString.Length > StringLengthLimit ? ValueWriteStrategy.Trim : ValueWriteStrategy.Passthrough;
                 case BlittableJsonToken.Integer:
                     return ValueWriteStrategy.Passthrough;
@@ -235,7 +241,7 @@ namespace Raven.Server.Web.Studio
                 case BlittableJsonToken.StartObject:
                     return ValueWriteStrategy.SubstituteWithObjectStub;
                 case BlittableJsonToken.CompressedString:
-                    var lazyCompressedString = (LazyCompressedStringValue) val;
+                    var lazyCompressedString = (LazyCompressedStringValue)val;
                     return lazyCompressedString.UncompressedSize > StringLengthLimit ? ValueWriteStrategy.Trim : ValueWriteStrategy.Passthrough;
                 case BlittableJsonToken.LazyNumber:
                 case BlittableJsonToken.Boolean:
@@ -245,7 +251,7 @@ namespace Raven.Server.Web.Studio
                     throw new DataMisalignedException($"Unidentified Type {token}");
             }
         }
-        
+
         private static HashSet<LazyStringValue> ExtractColumnNames(Document[] documents, DocumentsOperationContext context)
         {
             if (_buffers == null)
@@ -293,7 +299,7 @@ namespace Raven.Server.Web.Studio
             var excludeIds = new HashSet<LazyStringValue>();
 
             var reader = context.Read(RequestBodyStream(), "ExcludeIds");
-            if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids)) 
+            if (reader.TryGet("ExcludeIds", out BlittableJsonReaderArray ids))
             {
                 foreach (LazyStringValue id in ids)
                 {
@@ -306,7 +312,7 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
 
-       
+
         private void ExecuteCollectionOperation(Func<CollectionRunner, string, CollectionOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Documents.Operations.Operations.OperationType operationType, HashSet<LazyStringValue> excludeIds)
         {
             var collectionName = GetStringQueryString("name");
@@ -320,8 +326,8 @@ namespace Raven.Server.Web.Studio
             // use default options
             var options = new CollectionOperationOptions();
 
-            var task = Database.Operations.AddOperation(Database,collectionName, operationType, onProgress =>
-                    operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
+            var task = Database.Operations.AddOperation(Database, collectionName, operationType, onProgress =>
+                     operation(collectionRunner, collectionName, options, onProgress, token), operationId, token);
 
             task.ContinueWith(_ => returnContextToPool.Dispose());
 

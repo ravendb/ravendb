@@ -1,0 +1,108 @@
+﻿<!doctype html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="pl">
+{{> head }}
+<body>
+    {{> spinner }}
+
+    <div class="durandal-wrapper">
+        {{> topbar }}
+
+        <div class="prime-container">
+            {{> menu }}
+
+            <div class="content-container">
+
+                <div class="content-margin">
+                    <div class="toolbar">
+                        <div class="btn btn-primary">
+                            <i class="icon-save"></i> <span>Save</span>
+                        </div>
+                    </div>
+
+                    <div class="toggle">
+                        <input id="toggleOverride" class="styled" type="checkbox">
+                        <label for="toggleOverride">
+                            Override server configuration
+                        </label>
+                    </div>
+                    <div>
+
+                        <div class="row flex-row row-sm margin-bottom">
+                            <div class="col-sm-5">
+
+                            </div>
+                            <div class="col-sm-2">
+                            </div>
+                            <div class="col-sm-2">
+                                <a href="#"><i class="icon-link"></i> <span>Server configuration</span></a>
+                            </div>
+                            <div class="col-sm-2">
+                                <span>Effective configuration</span>
+                            </div>
+                        </div>
+                        <div class="panel padding padding-sm">
+                            <div class="row flex-row row-sm">
+                                <div class="col-sm-5">
+                                    <div class="checkbox">
+                                        <input id="checkboxReadBalance" class="styled" type="checkbox">
+                                        <label for="checkboxReadBalance">
+                                            Read balance bahavior <i class="icon-info text-info"></i>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-sm-2">
+                                    <div class="dropdown" style="display:block;">
+                                        <input class="form-control" value="None" type="text" data-toggle="dropdown" role="button" />
+                                        <ul class="dropdown-menu" aria-labelledby="drop4">
+                                            <li><a href="#">None</a></li>
+                                            <li><a href="#">RoundRobin</a></li>
+                                            <li><a href="#">FastestNode</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                                <div class="col-sm-2">
+                                    <input class="form-control" disabled value="RoundRobin" />
+                                </div>
+                                <div class="col-sm-2">
+                                    <span>None</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="panel padding padding-sm">
+                            <div class="row flex-row row-sm">
+                                <div class="col-sm-5">
+                                    <div class="checkbox">
+                                        <input id="checkboxMaxRequests" class="styled" type="checkbox">
+                                        <label for="checkboxMaxRequests">
+                                            Max number of requests per session
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="col-sm-2">
+                                    <input class="form-control" type="number" data-toggle="dropdown" role="button" />
+                                </div>
+                                <div class="col-sm-2">
+                                    <input class="form-control" disabled value="40" />
+                                </div>
+                                <div class="col-sm-2">
+                                    <span>None</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+            {{> notification-center }}
+        </div>{{> footer }}
+    </div>
+    <script type="text/javascript">
+
+    </script>
+
+    {{> modals/includeAll }}
+    {{> scripts }}
+
+</body>
+</html>

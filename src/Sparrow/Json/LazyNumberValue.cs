@@ -8,6 +8,7 @@ namespace Sparrow.Json
     {
         public readonly LazyStringValue Inner;
         private double? _val;
+        private float? _floatVal;
         private decimal? _decimalVal;
         private long? _longVal;
         private ulong? _ulongVal;
@@ -22,17 +23,28 @@ namespace Sparrow.Json
             if (self._longVal != null)
                 return self._longVal.Value;
 
-            self._longVal = long.Parse(self.Inner);
+            if (long.TryParse(self.Inner, out var longVal) == false)
+            {
+                var doubleVal = (double)self;
+                longVal = (long)doubleVal;
+            }
+
+            self._longVal = longVal;
             return self._longVal.Value; // that's inefficient, but percise
         }
-
 
         public static implicit operator ulong(LazyNumberValue self)
         {
             if (self._ulongVal != null)
                 return self._ulongVal.Value;
 
-            self._ulongVal = ulong.Parse(self.Inner);
+            if (ulong.TryParse(self.Inner, out var ulongVal) == false)
+            {
+                var doubleVal = (double)self;
+                ulongVal = (ulong)doubleVal;
+            }
+
+            self._ulongVal = ulongVal;
             return self._ulongVal.Value; // that's inefficient, but percise
         }
 
@@ -50,6 +62,16 @@ namespace Sparrow.Json
         public static implicit operator string(LazyNumberValue self)
         {
             return self.Inner;
+        }
+
+        public static implicit operator float(LazyNumberValue self)
+        {
+            if (self._floatVal != null)
+                return (float)self._floatVal;
+
+            var val = float.Parse(self.Inner, NumberStyles.Any, CultureInfo.InvariantCulture);
+            self._floatVal = val;
+            return val;
         }
 
         public static implicit operator decimal(LazyNumberValue self)
@@ -131,7 +153,7 @@ namespace Sparrow.Json
             if (obj is decimal)
                 return ((decimal)this).Equals((decimal)obj);
 
-            if (obj is LazyStringValue l && 
+            if (obj is LazyStringValue l &&
                 l.Length == 3) // checking for 3 as optimization
                 return Inner.Equals(l); // this is to match NaN
 
@@ -179,7 +201,7 @@ namespace Sparrow.Json
 
         public override string ToString()
         {
-            return this.Inner.ToString();
+            return Inner.ToString();
         }
 
         public string ToString(string format)
@@ -194,6 +216,22 @@ namespace Sparrow.Json
                 return true;
 
             return Inner.Equals("NaN");
+        }
+
+        public bool IsPositiveInfinity()
+        {
+            if (_val.HasValue && double.IsPositiveInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("Infinity");
+        }
+
+        public bool IsNegativeInfinity()
+        {
+            if (_val.HasValue && double.IsNegativeInfinity(_val.Value))
+                return true;
+
+            return Inner.Equals("-Infinity");
         }
 
         public TypeCode GetTypeCode()

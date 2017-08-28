@@ -160,77 +160,6 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
-        public async Task Fastst_node_should_choose_the_preferred_node()
-        {
-            var databaseName = "Fastst_node_should_choose_the_preferred_node" + Guid.NewGuid();
-
-            var leader = await CreateRaftClusterAndGetLeader(3);
-
-            var conventionsForLoadBalancing = new DocumentConventions
-            {
-                ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
-            };
-
-            //set proxies with delays to all servers except follower2
-            using (var leaderStore = new DocumentStore
-            {
-                Urls = leader.WebUrls,
-                Database = databaseName,
-                Conventions = conventionsForLoadBalancing
-            })
-            {
-                leaderStore.Initialize();
-
-                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
-                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
-                var leaderRequestExecutor = leaderStore.GetRequestExecutor();
-
-                //make sure we have updated topology --> more deterministic test
-                await leaderRequestExecutor.UpdateTopologyAsync(new ServerNode
-                {
-                    ClusterTag = leader.ServerStore.NodeTag,
-                    Database = databaseName,
-                    Url = leader.WebUrls[0]
-                }, 5000);
-
-
-                //wait until all nodes in database cluster are members (and not promotables)
-                //GetTopologyCommand -> does not retrieve promotables
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    var topology = new Topology();
-                    while (topology.Nodes?.Count != 3)
-                    {
-                        var topologyGetCommand = new GetTopologyCommand();
-                        await leaderRequestExecutor.ExecuteAsync(topologyGetCommand, context).ConfigureAwait(false);
-                        topology = topologyGetCommand.Result;
-                        Thread.Sleep(50);
-                    }
-                }
-
-                using (var session = leaderStore.OpenSession())
-                {
-                    session.Store(new User { Name = "John Dow" }, "users/1");
-                    session.SaveChanges();
-                }
-
-                while (leaderRequestExecutor.InSpeedTestPhase)
-                {
-                    using (var session = leaderStore.OpenSession())
-                    {
-                        session.Load<User>("users/1");
-                    }
-                }
-
-                var fastest = leaderRequestExecutor.GetFastestNode().Result.Node;
-                var preferred = leaderRequestExecutor.GetPreferredNode().Result.Item2;
-
-                Assert.Equal(preferred.Url, fastest.Url);
-
-            }
-        }
-
         private void ApplyProxiesOnRequestExecutor(Dictionary<RavenServer, ProxyServer> serversToProxies, RequestExecutor requestExecutor)
         {
             void ApplyProxies(Topology topology)
@@ -439,6 +368,45 @@ namespace SlowTests.Cluster
                     }
                 }
             }
-        }     
+        }
+
+        [Fact]
+        public async Task RavenDB_7992()
+        {
+            //here we test that when choosing Fastest-Node as the ReadBalanceBehavior, 
+            //we can execute commands that use a context, without it leading to a race condition 
+
+            var databaseName = "RavenDB_7992" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            var conventionsForLoadBalancing = new DocumentConventions
+            {
+                ReadBalanceBehavior = ReadBalanceBehavior.FastestNode
+            };
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+                Conventions = conventionsForLoadBalancing
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, _) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Store(new User { Name = "Jon Snow" });
+                    session.SaveChanges();
+                }
+
+                using (var session = leaderStore.OpenSession())
+                {
+                    session.Query<User>().Where(u => u.Name.StartsWith("Jo"));
+                }
+            }                          
+        }
     }
 }

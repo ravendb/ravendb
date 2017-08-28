@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 if (i > 0)
                     writer.Append(", ");
 
-                writer.Append(fieldToFetch);
+                WriteField(writer, fieldToFetch);
                 if (projection == null || string.Equals(fieldToFetch, projection))
                     continue;
 

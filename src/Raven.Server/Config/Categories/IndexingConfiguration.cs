@@ -11,7 +11,7 @@ namespace Raven.Server.Config.Categories
     public class IndexingConfiguration : ConfigurationCategory
     {
         private bool? _runInMemory;
-        
+
         private readonly RavenConfiguration _root;
 
         private PathSetting _indexStoragePath;
@@ -34,7 +34,7 @@ namespace Raven.Server.Config.Categories
                 return _runInMemory.Value;
             }
 
-            protected set { _runInMemory = value; }
+            protected set => _runInMemory = value;
         }
 
         [DefaultValue(false)]
@@ -54,8 +54,8 @@ namespace Raven.Server.Config.Categories
 
                 if (_indexStoragePath == null)
                 {
-                    _indexStoragePath = _root.ResourceType == ResourceType.Server 
-                        ? null 
+                    _indexStoragePath = _root.ResourceType == ResourceType.Server
+                        ? null
                         : _root.Core.DataDirectory.Combine("Indexes");
                 }
 
@@ -74,12 +74,20 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.JournalsStoragePath")]
         public virtual PathSetting JournalsStoragePath { get; protected set; }
 
+
         [Description("How long indexing will keep document transaction open when indexing. After this the transaction will be reopened.")]
         [DefaultValue(15)]
         [TimeUnit(TimeUnit.Seconds)]
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.MaxTimeForDocumentTransactionToRemainOpenInSec")]
         public TimeSetting MaxTimeForDocumentTransactionToRemainOpen { get; protected set; }
+
+        [Description("How long should we keep a superseded auto index?")]
+        [DefaultValue(15)]
+        [TimeUnit(TimeUnit.Seconds)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.TimeBeforeDeletionOfSupersededAutoIndexInSec")]
+        public TimeSetting TimeBeforeDeletionOfSupersededAutoIndex { get; protected set; }
 
         [Description("How long the database should wait before marking an auto index with the idle flag")]
         [DefaultValue(30)]

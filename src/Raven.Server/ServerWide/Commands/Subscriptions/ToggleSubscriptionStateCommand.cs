@@ -11,18 +11,20 @@ using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.Subscriptions
 {
-    public class ToggleSubscriptionStateCommand:UpdateValueForDatabaseCommand
+    public class ToggleSubscriptionStateCommand : UpdateValueForDatabaseCommand
     {
         public string SubscriptionName;
         public bool Disable;
 
         // for serialization
-        private ToggleSubscriptionStateCommand():base(null){}
+        private ToggleSubscriptionStateCommand() : base(null) { }
 
         public ToggleSubscriptionStateCommand([NotNull] string subscriptionName, bool disable, [NotNull] string databaseName) : base(databaseName)
         {
-            if (string.IsNullOrEmpty(subscriptionName)) throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
-            if (string.IsNullOrEmpty(databaseName)) throw new ArgumentException("Value cannot be null or empty.", nameof(databaseName));
+            if (string.IsNullOrEmpty(subscriptionName))
+                throw new ArgumentException("Value cannot be null or empty.", nameof(subscriptionName));
+            if (string.IsNullOrEmpty(databaseName))
+                throw new ArgumentException("Value cannot be null or empty.", nameof(databaseName));
             SubscriptionName = subscriptionName;
             Disable = disable;
         }
@@ -48,7 +50,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
                 var subscriptionState = JsonDeserializationClient.SubscriptionState(doc);
                 subscriptionState.Disabled = Disable;
-                using(var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
+                using (var obj = context.ReadObject(subscriptionState.ToJson(), "subscription"))
                 {
                     ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, obj);
                 }

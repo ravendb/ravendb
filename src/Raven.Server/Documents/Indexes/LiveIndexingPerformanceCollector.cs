@@ -48,12 +48,14 @@ namespace Raven.Server.Documents.Indexes
         {
             _changes.OnIndexChange += OnIndexChange;
 
-            var stats = _perIndexStats.Values
+            // This is done this way in order to avoid locking _perIndexStats
+            // for fetching .Values
+            var stats = _perIndexStats
                     .Select(x => new IndexPerformanceStats
                     {
-                        Name = x.Index.Name,
-                        Etag = x.Index.Etag,
-                        Performance = x.Index.GetIndexingPerformance()
+                        Name = x.Value.Index.Name,
+                        Etag = x.Value.Index.Etag,
+                        Performance = x.Value.Index.GetIndexingPerformance()
                     })
                     .ToList();
 
@@ -84,8 +86,12 @@ namespace Raven.Server.Documents.Indexes
         {
             var preparedStats = new List<IndexPerformanceStats>(_perIndexStats.Count);
 
-            foreach (var indexAndPerformanceStatsList in _perIndexStats.Values)
+            foreach (var keyValue in _perIndexStats)
             {
+                // This is done this way instead of using
+                // _perIndexStats.Values because .Values locks the entire
+                // dictionary.
+                var indexAndPerformanceStatsList = keyValue.Value;
                 var index = indexAndPerformanceStatsList.Index;
                 var performance = indexAndPerformanceStatsList.Performance;
 

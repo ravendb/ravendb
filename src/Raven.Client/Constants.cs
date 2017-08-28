@@ -102,7 +102,12 @@ namespace Raven.Client
 
             public const int MaxDatabaseNameLength = 128;
 
-            public const string UnchangedSubscriptionsChangeVecotr = "DoNotChange";
+            public enum SubscriptionChangeVectorSpecialStates
+            {
+                DoNotChange,
+                LastDocument,
+                BeginningOfTime
+            }
 
             public class Metadata
             {
@@ -164,11 +169,7 @@ namespace Raven.Client
 
                     public const string AllStoredFields = "__all_stored_fields";
 
-                    public const string DefaultSpatialFieldName = "__spatial";
-
                     public const string SpatialShapeFieldName = "__spatial_shape";
-
-                    public const string DistanceFieldName = "__distance";
 
                     internal const string RangeFieldSuffix = "_Range";
 

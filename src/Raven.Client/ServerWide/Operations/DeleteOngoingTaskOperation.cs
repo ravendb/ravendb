@@ -21,7 +21,7 @@ namespace Raven.Client.ServerWide.Operations
             _taskType = taskType;
         }
 
-        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<ModifyOngoingTaskResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new DeleteOngoingTaskCommand(_database, _taskId, _taskType);
         }
@@ -44,7 +44,7 @@ namespace Raven.Client.ServerWide.Operations
                 _taskType = taskType;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{_databaseName}/admin/tasks?id={_taskId}&type={_taskType}";
 

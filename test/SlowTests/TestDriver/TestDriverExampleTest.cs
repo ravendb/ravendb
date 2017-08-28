@@ -1,4 +1,6 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
+using System.Runtime.Loader;
 using Lucene.Net.Util;
 using Raven.Client.Documents;
 using Raven.TestDriver;
@@ -12,17 +14,17 @@ namespace SlowTests.TestDriver
         {
             get
             {
-                var testAssemblyLocation = typeof(RavenTestDriver<>).Assembly().Location;
+                var testAssemblyLocation = typeof(RavenTestDriver<>).Assembly.Location;
                 var testDllFile = new FileInfo(testAssemblyLocation);
 
 #if DEBUG
-                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Debug\netcoreapp1.1\Raven.Server.dll";
+                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Debug\netcoreapp2.0\Raven.Server.dll";
                 if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Debug\netcoreapp1.1\Raven.Server.dll";
+                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Debug\netcoreapp2.0\Raven.Server.dll";
 #else
-                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Release\netcoreapp1.1\Raven.Server.dll";
+                var serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\x64\Release\netcoreapp2.0\Raven.Server.dll";
                 if (File.Exists(serverDllPath) == false) // this can happen when running directly from CLI e.g. dotnet xunit
-                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Release\netcoreapp1.1\Raven.Server.dll";
+                    serverDllPath = @"..\..\..\..\..\src\Raven.Server\bin\Release\netcoreapp2.0\Raven.Server.dll";
 #endif
 
                 var serverPath = Path.Combine(
@@ -43,6 +45,11 @@ namespace SlowTests.TestDriver
 
         private const string DocFromDumpId = "Test/1";
 
+        public TestDriverExampleTest()
+        {
+            Debug = true;
+        }
+
         private class TestDoc
         {
             public string Name { get; set; }
@@ -55,7 +62,7 @@ namespace SlowTests.TestDriver
 
         protected override Stream DatabaseDumpFileStream =>
             typeof(RavenServerInDebugDllLocator)
-            .Assembly()
+            .Assembly
             .GetManifestResourceStream("SlowTests.Data.testing.ravendbdump");
 
         protected override void SetupDatabase(IDocumentStore documentStore)
@@ -68,7 +75,7 @@ namespace SlowTests.TestDriver
         }
 
         [Fact]
-        public void ShouldLoadDocumentAddedInSetupDatabasePhaseOrLoadDocumentFromImport()
+        public void ShouldLoadDocumentAddedInSetupDatabasePhase()
         {
             using (var documentStore = GetDocumentStore())
             {
@@ -81,19 +88,22 @@ namespace SlowTests.TestDriver
 
                     var item2 = session.Load<TestDoc>(ExampleDocId);
                     Assert.Equal(item.Name, item2.Name);
+                }
+            }
+        }
 
+        [Fact]
+        public void ShouldLoadDocumentAddedViaDatabaseImport()
+        {
+            using (var documentStore = GetDocumentStore())
+            {
+                using (var session = documentStore.OpenSession())
+                {
                     var docFromImport = session.Load<TestDoc>(DocFromDumpId);
                     Assert.NotNull(docFromImport);
                     Assert.Equal("This is a test", docFromImport.Name);
                 }
             }
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            KillGlobalServerProcess();
         }
     }
 }

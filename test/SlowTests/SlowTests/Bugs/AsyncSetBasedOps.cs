@@ -29,7 +29,7 @@ namespace SlowTests.SlowTests.Bugs
 #pragma warning restore 414,649
         }
 
-        [Fact(Skip = "RavenDB-6274")]
+        [Fact]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
             using (var store = GetDocumentStore(modifyDatabaseRecord: document => document.Settings[RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false"))
@@ -61,14 +61,10 @@ namespace SlowTests.SlowTests.Bugs
 
                 WaitForIndexing(store, timeout: TimeSpan.FromMinutes(5));
 
-                await (await store.Operations.SendAsync(new PatchByIndexOperation(
-                    new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}'" },
-                    new PatchRequest
-                    {
-                        Script = "this.FullName = this.FirstName + ' ' + this.LastName;"
-                    }
+                await (await store.Operations.SendAsync(new PatchByQueryOperation(
+                    new IndexQuery { Query = $"FROM INDEX '{stats.IndexName}' UPDATE {{ this.FullName = this.FirstName + ' ' + this.LastName; }}" }
                 ),CancellationToken.None))
-                .WaitForCompletionAsync(TimeSpan.FromSeconds(15));
+                .WaitForCompletionAsync(TimeSpan.FromSeconds(60));
 
                 using (var db = store.OpenAsyncSession())
                 {

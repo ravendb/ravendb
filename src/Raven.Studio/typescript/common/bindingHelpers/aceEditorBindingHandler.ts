@@ -16,20 +16,21 @@ class aceEditorBindingHandler {
         selectAll: false,
         bubbleEscKey: false,
         bubbleEnterKey: false
-    }
+    };
 
     static dom = ace.require("ace/lib/dom");
     static commands = ace.require("ace/commands/default_commands").commands;
     static isInFullScreeenMode = ko.observable<boolean>(false);
     static goToFullScreenText = "Press Shift + F11  to enter full screen mode";
     static leaveFullScreenText = "Press Shift + F11 or Esc to leave full screen mode";
+    static completitionCache = new Map<AceAjax.Editor, autoCompleteCompleter>();
 
     // used in tests
     static useWebWorkers = true;
 
     static getEditorBySelection(selector: JQuery): AceAjax.Editor {
         if (selector.length) {
-            var element = selector[0];
+            const element = selector[0];
             return ko.utils.domData.get(element, "aceEditor");
         }
         return null;
@@ -43,8 +44,7 @@ class aceEditorBindingHandler {
             // is complete and attached to the DOM.
             // See http://durandaljs.com/documentation/Interacting-with-the-DOM/
             composition.addBindingHandler("aceEditor");
-
-
+            
             const Editor = ace.require("ace/editor").Editor;
             ace.require("ace/config").defineOptions(Editor.prototype, "editor", {
                 editorType: {
@@ -53,6 +53,21 @@ class aceEditorBindingHandler {
                     value: "general"
                 }
             });
+
+            const langTools = ace.require("ace/ext/language_tools");
+
+            langTools.setCompleters([{
+                moduleId: "aceEditorBindingHandler",
+                getCompletions: (editor: AceAjax.Editor, session: AceAjax.IEditSession, pos: AceAjax.Position, prefix: string, callback: (errors: any[], wordlist: autoCompleteWordList[]) => void) => {
+                    if (aceEditorBindingHandler.completitionCache.has(editor)) {
+                        const completer = aceEditorBindingHandler.completitionCache.get(editor);
+                        completer(editor, session, pos, prefix, callback);
+                    } else {
+                        callback([{ error: "notext" }], null);
+                    }
+                },
+                identifierRegexps: [/[a-zA-Z_0-9'"\$\-\u00A2-\uFFFF]/]
+            }]);
 
             /// taken from https://github.com/ajaxorg/ace-demos/blob/master/scrolling-editor.html
             aceEditorBindingHandler.commands.push({
@@ -63,8 +78,7 @@ class aceEditorBindingHandler {
                     aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
                     editor.resize();
 
-
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.leaveFullScreenText);
                         $(".fullScreenModeLabel").hide();
                         $(editor.container).find(".fullScreenModeLabel").show();
@@ -81,7 +95,7 @@ class aceEditorBindingHandler {
                 name: "Exit FullScreen",
                 bindKey: "Esc",
                 exec: function (editor: any) {
-                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen") === true) {
+                    if (aceEditorBindingHandler.dom.hasCssClass(document.body, "fullScreen")) {
                         aceEditorBindingHandler.dom.toggleCssClass(document.body, "fullScreen");
                         aceEditorBindingHandler.dom.toggleCssClass(editor.container, "fullScreen-editor");
                         $(".fullScreenModeLabel").text(aceEditorBindingHandler.goToFullScreenText);
@@ -90,25 +104,6 @@ class aceEditorBindingHandler {
                     editor.resize();
                 }
             });
-        }
-    }
-
-    static detached() {
-        aceEditorBindingHandler.customCompleters = [];
-    }
-
-    static currentEditor: any;
-
-    static customCompleters: { editorType: string; completerHostObject: any; completer: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void }[] = [];
-
-    static autoCompleteHub(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void): void {
-        const curEditorType = editor.getOption("editorType");
-        const completerThreesome = aceEditorBindingHandler.customCompleters.find(x=> x.editorType === curEditorType);
-
-        if (!!completerThreesome) {
-            completerThreesome.completer.call(completerThreesome.completerHostObject, editor, session, pos, prefix, callback);
-        } else {
-            callback(null, []);
         }
     }
 
@@ -127,9 +122,7 @@ class aceEditorBindingHandler {
             getFocus?: boolean;
             hasFocus?: KnockoutObservable<boolean>;
             readOnly?: boolean;
-            completer?: (editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) => void;
-            typeName?: string;
-            completerHostObject?: any;
+            completer?: autoCompleteCompleter;
             minHeight?: number;
             maxHeight?: number;
             selectAll?: boolean;
@@ -145,10 +138,8 @@ class aceEditorBindingHandler {
         const fontSize = bindingValues.fontSize || this.defaults.fontSize;
         const lang = bindingValues.lang || this.defaults.lang;
         const readOnly = bindingValues.readOnly || this.defaults.readOnly;
-        const typeName = bindingValues.typeName;
         const code = typeof bindingValues.code === "function" ? bindingValues.code : bindingContext.$rawData;
-        let langTools: any = null;
-        const completerHostObject = bindingValues.completerHostObject;
+        const completer = bindingValues.completer;
         this.minHeight = bindingValues.minHeight ? bindingValues.minHeight : 140;
         this.maxHeight = bindingValues.maxHeight ? bindingValues.maxHeight : 400;
         this.allowResize = bindingValues.allowResize ? bindingValues.allowResize : false;
@@ -162,13 +153,10 @@ class aceEditorBindingHandler {
             throw new Error("code should be an observable");
         }
 
-        if (!!bindingValues.completer) {
-            langTools = ace.require("ace/ext/language_tools");
-        }
-
         const aceEditor: AceAjax.Editor = ace.edit(element);
 
         aceEditor.setOption("enableBasicAutocompletion", true);
+        aceEditor.setOption("enableLiveAutocompletion", true);
         aceEditor.setOption("newLineMode", "windows");
         aceEditor.setTheme(theme);
         aceEditor.setFontSize(fontSize);
@@ -207,25 +195,9 @@ class aceEditorBindingHandler {
                 exec: () => false // Returning false causes the event to bubble up.
             });
         }
-
-        // setup the autocomplete mechanism, bind recieved function with recieved type, will only work if both were recieved
-        if (!!typeName) {
-            aceEditor.setOption("editorType", typeName);
-
-            if (!!langTools) {
-                if (!aceEditorBindingHandler.customCompleters.find(x=> x.editorType === typeName)) {
-                    aceEditorBindingHandler.customCompleters.push({ editorType: typeName, completerHostObject: completerHostObject, completer: bindingValues.completer });
-                }
-                if (!!(<any>aceEditor).completers) {
-                    let completersList: { getComplitions: any; moduleId?: string }[] = (<any>aceEditor).completers;
-                    if (!completersList.find(x=> x.moduleId === "aceEditoBindingHandler")) {
-                        langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
-                    }
-                }
-                else {
-                    langTools.addCompleter({ moduleId: "aceEditoBindingHandler", getCompletions: aceEditorBindingHandler.autoCompleteHub });
-                }
-            }
+        
+        if (completer) {
+            aceEditorBindingHandler.completitionCache.set(aceEditor, completer);
         }
 
         const aceFocusElement = ".ace_text-input";
@@ -233,8 +205,21 @@ class aceEditorBindingHandler {
             code(aceEditor.getSession().getValue());
             this.alterHeight(element, aceEditor);
         });
-
-        $(element).on('focus', aceFocusElement, () => aceEditorBindingHandler.currentEditor = aceEditor);
+        
+        aceEditor.getSession().on("changeAnnotation", () => {
+            const annotations = aceEditor.getSession().getAnnotations() as Array<AceAjax.Annotation>;
+            
+            if ('rules' in code && ko.isObservable(code.rules)) {
+                const rules = ko.unwrap(code.rules) as KnockoutValidationRule[];
+                if (_.some(rules, x => x.rule === "aceValidation")) {
+                    const firstError = annotations.find(x => x.type === "error");
+                    
+                    if (firstError) {
+                        code.setError(`${firstError.row},${firstError.column}: ${firstError.type}: ${firstError.text}`)
+                    }
+                }
+            }
+        });
 
         // Initialize ace resizeble text box
         aceEditor.setOption('vScrollBarAlwaysVisible', true);
@@ -242,16 +227,8 @@ class aceEditorBindingHandler {
         
         if ($(element).height() < this.minHeight) {
             $(element).height(this.minHeight);
+            aceEditor.resize();
         }
-        /*TODO: 
-        $(element).resizable(<any>{
-            minHeight: this.minHeight,
-            handles: "s, se",
-            grid: [10000000000000000, 1],
-            resize: function (event, ui) {
-                aceEditor.resize();
-            }
-        });*/
 
         this.alterHeight(element, aceEditor);
         $(element).find('.ui-resizable-se').removeClass('ui-icon-gripsmall-diagonal-se');
@@ -266,6 +243,8 @@ class aceEditorBindingHandler {
             //TODO: $(element).resizable("destroy");
             aceEditor.getSession().setUseWorker(false);
             aceEditor.destroy();
+            
+            aceEditorBindingHandler.completitionCache.delete(aceEditor);
         });
 
         // Keep track of the editor for this element.
@@ -294,18 +273,16 @@ class aceEditorBindingHandler {
         }
     }
 
-    
-
     alterHeight(element: HTMLElement, aceEditor: AceAjax.Editor) {
         if (!this.allowResize) {
             return;
         }
         // update only if line count changes
-        var currentLinesCount = aceEditor.getSession().getScreenLength();
+        const currentLinesCount = aceEditor.getSession().getScreenLength();
         if (this.previousLinesCount != currentLinesCount) {
             let newHeight = currentLinesCount
                 * aceEditor.renderer.lineHeight
-                + (<any>aceEditor.renderer).scrollBar.getWidth();
+                + (<any>aceEditor.renderer).scrollBar.getWidth()
                 + 10; // few pixels extra padding
 
             if (newHeight < this.minHeight) {

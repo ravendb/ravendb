@@ -65,9 +65,7 @@ namespace Raven.Client.Documents.Session
         ///     skip document fetching until given ID is found and return documents after that ID (default:
         ///     null)
         /// </param>
-        /// <param name="transformer">name of a transformer that should be used to transform the results</param>
-        /// <param name="transformerParameters">parameters that will be passed to transformer</param>
-        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null, string transformer = null, Dictionary<string, object> transformerParameters = null);
+        IEnumerator<StreamResult<T>> Stream<T>(string startsWith, string matches = null, int start = 0, int pageSize = int.MaxValue, string startAfter = null);
 
         /// <summary>
         ///     Returns the results of a query directly into stream 

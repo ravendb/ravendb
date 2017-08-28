@@ -21,7 +21,7 @@ namespace Raven.Server.Web.Operations
 
             if (operation.Database == null) // server level op
             {
-                if (TryGetServerAdmin() == false)
+                if (IsOperator() == false)
                     return Task.CompletedTask;
             }
             else if (TryGetAllowedDbs(operation.Database.Name, out var _, requireAdmin: false) == false)

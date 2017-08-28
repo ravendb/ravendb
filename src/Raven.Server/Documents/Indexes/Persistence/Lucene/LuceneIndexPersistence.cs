@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using Lucene.Net.Analysis;
@@ -53,22 +54,38 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             _suggestionsDirectories = new Dictionary<string, LuceneVoronDirectory>();
             _suggestionsIndexSearcherHolders = new Dictionary<string, IndexSearcherHolder>();
 
-            var fields = index.Definition.MapFields.Values.ToList();
+            var fields = new List<IndexField>(index.Definition.MapFields.Values);
 
             switch (_index.Type)
             {
                 case IndexType.AutoMap:
-                    _converter = new LuceneDocumentConverter(fields, reduceOutput: false);
+
+                    foreach (var field in index.Definition.MapFields.Values)
+                    {
+                        if (field.Indexing == FieldIndexing.Search)
+                            AddDefaultIndexField(field);
+                    }
+
+                    _converter = new LuceneDocumentConverter(fields);
                     break;
                 case IndexType.AutoMapReduce:
                     var autoMapReduceIndexDefinition = (AutoMapReduceIndexDefinition)_index.Definition;
-                    fields.AddRange(autoMapReduceIndexDefinition.GroupByFields.Values);
+
+                    foreach (var field in autoMapReduceIndexDefinition.GroupByFields.Values)
+                    {
+                        fields.Add(field);
+
+                        if (field.Indexing == FieldIndexing.Search)
+                            AddDefaultIndexField(field);
+                    }
 
                     _converter = new LuceneDocumentConverter(fields, reduceOutput: true);
                     break;
                 case IndexType.MapReduce:
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: true);
+                    break;
                 case IndexType.Map:
-                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap, reduceOutput: _index.Type.IsMapReduce());
+                    _converter = new AnonymousLuceneDocumentConverter(fields, _index.IsMultiMap);
                     break;
                 case IndexType.Faulty:
                     _converter = null;
@@ -82,11 +99,26 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             foreach (var field in _fields)
             {
-                if ( !field.Value.HasSuggestions )
+                if (!field.Value.HasSuggestions)
                     continue;
 
                 string fieldName = field.Key;
                 _suggestionsIndexSearcherHolders[fieldName] = new IndexSearcherHolder(state => new IndexSearcher(_suggestionsDirectories[fieldName], true, state), _index._indexStorage.DocumentDatabase);
+            }
+
+            void AddDefaultIndexField(IndexField field)
+            {
+                Debug.Assert(field.OriginalName != null);
+
+                fields.Add(new IndexField
+                {
+                    Name = field.OriginalName,
+                    Indexing = FieldIndexing.Default,
+                    Aggregation = field.Aggregation,
+                    HasSuggestions = field.HasSuggestions,
+                    Storage = field.Storage,
+                    TermVector = field.TermVector
+                });
             }
         }
 
@@ -102,13 +134,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 throw new InvalidOperationException();
 
             using (var tx = environment.WriteTransaction())
-            {                
+            {
                 InitializeMainIndexStorage(tx, environment);
                 InitializeSuggestionsIndexStorage(tx, environment);
 
                 // force tx commit so it will bump tx counter and just created searcher holder will have valid tx id
                 tx.LowLevelTransaction.ModifyPage(0);
-                
+
                 tx.Commit();
             }
 
@@ -130,7 +162,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     CreateIndexStructure(directory, state);
                     RecreateSuggestionsSearcher(tx, field.Key);
                 }
-            }            
+            }
         }
 
         private void InitializeMainIndexStorage(Transaction tx, StorageEnvironment environment)
@@ -156,7 +188,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_index.Type == IndexType.MapReduce)
             {
-                var mapReduceIndex = (MapReduceIndex) _index;
+                var mapReduceIndex = (MapReduceIndex)_index;
                 if (string.IsNullOrWhiteSpace(mapReduceIndex.Definition.OutputReduceToCollection) == false)
                     return new OutputReduceIndexWriteOperation(mapReduceIndex, _directory, _converter, writeTransaction, this);
             }
@@ -209,7 +241,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             holder.SetIndexSearcher(asOfTx);
             return holder;
         }
-        
+
         internal void RecreateSearcher(Transaction asOfTx)
         {
             _indexSearcherHolder.SetIndexSearcher(asOfTx);
@@ -237,7 +269,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
         {
             if (_suggestionsIndexWriters != null)
                 return _suggestionsIndexWriters;
-            
+
             _suggestionsIndexWriters = new Dictionary<string, LuceneSuggestionIndexWriter>();
 
             foreach (var item in _fields)
@@ -246,13 +278,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                     continue;
 
                 string field = item.Key;
-                
+
                 try
                 {
                     var snapshotter = new SnapshotDeletionPolicy(new KeepOnlyLastCommitDeletionPolicy());
                     // TODO [ppekrol] support for IndexReaderWarmer?
-                    var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field], 
-                                        snapshotter, IndexWriter.MaxFieldLength.UNLIMITED, 
+                    var writer = new LuceneSuggestionIndexWriter(field, _suggestionsDirectories[field],
+                                        snapshotter, IndexWriter.MaxFieldLength.UNLIMITED,
                                         _index._indexStorage.DocumentDatabase, state);
 
                     _suggestionsIndexWriters[field] = writer;
@@ -274,15 +306,11 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             return _fields.ContainsKey(field);
         }
 
-        public void Dispose()
+        public void DisposeWriters()
         {
-            if (_disposed)
-                throw new ObjectDisposedException(nameof(Index));
-
-            _disposed = true;
-
             _indexWriter?.Analyzer?.Dispose();
             _indexWriter?.Dispose();
+            _indexWriter = null;
 
             if (_suggestionsIndexWriters != null)
             {
@@ -290,7 +318,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 {
                     writer.Value?.Dispose();
                 }
+
+                _suggestionsIndexWriters = null;
             }
+        }
+
+        public void Dispose()
+        {
+            if (_disposed)
+                throw new ObjectDisposedException(nameof(Index));
+
+            _disposed = true;
+
+            DisposeWriters();
 
             _converter?.Dispose();
             _directory?.Dispose();

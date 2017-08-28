@@ -15,7 +15,7 @@ namespace Raven.Client.ServerWide.Commands
 
         public override bool IsReadRequest => true;
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             //not sure if we need to escape database name here
             url = $"{node.Url}/debug/is-loaded?name={node.Database}";

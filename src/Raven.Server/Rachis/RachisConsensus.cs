@@ -40,6 +40,11 @@ namespace Raven.Server.Rachis
 
         public TStateMachine StateMachine;
 
+        internal override RachisStateMachine GetStateMachine()
+        {
+            return StateMachine;
+        }
+
         protected override void InitializeState(TransactionOperationContext context)
         {
             StateMachine = new TStateMachine();
@@ -58,7 +63,12 @@ namespace Raven.Server.Rachis
             StateMachine.Apply(context, uptoInclusive, leader, _serverStore);
         }
 
-        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ServerCertificateHolder.Certificate;
+        public void EnsureNodeRemovalOnDeletion(TransactionOperationContext context, string nodeTag)
+        {
+            StateMachine.EnsureNodeRemovalOnDeletion(context, nodeTag);
+        }
+
+        public override X509Certificate2 ClusterCertificate => _serverStore.RavenServer.ClusterCertificateHolder.Certificate;
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
         {
@@ -112,6 +122,10 @@ namespace Raven.Server.Rachis
             LeaderElect,
             Leader
         }
+
+        internal abstract RachisStateMachine GetStateMachine();
+
+        public const string InitialTag = "?";
 
         public State CurrentState { get; private set; }
 
@@ -171,7 +185,7 @@ namespace Raven.Server.Rachis
             LogsTable = new TableSchema();
             LogsTable.DefineKey(new TableSchema.SchemaIndexDef
             {
-                StartIndex = 0,
+                StartIndex = 0
             });
         }
 
@@ -242,7 +256,7 @@ namespace Raven.Server.Rachis
                     var state = tx.InnerTransaction.CreateTree(GlobalStateSlice);
 
                     var readResult = state.Read(TagSlice);
-                    _tag = readResult == null ? "?" : readResult.Reader.ToStringValue();
+                    _tag = readResult == null ? InitialTag : readResult.Reader.ToStringValue();
 
                     Log = LoggingSource.Instance.GetLogger<RachisConsensus>(_tag);
                     LogsTable.Create(tx.InnerTransaction, EntriesSlice, 16);
@@ -475,7 +489,17 @@ namespace Raven.Server.Rachis
             {
                 if (tx is LowLevelTransaction llt && llt.Committed)
                 {
-                    beforeStateChangedEvent?.Invoke();
+                    try
+                    {
+                        beforeStateChangedEvent?.Invoke();
+                    }
+                    catch (Exception e)
+                    {
+                        if (Log.IsInfoEnabled)
+                        {
+                            Log.Info("Before state change invocation function failed.", e);
+                        }
+                    }
 
                     try
                     {
@@ -703,12 +727,12 @@ namespace Raven.Server.Rachis
                             $"{initialMessage.DebugSourceIdentifier} attempted to connect to us with topology id {initialMessage.TopologyId} but our topology id is already set ({clusterTopology.TopologyId}). " +
                             "Rejecting connection from outside our cluster, this is likely an old server trying to connect to us.");
                     }
-                    if (_tag == "?")
+                    if (_tag == InitialTag)
                     {
                         using (ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                         using (context.OpenWriteTransaction())
                         {
-                            if (_tag == "?")// double checked locking under tx write lock
+                            if (_tag == InitialTag)// double checked locking under tx write lock
                             {
                                 UpdateNodeTag(context, initialMessage.DebugDestinationIdentifier);
                                 context.Transaction.Commit();
@@ -1297,7 +1321,10 @@ namespace Raven.Server.Rachis
                 if (CurrentState != State.Passive && forNewCluster == false)
                     return;
 
-                if (forNewCluster == false)
+                var lastNode = _tag == InitialTag ? "A" : GetTopology(ctx).LastNodeId;
+                // If we were kicked out form a cluster we want to keep the old cluster's tag and lastNode
+                // but if we are new born we will set our tag to A. 
+                if (forNewCluster == false && _tag == InitialTag)
                 {
                     UpdateNodeTag(ctx, "A");
                 }
@@ -1310,9 +1337,9 @@ namespace Raven.Server.Rachis
                     },
                     new Dictionary<string, string>(),
                     new Dictionary<string, string>(),
-                    "A"
+                    lastNode
                 );
-                
+
                 SetTopology(null, ctx, topology);
 
                 SwitchToSingleLeader(ctx);
@@ -1342,6 +1369,7 @@ namespace Raven.Server.Rachis
                 await task;
 
             await task;
+          
         }
 
         private volatile string _leaderTag;

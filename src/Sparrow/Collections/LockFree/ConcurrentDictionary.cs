@@ -61,7 +61,7 @@ namespace Sparrow.Collections.LockFree
             {
                 throw new ArgumentNullException(nameof(collection));
             }
-            this.InitializeFromCollection(collection);
+            InitializeFromCollection(collection);
         }
 
         // System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>
@@ -93,7 +93,7 @@ namespace Sparrow.Collections.LockFree
             {
                 throw new ArgumentNullException(nameof(comparer));
             }
-            this.InitializeFromCollection(collection);
+            InitializeFromCollection(collection);
         }
 
         // System.Collections.Concurrent.ConcurrentDictionary<TKey, TValue>
@@ -121,14 +121,14 @@ namespace Sparrow.Collections.LockFree
             {
                 throw new ArgumentNullException(nameof(comparer));
             }
-            this.InitializeFromCollection(collection);
+            InitializeFromCollection(collection);
         }
 
         private void InitializeFromCollection(IEnumerable<KeyValuePair<TKey, TValue>> collection)
         {
             foreach (KeyValuePair<TKey, TValue> current in collection)
             {
-                if (!this.TryAdd(current.Key, current.Value))
+                if (!TryAdd(current.Key, current.Value))
                 {
                     throw new ArgumentException("Collection contains duplicate keys");
                 }
@@ -337,12 +337,12 @@ namespace Sparrow.Collections.LockFree
         public bool ContainsKey(TKey key)
         {
             TValue value;
-            return this.TryGetValue(key, out value);
+            return TryGetValue(key, out value);
         }
 
         public void Add(KeyValuePair<TKey, TValue> item)
         {
-            this.Add(item.Key, item.Value);
+            Add(item.Key, item.Value);
         }
 
         public bool Contains(KeyValuePair<TKey, TValue> keyValuePair)
@@ -415,7 +415,7 @@ namespace Sparrow.Collections.LockFree
             {
                 throw new ArgumentNullException(nameof(key));
             }
-            return key is TKey && this.ContainsKey((TKey)((object)key));
+            return key is TKey && ContainsKey((TKey)((object)key));
         }
 
         void IDictionary.Add(object key, object value)
@@ -449,7 +449,7 @@ namespace Sparrow.Collections.LockFree
             if (key is TKey)
             {
                 TValue tValue;
-                this.TryRemove((TKey)((object)key), out tValue);
+                TryRemove((TKey)((object)key), out tValue);
             }
         }
 
@@ -490,7 +490,7 @@ namespace Sparrow.Collections.LockFree
                     throw new ArgumentNullException(nameof(key));
                 }
                 TValue tValue;
-                if (key is TKey && this.TryGetValue((TKey)((object)key), out tValue))
+                if (key is TKey && TryGetValue((TKey)((object)key), out tValue))
                 {
                     return tValue;
                 }
@@ -528,10 +528,10 @@ namespace Sparrow.Collections.LockFree
             while (true)
             {
                 TValue tValue;
-                if (this.TryGetValue(key, out tValue))
+                if (TryGetValue(key, out tValue))
                 {
                     tValue2 = updateValueFactory(key, tValue);
-                    if (this.TryUpdate(key, tValue2, tValue))
+                    if (TryUpdate(key, tValue2, tValue))
                     {
                         break;
                     }
@@ -539,7 +539,7 @@ namespace Sparrow.Collections.LockFree
                 else
                 {
                     tValue2 = addValueFactory(key);
-                    if (this.TryAdd(key, tValue2))
+                    if (TryAdd(key, tValue2))
                     {
                         break;
                     }
@@ -557,15 +557,15 @@ namespace Sparrow.Collections.LockFree
             while (true)
             {
                 TValue tValue;
-                if (this.TryGetValue(key, out tValue))
+                if (TryGetValue(key, out tValue))
                 {
                     TValue tValue2 = updateValueFactory(key, tValue);
-                    if (this.TryUpdate(key, tValue2, tValue))
+                    if (TryUpdate(key, tValue2, tValue))
                     {
                         return tValue2;
                     }
                 }
-                else if (this.TryAdd(key, addValue))
+                else if (TryAdd(key, addValue))
                 {
                     return addValue;
                 }

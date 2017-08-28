@@ -15,7 +15,7 @@ namespace SlowTests.Client.Subscriptions
 {
     public class TestSubscriptionOnDisabledDatabase:RavenTestBase
     {
-        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(6);
+        private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(60 * 10) : TimeSpan.FromSeconds(20);
 
         [Fact]
         public async Task Run()

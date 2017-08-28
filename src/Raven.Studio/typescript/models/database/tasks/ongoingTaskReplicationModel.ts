@@ -5,7 +5,6 @@ import ongoingTask = require("models/database/tasks/ongoingTaskModel");
 import clusterTopologyManager = require("common/shell/clusterTopologyManager");
 
 class ongoingTaskReplicationModel extends ongoingTask {
-
     editUrl: KnockoutComputed<string>;
 
     destinationDB = ko.observable<string>();
@@ -13,8 +12,10 @@ class ongoingTaskReplicationModel extends ongoingTask {
   
     validationGroup: KnockoutValidationGroup;
 
-    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication) {
+    constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication, isEdit: boolean) {
         super();
+
+        this.isEdit = isEdit;
         this.update(dto); 
         this.initializeObservables();
         this.initValidation();
@@ -39,7 +40,7 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
     toDto(): externalReplicationDataFromUI {
         return {
-            TaskName: this.taskName() || `External replication to ${this.destinationDB()}@${this.destinationURL()}`,
+            TaskName: this.taskName(),
             DestinationURL: this.destinationURL(),
             DestinationDB: this.destinationDB()
         };
@@ -49,7 +50,6 @@ class ongoingTaskReplicationModel extends ongoingTask {
 
         this.destinationDB.extend({
             required: true,
-            maxLength: 230,
             validDatabaseName: true
         });
 
@@ -65,13 +65,16 @@ class ongoingTaskReplicationModel extends ongoingTask {
     }
 
     static empty(): ongoingTaskReplicationModel {
-
         return new ongoingTaskReplicationModel({
             TaskName: "",
             TaskType: "Replication",
             DestinationDatabase: null,
             DestinationUrl: clusterTopologyManager.default.localNodeUrl()
-        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication);
+        } as Raven.Client.ServerWide.Operations.OngoingTaskReplication, true);
+    }
+
+    protected generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskReplication): string {
+        return `External replication to ${dto.DestinationDatabase}@${dto.DestinationUrl}`;
     }
 }
 

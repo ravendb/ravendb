@@ -43,7 +43,7 @@ namespace Raven.Server.Documents.Replication
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((IncomingConnectionInfo)obj);
         }
 
@@ -76,7 +76,7 @@ namespace Raven.Server.Documents.Replication
                 [nameof(SourceUrl)] = SourceUrl,
                 [nameof(SourceMachineName)] = SourceMachineName,
                 [nameof(SourceTag)] = SourceTag,
-                [nameof(RemoteIp)] = RemoteIp,
+                [nameof(RemoteIp)] = RemoteIp
             };
         }
     }

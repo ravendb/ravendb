@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -14,6 +13,8 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
+using Sparrow.Collections.LockFree;
+using Voron.Impl;
 using Voron.Impl.Extensions;
 
 namespace Raven.Server.Rachis
@@ -111,19 +112,19 @@ namespace Raven.Server.Rachis
             old.TrySetResult(null);
         }
 
-        
+
 
         public Dictionary<string, NodeStatus> GetStatus()
         {
             var dict = new Dictionary<string, NodeStatus>();
 
-            foreach (var peers in new[] { _nonVoters , _voters , _promotables })
+            foreach (var peers in new[] { _nonVoters, _voters, _promotables })
             {
                 foreach (var kvp in peers)
                 {
                     var status = new NodeStatus
                     {
-                        Connected = kvp.Value.Status.Equals("Connected"),
+                        Connected = kvp.Value.Status == AmbassadorStatus.Connected,
                         LastMatchingIndex = kvp.Value.FollowerMatchIndex,
                         LastReply = kvp.Value.LastReplyFromFollower,
                         LastSent = kvp.Value.LastSendToFollower,
@@ -132,7 +133,7 @@ namespace Raven.Server.Rachis
 
                     if (status.Connected == false)
                     {
-                        status.ErrorDetails = kvp.Value.Status;
+                        status.ErrorDetails = kvp.Value.StatusMessage;
                     }
 
                     dict[kvp.Key] = status;
@@ -205,7 +206,7 @@ namespace Raven.Server.Rachis
                         continue; // already here
                     }
 
-                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value, 
+                    var ambasaddor = new FollowerAmbassador(_engine, this, _promotableUpdated, promotable.Key, promotable.Value,
                         _engine.ClusterCertificate);
                     _promotables.Add(promotable.Key, ambasaddor);
                     _engine.AppendStateDisposable(this, ambasaddor);
@@ -332,7 +333,7 @@ namespace Raven.Server.Rachis
                 }
                 try
                 {
-                    _engine.SwitchToCandidateState("An error occurred during leadership - " + e);
+                    _engine.SwitchToCandidateState("An error occurred during our leadership." + Environment.NewLine + e);
                 }
                 catch (Exception e2)
                 {
@@ -363,7 +364,7 @@ namespace Raven.Server.Rachis
                 var sinceLastSend = (long)(now - followerAmbassador.LastSendToFollower).TotalMilliseconds;
                 var lastMsg = followerAmbassador.LastSendMsg;
                 sb.AppendLine(
-                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.Status} - {followerAmbassador.ThreadStatus}");
+                    $"{followerAmbassador.Tag}: Got last reply {sinceLastReply:#,#;;0} ms ago and sent {sinceLastSend:#,#;;0} ms ({lastMsg}) - {followerAmbassador.StatusMessage} - {followerAmbassador.ThreadStatus}");
             }
 
 
@@ -561,7 +562,7 @@ namespace Raven.Server.Rachis
                 if (ambassador.Value.FollowerMatchIndex != lastIndex)
                     continue;
 
-                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task task);
+                TryModifyTopology(ambassador.Key, ambassador.Value.Url, TopologyModification.Voter, out Task _);
 
                 _promotableUpdated.Set();
                 break;
@@ -570,33 +571,41 @@ namespace Raven.Server.Rachis
 
         public Task<(long Etag, object Result)> PutAsync(CommandBase cmd)
         {
-            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            Task<(long Etag, object Result)> task;
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenWriteTransaction())
+            using (context.OpenWriteTransaction()) // this line prevents concurrency issues on the PutAsync
             {
                 var djv = cmd.ToJson(context);
                 var cmdJson = context.ReadObject(djv, "raft/command");
 
                 var index = _engine.InsertToLeaderLog(context, cmdJson, RachisEntryFlags.StateMachineCommand);
                 context.Transaction.Commit();
-
-                _entries[index] = new CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
-                {
-                    CommandIndex = index,
-                    TaskCompletionSource = tcs
-                };
+                task = AddToEntries(index);
             }
 
             _newEntry.Set();
+            return task;
+        }
+
+        public Task<(long Etag, object Result)> AddToEntries(long index)
+        {
+            var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
+            _entries[index] =
+                new
+                    CommandState // we need to add entry inside write tx lock to omit a situation when command will be applied (and state set) before it is added to the entries list
+                    {
+                        CommandIndex = index,
+                        TaskCompletionSource = tcs
+                    };
             return tcs.Task;
         }
 
-        public ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new ConcurrentQueue<(string, AlertRaised)>();
+        public System.Collections.Concurrent.ConcurrentQueue<(string node, AlertRaised error)> ErrorsList = new System.Collections.Concurrent.ConcurrentQueue<(string, AlertRaised)>();
 
         public void NotifyAboutException(FollowerAmbassador node, Exception e)
         {
             var alert = AlertRaised.Create($"Node {node.Tag} encountered an error",
-                node.Status,
+                node.StatusMessage,
                 AlertType.ClusterTopologyWarning,
                 NotificationSeverity.Warning,
                 details: new ExceptionDetails(e));
@@ -720,7 +729,7 @@ namespace Raven.Server.Rachis
             Remove
         }
 
-        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false)
+        public bool TryModifyTopology(string nodeTag, string nodeUrl, TopologyModification modification, out Task task, bool validateNotInTopology = false, Action<TransactionOperationContext> beforeCommit = null)
         {
             using (_engine.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenWriteTransaction())
@@ -738,14 +747,14 @@ namespace Raven.Server.Rachis
                 if (validateNotInTopology && (nodeTag != null && clusterTopology.Contains(nodeTag) || clusterTopology.TryGetNodeTagByUrl(nodeUrl).HasUrl))
                 {
                     throw new InvalidOperationException($"Was requested to modify the topology for node={nodeTag} " +
-                                                        $"with validation that it is not contained by the topology but current topology contains it.");
+                                                        "with validation that it is not contained by the topology but current topology contains it.");
                 }
 
                 if (nodeTag == null)
                 {
                     nodeTag = GenerateNodeTag(clusterTopology);
                 }
-                
+
                 var newVotes = new Dictionary<string, string>(clusterTopology.Members);
                 newVotes.Remove(nodeTag);
                 var newPromotables = new Dictionary<string, string>(clusterTopology.Promotables);
@@ -773,7 +782,7 @@ namespace Raven.Server.Rachis
                         if (clusterTopology.Contains(nodeTag) == false)
                         {
                             throw new InvalidOperationException($"Was requested to remove node={nodeTag} from the topology " +
-                                                        $"but it is not contained by the topology.");
+                                                        "but it is not contained by the topology.");
                         }
                         break;
                     default:
@@ -789,19 +798,26 @@ namespace Raven.Server.Rachis
                 );
 
                 var topologyJson = _engine.SetTopology(context, clusterTopology);
-
                 var index = _engine.InsertToLeaderLog(context, topologyJson, RachisEntryFlags.Topology);
+
+                if (modification == TopologyModification.Remove)
+                {
+                    _engine.GetStateMachine().EnsureNodeRemovalOnDeletion(context,nodeTag);
+                }
+
+                context.Transaction.Commit();
+
                 var tcs = new TaskCompletionSource<(long Etag, object Result)>(TaskCreationOptions.RunContinuationsAsynchronously);
                 _entries[index] = new CommandState
                 {
                     TaskCompletionSource = tcs,
                     CommandIndex = index
                 };
+
                 _topologyModification = task = tcs.Task.ContinueWith(_ =>
                 {
                     Interlocked.Exchange(ref _topologyModification, null);
                 });
-                context.Transaction.Commit();
             }
             Interlocked.Exchange(ref _hasNewTopology, 1);
             _voterResponded.Set();
@@ -809,6 +825,8 @@ namespace Raven.Server.Rachis
 
             return true;
         }
+
+       
 
         private static string GenerateNodeTag(ClusterTopology clusterTopology)
         {

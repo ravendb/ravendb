@@ -14,7 +14,6 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
-using Microsoft.AspNetCore.Server.Kestrel;
 using Microsoft.Extensions.DependencyInjection;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Json.Converters;
@@ -33,15 +32,18 @@ using Sparrow.Logging;
 using System.Reflection;
 using System.Security.Claims;
 using System.Runtime.InteropServices;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features.Authentication;
-using Microsoft.AspNetCore.Server.Kestrel.Filter;
+using Microsoft.AspNetCore.Server.Kestrel.Core;
+using Microsoft.AspNetCore.Server.Kestrel.Core.Adapter.Internal;
 using Microsoft.AspNetCore.Server.Kestrel.Https;
+using Microsoft.AspNetCore.Server.Kestrel.Https.Internal;
+using Microsoft.Extensions.Logging;
 using Org.BouncyCastle.Pkcs;
 using Raven.Client;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Client.ServerWide.Tcp;
+using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
@@ -54,7 +56,7 @@ namespace Raven.Server
     {
         static RavenServer()
         {
-            
+
         }
 
         private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RavenServer>("Raven/Server");
@@ -114,36 +116,68 @@ namespace Raven.Server
 
             try
             {
-                Action<KestrelServerOptions> kestrelOptions = options => options.ShutdownTimeout = TimeSpan.FromSeconds(1);
-                bool certificateLoaded = LoadCertificate();
-                if (certificateLoaded)
+                var  clusterCert = LoadCertificate(
+                    Configuration.Security.ClusterCertificateExec,
+                    Configuration.Security.ClusterCertificateExecArguments,
+                    Configuration.Security.ClusterCertificatePath,
+                    Configuration.Security.ClusterCertificatePassword);
+
+                var httpsCert = LoadCertificate(
+                    Configuration.Security.CertificateExec,
+                    Configuration.Security.CertificateExecArguments,
+                    Configuration.Security.CertificatePath,
+                    Configuration.Security.CertificatePassword);
+
+                ClusterCertificateHolder = clusterCert ?? httpsCert ?? new CertificateHolder();
+
+                void ConfigureKestrel(KestrelServerOptions options)
                 {
-                    kestrelOptions += options =>
+                    options.Limits.MaxRequestBodySize = null;
+
+                    var actualCert = httpsCert ?? clusterCert;
+                    if (actualCert != null)
                     {
-                        var filterOptions = new HttpsConnectionFilterOptions
+                        var adapterOptions = new HttpsConnectionAdapterOptions
                         {
-                            ServerCertificate = ServerCertificateHolder.Certificate,
+                            ServerCertificate = actualCert.Certificate,
                             CheckCertificateRevocation = true,
                             ClientCertificateMode = ClientCertificateMode.AllowCertificate,
                             SslProtocols = SslProtocols.Tls12,
-                            ClientCertificateValidation = (X509Certificate2 cert, X509Chain chain, SslPolicyErrors errors) =>
+                            ClientCertificateValidation = (cert, chain, errors) =>
                                     // Here we are explicitly ignoring trust chain issues for client certificates
                                     // this is because we don't actually require trust, we just use the certificate
                                     // as a way to authenticate. The admin is going to tell us which specific certs
                                     // we can trust anyway, so we can ignore such errors.
-                                    errors == SslPolicyErrors.RemoteCertificateChainErrors ||
-                                    errors == SslPolicyErrors.None
+                                    errors == SslPolicyErrors.RemoteCertificateChainErrors || errors == SslPolicyErrors.None
                         };
 
-                        options.ConnectionFilter = new AuthenticatingFilter(this, new HttpsConnectionFilter(filterOptions, new NoOpConnectionFilter()));
-                    };
+                        var uri = new Uri(Configuration.Core.ServerUrl);
+                        var host = uri.DnsSafeHost;
+                        var ipAddresses = GetListenIpAddresses(host);
+
+                        var loggerFactory = options.ApplicationServices.GetRequiredService<ILoggerFactory>();
+                        var adapter = new AuthenticatingAdapter(this, new HttpsConnectionAdapter(adapterOptions, loggerFactory));
+
+                        foreach (var address in ipAddresses)
+                        {
+                            options.Listen(address, uri.Port, listenOptions => { listenOptions.ConnectionAdapters.Add(adapter); });
+                        }
+                    }
+                }
+
+                var addresses = new List<string>();
+                var serverUri = new Uri(Configuration.Core.ServerUrl);
+                foreach (var address in GetListenIpAddresses(serverUri.DnsSafeHost))
+                {
+                    addresses.Add($"{serverUri.Scheme}://{address}:{serverUri.Port}");
                 }
 
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(kestrelOptions)
-                    .UseUrls(Configuration.Core.ServerUrl)
+                    .UseKestrel(ConfigureKestrel)
+                    .UseUrls(addresses.ToArray())
                     .UseStartup<RavenServerStartup>()
+                    .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
                     {
                         services.AddSingleton(Router);
@@ -155,6 +189,8 @@ namespace Raven.Server
                     })
                     // ReSharper disable once AccessToDisposedClosure
                     .Build();
+
+                ClusterCertificateHolder = ClusterCertificateHolder ?? httpsCert ?? new CertificateHolder();
             }
             catch (Exception e)
             {
@@ -176,6 +212,7 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {string.Join(", ", WebUrls)}");
 
+                ServerStore.TriggerDatabases();
                 _tcpListenerTask = StartTcpListener();
             }
             catch (Exception e)
@@ -186,28 +223,21 @@ namespace Raven.Server
             }
         }
 
-        private bool LoadCertificate()
+        private CertificateHolder LoadCertificate(string exec, string execArgs, string path, string password)
         {
-            var certificateLoaded = false;
             try
             {
-                if (string.IsNullOrEmpty(Configuration.Security.CertificateExec) == false)
-                {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateWithExecutable();
-                    certificateLoaded = true;
-                }
-                else if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                {
-                    ServerCertificateHolder = ServerStore.Secrets.LoadCertificateFromPath();
-                    certificateLoaded = true;
-                }
+                if (string.IsNullOrEmpty(exec) == false)
+                    return ServerStore.Secrets.LoadCertificateWithExecutable(exec, execArgs);
+                if (string.IsNullOrEmpty(path) == false)
+                    return ServerStore.Secrets.LoadCertificateFromPath(path, password);
+                return null;
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException("Unable to start the server due to  invalid certificate configuration! Admin assistance required.", e);
+                throw new InvalidOperationException("Unable to start the server due to invalid certificate configuration! Admin assistance required.", e);
             }
 
-            return certificateLoaded;
         }
 
         private async Task ListenToPipe()
@@ -277,7 +307,7 @@ namespace Raven.Server
                 if (Status == AuthenticationStatus.Expired || Status == AuthenticationStatus.NotYetValid)
                     return false;
 
-                if (Status == AuthenticationStatus.ServerAdmin)
+                if (Status == AuthenticationStatus.Operator || Status == AuthenticationStatus.ClusterAdmin)
                     return true;
 
                 if (db == null)
@@ -311,71 +341,52 @@ namespace Raven.Server
             public AuthenticationStatus Status;
         }
 
-        public class AuthenticatingFilter : IConnectionFilter
+
+        public class AuthenticatingAdapter : IConnectionAdapter
         {
             private readonly RavenServer _server;
-            private readonly HttpsConnectionFilter _httpsConnectionFilter;
+            private readonly HttpsConnectionAdapter _httpsConnectionAdapter;
 
-            public AuthenticatingFilter(RavenServer server, HttpsConnectionFilter httpsConnectionFilter)
+            public AuthenticatingAdapter(RavenServer server, HttpsConnectionAdapter httpsConnectionAdapter)
             {
                 _server = server;
-                _httpsConnectionFilter = httpsConnectionFilter;
+                _httpsConnectionAdapter = httpsConnectionAdapter;
             }
 
-            private class DummyHttpRequestFeature : IHttpRequestFeature
+            public async Task<IAdaptedConnection> OnConnectionAsync(ConnectionAdapterContext context)
             {
-                public string Protocol { get; set; }
-                public string Scheme { get; set; }
-                public string Method { get; set; }
-                public string PathBase { get; set; }
-                public string Path { get; set; }
-                public string QueryString { get; set; }
-                public string RawTarget { get; set; }
-                public IHeaderDictionary Headers { get; set; }
-                public Stream Body { get; set; }
-            }
-
-            public async Task OnConnectionAsync(ConnectionFilterContext context)
-            {
-                await _httpsConnectionFilter.OnConnectionAsync(context);
-                var old = context.PrepareRequest;
-
-                var featureCollection = new FeatureCollection();
-                featureCollection.Set<IHttpRequestFeature>(new DummyHttpRequestFeature());
-                old?.Invoke(featureCollection);
-
-                var tls = featureCollection.Get<ITlsConnectionFeature>();
+                var connection = await _httpsConnectionAdapter.OnConnectionAsync(context);
+                var tls = context.Features.Get<ITlsConnectionFeature>();
                 var certificate = tls?.ClientCertificate;
                 var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate);
 
                 // build the token
-                context.PrepareRequest = features =>
-                {
-                    old?.Invoke(features);
-                    features.Set<IHttpAuthenticationFeature>(authenticationStatus);
-                };
+                context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
+
+                return connection;
             }
 
+            public bool IsHttps => true;
         }
 
         private AuthenticateConnection AuthenticateConnectionCertificate(X509Certificate2 certificate)
         {
-            var authenticationStatus = new AuthenticateConnection {Certificate = certificate};
+            var authenticationStatus = new AuthenticateConnection { Certificate = certificate };
             if (certificate == null)
             {
                 authenticationStatus.Status = AuthenticationStatus.NoCertificateProvided;
             }
-            else if (certificate.NotAfter < DateTime.UtcNow)
+            else if (certificate.NotAfter.ToUniversalTime() < DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.Expired;
             }
-            else if (certificate.NotBefore > DateTime.UtcNow)
+            else if (certificate.NotBefore.ToUniversalTime() > DateTime.UtcNow)
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
-            else if (certificate.Equals(ServerCertificateHolder.Certificate))
+            else if (certificate.Equals(ClusterCertificateHolder.Certificate))
             {
-                authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
             else
             {
@@ -396,9 +407,13 @@ namespace Raven.Server
                     {
                         var definition = JsonDeserializationServer.CertificateDefinition(cert);
                         authenticationStatus.Definition = definition;
-                        if (definition.ServerAdmin)
+                        if (definition.SecurityClearance == SecurityClearance.ClusterAdmin)
                         {
-                            authenticationStatus.Status = AuthenticationStatus.ServerAdmin;
+                            authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
+                        }
+                        else if (definition.SecurityClearance == SecurityClearance.Operator)
+                        {
+                            authenticationStatus.Status = AuthenticationStatus.Operator;
                         }
                         else
                         {
@@ -419,7 +434,7 @@ namespace Raven.Server
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 
-        internal CertificateHolder ServerCertificateHolder = new CertificateHolder();
+        internal CertificateHolder ClusterCertificateHolder;
 
         public class CertificateHolder
         {
@@ -458,7 +473,7 @@ namespace Raven.Server
                 }
                 bool successfullyBoundToAtLeastOne = false;
                 var errors = new List<Exception>();
-                foreach (var ipAddress in await GetTcpListenAddresses(host))
+                foreach (var ipAddress in GetListenIpAddresses(host))
                 {
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"RavenDB TCP is configured to use {Configuration.Core.TcpServerUrl} and bind to {ipAddress} at {port}");
@@ -514,28 +529,31 @@ namespace Raven.Server
             }
         }
 
-        private async Task<IPAddress[]> GetTcpListenAddresses(string host)
+        private IPAddress[] GetListenIpAddresses(string host)
         {
             if (IPAddress.TryParse(host, out IPAddress ipAddress))
-                return new[] {ipAddress};
+                return new[] { ipAddress };
 
             switch (host)
             {
                 case "*":
                 case "+":
-                    return new[] {IPAddress.Any};
+                    return new[] { IPAddress.Any };
                 case "localhost":
                 case "localhost.fiddler":
-                    return new[] {IPAddress.Loopback};
+                    return new[] { IPAddress.Loopback };
                 default:
                     try
                     {
-                        var ipHostEntry = await Dns.GetHostEntryAsync(host);
+                        var ipHostEntry = Dns.GetHostEntry(host);
 
                         if (ipHostEntry.AddressList.Length == 0)
                             throw new InvalidOperationException("The specified tcp server hostname has no entries: " +
                                                                 host);
-                        return ipHostEntry.AddressList;
+                        return ipHostEntry
+                            .AddressList
+                            .Where(x => x.IsIPv6LinkLocal == false)
+                            .ToArray();
                     }
                     catch (Exception e)
                     {
@@ -585,7 +603,7 @@ namespace Raven.Server
                         ContextPool = _tcpContextPool,
                         Stream = stream,
                         TcpClient = tcpClient,
-                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance(),
+                        PinnedBuffer = JsonOperationContext.ManagedPinnedBuffer.LongLivedInstance()
                     };
 
                     try
@@ -612,23 +630,22 @@ namespace Raven.Server
                                         $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint}");
                                 }
                             }
-                            var authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
 
-
-                            using (var writer = new BlittableJsonTextWriter(context, stream))
+                            if (MatchingOperationVersion(header, out var error) == false)
                             {
-                                writer.WriteStartObject();
-                                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.AuthorizationSuccessful));
-                                writer.WriteBool(authSuccessful);
-                                if (err != null)
+                                RespondToTcpConnection(stream, context, error, TcpConnectionStatus.TcpVersionMissmatch);
+                                if (Logger.IsInfoEnabled)
                                 {
-                                    writer.WriteComma();
-                                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
-                                    writer.WriteString(err);
+                                    Logger.Info(
+                                        $"New {header.Operation} TCP connection to {header.DatabaseName ?? "the cluster node"} from {tcpClient.Client.RemoteEndPoint} failed because:" +
+                                        $" {error}");
                                 }
-                                writer.WriteEndObject();
-                                writer.Flush();
+                                return; //we will not accept not matching versions
                             }
+
+                            bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, out var err);
+
+                            RespondToTcpConnection(stream, context, error, authSuccessful ? TcpConnectionStatus.Ok : TcpConnectionStatus.AuthorizationFailed);
 
                             if (authSuccessful == false)
                             {
@@ -668,6 +685,36 @@ namespace Raven.Server
             });
         }
 
+        private static void RespondToTcpConnection(Stream stream, JsonOperationContext context, string error, TcpConnectionStatus status)
+        {
+            using (var writer = new BlittableJsonTextWriter(context, stream))
+            {
+                writer.WriteStartObject();
+                writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Status));
+                writer.WriteString(status.ToString());
+                if (error != null)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(TcpConnectionHeaderResponse.Message));
+                    writer.WriteString(error);
+                }
+                writer.WriteEndObject();
+                writer.Flush();
+            }
+        }
+
+        private bool MatchingOperationVersion(TcpConnectionHeaderMessage header, out string error)
+        {
+            var version = TcpConnectionHeaderMessage.GetOperationTcpVersion(header.Operation);
+            if (version == header.OperationVersion)
+            {
+                error = null;
+                return true;
+            }
+            error = $"Message of type {header.Operation} version should be {version} but got a message with version {header.OperationVersion}";
+            return false;
+        }
+
         private void SendErrorIfPossible(TcpConnectionOptions tcp, Exception e)
         {
             var tcpStream = tcp?.Stream;
@@ -695,6 +742,12 @@ namespace Raven.Server
         }
 
         private ClusterMaintenanceWorker _clusterMaintenanceWorker;
+
+        // This is used for admin scripts only
+        public ScriptRunnerCache AdminScripts = new ScriptRunnerCache(null)
+        {
+            EnableClr = true
+        };
 
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
@@ -796,24 +849,26 @@ namespace Raven.Server
 
         private async Task<Stream> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (ServerCertificateHolder.Certificate != null)
+            if (ClusterCertificateHolder.Certificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
-                    // it is fine that the client doesn't have a cert, we just care that they
-                    // are connecting to us securely. At any rate, we'll ensure that if certificate
-                    // is required, we'll validate that it is one of the expected ones on the server
-                    // and that the client is authorized to do so. 
-                    // Otherwise, we'll generate an error, but we'll do that at a higher level then
-                    // SSL, because that generate a nicer error for the user to read then just aborted
-                    // connection because SSL negotation failed.
+                        // it is fine that the client doesn't have a cert, we just care that they
+                        // are connecting to us securely. At any rate, we'll ensure that if certificate
+                        // is required, we'll validate that it is one of the expected ones on the server
+                        // and that the client is authorized to do so. 
+                        // Otherwise, we'll generate an error, but we'll do that at a higher level then
+                        // SSL, because that generate a nicer error for the user to read then just aborted
+                        // connection because SSL negotation failed.
                         true);
                 stream = sslStream;
 
-                await sslStream.AuthenticateAsServerAsync(ServerCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
+                await sslStream.AuthenticateAsServerAsync(ClusterCertificateHolder.Certificate, true, SslProtocols.Tls12, false);
             }
 
             return stream;
         }
+
+
 
         private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, out string msg)
         {
@@ -839,7 +894,8 @@ namespace Raven.Server
                 case AuthenticationStatus.NotYetValid:
                     msg = "The provided client certificate " + certificate.FriendlyName + " is not yet valid because it starts on " + certificate.NotBefore;
                     return false;
-                case AuthenticationStatus.ServerAdmin:
+                case AuthenticationStatus.ClusterAdmin:
+                case AuthenticationStatus.Operator:
                     msg = "Admin can do it all";
                     return true;
                 case AuthenticationStatus.Allowed:
@@ -847,7 +903,7 @@ namespace Raven.Server
                     {
                         case TcpConnectionHeaderMessage.OperationTypes.Cluster:
                         case TcpConnectionHeaderMessage.OperationTypes.Heartbeats:
-                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ServerAdmin";
+                            msg = header.Operation + " is a server wide operation and the certificate " + certificate.FriendlyName + "is not ClusterAdmin/Operator";
                             return false;
                         case TcpConnectionHeaderMessage.OperationTypes.Subscription:
                         case TcpConnectionHeaderMessage.OperationTypes.Replication:
@@ -875,7 +931,7 @@ namespace Raven.Server
         }
 
         public RequestRouter Router { get; private set; }
-        public MetricsCountersManager Metrics { get; private set; }
+        public MetricsCountersManager Metrics { get; }
 
         public bool Disposed { get; private set; }
         internal NamedPipeServerStream Pipe { get; set; }
@@ -1009,7 +1065,8 @@ namespace Raven.Server
             NoCertificateProvided,
             UnfamiliarCertificate,
             Allowed,
-            ServerAdmin,
+            Operator,
+            ClusterAdmin,
             Expired,
             NotYetValid
         }

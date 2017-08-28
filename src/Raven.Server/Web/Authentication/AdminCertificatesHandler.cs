@@ -5,8 +5,11 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http.Features.Authentication;
 using Raven.Client;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Config;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +21,7 @@ namespace Raven.Server.Web.Authentication
     public class AdminCertificatesHandler : RequestHandler
     {
 
-        [RavenAction("/admin/certificates", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "POST", AuthorizationStatus.Operator)]
         public async Task Generate()
         {
             // one of the first admin action is to create a certificate, so let
@@ -26,103 +29,144 @@ namespace Raven.Server.Web.Authentication
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "certificate-generation");
+                var stream = TryGetRequestFormStream("Options") ?? RequestBodyStream();
                 
-                ValidateCertificate(certificateJson, out var friendlyName, out var password, out var serverAdmin, out Dictionary<string, DatabaseAccess> permissions);
-                
+                var certificateJson = ctx.ReadForDisk(stream, "certificate-generation");
+
+                var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                ValidateCertificate(certificate);
+
+                if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                {
+                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                    throw new InvalidOperationException($"Cannot generate the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
+                }
+
+                if (Server.ClusterCertificateHolder == null)
+                    throw new InvalidOperationException($"Cannot generate the client certificate '{certificate.Name}' becuase the server certificate is not loaded. " +
+                                                        $"You can supply a server certificate by using the following configuration keys: " +
+                                                        $"'{RavenConfiguration.GetKey(x => x.Security.CertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}'/" +
+                                                        $"'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificatePath)}'/'{RavenConfiguration.GetKey(x => x.Security.ClusterCertificateExec)}'. " +
+                                                        $"For a more detailed explanation please read about authentication and certificates in the RavenDB documentation.");
+
                 // this creates a client certificate which is signed by the current server certificate
-                var certificate = CertificateUtils.CreateSelfSignedClientCertificate(friendlyName, Server.ServerCertificateHolder);
+                var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, Server.ClusterCertificateHolder);
                 
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + certificate.Thumbprint,
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + selfSignedCertificate.Thumbprint,
                     new CertificateDefinition
                     {
+                        Name = certificate.Name,
                         // this does not include the private key, that is only for the client
-                        Certificate = Convert.ToBase64String(certificate.Export(X509ContentType.Cert)),
-                        Permissions = permissions,
-                        ServerAdmin = serverAdmin,
-                        Thumbprint = certificate.Thumbprint
+                        Certificate = Convert.ToBase64String(selfSignedCertificate.Export(X509ContentType.Cert)),
+                        Permissions = certificate.Permissions,
+                        SecurityClearance = certificate.SecurityClearance,
+                        Thumbprint = selfSignedCertificate.Thumbprint
                     }));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(friendlyName) + ".pfx";
+                var contentDisposition = "attachment; filename=" + Uri.EscapeDataString(certificate.Name) + ".pfx";
                 HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
                 HttpContext.Response.ContentType = "binary/octet-stream";
-                var pfx = certificate.Export(X509ContentType.Pfx, password);
+                var pfx = selfSignedCertificate.Export(X509ContentType.Pfx, certificate.Password);
                 HttpContext.Response.Body.Write(pfx, 0, pfx.Length);
             }
         }
         
-        [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "PUT", AuthorizationStatus.Operator)]
         public async Task Put()
         {
             // one of the first admin action is to create a certificate, so let
             // us also use that to indicate that we are the seed node
+            
             ServerStore.EnsureNotPassive();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "put-certificate"))
             {
-                ValidatePermissions(certificateJson, out var permissions, out var serverAdmin);
+                var certificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
 
-                if(certificateJson.TryGet("Certificate", out string certificate) == false)
-                    throw new ArgumentException("'Certificate' is a mandatory property");
+                ValidateCertificate(certificate);
 
-                var certificateDefinition = new CertificateDefinition()
+                if (certificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
                 {
-                    Certificate = certificate,
-                    Permissions = permissions,
-                    ServerAdmin = serverAdmin
-                };
+                    var clientCert = (HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection)?.Certificate;
+                    throw new InvalidOperationException($"Cannot save the certificate '{certificate.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
+                }
+
+                if (string.IsNullOrWhiteSpace(certificate.Certificate))
+                    throw new ArgumentException($"{nameof(certificate.Certificate)} is a mandatory property when saving an existing certificate");
 
                 byte[] certBytes;
                 try
                 {
-                    certBytes = Convert.FromBase64String(certificate);
+                    certBytes = Convert.FromBase64String(certificate.Certificate);
                 }
                 catch (Exception e)
                 {
-                    throw new ArgumentException("Unable to parse the 'Certificate' property, expected Base64 value", e);
+                    throw new ArgumentException($"Unable to parse the {nameof(certificate.Certificate)} property, expected a Base64 value", e);
                 }
                 var x509Certificate = new X509Certificate2(certBytes);
                 if (x509Certificate.HasPrivateKey)
                 {
                     // avoid storing the private key
-                    certificateDefinition.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
+                    certificate.Certificate = Convert.ToBase64String(x509Certificate.Export(X509ContentType.Cert));
                 }
-                certificateDefinition.Thumbprint = x509Certificate.Thumbprint;
-                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, certificateDefinition));
+                certificate.Thumbprint = x509Certificate.Thumbprint;
+
+                var res = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + x509Certificate.Thumbprint, certificate));
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
+                NoContentStatus();
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
             }
         }
 
-        [RavenAction("/admin/certificates", "DELETE", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "DELETE", AuthorizationStatus.Operator)]
         public async Task Delete()
         {
             var thumbprint = GetQueryStringValueAndAssertIfSingleAndNotEmpty("thumbprint");
 
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate;
+
+            if (clientCert != null && clientCert.Thumbprint.Equals(thumbprint))
+                throw new InvalidOperationException($"Cannot delete {clientCert.FriendlyName} becuase it's the current client certificate being used");
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             {
-                ServerStore.Cluster.DeleteLocalState(ctx, Constants.Certificates.Prefix + thumbprint);
+                var key = Constants.Certificates.Prefix + thumbprint;
+                using (ctx.OpenWriteTransaction())
+                {
+                    var certificate = ServerStore.Cluster.Read(ctx, key);
 
-                var res = await ServerStore.DeleteValueInClusterAsync(Constants.Certificates.Prefix + thumbprint);
+                    var definition = JsonDeserializationServer.CertificateDefinition(certificate);
+
+                    if (definition?.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException(
+                            $"Cannot delete the certificate '{definition?.Name}' with 'Cluster Admin' security clearance because the current client certificate being used has a lower clearance: {clientCert}");
+
+                    ServerStore.Cluster.DeleteLocalState(ctx, key);
+                }
+
+                var res = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
+                {
+                    Name = Constants.Certificates.Prefix + thumbprint
+                });
                 await ServerStore.Cluster.WaitForIndexNotification(res.Etag);
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NoContent;
             }
         }
     
-        [RavenAction("/admin/certificates", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/certificates", "GET", AuthorizationStatus.Operator)]
         public Task GetAll()
         {
             var thumbprint = GetStringQueryString("thumbprint", required: false);
 
             var start = GetStart();
             var pageSize = GetPageSize();
-
-            // TODO: cert.tostring(), expiration, permissions
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
@@ -173,57 +217,95 @@ namespace Raven.Server.Web.Authentication
             return Task.CompletedTask;
         }
 
-        private static void ValidateCertificate(
-            BlittableJsonReaderObject certificateJson, 
-            out string friendlyName, 
-            out string password, 
-            out bool serverAdmin, 
-            out Dictionary<string, DatabaseAccess> permissions)
+        [RavenAction("/admin/edit-certificate", "Post", AuthorizationStatus.Operator)]
+        public async Task EditPermissions()
         {
-            if (certificateJson.TryGet("Name", out friendlyName) == false)
-                throw new ArgumentException("'Name' is a required field when generating a new certificate");
+            ServerStore.EnsureNotPassive();
 
-            if (string.IsNullOrWhiteSpace(friendlyName))
-                throw new ArgumentException("'Name' cannot be empty when generating a new certificate");
-            
-            certificateJson.TryGet("Password", out password); //can be null
+            var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
+            var clientCert = feature?.Certificate;
 
-            ValidatePermissions(certificateJson, out permissions, out serverAdmin);
+            using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+            using (var certificateJson = ctx.ReadForDisk(RequestBodyStream(), "edit-certificate-permissions"))
+            {
+                var newPermissions = JsonDeserializationServer.CertificateDefinition(certificateJson);
+
+                ValidatePermissions(newPermissions);
+
+                var key = Constants.Certificates.Prefix + newPermissions.Thumbprint;
+
+                CertificateDefinition existingCertificate;
+                using (ctx.OpenWriteTransaction())
+                {
+                    var certificate = ServerStore.Cluster.Read(ctx, key);
+                    if (certificate == null)
+                        throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newPermissions.Thumbprint}'. It doesn't exist in the cluster.");
+
+                    existingCertificate = JsonDeserializationServer.CertificateDefinition(certificate);
+
+                    if (existingCertificate.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot edit the certificate '{existingCertificate.Name}'. It has 'Cluster Admin' security clearance while the current client certificate being used has a lower clearance: {clientCert}");
+
+                    if (newPermissions.SecurityClearance == SecurityClearance.ClusterAdmin && IsClusterAdmin() == false)
+                        throw new InvalidOperationException($"Cannot edit security clearance to 'Cluster Admin' for certificate '{existingCertificate.Name}'. Only a 'Cluster Admin' can do that and your current client certificate has a lower clearance: {clientCert}");
+
+                    ServerStore.Cluster.DeleteLocalState(ctx, key);
+                }
+
+                var deleteResult = await ServerStore.SendToLeaderAsync(new DeleteCertificateFromClusterCommand
+                {
+                    Name = Constants.Certificates.Prefix + existingCertificate.Thumbprint
+                });
+                await ServerStore.Cluster.WaitForIndexNotification(deleteResult.Etag);
+
+                var putResult = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Constants.Certificates.Prefix + newPermissions.Thumbprint,
+                    new CertificateDefinition
+                    {
+                        Name = existingCertificate.Name,
+                        Certificate = existingCertificate.Certificate,
+                        Permissions = newPermissions.Permissions,
+                        SecurityClearance = newPermissions.SecurityClearance,
+                        Thumbprint = existingCertificate.Thumbprint
+                    }));
+                await ServerStore.Cluster.WaitForIndexNotification(putResult.Etag);
+
+                NoContentStatus();
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
+            }
         }
 
-        private static void ValidatePermissions(BlittableJsonReaderObject certificateJson, out Dictionary<string, DatabaseAccess> permissions, out bool serverAdmin)
+        private static void ValidateCertificate(CertificateDefinition certificate)
         {
-            certificateJson.TryGet("ServerAdmin", out serverAdmin); //can be null, default is false
+            if (string.IsNullOrWhiteSpace(certificate.Name))
+                throw new ArgumentException($"{nameof(certificate.Name)} is a required field in the certificate definition");
 
-            if (certificateJson.TryGet("Permissions", out BlittableJsonReaderArray permissionsJson) == false)
-                throw new ArgumentException("'Permissions' is a required field when generating a new certificate");
+            ValidatePermissions(certificate);
+        }
+
+        private static void ValidatePermissions(CertificateDefinition certificate)
+        {
+            if (certificate.Permissions == null)
+                throw new ArgumentException($"{nameof(certificate.Permissions)} is a required field in the certificate definition");
 
             const string validDbNameChars = @"([A-Za-z0-9_\-\.]+)";
-            
-            permissions = new Dictionary<string, DatabaseAccess>();
-            foreach (BlittableJsonReaderObject kvp in permissionsJson.Items)
+
+            foreach (var kvp in certificate.Permissions)
             {
-                if (kvp.TryGet("Database", out string dbName) == false)
-                    throw new ArgumentException("'Database' is a required field in 'Permissions' when generating a new certificate");
-                if (kvp.TryGet("Access", out string accessString) == false)
-                    throw new ArgumentException("'Access' is a required field in 'Permissions' when generating a new certificate");
-                if (accessString != nameof(DatabaseAccess.ReadWrite) && accessString != nameof(DatabaseAccess.Admin))
-                    throw new ArgumentException($"Invalid access {accessString} for database {dbName} when generating a new certificate");
+                if (string.IsNullOrWhiteSpace(kvp.Key))
+                    throw new ArgumentException("Error in permissions in the certificate definition, database name is empty");
 
-                permissions.Add(dbName, accessString == nameof(DatabaseAccess.ReadWrite) ? DatabaseAccess.ReadWrite : DatabaseAccess.Admin);
+                if (kvp.Key.Length > Constants.Documents.MaxDatabaseNameLength)
+                    throw new InvalidOperationException($"Database name '{kvp.Key}' exceeds {Constants.Documents.MaxDatabaseNameLength} characters.");
 
-                if (string.IsNullOrWhiteSpace(dbName))
-                    throw new ArgumentNullException(nameof(permissions));
-
-                if (dbName.Length > Constants.Documents.MaxDatabaseNameLength)
-                    throw new InvalidOperationException($"Database name '{dbName}' exceeds {Constants.Documents.MaxDatabaseNameLength} characters.");
-
-                var result = Regex.Matches(dbName, validDbNameChars);
-                if (result.Count == 0 || result[0].Value != dbName)
+                var result = Regex.Matches(kvp.Key, validDbNameChars);
+                if (result.Count == 0 || result[0].Value != kvp.Key)
                 {
                     throw new InvalidOperationException(
-                        "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" chars but was: '" + dbName + "'");
+                        "Database name can only contain A-Z, a-z, \"_\", \".\" or \"-\" chars but was: '" + kvp.Key + "'");
                 }
+
+                if (kvp.Value != DatabaseAccess.ReadWrite && kvp.Value != DatabaseAccess.Admin)
+                    throw new ArgumentException($"Error in permissions in the certificate definition, invalid access {kvp.Value} for database {kvp.Key}");
             }
         }
     }

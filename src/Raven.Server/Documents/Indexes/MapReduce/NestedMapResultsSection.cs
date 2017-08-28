@@ -44,13 +44,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce
 
         public Slice Name => _nestedValueKey;
 
-        public TreePage RelevantPage
-        {
-            get
-            {
-                return _parent.FindPageFor(_nestedValueKey, out TreeNodeHeader* node);
-            }
-        }
+        public TreePage RelevantPage => _parent.FindPageFor(_nestedValueKey, out TreeNodeHeader* _);
 
         public void Add(long id, BlittableJsonReaderObject result)
         {

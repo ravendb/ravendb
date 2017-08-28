@@ -159,7 +159,7 @@ namespace SlowTests.MailingList
 
                     var result = session.Query<ResourceViewModel, ResourceViewModels_ByTag>().ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.NotEmpty(result);
                 }
             }

@@ -37,11 +37,11 @@ namespace Raven.Server.Documents.ETL.Handlers
         public Task GetDebugStats()
         {
             var debugStats = GetProcessesToReportOn()
-                .Select(etl => new DynamicJsonValue()
+                .Select(etl => new DynamicJsonValue
                 {
                     [nameof(etl.Name)] = etl.Name,
                     [nameof(etl.Statistics)] = etl.Statistics.ToJson(),
-                    [nameof(etl.Metrics)] = etl.Metrics.ToJson(),
+                    [nameof(etl.Metrics)] = etl.Metrics.ToJson()
                 }).ToArray();
 
             using (ContextPool.AllocateOperationContext(out JsonOperationContext context))

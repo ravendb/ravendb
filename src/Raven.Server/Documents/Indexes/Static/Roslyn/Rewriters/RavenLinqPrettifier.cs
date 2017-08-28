@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         return base.VisitInvocationExpression(node);
 
                     sourceExp = sourceExp.WithParameter(selectorExp.ParameterList.Parameters[0])
-                        .WithBody(SyntaxNodeExtensions.ReplaceNodes<CSharpSyntaxNode, IdentifierNameSyntax>(sourceExp.Body, Enumerable.OfType<IdentifierNameSyntax>(sourceExp.Body.DescendantNodes()), (orig, _) =>
+                        .WithBody(sourceExp.Body.ReplaceNodes(sourceExp.Body.DescendantNodes().OfType<IdentifierNameSyntax>(), (orig, _) =>
                         {
                             if (orig.Parent is MemberAccessExpressionSyntax access && orig == access.Name)
                                 return orig;
@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                                 .WithClauses(
                                     SyntaxFactory.SingletonList<QueryClauseSyntax>(
                                         SyntaxFactory.FromClause(
-                                            (SyntaxToken)selectorExp.ParameterList.Parameters[1].Identifier,
+                                            selectorExp.ParameterList.Parameters[1].Identifier,
                                             (ExpressionSyntax)sourceExpBody
                                         )
                                     )));
@@ -101,7 +101,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         //handle docs.Select()
                         return SyntaxFactory.QueryExpression(
                             SyntaxFactory.FromClause(
-                                (SyntaxToken)expressionSyntax.Parameter.Identifier,
+                                expressionSyntax.Parameter.Identifier,
                                 RavenLinqOptimizer.MaybeParenthesizedExpression((ExpressionSyntax)Visit(memeberAccess.Expression))
                             ),
                             SyntaxFactory.QueryBody(SyntaxFactory.SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body))));
@@ -133,7 +133,7 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                         return base.VisitInvocationExpression(node);
 
                     whereClause = whereClause.WithParameter(expressionSyntax.Parameter)
-                        .WithBody(SyntaxNodeExtensions.ReplaceNodes<CSharpSyntaxNode, IdentifierNameSyntax>(whereClause.Body, Enumerable.OfType<IdentifierNameSyntax>(whereClause.Body.DescendantNodes()), (orig, _) =>
+                        .WithBody(whereClause.Body.ReplaceNodes(whereClause.Body.DescendantNodes().OfType<IdentifierNameSyntax>(), (orig, _) =>
                         {
                             if (orig.Parent is MemberAccessExpressionSyntax access && orig == access.Name)
                                 return orig;
@@ -145,8 +145,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                     return SyntaxFactory.QueryExpression(
                         SyntaxFactory.FromClause(
-                            (SyntaxToken)expressionSyntax.Parameter.Identifier,
-                            (ExpressionSyntax)SyntaxFactory.IdentifierName(identifierNameSyntax.Identifier.ValueText)
+                            expressionSyntax.Parameter.Identifier,
+                            SyntaxFactory.IdentifierName(identifierNameSyntax.Identifier.ValueText)
                         ),
                         SyntaxFactory.QueryBody(SyntaxFactory.SelectClause((ExpressionSyntax)Visit(expressionSyntax.Body)))
                             .WithClauses(SyntaxFactory.SingletonList<QueryClauseSyntax>(SyntaxFactory.WhereClause((ExpressionSyntax)Visit(whereClause.Body)))));

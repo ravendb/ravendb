@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Util;
 using Raven.Server.Exceptions;
 using Raven.Server.Utils.Stats;
 
@@ -36,7 +37,8 @@ namespace Raven.Server.Documents.Indexes
                 InputCount = Stats.MapAttempts,
                 SuccessCount = Stats.MapSuccesses,
                 FailedCount = Stats.MapErrors,
-                OutputCount = Stats.IndexingOutputs
+                OutputCount = Stats.IndexingOutputs,
+                AllocatedBytes = Stats.AllocatedBytes
             };
         }
 
@@ -101,6 +103,11 @@ namespace Raven.Server.Documents.Indexes
         public int MapAttempts => _stats.MapAttempts;
 
         public int ErrorsCount => _stats.Errors?.Count ?? 0;
+
+        public void AddAllocatedBytes(long sizeInBytes)
+        {
+            _stats.AllocatedBytes = new Size(sizeInBytes);
+        }
 
         public void AddCorruptionError(Exception e)
         {

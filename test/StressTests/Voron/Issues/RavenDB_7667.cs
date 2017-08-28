@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Xunit;
 
 namespace StressTests.Voron.Issues
@@ -27,7 +28,7 @@ namespace StressTests.Voron.Issues
                     }
                 }
 
-                store.Operations.Send(new DeleteCollectionOperation("Users")).WaitForCompletion(TimeSpan.FromMinutes(5));
+                store.Operations.Send(new DeleteByQueryOperation(new IndexQuery() { Query = "FROM Users" })).WaitForCompletion(TimeSpan.FromMinutes(5));
             }
         }
 

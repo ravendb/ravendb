@@ -40,7 +40,6 @@ namespace Raven.Client.Documents.Queries.Facets
                 hasher.Write(Query);
                 hasher.Write (WaitForNonStaleResults);
                 hasher.Write(WaitForNonStaleResultsAsOfNow);
-                hasher.Write(WaitForNonStaleResultsAsOfNow);
                 hasher.Write(WaitForNonStaleResultsTimeout?.Ticks);
                 hasher.Write(CutoffEtag);
                 hasher.Write(Start);

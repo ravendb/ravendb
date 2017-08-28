@@ -20,7 +20,8 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
                     return node;
 
                 var nodeAsString = node.Expression.ToString();
-                if (nodeAsString.StartsWith("docs") == false)
+                const string nodePrefix = "docs";
+                if (nodeAsString.StartsWith(nodePrefix) == false)
                     return node;
 
                 var nodeParts = nodeAsString.Split(new[] { "." }, StringSplitOptions.RemoveEmptyEntries);
@@ -29,8 +30,9 @@ namespace Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters
 
                 CollectionName = nodeParts[1];
 
-                var collectionIndex = nodeAsString.IndexOf(CollectionName, StringComparison.OrdinalIgnoreCase);
-                nodeAsString = nodeAsString.Remove(collectionIndex - 1, CollectionName.Length + 1); // removing .Users
+                var collectionIndex = nodeAsString.IndexOf(CollectionName, nodePrefix.Length, StringComparison.OrdinalIgnoreCase);
+                // removing collection name: "docs.Users.Select" => "docs.Select"
+                nodeAsString = nodeAsString.Remove(collectionIndex - 1, CollectionName.Length + 1);
 
                 var newExpression = SyntaxFactory.ParseExpression(nodeAsString);
                 return node.WithExpression(newExpression);

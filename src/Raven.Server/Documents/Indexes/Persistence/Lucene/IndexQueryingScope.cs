@@ -114,9 +114,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
             if (_fieldsToFetch.IsProjection == false && _alreadySeenDocumentKeysInPreviousPage.Add(key) == false)
             {
-                if (_fieldsToFetch.IsTransformation && _query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer)
-                    return true;
-
                 return false;
             }
 
@@ -125,8 +122,6 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
 
         public bool TryIncludeInResults(Document document)
         {
-            //if (shouldIncludeInResults(indexQueryResult) == false)
-            //    return false;
             if (document == null)
                 return false;
 

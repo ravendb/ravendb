@@ -24,13 +24,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public class RavenAwsS3Client : RavenAwsClient
     {
-        private int MaxUploadPutObjectSizeInBytes = 256 * 1024 * 1024; // 256MB
-        private int MinOnePartUploadSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
+        private const int MaxUploadPutObjectSizeInBytes = 256 * 1024 * 1024; // 256MB
+        private const int MinOnePartUploadSizeLimitInBytes = 100 * 1024 * 1024; // 100MB
         private const long MultiPartUploadLimitInBytes = 5L * 1024 * 1024 * 1024 * 1024; // 5TB
 
         private readonly string _bucketName;
 
-        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName, 
+        public RavenAwsS3Client(string awsAccessKey, string awsSecretKey, string awsRegionName,
             string bucketName, UploadProgress uploadProgress = null, CancellationToken? cancellationToken = null)
             : base(awsAccessKey, awsSecretKey, awsRegionName, uploadProgress, cancellationToken)
         {
@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 {
                     {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                     {"x-amz-content-sha256", payloadHash}
-                },
+                }
             };
 
             var headers = ConvertToHeaders(requestMessage.Headers);
@@ -426,7 +426,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 var hasLocationConstraint = AwsRegion != DefaultRegion;
                 var payloadHash = hasLocationConstraint ?
-                    RavenAwsHelper.CalculatePayloadHashFromString(xmlString) : 
+                    RavenAwsHelper.CalculatePayloadHashFromString(xmlString) :
                     RavenAwsHelper.CalculatePayloadHash(null);
 
                 var requestMessage = new HttpRequestMessage(HttpMethods.Put, url)
@@ -436,7 +436,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                         {"x-amz-content-sha256", payloadHash}
                     },
-                    Content = hasLocationConstraint == false ? 
+                    Content = hasLocationConstraint == false ?
                         null : new StringContent(xmlString, Encoding.UTF8, "text/plain")
                 };
 
@@ -494,7 +494,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     {
                         {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                         {"x-amz-content-sha256", payloadHash}
-                    },
+                    }
                 };
 
                 var headers = ConvertToHeaders(requestMessage.Headers);

@@ -59,7 +59,7 @@ h3 {
 }
 
 strong {
-    color: lighten(@text-color,8%);
+    color: @gray-lighter;
 }
 
 kbd {
@@ -314,7 +314,6 @@ a {
     .flex-bottom {
         align-self: flex-end;
     }
-
 
     hr.hr-vertical {
         @media (min-width: @screen-sm) {
@@ -752,6 +751,22 @@ input[type=file] + .form-control {
     margin: 0;
 }
 
+.margin-left {
+    margin-left: @grid-gutter-width / 2;
+
+    &.margin-left-sm {
+        margin-left: @grid-gutter-width / 4;
+    }
+}
+
+.margin-right {
+    margin-right: @grid-gutter-width / 2;
+
+    &.margin-right-sm {
+        margin-right: @grid-gutter-width / 4;
+    }
+}
+
 .margin-bottom {
     margin-bottom: @grid-gutter-width / 2;
 
@@ -1036,11 +1051,11 @@ pre {
         font-size: 13px;
 
         dt {
-            width: 80px;
+            width: 90px;
         }
 
         dd {
-            margin-left: 90px;
+            margin-left: 90px + @grid-gutter-width/2;
         }
     }
 }
@@ -1313,6 +1328,9 @@ pre {
         background-color: @gray-dark;
     }
 
+    .actions {
+        flex-shrink:0;
+    }
 
 
     .panel-name {
@@ -1472,7 +1490,6 @@ pre {
         transform-origin: top left;
         content: attr(data-state-text);
         text-transform: uppercase;
-        white-space: nowrap;
     }
 }
 
@@ -1685,14 +1702,12 @@ ul.properties {
 @import "pages/documents-edit";
 @import "pages/documents";
 @import "pages/indexes.less";
-@import "pages/transformers.less";
 @import "pages/databases.less";
 @import "pages/indexes-terms.less";
 @import "pages/storage-report.less";
 @import "pages/sample-data.less";
 @import "pages/about.less";
 @import "pages/edit-index.less";
-@import "pages/edit-transformer.less";
 @import "pages/query.less";
 @import "pages/patch.less";
 @import "pages/cluster.less";
@@ -1710,3 +1725,4 @@ ul.properties {
 @import "pages/indexes-maintenance.less";
 @import "pages/database-group-graph.less";
 @import "pages/edit-backup.less";
+@import "pages/certificates.less";

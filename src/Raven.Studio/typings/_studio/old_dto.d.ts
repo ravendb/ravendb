@@ -26,11 +26,6 @@ interface serverBuildVersionDto {
     FullVersion: string;
 }
 
-interface latestServerBuildVersionDto {
-    LatestBuild: number;
-    Exception: string;
-}
-
 interface clientBuildVersionDto {
     Version: string;
 }
@@ -38,12 +33,6 @@ interface clientBuildVersionDto {
 interface supportCoverageDto {
     Status: string;
     EndsAt: string;
-}
-
-interface HotSpareDto {
-    ActivationMode: string;
-    ActivationTime: string;
-    RemainingTestActivations: number;
 }
 
 interface userInfoDto {
@@ -76,146 +65,9 @@ interface logDto {
     StackTrace: string;
 }
 
-interface serverErrorDto {
-    Index: number;
-    IndexName: string;
-    Error: string;
-    Timestamp: string;
-    Document: string;
-    Action: string;
-}
-
-interface replicationStatsDocumentDto {
-    Self: string; // e.g. "http://judah-pc:8080/databases/ReplSrc"
-    MostRecentDocumentEtag: string;
-    Stats: replicationStatsDto[];
-}
-
-interface replicationStatsDto {
-    FailureCountInternal: number;
-    Url: string;
-    LastHeartbeatReceived: string;
-    LastEtagCheckedForReplication: string;
-    LastReplicatedEtag: string;
-    LastReplicatedLastModified: string;
-    LastSuccessTimestamp: string;
-    LastFailureTimestamp: string;
-    FailureCount: number;
-    LastError: string;
-}
-
-interface documentCountDto {
-    Count: number;
-    Type: string;
-    IsEtl: boolean;
-}
-
-interface replicationDestinationDto {
-    Url: string;
-    Username: string;
-    Password: string;
-    Domain: string;
-    Database: string;
-    IgnoredClient: boolean;
-    Disabled: boolean;
-    ClientVisibleUrl: string;
-    SpecifiedCollections: dictionary<string>;
-}
-
-
-
-interface replicationsDto {
-    Destinations: replicationDestinationDto[];
-    Source: string;
-    ClientConfiguration?: replicationClientConfigurationDto;
-}
-
-interface replicationClientConfigurationDto {
-    FailoverBehavior?: string;
-    RequestTimeSlaThresholdInMilliseconds: number;
-}
-
 interface environmentColorDto {
     Name: string;
     BackgroundColor: string;
-}
-
-interface replicationConfigDto {
-    DocumentConflictResolution: string;    
-}
-
-interface storedPatchDto extends patchDto {
-    Hash: number;
-}
-
-interface scriptedPatchRequestDto {
-    Script: string;
-    Values: any;
-}
-
-interface backupRequestDto {
-    BackupLocation: string;
-    DatabaseDocument: databaseDocumentDto;
-}
-
-interface backupStatusDto {
-    Started: string;
-    Completed?: string;
-    Success?: string;
-    IsRunning: boolean;
-    Messages: backupMessageDto[];
-}
-
-interface backupMessageDto {
-    Message: string;
-    Timestamp: string;
-    Severity: string;
-}
-
-interface databaseDocumentDto {
-    Id: string;
-    Settings: {};
-    SecuredSettings: {};
-    Disabled: boolean;
-}
-
-interface restoreRequestDto {
-    BackupLocation: string;
-    IndexesLocation: string;
-    JournalsLocation: string;
-}
-
-interface databaseRestoreRequestDto extends restoreRequestDto {
-    DatabaseName: string;
-    DatabaseLocation: string;
-    DisableReplicationDestinations: boolean;
-    GenerateNewDatabaseId?: boolean;
-}
-
-interface restoreStatusDto {
-    Messages: string[];
-    State: string;
-}
-
-interface compactStatusDto {
-    Messages: string[];
-    LastProgressMessage: string;
-    State: string;
-}
-
-interface commandData {
-    CommandText: string;
-    Params:{Id:string;Value:any}[];
-}
-
-interface tableQuerySummary {
-    TableName: string;
-    Commands: commandData[];
-}
-
-interface sqlReplicationSimulationResultDto {
-    Results: tableQuerySummary[];
-    //TODO: LastAlert: alertDto;
 }
 
 interface facetDto {
@@ -251,12 +103,6 @@ interface facetValueDto {
     Max: number;
     Min: number;
     Average: number;
-}
-
-interface replicationSourceDto extends documentDto {
-    LastDocumentEtag?: string;
-    ServerInstanceId: string;
-    Source: string;
 }
 
 interface documentBase extends dictionary<any> {
@@ -297,7 +143,6 @@ interface statusDebugChangesDto {
 interface statusDebugChangesDocumentStoreDto {
     WatchAllDocuments: boolean;
     WatchAllIndexes: boolean;
-    WatchAllTransformers: boolean;
     WatchAllReplicationConflicts: boolean;
     WatchedIndexes: Array<string>;
     WatchedDocuments: Array<string>;
@@ -417,20 +262,6 @@ interface requestHeaderDto {
     Values: string[];
 }
 
-interface sqlReplicationStatsDto {
-    Name: string;
-    Statistics: any;
-    Metrics: sqlReplicaitonMetricsDto;
-}
-interface sqlReplicaitonMetricsDto {
-    GeneralMetrics: dictionary<metricsDataDto>;
-    TablesMetrics: dictionary<dictionary<metricsDataDto>>;
-}
-interface metricsDataDto {
-    Type: string;
-    Name:string;
-}
-
 interface statusDebugIndexFieldsDto {
     FieldNames: string[];
 }
@@ -462,20 +293,6 @@ interface changesApiEventDto {
     Value?: any;
 }
 
-interface databaseDto extends tenantDto {
-    IndexingDisabled: boolean;
-    RejectClientsEnabled: boolean;
-    ClusterWide: boolean;
-}
-
-interface tenantDto {
-    IsLoaded: boolean;
-    Name: string;
-    Disabled: boolean;
-    Bundles: Array<string>;
-    IsAdminCurrentTenant: boolean;
-}
-
 interface suggestionsDto {
     Suggestions: Array<string>;
 }
@@ -486,111 +303,10 @@ interface queryFieldInfo {
     FieldValue: string;
 }
 
-interface indexSuggestion extends queryFieldInfo {
-    Suggestion: string;
-}
-
-
 interface mergeResult {
   Document: string;
   Metadata: string;
 }
-
-interface operationStatusDto {
-    Completed: boolean;
-    Faulted: boolean;
-    Canceled: boolean;
-    State: operationStateDto;
-}
-
-interface operationStateDto {
-    Error?: string;
-    Progress?: string;
-}
-
-interface bulkOperationStatusDto extends operationStatusDto {
-    OperationProgress: bulkOperationProgress;
-}
-
-
-interface debugDocumentStatsStateDto extends operationStatusDto {
-    Stats: debugDocumentStatsDto;
-}
-
-interface documentStateDto {
-    Document: string;
-    Deleted: boolean;
-}
-
-interface bulkOperationProgress {
-    TotalEntries: number;
-    ProcessedEntries: number;
-}
-
-
-interface dataDumperOperationStatusDto extends operationStatusDto {
-    ExceptionDetails: string;
-}
-
-interface importOperationStatusDto extends operationStatusDto{
-    LastProgress: string;
-    ExceptionDetails: string;
-}
-
-interface globalTopologyDto {
-    Databases: replicationTopologyDto;
-}
-
-interface replicationTopologyDto {
-    Servers: string[];
-    Connections: replicationTopologyConnectionDto[];
-    SkippedResources: string[];
-}
-
-interface synchronizationTopologyDto {
-    Servers: string[];
-    Connections: synchronizationTopologyConnectionDto[];
-    SkippedResources: string[];
-}
-
-interface replicationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
-    LastDocumentEtag: string;
-    ReplicationBehavior: string;
-    SendServerId: string;
-    Source: string;
-    SourceToDestinationState: string;
-    StoredServerId: string;
-    UiType: string;
-}
-
-interface synchronizationTopologyConnectionDto {
-    Destination: string;
-    DestinationToSourceState: string;
-    Errors: string[];
-    LastSourceFileEtag: string;
-    SendServerId: string;
-    Source: string;
-    SourceToDestinationState: string;
-    StoredServerId: string;
-    UiType: string;
-}
-
-interface runningTaskDto {
-    Id: number;
-    Status: operationStateDto;
-    Exception: string;
-    Killable: boolean;
-    Completed: boolean;
-    Faulted: boolean;
-    Canceled: boolean;
-    Description: string;
-    TaskType: string;
-    StartTime: string;
-}
-
 
 interface adminLogsConfigEntryDto {
     category: string;
@@ -635,26 +351,6 @@ interface diskPerformanceResultWrappedDto {
     DebugMsgs: string[];
 }
 
-interface indexReplaceDocumentDto extends documentDto {
-    IndexToReplace: string;
-    MinimumEtagBeforeReplace?: string;
-    ReplaceTimeUtc?: string;
-}
-
-interface replicationExplanationForDocumentDto {
-    Id: string;
-    Etag: string;
-    Destination: destinationInformationDto;
-    Message: string;
-}
-
-interface destinationInformationDto {
-    Url: string;
-    DatabaseName: string;
-    ServerInstanceId: string;
-    LastDocumentEtag: string;
-}
-
 interface pluginsInfoDto {
     Extensions: Array<extensionsLogDto>;
     Triggers: Array<triggerInfoDto>;
@@ -676,10 +372,6 @@ interface triggerInfoDto {
     Name: string;
 }
 
-interface copyFromParentDto<T> {
-    copyFromParent(parent: T): void;
-}
-
 interface dataExplorationRequestDto {
     Linq: string;
     Collection: string;
@@ -688,36 +380,8 @@ interface dataExplorationRequestDto {
 }
 
 
-interface diskIoPerformanceRunDto {
-    ProcessId: number;
-    ProcessName: string;
-    DurationInMinutes: number;
-    StartTime: string;
-    Databases: Array<diskIoPerformanceRunResultDto>;
-}
-
-interface diskIoPerformanceRunResultDto
-{
-    Name: string;
-    Results: dictionary<Array<diskIoPerformanceRunIoResultDto>>;
-}
-
-interface diskIoPerformanceRunIoResultDto extends documentDto {
-    PathType: string;
-    WriteDurationInMilliseconds: number;
-    WriteIoSizeInBytes: number;
-    ReadDurationInMilliseconds: number;
-    ReadIoSizeInBytes: number;
-    NumberOfReadOperations: number;
-    NumberOfWriteOperations: number;
-}
 
 interface performanceRunItemDto {
     displayName: string;
     documentId: string;
-}
-
-interface generatedCodeDto {
-    Document: string;
-    Code: string;
 }

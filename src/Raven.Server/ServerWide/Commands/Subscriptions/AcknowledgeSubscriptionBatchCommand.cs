@@ -13,8 +13,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
         public long SubscriptionId;
         public string SubscriptionName;
         public string NodeTag;
-        public Guid DbId;
         public long LastDocumentEtagAckedInNode;
+        public DateTime LastTimeServerMadeProgressWithDocuments;
 
         // for serializtion
         private AcknowledgeSubscriptionBatchCommand() : base(null) { }
@@ -37,11 +37,8 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
             var subscription = JsonDeserializationCluster.SubscriptionState(existingValue);
             
-            if (subscription.LastEtagReachedInServer == null)
-                subscription.LastEtagReachedInServer = new Dictionary<string, long>();
-            subscription.LastEtagReachedInServer[DbId.ToString()] = LastDocumentEtagAckedInNode;
-            subscription.ChangeVector = ChangeVector;
-            subscription.TimeOfLastClientActivity = DateTime.UtcNow;
+            subscription.ChangeVectorForNextBatchStartingPoint = ChangeVector;
+            subscription.LastTimeServerMadeProgressWithDocuments = LastTimeServerMadeProgressWithDocuments;
 
             return context.ReadObject(subscription.ToJson(), itemId);
         }
@@ -52,6 +49,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             json[nameof(SubscriptionId)] = SubscriptionId;
             json[nameof(SubscriptionName)] = SubscriptionName;
             json[nameof(NodeTag)] = NodeTag;
+            json[nameof(LastTimeServerMadeProgressWithDocuments)] = LastTimeServerMadeProgressWithDocuments;
         }
 
         public ulong GetTaskKey()

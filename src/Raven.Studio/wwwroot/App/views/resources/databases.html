@@ -192,7 +192,7 @@
                                         </li>
                                     </ul>
                                 </div>
-                                <button class="btn btn-success" data-bind="click: $root.activateDatabase, enable: canNavigateToDatabase(), disable: isBeingDeleted" title="Refresh database statistics">
+                                <button class="btn btn-success" data-bind="click: _.partial($root.updateDatabaseInfo, name), enable: canNavigateToDatabase(), disable: isBeingDeleted" title="Refresh database statistics">
                                     <i class="icon-refresh-stats"></i>
                                 </button>
                                 <button class="btn btn-danger" data-bind="click: $root.deleteDatabase, disable: isBeingDeleted, css: { 'btn-spinner': isBeingDeleted }" title="Remove database">

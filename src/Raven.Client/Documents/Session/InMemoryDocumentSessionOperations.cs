@@ -679,10 +679,14 @@ more responsive application.
                 DocumentsById.Add(documentInfo);
         }
 
-        protected virtual void AssertNoNonUniqueInstance(object entity, string id)
+        protected void AssertNoNonUniqueInstance(object entity, string id)
         {
             DocumentInfo info;
-            if (id == null || id.EndsWith("/") || DocumentsById.TryGetValue(id, out info) == false || ReferenceEquals(info.Entity, entity))
+            if (string.IsNullOrEmpty(id) || 
+                id[id.Length-1] == '|' ||
+                id[id.Length - 1] == '/' ||
+                DocumentsById.TryGetValue(id, out info) == false || 
+                ReferenceEquals(info.Entity, entity))
                 return;
 
             throw new NonUniqueObjectException("Attempted to associate a different object with id '" + id + "'.");
@@ -793,10 +797,17 @@ more responsive application.
                 if (result.DeferredCommandsDictionary.TryGetValue((entity.Value.Id, CommandType.ClientNotAttachmentPUT, null), out ICommandData command))
                     ThrowInvalidModifiedDocumentWithDeferredCommand(command);
 
-                var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
-                OnBeforeStore?.Invoke(this, beforeStoreEventArgs);
-                if ((OnBeforeStore != null) && EntityChanged(document, entity.Value, null))
-                    document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                var onOnBeforeStore = OnBeforeStore;
+                if (onOnBeforeStore != null)
+                {
+                    var beforeStoreEventArgs = new BeforeStoreEventArgs(this, entity.Value.Id, entity.Key);
+                    onOnBeforeStore(this, beforeStoreEventArgs);
+                    if(beforeStoreEventArgs.MetadataAccessed)
+                        UpdateMetadataModifications(entity.Value);
+                    if (beforeStoreEventArgs.MetadataAccessed || 
+                        EntityChanged(document, entity.Value, null))
+                        document = EntityToBlittable.ConvertEntityToBlittable(entity.Key, entity.Value);
+                }
 
                 entity.Value.IsNewDocument = false;
                 result.Entities.Add(entity.Key);

@@ -69,13 +69,8 @@ namespace SlowTests.MailingList
 
                 store
                     .Operations
-                    .Send(new PatchByIndexOperation(
-                        new IndexQuery { Query = $"FROM INDEX '{new Index1().IndexName}'" },
-                        new PatchRequest
-                        {
-                            Script = "this.Privilege[0].Level = 'Gold'"
-                        },
-                        options: null))
+                    .Send(new PatchByQueryOperation(
+                        new IndexQuery { Query = $"FROM INDEX '{new Index1().IndexName}' UPDATE {{ this.Privilege[0].Level = 'Gold' }}" }))
                     .WaitForCompletion(TimeSpan.FromSeconds(15));
 
                 using (var commands = store.Commands())

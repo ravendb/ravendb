@@ -18,7 +18,7 @@ namespace Raven.Server.Documents.Revisions
             var revisionsStorage = _database.DocumentsStorage.RevisionsStorage;
             if (revisionsStorage.Configuration == null)
                 throw new RevisionsDisabledException();
-            bool result = _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).Result;
+            var result = _database.TxMerger.Enqueue(new DeleteRevisionsBeforeCommand(collection, time, _database)).Result;
         }
 
         private class DeleteRevisionsBeforeCommand : TransactionOperationsMerger.MergedTransactionCommand

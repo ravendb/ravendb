@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Converters;
 using Raven.Client.ServerWide;
@@ -31,11 +32,12 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
             SubscriptionName = string.IsNullOrEmpty(SubscriptionName) ? subscriptionId.ToString() : SubscriptionName;
             var receivedSubscriptionState = context.ReadObject(new SubscriptionState {
                                 Criteria = Criteria,
-                                ChangeVector = InitialChangeVector,
+                                ChangeVectorForNextBatchStartingPoint = InitialChangeVector,
                                 SubscriptionId = subscriptionId,
                                 SubscriptionName = SubscriptionName,
-                                TimeOfLastClientActivity = DateTime.UtcNow,
-                                Disabled = Disabled
+                                LastTimeServerMadeProgressWithDocuments = DateTime.UtcNow,
+                                Disabled = Disabled,
+                                LastClientConnectionTime = DateTime.Now 
             }.ToJson(), SubscriptionName);
             BlittableJsonReaderObject modifiedSubscriptionState = null;
             try
@@ -56,12 +58,13 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
                             throw new InvalidOperationException("A subscription could not be modified because the name '" + subscriptionItemName +
                                                                 "' is already in use in a subscription with different Id.");
 
-                        if (InitialChangeVector == Raven.Client.Constants.Documents.UnchangedSubscriptionsChangeVecotr)
+                        if (Constants.Documents.SubscriptionChangeVectorSpecialStates.TryParse(InitialChangeVector , 
+                            out Constants.Documents.SubscriptionChangeVectorSpecialStates changeVectorState) && changeVectorState == Constants.Documents.SubscriptionChangeVectorSpecialStates.DoNotChange)
                         {
                             if (receivedSubscriptionState.Modifications == null)
                                 receivedSubscriptionState.Modifications = new DynamicJsonValue();
 
-                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVector)] = existingSubscriptionState.ChangeVector;
+                            receivedSubscriptionState.Modifications[nameof(SubscriptionState.ChangeVectorForNextBatchStartingPoint)] = existingSubscriptionState.ChangeVectorForNextBatchStartingPoint;
                             modifiedSubscriptionState = context.ReadObject(receivedSubscriptionState, SubscriptionName);
                         }
                     }
@@ -83,7 +86,7 @@ namespace Raven.Server.ServerWide.Commands.Subscriptions
 
         public override void FillJson(DynamicJsonValue json)
         {
-            json[nameof(Criteria)] = new DynamicJsonValue()
+            json[nameof(Criteria)] = new DynamicJsonValue
             {
                 [nameof(SubscriptionCriteria.Collection)] = Criteria.Collection,
                 [nameof(SubscriptionCriteria.Script)] = Criteria.Script,

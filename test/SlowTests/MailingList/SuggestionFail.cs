@@ -47,7 +47,7 @@ namespace SlowTests.MailingList
                             {
                                 Storage = FieldStorage.Yes,
                                 Suggestions = true,
-                                Indexing = FieldIndexing.Analyzed,
+                                Indexing = FieldIndexing.Search,
                                 TermVector = FieldTermVector.WithPositionsAndOffsets
                             }
                         }

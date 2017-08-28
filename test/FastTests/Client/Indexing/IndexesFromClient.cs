@@ -145,16 +145,9 @@ namespace FastTests.Client.Indexing
                 Assert.Equal(1, indexes.Length);
 
                 var index = indexes[0];
-                IndexStats stats = null;
+                WaitForIndexing(store);
 
-                Assert.True(SpinWait.SpinUntil(() =>
-                {
-                    stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
-                    if (stats.MapAttempts == 2)
-                        return true;
-
-                    return false;
-                }, TimeSpan.FromSeconds(5)));
+                var stats = store.Admin.Send(new GetIndexStatisticsOperation(index.Name));
 
                 Assert.Equal(index.Etag, stats.Etag);
                 Assert.Equal(index.Name, stats.Name);
@@ -176,6 +169,10 @@ namespace FastTests.Client.Indexing
                 Assert.NotNull(stats.Memory.DiskSize.HumaneSize);
                 Assert.True(stats.Memory.ThreadAllocations.SizeInBytes >= 0);
                 Assert.NotNull(stats.Memory.ThreadAllocations.HumaneSize);
+
+                Assert.NotNull(stats.LastBatchStats.AllocatedBytes);
+                Assert.True(stats.LastBatchStats.AllocatedBytes.SizeInBytes > 0);
+                Assert.NotNull(stats.LastBatchStats.AllocatedBytes.HumaneSize);
 
                 Assert.True(stats.LastIndexingTime.HasValue);
                 Assert.True(stats.LastQueryingTime.HasValue);
@@ -506,7 +503,7 @@ namespace FastTests.Client.Indexing
 
                 using (var commands = store.Commands())
                 {
-                    var command = new ExplainQueryCommand(store.Conventions, commands.Context, new IndexQuery { Query = "FROM Users" });
+                    var command = new ExplainQueryCommand(store.Conventions, new IndexQuery { Query = "FROM Users" });
 
                     await commands.RequestExecutor.ExecuteAsync(command, commands.Context);
 
@@ -544,14 +541,14 @@ namespace FastTests.Client.Indexing
                         {
                             Name = "Title",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
+                            Indexing = FieldIndexing.Search,
                             Storage = FieldStorage.Yes
                         },
                         new IndexField
                         {
                             Name = "Desc",
                             Analyzer = typeof(SimpleAnalyzer).FullName,
-                            Indexing = FieldIndexing.Analyzed,
+                            Indexing = FieldIndexing.Search,
                             Storage = FieldStorage.Yes
                         }
                     }));

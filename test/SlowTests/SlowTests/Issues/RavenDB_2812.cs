@@ -35,7 +35,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6274")]
+        [Fact]
         public async Task ShouldProperlyPageResults()
         {
             var store = GetDocumentStore();

@@ -13,9 +13,9 @@ namespace Raven.Client.ServerWide.Commands
         public string ClusterStatus;
     }
 
-    class GetNodeInfoCommand : RavenCommand<NodeInfo>
+    public class GetNodeInfoCommand : RavenCommand<NodeInfo>
     {
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/cluster/node-info";
 

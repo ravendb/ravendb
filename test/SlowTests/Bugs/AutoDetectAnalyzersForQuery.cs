@@ -24,7 +24,7 @@ namespace SlowTests.Bugs
                 {
                     Maps = { "from doc in docs select new { doc.Name}"},
                     Name = "test",
-                    Fields = {{"Name", new IndexFieldOptions { Indexing = FieldIndexing.NotAnalyzed}}}
+                    Fields = {{"Name", new IndexFieldOptions { Indexing = FieldIndexing.Exact}}}
                 }}));
 
                 using (var session = store.OpenSession())

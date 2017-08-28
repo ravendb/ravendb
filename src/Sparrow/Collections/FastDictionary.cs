@@ -93,9 +93,9 @@ namespace Sparrow.Collections
 
             public Entry ( uint hash, TKey key, TValue value)
             {
-                this.Hash = hash;
-                this.Key = key;
-                this.Value = value;
+                Hash = hash;
+                Key = key;
+                Value = value;
             }
         }
 
@@ -151,20 +151,20 @@ namespace Sparrow.Collections
             Contract.Ensures(_capacity >= initialBucketCount);
             Contract.Ensures(_capacity >= src._capacity);            
 
-            this._comparer = comparer;
+            _comparer = comparer;
 
-            this._initialCapacity = Bits.NextPowerOf2(initialBucketCount);
-            this._capacity = Math.Max(src._capacity, initialBucketCount);
-            this._capacityMask = this._capacity - 1;
-            this._size = src._size;
-            this._numberOfUsed = src._numberOfUsed;
-            this._numberOfDeleted = src._numberOfDeleted;
-            this._nextGrowthThreshold = src._nextGrowthThreshold;
+            _initialCapacity = Bits.NextPowerOf2(initialBucketCount);
+            _capacity = Math.Max(src._capacity, initialBucketCount);
+            _capacityMask = _capacity - 1;
+            _size = src._size;
+            _numberOfUsed = src._numberOfUsed;
+            _numberOfDeleted = src._numberOfDeleted;
+            _nextGrowthThreshold = src._nextGrowthThreshold;
 
             if (comparer.Equals(src._comparer))
             {
                 // Initialization through copy (very efficient) because the comparer is the same.
-                this._entries = new Entry[_capacity];
+                _entries = new Entry[_capacity];
                 Array.Copy(src._entries, _entries, _capacity);
 
                 _usedEntries = new int[src._usedEntries.Length];
@@ -178,7 +178,7 @@ namespace Sparrow.Collections
                 BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
 
                 // Creating a temporary alias to use for rehashing.
-                this._entries = src._entries;
+                _entries = src._entries;
                 _usedEntries = new int[_capacity];
 
                 // This call will rewrite the aliases
@@ -196,35 +196,35 @@ namespace Sparrow.Collections
             Contract.Requires(comparer != null);
             Contract.Ensures(_capacity >= initialBucketCount);
 
-            this._comparer = comparer;
+            _comparer = comparer;
 
             // Calculate the next power of 2.
             int newCapacity = initialBucketCount >= DictionaryHelper.KMinBuckets ? initialBucketCount : DictionaryHelper.KMinBuckets;
             newCapacity = Bits.NextPowerOf2(newCapacity);
 
-            this._initialCapacity = newCapacity;
+            _initialCapacity = newCapacity;
 
             // Initialization
-            this._entries = new Entry[newCapacity];
-            BlockCopyMemoryHelper.Memset(this._entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
+            _entries = new Entry[newCapacity];
+            BlockCopyMemoryHelper.Memset(_entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
 
             _usedEntries = new int[newCapacity];
             _usedEntriesIndex = 0;
 
-            this._capacity = newCapacity;
-            this._capacityMask = this._capacity - 1;
+            _capacity = newCapacity;
+            _capacityMask = _capacity - 1;
 
-            this._numberOfUsed = 0;
-            this._numberOfDeleted = 0;
-            this._size = 0;
+            _numberOfUsed = 0;
+            _numberOfDeleted = 0;
+            _size = 0;
 
-            this._nextGrowthThreshold = _capacity * 4 / KLoadFactor;
+            _nextGrowthThreshold = _capacity * 4 / KLoadFactor;
         }
 
         public void Add(TKey key, TValue value)
         {
             Contract.Requires(key != null);
-            Contract.Ensures(this._numberOfUsed <= this._capacity);
+            Contract.Ensures(_numberOfUsed <= _capacity);
 
             ResizeIfNeeded();
 
@@ -245,7 +245,7 @@ namespace Sparrow.Collections
                 {
                     _numberOfUsed++;
                     _size++;
-                    goto Set;
+                    goto UnusedSet;
                 }
                 if (nHash == KDeletedHash)
                 {
@@ -281,20 +281,17 @@ namespace Sparrow.Collections
             }
             ThrowWhenDuplicatedKey(key); // We throw here. 
 
-            Set:
-
-            this._entries[bucket].Hash = uhash;
-            this._entries[bucket].Key = key;
-            this._entries[bucket].Value = value;
+            UnusedSet: // The bucket was formerly unused, so we must track it.
 
             if (_usedEntriesIndex >= _usedEntries.Length)
                 Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
-            this._usedEntries[_usedEntriesIndex++] = bucket;
-        }
+            _usedEntries[_usedEntriesIndex++] = bucket;
 
-        private void ThrowWhenKeyIsNull(TKey key)
-        {
-            throw new ArgumentNullException(nameof(key));
+            Set:
+
+            _entries[bucket].Hash = uhash;
+            _entries[bucket].Key = key;
+            _entries[bucket].Value = value;
         }
 
         private void ThrowWhenDuplicatedKey(TKey key)
@@ -304,7 +301,7 @@ namespace Sparrow.Collections
 
         public bool Remove(TKey key)
         {
-            Contract.Ensures(this._numberOfUsed < this._capacity);
+            Contract.Ensures(_numberOfUsed < _capacity);
 
             if (key == null)
                 throw new ArgumentNullException(nameof(key));
@@ -336,7 +333,7 @@ namespace Sparrow.Collections
             Contract.Assert(_numberOfDeleted >= Contract.OldValue<int>(_numberOfDeleted));
             Contract.Assert(_entries[node].Hash == KDeletedHash);
 
-            if (3 * this._numberOfDeleted / 2 > this._capacity - this._numberOfUsed)
+            if (3 * _numberOfDeleted / 2 > _capacity - _numberOfUsed)
             {
                 // We will force a rehash with the growth factor based on the current size.
                 Shrink(Math.Max(_initialCapacity, _size * 2));
@@ -355,15 +352,13 @@ namespace Sparrow.Collections
         private void Shrink(int newCapacity)
         {
             Contract.Requires(newCapacity > _size);
-            Contract.Ensures(this._numberOfUsed < this._capacity);
+            Contract.Ensures(_numberOfUsed < _capacity);
 
             // Calculate the next power of 2.
             newCapacity = Math.Max(Bits.NextPowerOf2(newCapacity), _initialCapacity);
 
             var entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
-
-            Array.Resize(ref _usedEntries, newCapacity);
 
             Rehash(entries);
         }
@@ -374,7 +369,7 @@ namespace Sparrow.Collections
             get
             {
                 Contract.Requires(key != null);
-                Contract.Ensures(this._numberOfUsed <= this._capacity);
+                Contract.Ensures(_numberOfUsed <= _capacity);
 
                 int hash = GetInternalHashCode(key); // PERF: This goes first because it can consume lots of registers.
 
@@ -425,7 +420,7 @@ namespace Sparrow.Collections
             set
             {
                 Contract.Requires(key != null);
-                Contract.Ensures(this._numberOfUsed <= this._capacity);
+                Contract.Ensures(_numberOfUsed <= _capacity);
 
                 ResizeIfNeeded();
 
@@ -446,7 +441,7 @@ namespace Sparrow.Collections
                     {
                         _numberOfUsed++;
                         _size++;
-                        goto Set;
+                        goto UnusedSet;
                     }
                     if (nHash == KDeletedHash)
                     {
@@ -481,15 +476,17 @@ namespace Sparrow.Collections
                     goto Loop;
                 }
 
-                Set:
-
-                this._entries[bucket].Hash = uhash;
-                this._entries[bucket].Key = key;
-                this._entries[bucket].Value = value;
+                UnusedSet: // The bucket was formerly unused, so we must track it for cleanup. 
 
                 if (_usedEntriesIndex >= _usedEntries.Length)
                     Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
                 _usedEntries[_usedEntriesIndex++] = bucket;
+
+                Set:
+
+                _entries[bucket].Hash = uhash;
+                _entries[bucket].Key = key;
+                _entries[bucket].Value = value;
             }
         }
 
@@ -500,20 +497,39 @@ namespace Sparrow.Collections
 
         public void Clear()
         {
-            var entry = new Entry(KUnusedHash, default(TKey), default(TValue));
+            // PERF: As of 08/22/2017 the JIT Loop Cloning model will pick up the copies and generate 2 loops, one with range checks
+            //       and one without. Given the behavior of this code, the predicted branch will be taken 100% of the time and remove
+            //       the range checking for a faster more compact loop. 
+            int usedEntriesIndex = _usedEntriesIndex;
+            var entries = _entries;
+            var usedEntries = _usedEntries;
 
-            for (int i = 0; i < _usedEntriesIndex; i++)
-                this._entries[_usedEntries[i]] = entry;
+            for (int i = 0; i < usedEntriesIndex; i++)
+            {
+                ref Entry entry = ref entries[usedEntries[i]];
+                entry.Hash = KUnusedHash;
+                entry.Key = default(TKey);
+                entry.Value = default(TValue);
+            }                
 
-            this._usedEntriesIndex = 0;
-            this._numberOfUsed = 0;
-            this._numberOfDeleted = 0;
-            this._size = 0;
+#if VALIDATE
+            for (int i = 0; i < _entries.Length; i++ )
+            {
+                ref var entryRef = ref _entries[i];
+                if ( entryRef.Hash != KUnusedHash )
+                    throw new Exception("Failed Clear Validation");
+            }
+#endif
+
+            _usedEntriesIndex = 0;
+            _numberOfUsed = 0;
+            _numberOfDeleted = 0;
+            _size = 0;
         }
 
         public bool Contains(TKey key)
         {
-            Contract.Ensures(this._numberOfUsed <= this._capacity);
+            Contract.Ensures(_numberOfUsed <= _capacity);
 
             if (key == null)
                 throw new ArgumentNullException(nameof(key));
@@ -524,12 +540,10 @@ namespace Sparrow.Collections
         private void Grow(int newCapacity)
         {
             Contract.Requires(newCapacity >= _capacity);
-            Contract.Ensures((_capacity & (_capacity - 1)) == 0);
+            Contract.Ensures((newCapacity & (newCapacity - 1)) == 0);
 
             var entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
-
-            Array.Resize(ref _usedEntries, newCapacity);
 
             Rehash(entries);
         }
@@ -538,7 +552,7 @@ namespace Sparrow.Collections
         public bool TryGetValue(TKey key, out TValue value)
         {
             Contract.Requires(key != null);
-            Contract.Ensures(this._numberOfUsed <= this._capacity);
+            Contract.Ensures(_numberOfUsed <= _capacity);
 
             int hash = GetInternalHashCode(key); // PERF: This goes first because it can consume lots of registers.
 
@@ -560,13 +574,13 @@ namespace Sparrow.Collections
                 bucket = (bucket + numProbes) & _capacityMask;
                 numProbes++;
 
-#if DEBUG       
+#if DEBUG
                 if ( numProbes >= 100 )
                     throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
 #else
                 if (numProbes >= capacity)
                     break;
-#endif                
+#endif
             }
             while (true);
 
@@ -615,13 +629,13 @@ namespace Sparrow.Collections
                 bucket = (bucket + numProbes) & _capacityMask;
                 numProbes++;
 
-#if DEBUG       
+#if DEBUG
                 if ( numProbes >= 100 )
                     throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
 #else
                 if (numProbes >= capacity)
                     break;
-#endif                
+#endif
             }
             while (true);
 
@@ -677,15 +691,15 @@ namespace Sparrow.Collections
                 size++;
             }
 
-            this._capacity = entries.Length;
-            this._capacityMask = newCapacityMask;
-            this._size = size;
-            this._entries = entries;
+            _capacity = entries.Length;
+            _capacityMask = newCapacityMask;
+            _size = size;
+            _entries = entries;
 
-            this._numberOfUsed = size;
-            this._numberOfDeleted = 0;
+            _numberOfUsed = size;
+            _numberOfDeleted = 0;
 
-            this._nextGrowthThreshold = _capacity * 4 / KLoadFactor;
+            _nextGrowthThreshold = _capacity * 4 / KLoadFactor;
         }
 
 
@@ -736,9 +750,9 @@ namespace Sparrow.Collections
 
             internal Enumerator(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
             {
-                this._dictionary = dictionary;
-                this._index = 0;
-                this._current = new KeyValuePair<TKey, TValue>();
+                _dictionary = dictionary;
+                _index = 0;
+                _current = new KeyValuePair<TKey, TValue>();
             }
 
             public bool MoveNext()
@@ -750,13 +764,14 @@ namespace Sparrow.Collections
                 // dictionary.count+1 could be negative if dictionary.count is Int32.MaxValue
                 while (_index < count)
                 {
-                    if (entries[_index].Hash < KDeletedHash)
+                    ref var entry = ref entries[_index];
+                    _index++;
+
+                    if (entry.Hash < KDeletedHash)
                     {
-                        _current = new KeyValuePair<TKey, TValue>(entries[_index].Key, entries[_index].Value);
-                        _index++;
+                        _current = new KeyValuePair<TKey, TValue>(entry.Key, entry.Value);
                         return true;
                     }
-                    _index++;
                 }
 
                 _index = count + 1;
@@ -834,7 +849,7 @@ namespace Sparrow.Collections
             {
                 Contract.Requires(dictionary != null);
 
-                this._dictionary = dictionary;
+                _dictionary = dictionary;
             }
 
             public Enumerator GetEnumerator()
@@ -885,7 +900,7 @@ namespace Sparrow.Collections
 
                 internal Enumerator(FastDictionaryBase<TKey, TValue, TComparer> dictionary)
                 {
-                    this._dictionary = dictionary;
+                    _dictionary = dictionary;
                     _index = 0;
                     _currentKey = default(TKey);
                 }
@@ -901,13 +916,14 @@ namespace Sparrow.Collections
                     var entries = _dictionary._entries;
                     while (_index < count)
                     {
-                        if (entries[_index].Hash < KDeletedHash)
+                        ref var entry = ref entries[_index];
+                        _index++;
+
+                        if (entry.Hash < KDeletedHash)
                         {
-                            _currentKey = entries[_index].Key;
-                            _index++;
+                            _currentKey = entry.Key;
                             return true;
                         }
-                        _index++;
                     }
 
                     _index = count + 1;
@@ -917,7 +933,7 @@ namespace Sparrow.Collections
 
                 public TKey Current => _currentKey;
 
-                Object System.Collections.IEnumerator.Current
+                Object IEnumerator.Current
                 {
                     get
                     {
@@ -928,7 +944,7 @@ namespace Sparrow.Collections
                     }
                 }
 
-                void System.Collections.IEnumerator.Reset()
+                void IEnumerator.Reset()
                 {
                     _index = 0;
                     _currentKey = default(TKey);
@@ -946,7 +962,7 @@ namespace Sparrow.Collections
             {
                 Contract.Requires(dictionary != null);
 
-                this._dictionary = dictionary;
+                _dictionary = dictionary;
             }
 
             public Enumerator GetEnumerator()
@@ -1012,13 +1028,14 @@ namespace Sparrow.Collections
                     var entries = _dictionary._entries;
                     while (_index < count)
                     {
-                        if (entries[_index].Hash < KDeletedHash)
+                        ref var entry = ref entries[_index];
+                        _index++;
+
+                        if (entry.Hash < KDeletedHash)
                         {
-                            _currentValue = entries[_index].Value;
-                            _index++;
+                            _currentValue = entry.Value;
                             return true;
                         }
-                        _index++;
                     }
 
                     _index = count + 1;

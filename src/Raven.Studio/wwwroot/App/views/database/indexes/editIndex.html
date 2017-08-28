@@ -1,6 +1,6 @@
 <div data-bind="if:  !isAutoIndex(), css: { 'content-margin': !isAutoIndex() }">
     <div class="flex-window edit-index">
-        <div class="flex-window-head">
+
             <div class="toolbar">
                 <div class="row">
                     <div class="col-lg-6">
@@ -24,8 +24,7 @@
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="flex-window-scroll">
+        
             <div class="row">
                 <div class="col-sm-2">
                     <h2 id="map-title">Maps <small><i class="icon-info text-info"></i></small></h2>
@@ -34,7 +33,7 @@
                     <div data-bind="foreach: editedIndex().maps">
                         <div class="clearfix">
                             <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                                <button type="button" class="btn btn-upcoming"><i class="icon-indent"></i> <span>Format</span></button>
+                                <!-- <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button>-->
                                 <button type="button" class="btn btn-danger" data-bind="click: _.partial($root.removeMap, $index()), enable: $root.editedIndex().maps().length > 1"
                                         title="Remove this map from the index">
                                     <i class="icon-trash"></i> <span>Delete</span>
@@ -46,7 +45,7 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter, completerHostObject: $root.indexAutoCompleter  }, validationElement: map"></pre>
+                                 data-bind="aceEditor: { code: map, allowResize: true, getFocus: true, lang: 'ace/mode/ravenMapLinq', typeName: 'map', completer: $root.indexAutoCompleter.indexMapCompleter  }, validationOptions: { errorsAsTitle: false }, validationElement: map"></pre>
 
                             <div data-bind="validationElement: map">
                                 <div class="help-block" data-bind="validationMessage: map"></div>
@@ -68,7 +67,7 @@
                     <div data-bind="if: editedIndex().hasReduce">
                         <div class="clearfix">
                             <div class="btn-group btn-group-sm pull-right" role="group" aria-label="...">
-                                <button type="button" class="btn btn-upcoming"><i class="icon-indent"></i> <span>Format</span></button>
+                                <!-- TODO <button type="button" class="btn"><i class="icon-indent"></i> <span>Format</span></button> -->
                                 <button type="button" class="btn btn-danger" data-bind="click: removeReduce" title="Remove the Reduce function from the index">
                                     <i class="icon-trash"></i> <span>Delete</span>
                                 </button>
@@ -79,7 +78,7 @@
                         -->
                         <div class="margin-bottom">
                             <pre class="form-control map"
-                                 data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter, completerHostObject: $root.indexAutoCompleter }, validationElement: editedIndex().reduce"></pre>
+                                 data-bind="aceEditor: { code: editedIndex().reduce, allowResize: true, getFocus: true, lang: 'ace/mode/ravenReduceLinq', typeName: 'reduce', completer: $root.indexAutoCompleter.indexReduceCompleter }, validationOptions: { errorsAsTitle: false }, validationElement: editedIndex().reduce"></pre>
 
                             <div data-bind="validationElement: editedIndex().reduce">
                                 <div class="help-block" data-bind="validationMessage: editedIndex().reduce"></div>
@@ -186,7 +185,7 @@
                     </div>
                 </div>
             </div>
-        </div>
+        
     </div>
 
     <div class="backdrop"></div>
@@ -348,18 +347,19 @@
                         </div>
                     </div>
 
+                    <!-- TODO
                     <div class="properties-item">
                         <span class="properties-label">Highlighting</span>
 
                         <div class="btn-group properties-value">
-                            <button type="button" class="btn set-size dropdown-toggle btn-upcoming" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
+                            <button type="button" class="btn set-size dropdown-toggle" disabled="disabled" data-toggle="dropdown" aria-expanded="false">
                                 <span>Default (No)</span> <span class="caret"></span>
                             </button>
                             <ul class="dropdown-menu">
-                                <!-- TODO: -->
+                            TODO
                             </ul>
                         </div>
-                    </div>
+                    </div> -->
 
                     <div class="properties-item">
                         <span class="properties-label">Suggestions</span>

@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 [nameof(CanDelete)] = new DynamicJsonArray(CanDelete),
                 [nameof(MergedIndex)] = MergedIndex.ToJson(),
                 [nameof(Collection)] = Collection,
-                [nameof(SurpassingIndex)] = SurpassingIndex,
+                [nameof(SurpassingIndex)] = SurpassingIndex
             };
         }
     }

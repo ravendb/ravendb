@@ -20,18 +20,15 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static FromToken Create(string indexName, string collectionName)
         {
-            if (indexName == null && collectionName == null)
-                throw new NotSupportedException();
-
-            if (indexName != null && collectionName != null)
-                throw new NotSupportedException();
-
             return new FromToken(indexName, collectionName);
         }
 
         private static readonly char[] _whiteSpaceChars = { ' ', '\t', '\r', '\n', '\v' };
         public override void WriteTo(StringBuilder writer)
         {
+            if (IndexName == null && CollectionName == null)
+                throw new NotSupportedException("Either IndexName or CollectionName must be specified");
+
             if (IsDynamic)
             {
                 writer
@@ -46,7 +43,7 @@ namespace Raven.Client.Documents.Session.Tokens
                 }
                 else
                 {
-                    writer.Append(CollectionName);
+                   WriteField(writer, CollectionName);
                 }
 
                 return;

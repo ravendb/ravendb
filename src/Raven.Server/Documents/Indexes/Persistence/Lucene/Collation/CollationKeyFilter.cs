@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
         public CollationKeyFilter(TokenStream input, CultureInfo cultureInfo) : base(input)
         {
             _cultureInfo = cultureInfo;
-            _termAtt = (TermAttribute)base.AddAttribute<ITermAttribute>();
+            _termAtt = (TermAttribute)AddAttribute<ITermAttribute>();
         }
 
         public override bool IncrementToken()
@@ -114,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Collation
             public static extern unsafe int GetSortKey(SafeHandle sortHandle, string str, int strLength, byte* sortKey, int sortKeyLength, CompareOptions options);
         }
 
-        private class PosixHelper
+        private sealed class PosixHelper
         {
             public delegate SafeHandle GetSortHandleDelegate(CompareInfo value);
 

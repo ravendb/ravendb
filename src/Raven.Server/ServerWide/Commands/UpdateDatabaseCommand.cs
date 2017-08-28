@@ -1,4 +1,5 @@
 using Raven.Client.ServerWide;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -26,6 +27,11 @@ namespace Raven.Server.ServerWide.Commands
             FillJson(djv);
 
             return djv;
+        }
+
+        public virtual void Initialize(ServerStore serverStore, TransactionOperationContext context)
+        {
+            
         }
     }
 }

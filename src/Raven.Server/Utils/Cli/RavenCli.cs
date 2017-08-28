@@ -321,7 +321,7 @@ namespace Raven.Server.Utils.Cli
                 new[] {"%T", "UTC Time"},
                 new[] {"%M", "Memory information (WS:WorkingSet, UM:Unmanaged, M:Managed, MP:MemoryMapped)"},
                 new[] {"%R", "Momentary Req/Sec"},
-                new[] {"label", "any label"},
+                new[] {"label", "any label"}
             };
 
             var msg = new StringBuilder();
@@ -494,7 +494,7 @@ namespace Raven.Server.Utils.Cli
                     // this does not include the private key, that is only for the client
                     Certificate = Convert.ToBase64String(cert.Export(X509ContentType.Cert)),
                     Permissions = null,
-                    ServerAdmin = true,
+                    SecurityClearance = SecurityClearance.ClusterAdmin,
                     Thumbprint = cert.Thumbprint
                 }.ToJson();
 
@@ -518,7 +518,6 @@ namespace Raven.Server.Utils.Cli
                 return false;
             }
 
-            bool isServerScript = false;
             DocumentDatabase database = null;
             switch (args[0].ToLower())
             {
@@ -536,7 +535,6 @@ namespace Raven.Server.Utils.Cli
                     }
                     break;
                 case "server":
-                    isServerScript = true;
                     break;
                 default:
                     WriteError($"Invalid arguments '{args[0]}' passed to script", cli);
@@ -552,20 +550,13 @@ namespace Raven.Server.Utils.Cli
 
             using (cli._server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                var adminJsScript = new AdminJsScript { Script = jsCli.Script };
-                var result = isServerScript ? jsCli.AdminConsole.ApplyServerScript(adminJsScript) : jsCli.AdminConsole.ApplyScript(adminJsScript);
-
-                string str;
-                if (result == null || result is DynamicJsonValue)
-                    str = ConvertResultToString(context, result);
-                else
-                    str = result.ToString();
-                str += Environment.NewLine;
+                var adminJsScript = new AdminJsScript(jsCli.Script);
+                var result = jsCli.AdminConsole.ApplyScript(adminJsScript);
 
                 if (cli._consoleColoring)
                     Console.ForegroundColor = ConsoleColor.Magenta;
 
-                WriteText(str, TextColor, cli);
+                WriteText(result, TextColor, cli);
 
                 if (cli._consoleColoring)
                     Console.ResetColor();
@@ -573,23 +564,31 @@ namespace Raven.Server.Utils.Cli
             return true;
         }
 
-        public static string ConvertResultToString(JsonOperationContext context, object result)
+        public static string ConvertResultToString(ScriptRunnerResult result)
         {
             var ms = new MemoryStream();
-            using (var writer = new BlittableJsonTextWriter(context, ms))
+            using(var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (var writer = new BlittableJsonTextWriter(ctx, ms))
             {
                 writer.WriteStartObject();
 
-                writer.WritePropertyName(nameof(AdminJsScriptResult.Result));
+                writer.WritePropertyName("Result");
 
-                if (result != null)
+                if (result.IsNull)
                 {
-                    var djv = result as DynamicJsonValue;
-                    context.Write(writer, djv);
+                    writer.WriteNull();
+                }
+                else if (result.RawJsValue.IsBoolean())
+                {
+                    writer.WriteBool(result.RawJsValue.AsBoolean());
+                }
+                else if (result.RawJsValue.IsString())
+                {
+                    writer.WriteString(result.RawJsValue.AsString());
                 }
                 else
                 {
-                    writer.WriteNull();
+                    writer.WriteObject(result.TranslateToObject(ctx));
                 }
 
                 writer.WriteEndObject();
@@ -766,6 +765,28 @@ namespace Raven.Server.Utils.Cli
             _reader = textReader;
             _consoleColoring = consoleColoring;
 
+            var parentProcessId = server.Configuration.Testing.ParentProcessId;
+            if (parentProcessId != null)
+            {
+                void OnParentProcessExit(object o, EventArgs e)
+                {
+                    WriteText("Parent process " + parentProcessId + " has exited, closing",
+                        ErrorColor, this);
+                    Environment.Exit(-0xDEAD);
+                }
+
+                var parent = Process.GetProcessById(parentProcessId.Value);
+                if (parent == null)
+                {
+                    OnParentProcessExit(this, EventArgs.Empty);
+                    return false;
+                }
+                parent.EnableRaisingEvents = true;
+                parent.Exited += OnParentProcessExit;
+                if(parent.HasExited)
+                    OnParentProcessExit(this, EventArgs.Empty);
+            }
+
             try
             {
                 return StartCli(consoleMre);
@@ -934,7 +955,7 @@ namespace Raven.Server.Utils.Cli
                             {
                                 if (_consoleColoring == false)
                                 {
-                                    var str = "Restarting Server";
+                                    const string str = "Restarting Server";
                                     PrintBothToConsoleAndRemotePipe(str, this, Delimiter.RestartServer);
                                 }
                                 return true;
@@ -949,7 +970,7 @@ namespace Raven.Server.Utils.Cli
                             {
                                 if (_consoleColoring == false)
                                 {
-                                    var str = "Shutting down the server";
+                                    const string str = "Shutting down the server";
                                     PrintBothToConsoleAndRemotePipe(str, this, Delimiter.Shutdown);
                                 }
                                 return false;

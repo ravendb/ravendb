@@ -17,7 +17,6 @@ $ErrorActionPreference = "Stop"
 . '.\scripts\checkPrerequisites.ps1'
 . '.\scripts\restore.ps1'
 . '.\scripts\clean.ps1'
-. '.\scripts\arm.ps1'
 . '.\scripts\archive.ps1'
 . '.\scripts\package.ps1'
 . '.\scripts\buildProjects.ps1'
@@ -108,6 +107,7 @@ New-Item -Path $RELEASE_DIR -ErrorAction SilentlyContinue
 CleanFiles $RELEASE_DIR
 CleanBinDirs $TYPINGS_GENERATOR_SRC_DIR, $RVN_SRC_DIR, $SERVER_SRC_DIR, $CLIENT_SRC_DIR, $SPARROW_SRC_DIR, $TESTDRIVER_SRC_DIR
 
+ValidateClientDependencies $CLIENT_SRC_DIR $SPARROW_SRC_DIR
 UpdateSourceWithBuildInfo $PROJECT_DIR $buildNumber $version
 
 DownloadDependencies

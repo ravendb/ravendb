@@ -2,9 +2,9 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Changes;
-using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.ETL;
+using Raven.Server.Config.Categories;
 using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.ETL.Providers.SQL;
 using Raven.Server.NotificationCenter.Notifications;
@@ -14,7 +14,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.ETL
 {
-    public class EtlLoader
+    public class EtlLoader : IDisposable
     {
         private const string AlertTitle = "ETL loader";
 
@@ -39,7 +39,7 @@ namespace Raven.Server.Documents.ETL
         }
 
         public EtlProcess[] Processes => _processes;
-        
+
         public List<RavenEtlConfiguration> RavenDestinations;
 
         public List<SqlEtlConfiguration> SqlDestinations;
@@ -48,7 +48,7 @@ namespace Raven.Server.Documents.ETL
         {
             LoadProcesses(record);
         }
-        
+
         private void LoadProcesses(DatabaseRecord record)
         {
             lock (_loadProcessedLock)
@@ -87,7 +87,7 @@ namespace Raven.Server.Documents.ETL
                 RavenEtlConfiguration ravenConfig = null;
 
                 var connectionStringNotFound = false;
-                
+
                 switch (config.EtlType)
                 {
                     case EtlType.Raven:
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.ETL
                         {
                             $"Connection string named '{config.ConnectionStringName}' was not found for {config.EtlType} ETL"
                         });
-                    
+
                     continue;
                 }
 
@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.ETL
                 if (config.Disabled)
                     continue;
 
-                if (_databaseRecord.Topology.WhoseTaskIsIt(config,_serverStore.IsPassive()) != _serverStore.NodeTag)
+                if (_databaseRecord.Topology.WhoseTaskIsIt(config, _serverStore.IsPassive()) != _serverStore.NodeTag)
                     continue;
 
                 foreach (var transform in config.Transforms)
@@ -162,12 +162,24 @@ namespace Raven.Server.Documents.ETL
                 return false;
             }
 
-            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false)
+            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel == false)
             {
                 LogConfigurationError(config,
                     new List<string>
                     {
-                        $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so cannot be used"
+                        $"{_database.Name} is encrypted, but connection to ETL destination {config.GetDestination()} does not use encryption, so ETL is not allowed. " +
+                        $"You can change this behavior by setting {nameof(config.AllowEtlOnNonEncryptedChannel)} when creating the ETL configuration"
+                    });
+                return false;
+            }
+
+            if (_databaseRecord.Encrypted && config.UsingEncryptedCommunicationChannel() == false && config.AllowEtlOnNonEncryptedChannel)
+            {
+                LogConfigurationWarning(config,
+                    new List<string>
+                    {
+                        $"{_database.Name} is encrypted and connection to ETL destination {config.GetDestination()} does not use encryption, " +
+                        $"but {nameof(config.AllowEtlOnNonEncryptedChannel)} is set to true, so ETL is allowed"
                     });
                 return false;
             }
@@ -198,6 +210,19 @@ namespace Raven.Server.Documents.ETL
             _database.NotificationCenter.Add(alert);
         }
 
+        private void LogConfigurationWarning<T>(EtlConfiguration<T> config, List<string> warnings) where T : ConnectionString
+        {
+            var warnMessage = $"Warning about ETL configuration for '{config.Name}'{(config.Connection != null ? $" ({config.GetDestination()})" : string.Empty)}. " +
+                               $"Reason{(warnings.Count > 1 ? "s" : string.Empty)}: {string.Join(";", warnings)}.";
+
+            if (Logger.IsInfoEnabled)
+                Logger.Info(warnMessage);
+
+            var alert = AlertRaised.Create(AlertTitle, warnMessage, AlertType.Etl_Warning, NotificationSeverity.Warning);
+
+            _database.NotificationCenter.Add(alert);
+        }
+
         private void LoadConfiguration(DatabaseRecord record)
         {
             _databaseRecord = record;
@@ -222,9 +247,9 @@ namespace Raven.Server.Documents.ETL
             _database.Changes.OnDocumentChange -= NotifyAboutWork;
 
             var ea = new ExceptionAggregator(Logger, "Could not dispose ETL loader");
-            
+
             Parallel.ForEach(_processes, x => ea.Execute(x.Dispose));
-            
+
             ea.ThrowIfNeeded();
         }
 
@@ -255,7 +280,8 @@ namespace Raven.Server.Documents.ETL
             // unsubscribe old etls _after_ we start new processes to ensure the tombstone cleaner 
             // constantly keeps track of tombstones processed by ETLs so it won't delete them during etl processes reloading
 
-            old.ForEach(x => _database.DocumentTombstoneCleaner.Unsubscribe(x));
+            foreach (var process in old)
+                _database.DocumentTombstoneCleaner.Unsubscribe(process);
         }
     }
 }

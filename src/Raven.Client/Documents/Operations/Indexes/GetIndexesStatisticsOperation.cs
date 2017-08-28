@@ -16,7 +16,7 @@ namespace Raven.Client.Documents.Operations.Indexes
 
         private class GetIndexesStatisticsCommand : RavenCommand<IndexStats[]>
         {
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/databases/{node.Database}/indexes/stats";
 

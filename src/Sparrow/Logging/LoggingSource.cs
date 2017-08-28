@@ -14,7 +14,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Logging
 {
-    public class LoggingSource
+    public sealed class LoggingSource
     {
         private const string LoggingThreadName = "Logging Thread";
         [ThreadStatic] private static string _currentThreadId;
@@ -36,7 +36,7 @@ namespace Sparrow.Logging
         public bool IsOperationsEnabled;
         private Stream _additionalOutput;
 
-        public static LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
+        public static readonly LoggingSource Instance = new LoggingSource(Path.GetTempPath(), LogMode.None);
 
 
         private static byte[] _headerRow = Encodings.Utf8.GetBytes("Time,\tThread,\tLevel,\tSource,\tLogger,\tMessage,\tException");
@@ -46,8 +46,8 @@ namespace Sparrow.Logging
             public LoggingFilter Filter { get; } = new LoggingFilter();
         }
 
-        private readonly ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
-            new ConcurrentDictionary<WebSocket, WebSocketContext>();
+        private readonly Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext> _listeners =
+            new Collections.LockFree.ConcurrentDictionary<WebSocket, WebSocketContext>();
 
         private LogMode _logMode;
         private LogMode _oldLogMode;
@@ -59,7 +59,7 @@ namespace Sparrow.Logging
 
             lock (this)
             {
-                if (_listeners.Count == 0)
+                if (_listeners.IsEmpty)
                 {
                     _oldLogMode = _logMode;
                     SetupLogMode(LogMode.Information, _path);
@@ -412,7 +412,7 @@ namespace Sparrow.Logging
             file.Write(bytes.Array, bytes.Offset, bytes.Count);
             _additionalOutput?.Write(bytes.Array, bytes.Offset, bytes.Count);
 
-            if (_listeners.Count != 0)
+            if (!_listeners.IsEmpty)
             {
                 // this is rare
                 SendToWebSockets(item, bytes);
@@ -472,12 +472,12 @@ namespace Sparrow.Logging
         {
             WebSocketContext value;
             _listeners.TryRemove(socket, out value);
-            if (_listeners.Count != 0)
+            if (!_listeners.IsEmpty)
                 return;
 
             lock (this)
             {
-                if (_listeners.Count == 0)
+                if (_listeners.IsEmpty)
                 {
                     SetupLogMode(_oldLogMode, _path);
                 }

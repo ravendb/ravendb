@@ -21,8 +21,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
     public class RavenAwsGlacierClient : RavenAwsClient
     {
-        private int MaxUploadArchiveSizeInBytes = 256 * 1024 * 1024; // 256MB
-        private int MinOnePartUploadSizeLimitInBytes = 128 * 1024 * 1024; // 128MB
+        private const int MaxUploadArchiveSizeInBytes = 256 * 1024 * 1024; // 256MB
+        private const int MinOnePartUploadSizeLimitInBytes = 128 * 1024 * 1024; // 128MB
         private const long MultiPartUploadLimitInBytes = 40L * 1024 * 1024 * 1024 * 1024; // 40TB
 
         private readonly string _vaultName;
@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             var baseUrl = $"{GetUrl()}/multipart-uploads";
             var uploadId = await GetUploadId(baseUrl, archiveDescription, lengthPerPartPowerOf2);
             var client = GetClient(TimeSpan.FromDays(7));
-            
+
             var uploadUrl = $"{baseUrl}/{uploadId}";
             var fullStreamPayloadTreeHash = RavenAwsHelper.CalculatePayloadTreeHash(stream);
 
@@ -165,9 +165,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     if (retryCount == MaxRetriesForMultiPartUpload)
                         throw StorageException.FromResponseMessage(response);
                 }
-                catch (Exception e)
+                catch (Exception)
                 {
-                    var t = e;
                     if (retryCount == MaxRetriesForMultiPartUpload)
                         throw;
                 }
@@ -187,7 +186,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             await UploadPart(baseStream, client, url, length, ++retryCount);
         }
 
-        private async Task<string> GetUploadId(string url, 
+        private async Task<string> GetUploadId(string url,
             string archiveDescription, long lengthPerPartPowerOf2)
         {
             var now = SystemTime.UtcNow;
@@ -272,7 +271,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                     {"x-amz-glacier-version", "2012-06-01"},
                     {"x-amz-date", RavenAwsHelper.ConvertToString(now)},
                     {"x-amz-content-sha256", payloadHash}
-                },
+                }
             };
 
             var headers = ConvertToHeaders(requestMessage.Headers);
@@ -390,7 +389,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             if (response.StatusCode == HttpStatusCode.NotFound)
                 return false;
 
-            var x = await response.Content.ReadAsStringAsync();
+            await response.Content.ReadAsStringAsync();
             throw StorageException.FromResponseMessage(response);
         }
 

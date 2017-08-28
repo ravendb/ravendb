@@ -2,6 +2,7 @@
 using Raven.Server.Commercial;
 using Raven.Server.Json;
 using Raven.Server.Routing;
+using Raven.Server.ServerWide;
 using Sparrow.Json;
 
 namespace Raven.Server.Web.Studio
@@ -21,7 +22,7 @@ namespace Raven.Server.Web.Studio
             return Task.CompletedTask;
         }
  
-        [RavenAction("/admin/license/registration", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/license/registration", "POST", AuthorizationStatus.ClusterAdmin)]
         public async Task Register()
         {
             UserRegistrationInfo userInfo;
@@ -37,8 +38,8 @@ namespace Raven.Server.Web.Studio
             NoContentStatus();
         }
 
-        [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ServerAdmin)]
-        public Task Activate()
+        [RavenAction("/admin/license/activate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task Activate()
         {
             License license;
 
@@ -48,9 +49,17 @@ namespace Raven.Server.Web.Studio
                 license = JsonDeserializationServer.License(json);
             }
 
-            ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
+            await ServerStore.LicenseManager.Activate(license, skipLeaseLicense: false);
 
-            return NoContent();
+            NoContentStatus();
+        }
+
+        [RavenAction("/admin/license/deactivate", "POST", AuthorizationStatus.ClusterAdmin)]
+        public async Task Deactivate()
+        {
+            await ServerStore.LicenseManager.DeactivateLicense();
+
+            NoContentStatus();
         }
     }
 }

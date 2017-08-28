@@ -1,5 +1,4 @@
 ﻿using DasMulli.Win32.ServiceUtils;
-using Microsoft.Extensions.PlatformAbstractions;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -7,7 +6,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.ServiceProcess;
-using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 

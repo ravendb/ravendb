@@ -63,17 +63,17 @@ namespace Raven.Server.Documents.Indexes
             _indexAndTransformerLocker = indexAndTransformerLocker;
         }
 
-        public void HandleDatabaseRecordChange(DatabaseRecord record, long etag)
+        public void HandleDatabaseRecordChange(DatabaseRecord record, long index)
         {
             if (record == null)
                 return;
 
-            HandleDeletes(record);
-            HandleChangesForStaticIndexes(record, etag);
-            HandleChangesForAutoIndexes(record);
+            HandleDeletes(record, index);
+            HandleChangesForStaticIndexes(record, index);
+            HandleChangesForAutoIndexes(record, index);
         }
 
-        private void HandleChangesForAutoIndexes(DatabaseRecord record)
+        private void HandleChangesForAutoIndexes(DatabaseRecord record, long index)
         {
             foreach (var kvp in record.AutoIndexes)
             {
@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not create auto index {name}", e);
                 }
@@ -196,7 +197,7 @@ namespace Raven.Server.Documents.Indexes
             throw new NotSupportedException("Cannot create auto-index from " + definition.Type);
         }
 
-        private void HandleChangesForStaticIndexes(DatabaseRecord record, long etag)
+        private void HandleChangesForStaticIndexes(DatabaseRecord record, long index)
         {
             foreach (var kvp in record.Indexes)
             {
@@ -209,11 +210,25 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception exception)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(index, exception);
+
+                    var indexName = name;
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not update static index {name}", exception);
-
+                    //If we don't have the index in memory this means that it is corrupted when trying to load it
+                    //If we do have the index and it is not faulted this means that this is the replacment index that is faulty
+                    //If we already have a replacment that is faulty don't add a new one
+                    if (_indexes.TryGetByName(indexName, out Index i))
+                    {
+                        if (i is FaultyInMemoryIndex)
+                            return;
+                        indexName = Constants.Documents.Indexing.SideBySideIndexNamePrefix + name;
+                        if (_indexes.TryGetByName(indexName, out Index j) && j is FaultyInMemoryIndex)
+                            return;
+                    }
+                    
                     var configuration = new FaultyInMemoryIndexConfiguration(_documentDatabase.Configuration.Indexing.StoragePath, _documentDatabase.Configuration);
-                    var fakeIndex = new FaultyInMemoryIndex(exception, etag, name, configuration);
+                    var fakeIndex = new FaultyInMemoryIndex(exception, index, indexName, configuration);
                     _indexes.Add(fakeIndex);
                 }
             }
@@ -262,22 +277,21 @@ namespace Raven.Server.Documents.Indexes
                 Debug.Assert(currentIndex != null);
 
                 definition.Name = replacementIndexName;
-                var sideBySideIndex = GetIndex(replacementIndexName);
-                if (sideBySideIndex != null)
+                var replacementIndex = GetIndex(replacementIndexName);
+                if (replacementIndex != null)
                 {
-                    creationOptions = GetIndexCreationOptions(definition, sideBySideIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
+                    creationOptions = GetIndexCreationOptions(definition, replacementIndex, out IndexDefinitionCompareDifferences sideBySideDifferences);
                     if (creationOptions == IndexCreationOptions.Noop)
                         return;
 
                     if (creationOptions == IndexCreationOptions.UpdateWithoutUpdatingCompiledIndex)
                     {
-                        UpdateIndex(definition, sideBySideIndex, sideBySideDifferences);
+                        UpdateIndex(definition, replacementIndex, sideBySideDifferences);
+                        return;
                     }
-                }
 
-                var replacementIndex = GetIndex(replacementIndexName);
-                if (replacementIndex != null)
                     DeleteIndexInternal(replacementIndex);
+                }
             }
 
             Index index;
@@ -296,7 +310,7 @@ namespace Raven.Server.Documents.Indexes
             CreateIndexInternal(index);
         }
 
-        private void HandleDeletes(DatabaseRecord record)
+        private void HandleDeletes(DatabaseRecord record, long raftLogIndex)
         {
             foreach (var index in _indexes)
             {
@@ -314,6 +328,7 @@ namespace Raven.Server.Documents.Indexes
                 }
                 catch (Exception e)
                 {
+                    _documentDatabase.RachisLogIndexNotifications.NotifyListenersAbout(raftLogIndex, e);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Could not delete index {index.Name}", e);
                 }
@@ -366,7 +381,7 @@ namespace Raven.Server.Documents.Indexes
             definition.RemoveDefaultValues();
             ValidateAnalyzers(definition);
 
-            var instance = IndexAndTransformerCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
+            var instance = IndexCompilationCache.GetIndexInstance(definition); // pre-compile it and validate
 
             await _indexAndTransformerLocker.WaitAsync();
 
@@ -386,8 +401,6 @@ namespace Raven.Server.Documents.Indexes
                     await _documentDatabase.RachisLogIndexNotifications.WaitForIndexNotification(etag);
 
                     var index = GetIndex(definition.Name); // not all operations are changing Etag, this is why we need to take it directly from the index
-                    if (index == null)
-                        throw new InvalidOperationException("Failed to create index " + definition.Name);
                     return index.Etag;
                 }
                 catch (CommandExecutionException e)
@@ -442,7 +455,7 @@ namespace Raven.Server.Documents.Indexes
             if (existingIndex == null)
                 return true;
 
-            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences differences);
+            var creationOptions = GetIndexCreationOptions(definition, existingIndex, out IndexDefinitionCompareDifferences _);
             return creationOptions != IndexCreationOptions.Noop;
         }
 
@@ -482,31 +495,16 @@ namespace Raven.Server.Documents.Indexes
                 default:
                     throw new NotSupportedException($"Cannot update {definition.Type} index from IndexDefinition");
             }
-
-
         }
 
-        private static IndexDefinitionCompareDifferences UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex,
-            IndexDefinitionCompareDifferences indexDifferences)
+        private static void UpdateStaticIndexLockModeAndPriority(IndexDefinition definition, Index existingIndex, IndexDefinitionCompareDifferences indexDifferences)
         {
-            indexDifferences &= ~IndexDefinitionCompareDifferences.Etag;
-
             if (definition.LockMode.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.LockMode) != 0)
                 existingIndex.SetLock(definition.LockMode.Value);
 
             if (definition.Priority.HasValue && (indexDifferences & IndexDefinitionCompareDifferences.Priority) != 0)
                 existingIndex.SetPriority(definition.Priority.Value);
-
-            indexDifferences &= ~IndexDefinitionCompareDifferences.LockMode;
-            indexDifferences &= ~IndexDefinitionCompareDifferences.Priority;
-            return indexDifferences;
         }
-
-        internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex)
-        {
-            return GetIndexCreationOptions(indexDefinition, existingIndex, out IndexDefinitionCompareDifferences differences);
-        }
-
 
         internal IndexCreationOptions GetIndexCreationOptions(object indexDefinition, Index existingIndex, out IndexDefinitionCompareDifferences differences)
         {
@@ -928,9 +926,18 @@ namespace Raven.Server.Documents.Indexes
             }
             catch (Exception e)
             {
+                var alreadyFaulted = false;
+                if (index != null && _indexes.TryGetByName(index.Name, out Index i))
+                {
+                    if (i is FaultyInMemoryIndex)
+                    {
+                        alreadyFaulted = true;
+                    }                    
+                }
                 index?.Dispose();
                 exceptions?.Add(e);
-
+                if(alreadyFaulted)
+                    return;
                 var configuration = new FaultyInMemoryIndexConfiguration(path, _documentDatabase.Configuration);
                 var fakeIndex = new FaultyInMemoryIndex(e, etag, name, configuration);
 
@@ -944,8 +951,7 @@ namespace Raven.Server.Documents.Indexes
                     AlertType.IndexStore_IndexCouldNotBeOpened,
                     NotificationSeverity.Error,
                     key: fakeIndex.Name,
-                    details: new ExceptionDetails(e)));
-
+                    details: new ExceptionDetails(e)));                
                 _indexes.Add(fakeIndex);
             }
         }
@@ -1070,7 +1076,7 @@ namespace Raven.Server.Documents.Indexes
             public DateTime CreationDate { get; set; }
         }
 
-        public bool TryReplaceIndexes(string oldIndexName, string newIndexName, bool immediately = false)
+        public bool TryReplaceIndexes(string oldIndexName, string replacementIndexName)
         {
             bool lockTaken = false;
             try
@@ -1078,8 +1084,7 @@ namespace Raven.Server.Documents.Indexes
                 Monitor.TryEnter(_locker, 16, ref lockTaken);
                 if (lockTaken == false)
                     return false;
-
-                if (_indexes.TryGetByName(newIndexName, out Index newIndex) == false)
+                if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
                     return true;
 
                 if (_indexes.TryGetByName(oldIndexName, out Index oldIndex))
@@ -1104,8 +1109,33 @@ namespace Raven.Server.Documents.Indexes
 
                 if (oldIndex != null)
                 {
-                    using (oldIndex.DrainRunningQueries())
+                    using (oldIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
                         DeleteIndexInternal(oldIndex);
+                }
+
+                if (newIndex.Configuration.RunInMemory == false)
+                {
+                    using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
+                    using (newIndex.StorageOperation())
+                    {
+                        var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                        var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                        IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                            newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                        if (newIndex.Configuration.TempPath != null)
+                        {
+                            IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                        }
+
+                        if (newIndex.Configuration.JournalsStoragePath != null)
+                        {
+                            IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                        }
+                    }
                 }
 
                 _documentDatabase.Changes.RaiseNotifications(

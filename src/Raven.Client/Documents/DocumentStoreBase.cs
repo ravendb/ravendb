@@ -11,7 +11,6 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -45,11 +44,11 @@ namespace Raven.Client.Documents
         /// Subscribe to change notifications from the server
         /// </summary>
 
-        public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
+        public abstract IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
 
         public abstract IDatabaseChanges Changes(string database = null);
 
-        public abstract IDisposable DisableAggressiveCaching();
+        public abstract IDisposable DisableAggressiveCaching(string database = null);
 
         public abstract string Identifier { get; set; }
         public abstract IDocumentStore Initialize();
@@ -73,22 +72,6 @@ namespace Raven.Client.Documents
         /// Executes index creation.
         /// </summary>
         public virtual Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken))
-        {
-            return task.ExecuteAsync(this, Conventions, token);
-        }
-
-        /// <summary>
-        /// Executes transformer creation
-        /// </summary>
-        public virtual void ExecuteTransformer(AbstractTransformerCreationTask task)
-        {
-            AsyncHelpers.RunSync(() => ExecuteTransformerAsync(task));
-        }
-
-        /// <summary>
-        /// Executes transformer creation
-        /// </summary>
-        public virtual Task ExecuteTransformerAsync(AbstractTransformerCreationTask task, CancellationToken token = default(CancellationToken))
         {
             return task.ExecuteAsync(this, Conventions, token);
         }
@@ -212,9 +195,9 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Setup the context for aggressive caching.
         /// </summary>
-        public IDisposable AggressivelyCache()
+        public IDisposable AggressivelyCache(string database = null)
         {
-            return AggressivelyCacheFor(TimeSpan.FromDays(1));
+            return AggressivelyCacheFor(TimeSpan.FromDays(1), database);
         }
 
         protected void RegisterEvents(InMemoryDocumentSessionOperations session)

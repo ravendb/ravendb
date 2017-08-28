@@ -37,6 +37,8 @@ namespace Raven.Client.ServerWide.PeriodicBackup
 
         public AzureSettings AzureSettings { get; set; }
 
+        public FtpSettings FtpSettings { get; set; }
+
         public ulong GetTaskKey()
         {
             Debug.Assert(TaskId != 0);

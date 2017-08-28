@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
+using Raven.Client;
 using Raven.Server.Documents;
 using Sparrow;
 using Sparrow.Json;
@@ -8,102 +11,90 @@ namespace Raven.Server.Json
 {
     public static class BlittableJsonTraverserHelper
     {
-        public static bool TryRead(BlittableJsonTraverser blittableJsonTraverser, Document document, StringSegment path, out object value)
+        public static bool TryRead(
+            BlittableJsonTraverser blittableJsonTraverser,
+            Document document,
+            StringSegment path,
+            out object value)
         {
-            if (blittableJsonTraverser.TryRead(document.Data, path, out value, out StringSegment leftPath) == false)
+            if (TryRead(blittableJsonTraverser, document.Data, path, out value))
+                return true;
+            if (path == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
+            {
+                value = document.Id;
+                return true;
+            }
+            value = null;
+            return false;
+        }
+
+        public static bool TryRead(
+            BlittableJsonTraverser blittableJsonTraverser, 
+            BlittableJsonReaderObject document, 
+            StringSegment path, 
+            out object value)
+        {
+            if (blittableJsonTraverser.TryRead(document, path, out value, out StringSegment leftPath) && 
+                leftPath.Length == 0)
             {
                 value = TypeConverter.ConvertForIndexing(value);
+                return true;
+            }
 
-                if (value == null)
-                    return false;
+            if (value == null)
+                return false;
 
-                if (leftPath == "Length")
+            return TryReadComputedProperties(blittableJsonTraverser, leftPath, ref value);
+        }
+
+
+        public static bool TryReadComputedProperties(BlittableJsonTraverser blittableJsonTraverser, StringSegment leftPath, ref object value)
+        {
+            value = TypeConverter.ConvertForIndexing(value);
+
+            if (leftPath == "Length" || leftPath == "length" ||
+                leftPath == "Count" || leftPath == "count")
+            {
+                if (value is LazyStringValue lazyStringValue)
                 {
-                    var lazyStringValue = value as LazyStringValue;
-                    if (lazyStringValue != null)
-                    {
-                        value = lazyStringValue.Size;
-                        return true;
-                    }
-
-                    var lazyCompressedStringValue = value as LazyCompressedStringValue;
-                    if (lazyCompressedStringValue != null)
-                    {
-                        value = lazyCompressedStringValue.UncompressedSize;
-                        return true;
-                    }
-
-                    var array = value as BlittableJsonReaderArray;
-                    if (array != null)
-                    {
-                        value = array.Length;
-                        return true;
-                    }
-
-                    value = null;
-                    return false;
+                    value = lazyStringValue.Size;
+                    return true;
                 }
 
-                if (leftPath == "Count")
+                if (value is string s)
                 {
-                    var array = value as BlittableJsonReaderArray;
-                    if (array != null)
-                    {
-                        value = array.Length;
-                        return true;
-                    }
-
-                    var obj = value as BlittableJsonReaderObject;
-                    if (obj != null)
-                    {
-                        value = obj.Count;
-                        return true;
-                    }
-
-                    value = null;
-                    return false;
+                    value = s.Length;
+                    return true;
                 }
 
-                if (value is BlittableJsonReaderObject) // dictionary key e.g. .Where(x => x.Events.Any(y => y.Key.In(dates)))
+                if (value is LazyCompressedStringValue lazyCompressedStringValue)
                 {
-                    var isKey = leftPath == "Key";
-                    if (isKey || leftPath == "Value")
-                    {
-                        var obj = (BlittableJsonReaderObject)value;
-
-                        var index = 0;
-                        var property = new BlittableJsonReaderObject.PropertyDetails();
-                        var values = new object[obj.Count];
-
-                        foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
-                        {
-                            obj.GetPropertyByIndex(propertyIndex, ref property);
-                            var val = isKey ? property.Name : property.Value;
-                            values[index++] = TypeConverter.ConvertForIndexing(val);
-                        }
-
-                        value = values;
-                        return true;
-                    }
+                    value = lazyCompressedStringValue.UncompressedSize;
+                    return true;
                 }
 
-                if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
+                var array = value as BlittableJsonReaderArray;
+                if (array != null)
                 {
-                    int indexOfPropertySeparator;
-                    do
-                    {
-                        indexOfPropertySeparator = leftPath.IndexOfAny(BlittableJsonTraverser.PropertySeparators, 0);
-                        if (indexOfPropertySeparator != -1)
-                            leftPath = leftPath.SubSegment(0, indexOfPropertySeparator);
+                    value = array.Length;
+                    return true;
+                }
 
-                        var accessor = TypeConverter.GetPropertyAccessor(value);
-                        value = accessor.GetValue(leftPath, value);
+                if (value is BlittableJsonReaderObject json)
+                {
+                    value = json.Count;
+                    return true;
+                }
 
-                        if (value == null)
-                            return false;
+                if (value is Array a)
+                {
+                    value = a.Length;
+                    return true;
+                }
 
-                    } while (indexOfPropertySeparator != -1);
-
+                if (value is List<object> l)
+                {
+                    value = l.Count;
                     return true;
                 }
 
@@ -111,8 +102,67 @@ namespace Raven.Server.Json
                 return false;
             }
 
-            value = TypeConverter.ConvertForIndexing(value);
-            return true;
+            if (value is BlittableJsonReaderObject obj) // dictionary key e.g. .Where(x => x.Events.Any(y => y.Key.In(dates)))
+            {
+                var isKey = leftPath == "Key";
+                if (isKey || leftPath == "Value")
+                {
+                    var index = 0;
+                    var property = new BlittableJsonReaderObject.PropertyDetails();
+                    var values = new object[obj.Count];
+
+                    foreach (var propertyIndex in obj.GetPropertiesByInsertionOrder())
+                    {
+                        obj.GetPropertyByIndex(propertyIndex, ref property);
+                        var val = isKey ? property.Name : property.Value;
+                        values[index++] = TypeConverter.ConvertForIndexing(val);
+                    }
+
+                    value = values;
+                    return true;
+                }
+                if (TryRead(blittableJsonTraverser, obj, leftPath, out value))
+                    return true;
+            }
+
+            if (value is DateTime || value is DateTimeOffset || value is TimeSpan)
+            {
+                int indexOfPropertySeparator;
+                do
+                {
+                    indexOfPropertySeparator = leftPath.IndexOfAny(BlittableJsonTraverser.PropertySeparators, 0);
+                    if (indexOfPropertySeparator != -1)
+                        leftPath = leftPath.Subsegment(0, indexOfPropertySeparator);
+
+                    var accessor = TypeConverter.GetPropertyAccessor(value);
+                    value = accessor.GetValue(leftPath, value);
+
+                    if (value == null)
+                        return false;
+                } while (indexOfPropertySeparator != -1);
+
+                return true;
+            }
+
+            if (value is string == false && 
+                value is IEnumerable items)
+            {
+                value = ReadNestedComputed(blittableJsonTraverser, items, leftPath);
+                return true;
+            }
+
+            value = null;
+            return false;
+        }
+
+        private static IEnumerable<object> ReadNestedComputed(BlittableJsonTraverser blittableJsonTraverser, IEnumerable items, StringSegment leftPath)
+        {
+            foreach (var item in items)
+            {
+                var current = item;
+                if (TryReadComputedProperties(blittableJsonTraverser, leftPath, ref current))
+                    yield return current;
+            }
         }
     }
 }

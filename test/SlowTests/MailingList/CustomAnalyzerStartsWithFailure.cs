@@ -77,7 +77,7 @@ namespace SlowTests.MailingList
             public CustomerByName()
             {
                 Map = customers => from customer in customers select new { customer.Name };
-                Indexes.Add(x => x.Name, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Name, FieldIndexing.Search);
                 Analyzers.Add(x => x.Name, typeof(CustomAnalyzer).AssemblyQualifiedName);
             }
         }

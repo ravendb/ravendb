@@ -1,10 +1,8 @@
 using System;
 using System.Diagnostics;
-using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using Sparrow;
-using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using Voron.Global;
@@ -107,21 +105,21 @@ namespace Voron.Data.RawData
                     $"Page {pageHeader->PageNumber}, {pageHeader->NumberOfEntries} entries, next allocation: {pageHeader->NextAllocation}")
                     .AppendLine();
 
-            for (int i = sizeof(RawDataSmallPageHeader); i < pageHeader->NextAllocation; )
+            for (int i = sizeof(RawDataSmallPageHeader); i < pageHeader->NextAllocation;)
             {
                 var oldSize = (RawDataEntrySizes*)((byte*)pageHeader + i);
                 sb.Append($"{i} - {oldSize->AllocatedSize} / {oldSize->UsedSize} - ");
 
-                if (oldSize->UsedSize>0)
+                if (oldSize->UsedSize > 0)
                 {
-                    var tvr = new TableValueReader((byte*) pageHeader + i + sizeof (RawDataEntrySizes),
+                    var tvr = new TableValueReader((byte*)pageHeader + i + sizeof(RawDataEntrySizes),
                         oldSize->UsedSize);
 
                     sb.Append(tvr.Count);
                 }
 
                 sb.AppendLine();
-                i += oldSize->AllocatedSize + sizeof (RawDataEntrySizes);
+                i += oldSize->AllocatedSize + sizeof(RawDataEntrySizes);
             }
 
             return sb.ToString();
@@ -178,7 +176,7 @@ namespace Voron.Data.RawData
                     newSize->UsedSize = oldSize->UsedSize;
                     pageHeader->NextAllocation += (ushort)sizeof(RawDataEntrySizes);
                     pageHeader->NumberOfEntries++;
-                    Memory.Copy(((byte*)pageHeader) + pageHeader->NextAllocation , tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes),
+                    Memory.Copy(((byte*)pageHeader) + pageHeader->NextAllocation, tmp.TempPagePointer + pos + sizeof(RawDataEntrySizes),
                         oldSize->UsedSize);
 
                     pageHeader->NextAllocation += (ushort)oldSize->AllocatedSize;
@@ -240,22 +238,22 @@ namespace Voron.Data.RawData
         private static ushort GetNumberOfPagesInSmallSection(LowLevelTransaction tx)
         {
             // all sizes are with 8 Kb page size
-            if (tx.DataPager.NumberOfAllocatedPages > 1024*32) // 256 MB 
+            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 32) // 256 MB 
             {
                 // roughly 16 MB
-                return (ushort) ((Constants.Storage.PageSize - ReservedHeaderSpace)/2);
+                return (Constants.Storage.PageSize - ReservedHeaderSpace) / 2;
             }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024*16) // 64 MB
+            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 16) // 64 MB
             {
                 // 8 MB
                 return 1024;
             }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024*8) // 32 MB
+            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 8) // 32 MB
             {
                 // 4 MB
                 return 512;
             }
-            if (tx.DataPager.NumberOfAllocatedPages > 1024*4) // 16 MB
+            if (tx.DataPager.NumberOfAllocatedPages > 1024 * 4) // 16 MB
             {
                 // 2 MB
                 return 128;
@@ -264,5 +262,23 @@ namespace Voron.Data.RawData
             // 512 KB
             return 32;
         }
+
+        public bool IsOwned(long id)
+        {
+            var posInPage = (int)(id % Constants.Storage.PageSize);
+            var pageNumberInSection = (id - posInPage) / Constants.Storage.PageSize;
+
+            // same section, obbviously owned
+            if (pageNumberInSection > _sectionHeader->PageNumber &&
+                pageNumberInSection <= _sectionHeader->PageNumber + _sectionHeader->NumberOfPages)
+                return true;
+
+            var pageHeader = PageHeaderFor(pageNumberInSection);
+            var sectionPageNumber = pageHeader->PageNumber - pageHeader->PageNumberInSection - 1;
+            var idSectionHeader = (RawDataSmallSectionPageHeader*)_tx.GetPage(sectionPageNumber).Pointer;
+
+            return idSectionHeader->SectionOwnerHash == _sectionHeader->SectionOwnerHash;
+        }
+
     }
 }

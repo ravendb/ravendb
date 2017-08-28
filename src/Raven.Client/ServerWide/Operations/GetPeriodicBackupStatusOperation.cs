@@ -19,7 +19,7 @@ namespace Raven.Client.ServerWide.Operations
             _taskId = taskId;
         }
 
-        public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        public RavenCommand<GetPeriodicBackupStatusOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new GetPeriodicBackupStatusCommand(_databaseName, _taskId);
         }
@@ -37,7 +37,7 @@ namespace Raven.Client.ServerWide.Operations
             _taskId = taskId;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/periodic-backup/status?name={_databaseName}&taskId={_taskId}";
             var request = new HttpRequestMessage

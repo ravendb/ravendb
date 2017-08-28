@@ -13,43 +13,41 @@ namespace Raven.Client.ServerWide.Operations.Certificates
     {
         private readonly string _name;
         private readonly Dictionary<string, DatabaseAccess> _permissions;
-        private readonly bool _serverAdmin;
+        private readonly SecurityClearance _clearance;
         private readonly string _password;
 
-        public CreateClientCertificateOperation(string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
+        public CreateClientCertificateOperation(string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
         {
             _name = name ?? throw new ArgumentNullException(nameof(name));
             _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-            _serverAdmin = serverAdmin;
+            _clearance = clearance;
             _password = password;
         }
 
         public RavenCommand<CertificateRawData> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new CreateClientCertificateCommand(context, _name, _permissions, _serverAdmin, _password);
+            return new CreateClientCertificateCommand( _name, _permissions, _clearance, _password);
         }
 
         private class CreateClientCertificateCommand : RavenCommand<CertificateRawData>
         {
             private readonly string _name;
             private readonly Dictionary<string, DatabaseAccess> _permissions;
-            private readonly bool _serverAdmin;
+            private readonly SecurityClearance _clearance;
             private readonly string _password;
-            private readonly JsonOperationContext _context;
 
-            public CreateClientCertificateCommand(JsonOperationContext context, string name, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false, string password = null)
+            public CreateClientCertificateCommand(string name, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance, string password = null)
             {
                 _name = name ?? throw new ArgumentNullException(nameof(name));
-                _context = context ?? throw new ArgumentNullException(nameof(context));
                 _permissions = permissions ?? throw new ArgumentNullException(nameof(permissions));
-                _serverAdmin = serverAdmin;
+                _clearance = clearance;
                 _password = password;
                 ResponseType = RavenCommandResponseType.Raw;
             }
 
             public override bool IsReadRequest => true;
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/certificates";
 
@@ -60,26 +58,26 @@ namespace Raven.Client.ServerWide.Operations.Certificates
 
                 request.Content = new BlittableJsonContent(stream =>
                 {
-                    using (var writer = new BlittableJsonTextWriter(_context, stream))
+                    using (var writer = new BlittableJsonTextWriter(ctx, stream))
                     {
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName("Name");
+                        writer.WritePropertyName(nameof(CertificateDefinition.Name));
                         writer.WriteString(_name.ToString());
                         writer.WriteComma();
-                        writer.WritePropertyName("ServerAdmin");
-                        writer.WriteBool(_serverAdmin);
+                        writer.WritePropertyName(nameof(SecurityClearance));
+                        writer.WriteString(_clearance.ToString());
                         writer.WriteComma();
 
                         if (_password != null)
                         {
-                            writer.WritePropertyName("Password");
+                            writer.WritePropertyName(nameof(CertificateDefinition.Password));
                             writer.WriteString(_password.ToString());
                             writer.WriteComma();
                         }
                         
-                        writer.WritePropertyName("Permissions");
-                        writer.WriteStartArray();
+                        writer.WritePropertyName(nameof(CertificateDefinition.Permissions));
+                        writer.WriteStartObject();
                         bool first = true;
                         foreach (var kvp in _permissions)
                         {
@@ -87,15 +85,11 @@ namespace Raven.Client.ServerWide.Operations.Certificates
                                 writer.WriteComma();
                             first = false;
 
-                            writer.WriteStartObject();
-                            writer.WritePropertyName("Database");
                             writer.WriteString(kvp.Key);
                             writer.WriteComma();
-                            writer.WritePropertyName("Access");
                             writer.WriteString(kvp.Value == DatabaseAccess.ReadWrite ? nameof(DatabaseAccess.ReadWrite) : nameof(DatabaseAccess.Admin));
-                            writer.WriteEndObject();
                         }
-                        writer.WriteEndArray();
+                        writer.WriteEndObject();
 
                         writer.WriteEndObject();
                     }

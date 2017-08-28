@@ -11,7 +11,7 @@ namespace Raven.Server.ServerWide.Maintenance
         Loading = 2,
         Faulted = 4,
         Unloaded = 8,
-        Shutdown = 16,
+        Shutdown = 16
     }
 
     public class DatabaseStatusReport : IDynamicJson
@@ -33,6 +33,7 @@ namespace Raven.Server.ServerWide.Maintenance
         public long LastEtag;
         public long LastTombstoneEtag;
         public long NumberOfConflicts;
+        public long NumberOfDocuments;
 
         public DatabaseStatus Status;
         public string Error;
@@ -47,8 +48,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(LastEtag)] = LastEtag,
                 [nameof(LastTombstoneEtag)] = LastTombstoneEtag,
                 [nameof(NumberOfConflicts)] = NumberOfConflicts,
+                [nameof(NumberOfDocuments)] = NumberOfDocuments,
                 [nameof(LastChangeVector)] = LastChangeVector,
-                [nameof(Error)] = Error,
+                [nameof(Error)] = Error
             };
             var indexStats = new DynamicJsonValue();
 
@@ -135,9 +137,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 [nameof(Report)] = DynamicJsonValue.Convert(Report),
                 [nameof(LastGoodDatabaseStatus)] = DynamicJsonValue.Convert(LastGoodDatabaseStatus),
                 [nameof(Status)] = Status,
-                [nameof(Error)] = Error,
+                [nameof(Error)] = Error?.ToString(),
                 [nameof(UpdateDateTime)] = UpdateDateTime,
-                [nameof(LastSuccessfulUpdateDateTime)] = LastSuccessfulUpdateDateTime,
+                [nameof(LastSuccessfulUpdateDateTime)] = LastSuccessfulUpdateDateTime
             };
         }
     }

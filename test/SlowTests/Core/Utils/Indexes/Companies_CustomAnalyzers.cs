@@ -36,7 +36,7 @@ namespace SlowTests.Core.Utils.Indexes
             Stores.Add(c => c.Name, FieldStorage.Yes);
             Stores.Add(c => c.Desc, FieldStorage.Yes);
 
-            Indexes.Add(c => c.Email, FieldIndexing.NotAnalyzed);
+            Indexes.Add(c => c.Email, FieldIndexing.Exact);
 
             TermVectors.Add(c => c.Name, FieldTermVector.WithPositionsAndOffsets);
         }

@@ -171,39 +171,47 @@ namespace Voron.Data.BTrees
 
                     int index;
 
-                    Slice lastKey;
-                    using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
+                    if (decompressedPage.NumberOfEntries > 0)
                     {
-                        // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
-                        // when we insert sequential keys
-
-                        var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
-
-                        if (cmp > 0)
-                            index = decompressedPage.NumberOfEntries;
-                        else
+                        Slice lastKey;
+                        using (decompressedPage.GetNodeKey(_llt, decompressedPage.NumberOfEntries - 1, out lastKey))
                         {
-                            if (cmp == 0)
-                            {
-                                // update of the last entry, just decrement NumberOfEntries in the page and
-                                // put it at the last position
+                            // optimization: it's very likely that uncompressed nodes have greater keys than compressed ones 
+                            // when we insert sequential keys
 
-                                index = decompressedPage.NumberOfEntries - 1;
-                                decompressedPage.Lower -= Constants.Tree.NodeOffsetSize;
-                            }
+                            var cmp = SliceComparer.CompareInline(nodeKey, lastKey);
+
+                            if (cmp > 0)
+                                index = decompressedPage.NumberOfEntries;
                             else
                             {
-                                index = decompressedPage.NodePositionFor(_llt, nodeKey);
-
-                                if (decompressedPage.LastMatch == 0) // update
+                                if (cmp == 0)
                                 {
-                                    decompressedPage.RemoveNode(index);
+                                    // update of the last entry, just decrement NumberOfEntries in the page and
+                                    // put it at the last position
 
-                                    if (usage == DecompressionUsage.Write)
-                                        State.NumberOfEntries--;
+                                    index = decompressedPage.NumberOfEntries - 1;
+                                    decompressedPage.Lower -= Constants.Tree.NodeOffsetSize;
+                                }
+                                else
+                                {
+                                    index = decompressedPage.NodePositionFor(_llt, nodeKey);
+
+                                    if (decompressedPage.LastMatch == 0) // update
+                                    {
+                                        decompressedPage.RemoveNode(index);
+
+                                        if (usage == DecompressionUsage.Write)
+                                            State.NumberOfEntries--;
+                                    }
                                 }
                             }
                         }
+                    }
+                    else
+                    {
+                        // all uncompressed nodes were compresion tombstones which deleted all entries from the decompressed page
+                        index = 0;
                     }
 
                     switch (uncompressedNode->Flags)

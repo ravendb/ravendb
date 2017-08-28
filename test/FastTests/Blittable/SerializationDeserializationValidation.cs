@@ -54,7 +54,7 @@ namespace FastTests.Blittable
             public TimeSpan timeSpanNanoseconds;
         }
 
-        [Fact(Skip= "RavenDB-7649")]
+        [Fact]
         public void ValidateRanges()
         {
 
@@ -80,7 +80,7 @@ namespace FastTests.Blittable
                 floatPositiveInfinity = float.PositiveInfinity,
                 floatNan = float.NaN,
                 uintMaxVal = uint.MaxValue, 
-                ulongMaxVal = ulong.MaxValue, //todo: we do not support this
+                ulongMaxVal = ulong.MaxValue,
                 stringMaxLength = string.Join("", Enumerable.Repeat(1, short.MaxValue)),
                 dateMaxPercision = DateTime.Now,
                 dateTimeOffsetMinVal = DateTimeOffset.MinValue,

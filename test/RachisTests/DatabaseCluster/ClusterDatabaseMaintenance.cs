@@ -5,15 +5,14 @@ using System.Threading.Tasks;
 using FastTests.Server.Documents.Indexing;
 using FastTests.Server.Replication;
 using Raven.Client.Documents;
-using Raven.Client.Documents.Session;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
-using Raven.Server;
+using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Server.Config;
-using Raven.Tests.Core.Utils.Entities;
+using Raven.Server.Config.Categories;
 using Tests.Infrastructure;
 using Xunit;
 
@@ -22,7 +21,7 @@ namespace RachisTests.DatabaseCluster
     public class ClusterDatabaseMaintenance : ReplicationTestsBase
     {
         [Fact]
-        public async Task DemoteOnServerDown()
+        public async Task MoveToRehabOnServerDown()
         {
             var clusterSize = 3;
             var databaseName = "DemoteOnServerDown";
@@ -40,7 +39,7 @@ namespace RachisTests.DatabaseCluster
 
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize - 1);
                 Assert.Equal(clusterSize - 1, val);
-                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 1);
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
             }
         }
@@ -66,7 +65,6 @@ namespace RachisTests.DatabaseCluster
                 await dbServer.ServerStore.Cluster.WaitForIndexNotification(createRes.RaftCommandIndex);
 
                 await dbServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-
                 using (var dbStore = new DocumentStore
                 {
                     Urls = dbServer.WebUrls,
@@ -79,13 +77,14 @@ namespace RachisTests.DatabaseCluster
                         await session.SaveChangesAsync();
                     }
                 }
+
                 var res = await store.Admin.Server.SendAsync(new AddDatabaseNodeOperation(databaseName));
                 Assert.Equal(1, res.Topology.Members.Count);
                 Assert.Equal(1, res.Topology.Promotables.Count);
 
                 await WaitForRaftIndexToBeAppliedInCluster(res.RaftCommandIndex, TimeSpan.FromSeconds(5));
                 await WaitForDocumentInClusterAsync<IndexMerging.User>(res.Topology, databaseName, "users/1", u => u.Name == "Karmel", TimeSpan.FromSeconds(10));
-
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer 
                 var val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0);
                 Assert.Equal(0, val);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
@@ -121,7 +120,7 @@ namespace RachisTests.DatabaseCluster
             {
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 2);
                 Assert.Equal(2, val);
-                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 1);
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
             }
         }
@@ -153,12 +152,12 @@ namespace RachisTests.DatabaseCluster
 
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), clusterSize - 1);
                 Assert.Equal(clusterSize - 1, val);
-                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 1);
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 1);
                 Assert.Equal(1, val);
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 val = await WaitForValueAsync(async () => await GetMembersCount(store, databaseName), 3, 30_000);
                 Assert.Equal(3, val);
-                val = await WaitForValueAsync(async () => await GetPromotableCount(store, databaseName), 0, 30_000);
+                val = await WaitForValueAsync(async () => await GetRehabCount(store, databaseName), 0, 30_000);
                 Assert.Equal(0, val);
             }
         }
@@ -166,7 +165,7 @@ namespace RachisTests.DatabaseCluster
         [Fact]
         public async Task MoveToPassiveWhenRefusedConnectionFromAllNodes()
         {
-            DebuggerAttachedTimeout.DisableLongTimespan = true;
+            //DebuggerAttachedTimeout.DisableLongTimespan = true;
             var clusterSize = 3;
             var databaseName = "MoveToPassiveWhenRefusedConnectionFromAllNodes";
             var leader = await CreateRaftClusterAndGetLeader(clusterSize, false, 0);
@@ -212,12 +211,12 @@ namespace RachisTests.DatabaseCluster
                     Assert.Equal(clusterSize - 1, val);
                 }
                 // bring the node back to live and ensure that he moves to passive state
-                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                Servers[1] = GetNewServer(new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Core.PublicServerUrl), urls[0] }, { RavenConfiguration.GetKey(x => x.Core.ServerUrl), urls[0] } }, runInMemory: false, deletePrevious: false, partialPath: dataDir);
                 await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Passive).WaitAsync(TimeSpan.FromSeconds(30));
                 Assert.Equal(RachisConsensus.State.Passive, Servers[1].ServerStore.CurrentState);
                 // rejoin the node to the cluster
                 await leader.ServerStore.AddNodeToClusterAsync(urls[0], nodeTag);
-                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(TimeSpan.FromSeconds(30));
+                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower).WaitAsync(TimeSpan.FromSeconds(300));
                 Assert.Equal(RachisConsensus.State.Follower, Servers[1].ServerStore.CurrentState);
             }
         }
@@ -307,24 +306,198 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
+        [Fact]
+        public async Task RemoveNodeFromClusterWhileDeletion()
+        {
+            var databaseName = "RemoveNodeFromClusterWhileDeletion" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 3, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+
+                var node = Servers[1].ServerStore.Engine.Tag;
+                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                await leaderStore.Admin.Server.SendAsync(new DeleteDatabaseOperation(databaseName, true));
+
+                await WaitForValueAsync(async () =>
+                {
+                    var records = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                    return records.DeletionInProgress.Count;
+                }, 1);
+
+                DatabaseRecord record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                Assert.Single(record.DeletionInProgress);
+                Assert.Equal(node, record.DeletionInProgress.First().Key);
+                await leader.ServerStore.RemoveFromClusterAsync(node);
+
+                record = await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+
+                Assert.Null(record);
+            }
+        }
+
+        [Fact]
+        public async Task Promote_immedtialty_should_work()
+        {
+            var databaseName = "Promote_immedtialty_should_work" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3);
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, 2, leader.WebUrls[0]);
+                await WaitForRaftIndexToBeAppliedInCluster(index, TimeSpan.FromSeconds(30));
+                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+
+                Assert.Equal(2, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+
+                var nodeNotInDbGroup = Servers.Single(s => dbGroupNodes.Contains(s) == false)?.ServerStore.NodeTag;
+                leaderStore.Admin.Server.Send(new AddDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(1, dbToplogy.Promotables.Count);
+                Assert.Equal(nodeNotInDbGroup, dbToplogy.Promotables[0]);
+
+                await leaderStore.Admin.Server.SendAsync(new PromoteDatabaseNodeOperation(databaseName, nodeNotInDbGroup));
+                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+
+                Assert.Equal(3, dbToplogy.AllNodes.Count());
+                Assert.Equal(0, dbToplogy.Promotables.Count);
+            }
+        }
+
+        [Fact]
+        public async Task ChangeUrlOfSingleNodeCluster()
+        {
+            var databaseName = "ChangeUrlOfSingleNodeCluster" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(1, shouldRunInMemory:false);
+
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+                await CreateDatabaseInCluster(databaseName, 1, leader.WebUrls[0]);
+                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(1, dbToplogy.Members.Count);
+            }
+            var dataDir = Servers[0].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+            DisposeServerAndWaitForFinishOfDisposal(Servers[0]);
+            var customSettings = new Dictionary<string, string>();
+            var certPath = SetupServerAuthentication(customSettings);
+            customSettings[RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "https://" + Environment.MachineName + ":8999";
+            leader = Servers[0] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+
+            var adminCert = AskServerForClientCertificate(certPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
+           
+            using (var leaderStore = new DocumentStore
+            {
+                Certificate = adminCert,
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
+                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(1, dbToplogy.Members.Count);
+            }
+        }
+
+        [Fact]
+        public async Task ChangeUrlOfMultiNodeCluster()
+        {
+            var databaseName = "ChangeUrlOfSingleNodeCluster" + Guid.NewGuid();
+            var leader = await CreateRaftClusterAndGetLeader(3, shouldRunInMemory: false);
+            var groupSize = 3;
+            using (var leaderStore = new DocumentStore
+            {
+                Urls = leader.WebUrls,
+                Database = databaseName,
+            })
+            {
+                leaderStore.Initialize();
+                var (index, dbGroupNodes) = await CreateDatabaseInCluster(databaseName, groupSize, leader.WebUrls[0]);
+                await Task.Delay(TimeSpan.FromSeconds(10));
+                var dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(groupSize, dbToplogy.Members.Count);
+           
+                var dataDir = Servers[1].Configuration.Core.DataDirectory.FullPath.Split('/').Last();
+                var nodeTag = Servers[1].ServerStore.NodeTag;
+                // kill and change the url
+                DisposeServerAndWaitForFinishOfDisposal(Servers[1]);
+                var customSettings = new Dictionary<string, string>
+                {
+                    [RavenConfiguration.GetKey(x => x.Core.ServerUrl)] = "http://" + Environment.MachineName + ":8080",
+                    [RavenConfiguration.GetKey(x => x.Security.UnsecuredAccessAllowed)] = UnsecuredAccessAddressRange.PrivateNetwork.ToString()
+                };
+                Servers[1] = GetNewServer(customSettings, runInMemory: false, deletePrevious: false, partialPath: dataDir);
+                // ensure that at this point we still can't talk to node 
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
+                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(1, dbToplogy.Rehabs.Count);
+                Assert.Equal(groupSize - 1, dbToplogy.Members.Count);
+
+                await WaitForLeader(TimeSpan.FromSeconds(5));
+                leader = Servers.Single(s => s.Disposed == false && s.ServerStore.IsLeader());
+                // remove and rejoin to change the url
+                await leader.ServerStore.RemoveFromClusterAsync(nodeTag);
+                await leader.ServerStore.AddNodeToClusterAsync(Servers[1].ServerStore.NodeHttpServerUrl, nodeTag);
+                await Servers[1].ServerStore.WaitForState(RachisConsensus.State.Follower);
+                await Task.Delay(TimeSpan.FromSeconds(5)); // wait for the observer to update the status
+                dbToplogy = (await leaderStore.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName))).Topology;
+                Assert.Equal(groupSize, dbToplogy.Members.Count);
+            }
+        }
+
         private static async Task<int> GetPromotableCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
             }
-            return res.Promotables.Count;
+            return res.Topology.Promotables.Count;
+        }
+
+        private static async Task<int> GetRehabCount(IDocumentStore store, string databaseName)
+        {
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.Topology.Rehabs.Count;
         }
 
         private static async Task<int> GetMembersCount(IDocumentStore store, string databaseName)
         {
-            var res = await store.Admin.Server.SendAsync(new GetDatabaseTopologyOperation(databaseName));
+            var res = await store.Admin.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             if (res == null)
             {
                 return -1;
             }
-            return res.Members.Count;
+            return res.Topology.Members.Count;
         }
     }
 }

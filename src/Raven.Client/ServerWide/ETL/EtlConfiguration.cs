@@ -67,6 +67,8 @@ namespace Raven.Client.ServerWide.ETL
 
         public abstract bool UsingEncryptedCommunicationChannel();
 
+        public bool AllowEtlOnNonEncryptedChannel { get; set; }
+
         public ulong GetTaskKey()
         {
             Debug.Assert(Name != null);

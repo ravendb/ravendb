@@ -5,7 +5,7 @@ class document implements documentBase {
 
     constructor(dto: documentDto) {
         this.__metadata = new documentMetadata(dto["@metadata"]);
-        for (var property in dto) {
+        for (let property in dto) {
             if (property !== "@metadata") {
                 (<any>this)[property] = dto[property];
             }

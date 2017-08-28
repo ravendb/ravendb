@@ -42,7 +42,6 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
         public string BuildExpression(Dictionary<string, ExpressionSyntax> selectExpressions)
         {
             var memberDeclarators = new SeparatedSyntaxList<AnonymousObjectMemberDeclaratorSyntax>();
-            AnonymousObjectCreationExpressionSyntax anonymousObjectCreationExpression = null;
 
             foreach (var curExpr in selectExpressions.OrderBy(x => x.Key))
             {
@@ -51,7 +50,7 @@ namespace Raven.Server.Documents.Indexes.IndexMerging
                 memberDeclarators = memberDeclarators.Add(assignmentExpression);
             }
 
-            anonymousObjectCreationExpression = SyntaxFactory.AnonymousObjectCreationExpression(memberDeclarators);
+            var anonymousObjectCreationExpression = SyntaxFactory.AnonymousObjectCreationExpression(memberDeclarators);
 
             if (InvocationExpression != null)
             {

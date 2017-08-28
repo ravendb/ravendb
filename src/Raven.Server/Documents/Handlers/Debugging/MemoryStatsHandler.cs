@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -8,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Util;
 using Raven.Server.Routing;
 using Raven.Server.Web;
+using Sparrow.Collections.LockFree;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Utils;
@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public class MemoryStatsHandler : RequestHandler
     {
-        [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.ServerAdmin, IsDebugInformationEndpoint = true)]
+        [RavenAction("/admin/debug/memory/stats", "GET", AuthorizationStatus.Operator, IsDebugInformationEndpoint = true)]
         public Task MemoryStats()
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -151,7 +151,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["WorkingSet"] = Size.Humane(workingSet),
                     ["TotalUnmanagedAllocations"] = Size.Humane(totalUnmanagedAllocations),
                     ["ManagedAllocations"] = Size.Humane(managedMemory),
-                    ["TotalMemoryMapped"] = Size.Humane(totalMapping),
+                    ["TotalMemoryMapped"] = Size.Humane(totalMapping)
                 },
 
                 ["Threads"] = threads,

@@ -8,18 +8,15 @@ namespace Raven.Client.Documents.Commands
 {
     public class StreamCommand : RavenCommand<StreamResult>
     {
-        public readonly bool UsedTransformer;
-
         private readonly string _url;
 
-        public StreamCommand(string url, bool usedTransformer)
+        public StreamCommand(string url)
         {
             _url = url ?? throw new ArgumentNullException(nameof(url));
-            UsedTransformer = usedTransformer;
             ResponseType = RavenCommandResponseType.Empty;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var request = new HttpRequestMessage
             {

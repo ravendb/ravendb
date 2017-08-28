@@ -7,9 +7,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
-using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Queries.Spatial;
+using Raven.Client.Documents.Session.Operations;
 
 namespace Raven.Client.Documents.Session
 {
@@ -18,6 +17,11 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public interface IDocumentQueryCustomization
     {
+        /// <summary>
+        /// Get the raw query operation that will be sent to the server
+        /// </summary>
+        QueryOperation QueryOperation { get; }
+
         /// <summary>
         ///     Allow you to modify the index query before it is executed
         /// </summary>
@@ -134,24 +138,6 @@ namespace Raven.Client.Documents.Session
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
 
         /// <summary>
-        ///     Filter matches based on a given shape - only documents with the shape defined in fieldName that
-        ///     have a relation rel with the given shapeWKT will be returned
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="shapeWKT">WKT formatted shape</param>
-        /// <param name="rel">Spatial relation to check (Within, Contains, Disjoint, Intersects, Nearby)</param>
-        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization RelatesToShape(string fieldName, string shapeWKT, SpatialRelation rel, double distErrorPercent = 0.025);
-
-        /// <summary>
-        ///     If set to true, this property will send multiple index entries from the same document (assuming the index project
-        ///     them)
-        ///     to the result transformer function. Otherwise, those entries will be consolidate an the transformer will be
-        ///     called just once for each document in the result set
-        /// </summary>
-        IDocumentQueryCustomization SetAllowMultipleIndexEntriesForSameDocumentToResultTransformer(bool val);
-
-        /// <summary>
         ///     Sets the tags to highlight matches with.
         /// </summary>
         /// <param name="preTag">Prefix tag.</param>
@@ -170,23 +156,6 @@ namespace Raven.Client.Documents.Session
         ///     results). Default: false
         /// </summary>
         IDocumentQueryCustomization ShowTimings();
-
-        /// <summary>
-        ///     When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization SortByDistance();
-
-        /// <summary>
-        ///     Ability to use one factory to determine spatial shape that will be used in query.
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="clause">function with spatial criteria factory</param>
-        IDocumentQueryCustomization Spatial(string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause);
-
-        /// <summary>
-        ///     Execute the transformation function on the results of this query.
-        /// </summary>
-        IDocumentQueryCustomization TransformResults(Func<IndexQuery, IEnumerable<object>, IEnumerable<object>> resultsTransformer);
 
         /// <summary>
         ///     EXPERT ONLY: Instructs the query to wait for non stale results.
@@ -248,56 +217,5 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         /// <param name="waitTimeout">Maximum time to wait for index query results to become non-stale before exception is thrown.</param>
         IDocumentQueryCustomization WaitForNonStaleResultsAsOfNow(TimeSpan waitTimeout);
-
-        /// <summary>
-        ///     Filter matches to be inside the specified radius. This method assumes that spatial data is found under default
-        ///     spatial field name: __spatial
-        /// </summary>
-        /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, double distErrorPercent = 0.025);
-
-        /// <summary>
-        ///     Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="radius">Radius (in kilometers) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, double distErrorPercent = 0.025);
-
-        /// <summary>
-        ///     Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
-
-        /// <summary>
-        ///     Filter matches to be inside the specified radius
-        /// </summary>
-        /// <param name="fieldName">Spatial field name.</param>
-        /// <param name="radius">Radius (measured in units passed to radiusUnits parameter) in which matches should be found.</param>
-        /// <param name="latitude">Latitude pointing to a circle center.</param>
-        /// <param name="longitude">Longitude pointing to a circle center.</param>
-        /// <param name="radiusUnits">Units that will be used to measure distances (Kilometers, Miles).</param>
-        /// <param name="distErrorPercent">"Gets the error distance that specifies how precise the query shape is."</param>
-        IDocumentQueryCustomization WithinRadiusOf(string fieldName, double radius, double latitude, double longitude, SpatialUnits radiusUnits, double distErrorPercent = 0.025);
-
-        /// <summary>
-        /// When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization SortByDistance(double lat, double lng);
-
-        /// <summary>
-        /// When using spatial queries, instruct the query to sort by the distance from the origin point
-        /// </summary>
-        IDocumentQueryCustomization SortByDistance(double lat, double lng, string fieldName);
     }
 }

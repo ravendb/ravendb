@@ -9,6 +9,8 @@ using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Utils;
 using Raven.Server.Web.System;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
@@ -63,7 +65,7 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
@@ -135,7 +137,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
             }
 
 
@@ -366,7 +368,7 @@ namespace RachisTests.DatabaseCluster
             X509Certificate2 adminCertificate = null;
             if (useSsl)
             {
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
             }
 
             using (var store = new DocumentStore()
@@ -431,13 +433,13 @@ namespace RachisTests.DatabaseCluster
             if (useSsl)
             {
 
-                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), serverAdmin: true, defaultServer: leader);
+                adminCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, defaultServer: leader);
                 clientCertificate = AskServerForClientCertificate(_selfSignedCertFileName, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, defaultServer: leader);
             }
-
+            DatabaseTopology topology;
             var doc = new DatabaseRecord(databaseName);
             using (var store = new DocumentStore()
             {
@@ -451,7 +453,7 @@ namespace RachisTests.DatabaseCluster
             }.Initialize())
             {
                 var databaseResult = await store.Admin.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
-                var topology = databaseResult.Topology;
+                topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
                 foreach (var server in Servers)
                 {
@@ -495,7 +497,10 @@ namespace RachisTests.DatabaseCluster
                 using (var session = store.OpenAsyncSession())
                 {
                     var user = await session.LoadAsync<User>("users/2");
-                    Assert.Equal(2, session.Advanced.GetChangeVectorFor(user).Length);
+                    var changeVector = session.Advanced.GetChangeVectorFor(user);
+                    Assert.True(changeVector.Contains("A:1-"));
+                    Assert.True(changeVector.Contains("B:2-"));
+                    Assert.True(changeVector.Contains("C:1-"));
                 }
             }
         }
@@ -505,7 +510,7 @@ namespace RachisTests.DatabaseCluster
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin
@@ -541,7 +546,7 @@ namespace RachisTests.DatabaseCluster
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert1 = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin

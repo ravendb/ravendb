@@ -4,39 +4,69 @@
             <virtual-grid class="resizable virtual-grid" params="controller: gridController, emptyTemplate: 'no-conflicts-found-template'"></virtual-grid>
         </div>
     </div>
-    <div class="flex-vertical flex-grow" data-bind="visible: hasDetailsLoaded">
+    <div class="flex-grow" data-bind="visible: !hasDetailsLoaded()">
+        <div class="panel padding">
+            <h2 class="text-center"><i class="icon-force"></i><span>Pick a conflicting document to resolve it</span></h2>
+        </div>
+    </div>
+    <div class="edit-conflict flex-vertical slidein-style" data-bind="visible: hasDetailsLoaded">
         
-        <h2 data-bind="text: 'Resolving conflict for: ' + documentId()"></h2>
-
-        <div class="conflicted-files-cv flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
-            <div>Change vector:
-                <span data-bind="foreach: changeVector">
-                   <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
-               </span>
+        <div class="flex-horizontal">
+            <h3 data-bind="text: 'Resolving conflict for: ' + documentId()"></h3>
+            <div class="flex-separator"></div>
+            <div>
+                <button class="btn btn-sm btn-info">
+                    <i class="icon-info"></i>
+                    <span data-bind="click: changeVectorsVisible.toggle.bind(changeVectorsVisible), text: changeVectorsVisible() ? 'Hide change vectors' : 'Show change vectors'"></span>
+                </button>
             </div>
         </div>
         
-        <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
-            <div class="file">
-                <pre data-bind="visible: !deletedMarker()"><code data-bind="html: formattedValue"></code></pre>
-                <pre data-bind="visible: deletedMarker()"><code>Document was removed.</code></pre>
+
+        <div class="scroll-horizontal">
+            <div class="conflicted-files flex-stretch-items flex-horizontal" data-bind="foreach: conflictItems">
+                <div class="conflicted-item flex-vertical">
+                    <div class="actions padding padding-sm">
+                        <div class="flex-horizontal">
+                            <div class="file-info flex-grow">
+                                <i class="icon-clock"></i><span class="modify-date" data-bind="text: lastModified"></span><br />
+                                 <!-- TODO
+                                <i class="icon-database"></i><span class="source-database">ExampleDatabase</span> -->
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-warning usethis" data-bind="click: _.partial($root.useThis, $data)"><i class="icon-tick"></i><span>Use this</span></button>
+                            </div>
+                        </div>
+                        <div class="vectors" data-bind="collapse: $root.changeVectorsVisible">
+                            <div class="title"><small>Change vector:</small></div>
+                            <div data-bind="foreach: changeVector">
+                                <span class="badge badge-default" data-bind="text: shortFormat, attr: { title: fullFormat }"></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="file scroll flex-grow flex-vertical">
+                        <pre data-bind="visible: !deletedMarker()" class="flex-grow"><code data-bind="html: formattedValue"></code></pre>
+                        <pre data-bind="visible: deletedMarker()" class="flex-grow"><code>Document was removed.</code></pre>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <div class="margin-bottom">
-            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Save</span></button>
+        <div class="margin-bottom margin-bottom-sm">
             <button type="button" data-bind="click: deleteDocument" class="btn btn-danger">
                 <i class="icon-trash"></i>
                 <span>Delete</span>
             </button>
+
+            <button class="btn btn-primary" data-bind="click: saveDocument"><i class="icon-save"></i> <span>Resolve and save</span></button>
         </div>
 
         <div class="result-file flex-grow">
             <pre id="docEditor" class="form-control absolute-fill"
-                 data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/json' }, attr: { disabled: isBusy }, validationElement: suggestedResolution"></pre>
+                 data-bind="aceEditor: { code: suggestedResolution, fontSize:'16px', lang: 'ace/mode/json' }, attr: { disabled: isBusy }, validationOptions: { errorsAsTitle: false }, validationElement: suggestedResolution"></pre>
         </div>
             
-        <div data-bind="validationElement: suggestedResolution">
+        <div data-bind="validationOptions: { errorsAsTitle: false }, validationElement: suggestedResolution">
             <div class="help-block" data-bind="validationMessage: suggestedResolution"></div>
         </div>
     </div>

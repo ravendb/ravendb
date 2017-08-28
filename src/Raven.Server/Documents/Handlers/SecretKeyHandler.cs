@@ -17,7 +17,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class SecretKeyHandler : RequestHandler
     {
-        [RavenAction("/admin/secrets", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets", "GET", AuthorizationStatus.Operator)]
         public Task GetKeys()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -36,11 +36,11 @@ namespace Raven.Server.Documents.Handlers
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets/generate", "GET", AuthorizationStatus.Operator)]
         public unsafe Task Generate()
         {
             HttpContext.Response.ContentType = "application/base64";
-            
+
             var key = new byte[256 / 8];
             fixed (byte* pKey = key)
             {
@@ -49,16 +49,16 @@ namespace Raven.Server.Documents.Handlers
                 var base64 = Convert.ToBase64String(key);
                 Sodium.ZeroMemory(pKey, key.Length);
                 fixed (char* pBase64 = base64)
-                using (var writer = new StreamWriter(ResponseBodyStream()))
-                {
-                    writer.Write(base64);
-                    Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
-                }
+                    using (var writer = new StreamWriter(ResponseBodyStream()))
+                    {
+                        writer.Write(base64);
+                        Sodium.ZeroMemory((byte*)pBase64, base64.Length * sizeof(char));
+                    }
             }
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets", "POST", AuthorizationStatus.Operator)]
         public Task PutKey()
         {
             var name = GetStringQueryString("name");
@@ -69,19 +69,19 @@ namespace Raven.Server.Documents.Handlers
                 var base64 = reader.ReadToEnd();
                 ServerStore.PutSecretKey(base64, name, overwrite);
             }
-            
+
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
             return Task.CompletedTask;
         }
 
-        [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.ServerAdmin)]
+        [RavenAction("/admin/secrets/distribute", "POST", AuthorizationStatus.Operator)]
         public async Task DistributeKeyInCluster()
         {
             ServerStore.EnsureNotPassive();
 
             var name = GetStringQueryString("name");
-            var nodes = GetStringValuesQueryString("node", required: true);
+            var nodes = GetStringValuesQueryString("node");
 
             using (var reader = new StreamReader(HttpContext.Request.Body))
             {
@@ -123,10 +123,10 @@ namespace Raven.Server.Documents.Handlers
 
             HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
         }
-       
-        private static async Task SendKeyToNodeAsync(string name, string base64, TransactionOperationContext ctx, ServerStore server, string node, string url)
+
+        private static async Task SendKeyToNodeAsync(string name, string base64, JsonOperationContext ctx, ServerStore server, string node, string url)
         {
-            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.RavenServer.ServerCertificateHolder.Certificate, DocumentConventions.Default))
+            using (var shortLived = RequestExecutor.CreateForSingleNodeWithoutConfigurationUpdates(url, name, server.RavenServer.ClusterCertificateHolder.Certificate, DocumentConventions.Default))
             {
                 var command = new PutSecretKeyCommand(name, base64);
                 try
@@ -146,18 +146,18 @@ namespace Raven.Server.Documents.Handlers
         private unsafe void StoreKeyLocally(string name, byte[] key, TransactionOperationContext ctx)
         {
             fixed (byte* pKey = key)
-            try
-            {
-                using (var tx = ctx.OpenWriteTransaction())
+                try
                 {
-                    Server.ServerStore.PutSecretKey(ctx, name, key);
-                    tx.Commit();
+                    using (var tx = ctx.OpenWriteTransaction())
+                    {
+                        Server.ServerStore.PutSecretKey(ctx, name, key);
+                        tx.Commit();
+                    }
                 }
-            }
-            finally
-            {
-                Sodium.ZeroMemory(pKey, key.Length);
-            }
+                finally
+                {
+                    Sodium.ZeroMemory(pKey, key.Length);
+                }
         }
     }
 }

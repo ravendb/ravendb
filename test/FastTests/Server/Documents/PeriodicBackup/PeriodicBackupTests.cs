@@ -43,47 +43,5 @@ namespace FastTests.Server.Documents.PeriodicBackup
                 Assert.Equal("* */2 * * *", backups.First().Configuration.IncrementalBackupFrequency);
             }
         }
-
-        [Fact(Skip = "RavenDB-7931 Takes too long"), Trait("Category", "Smuggler")]
-        public async Task CanBackupToDirectory()
-        {
-            var backupPath = NewDataPath(suffix: "BackupFolder");
-            using (var store = GetDocumentStore())
-            {
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User { Name = "oren" }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-
-                var config = new PeriodicBackupConfiguration
-                {
-                    LocalSettings = new LocalSettings
-                    {
-                        FolderPath = backupPath
-                    },
-                    IncrementalBackupFrequency = "* * * * *" //every minute
-                };
-                var operation = new UpdatePeriodicBackupOperation(config, store.Database);
-                var result = await store.Admin.Server.SendAsync(operation);
-                var periodicBackupTaskId = result.TaskId;
-
-                var getPeriodicBackupStatus = new GetPeriodicBackupStatusOperation(store.Database, periodicBackupTaskId);
-                SpinWait.SpinUntil(() => store.Admin.Server.Send(getPeriodicBackupStatus).Status?.LastFullBackup != null, TimeSpan.FromSeconds(60));
-            }
-
-            using (var store = GetDocumentStore(dbSuffixIdentifier: "2"))
-            {
-                await store.Smuggler.ImportIncrementalAsync(new DatabaseSmugglerOptions(),
-                    Directory.GetDirectories(backupPath).First());
-
-                using (var session = store.OpenAsyncSession())
-                {
-                    var user = await session.LoadAsync<User>("users/1");
-                    Assert.NotNull(user);
-                    Assert.Equal("oren", user.Name);
-                }
-            }
-        }
     }
 }

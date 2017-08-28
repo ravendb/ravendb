@@ -33,15 +33,11 @@ namespace SlowTests.MailingList
 
                 WaitForIndexing(store);
 
-                store.Operations.Send(new PatchByIndexOperation(
-                    new IndexQuery { Query = "FROM INDEX 'EntityEntityIdPatch'" },
-                    new PatchRequest
-                    {
-                        Script = @"
+                store.Operations.Send(new PatchByQueryOperation(
+                    new IndexQuery { Query = @"FROM INDEX 'EntityEntityIdPatch' UPDATE { 
 this.EntityTypeId = this.EntityType;
 delete this.EntityType
-"
-                    }));
+}" }));
 
                 var id = store.Admin.Send(new GetIndexOperation("EntityEntityIdPatch")).Etag;
                 store.Admin.Send(new DeleteIndexOperation("EntityEntityIdPatch"));

@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using LuceneDocument = Lucene.Net.Documents.Document;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
 {
@@ -18,7 +17,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
         {
             _isMultiMap = isMultiMap;
         }
-        
+
         protected override int GetFields<T>(T instance, LazyStringValue key, object document, JsonOperationContext indexContext)
         {
             int newFields = 0;
@@ -55,7 +54,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene.Documents
                     throw new InvalidOperationException($"Field '{property.Key}' is not defined. Available fields: {string.Join(", ", _fields.Keys)}.", e);
                 }
 
-                int boostedFields = GetRegularFields(instance, field, value, indexContext);
+                var boostedFields = GetRegularFields(instance, field, value, indexContext);
+
                 newFields += boostedFields;
 
                 if (boostedValue != null)

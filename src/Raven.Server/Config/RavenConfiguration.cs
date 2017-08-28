@@ -48,6 +48,8 @@ namespace Raven.Server.Config
 
         public ServerConfiguration Server { get; }
 
+        public TestingConfiguration Testing { get; }
+
         public MemoryConfiguration Memory { get; }
 
         public StudioConfiguration Studio { get; }
@@ -59,6 +61,8 @@ namespace Raven.Server.Config
         public LicenseConfiguration Licensing { get; }
 
         public TombstoneConfiguration Tombstones { get; }
+
+        public SubscriptionConfiguration Subscriptions { get; }
 
         internal IConfigurationRoot ServerWideSettings { get; set; }
 
@@ -90,11 +94,13 @@ namespace Raven.Server.Config
             Patching = new PatchingConfiguration();
             Logs = new LogsConfiguration();
             Server = new ServerConfiguration();
+            Testing = new TestingConfiguration();
             Databases = new DatabaseConfiguration();
             Memory = new MemoryConfiguration();
             Studio = new StudioConfiguration();
             Licensing = new LicenseConfiguration();
             Tombstones = new TombstoneConfiguration();
+            Subscriptions = new SubscriptionConfiguration();
         }
 
         private void AddJsonConfigurationVariables(string customConfigPath = null)
@@ -136,6 +142,7 @@ namespace Raven.Server.Config
 
         public RavenConfiguration Initialize()
         {
+            Testing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Server.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Core.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Replication.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
@@ -154,6 +161,7 @@ namespace Raven.Server.Config
             PerformanceHints.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Licensing.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
             Tombstones.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
+            Subscriptions.Initialize(Settings, ServerWideSettings, ResourceType, ResourceName);
 
             PostInit();
 

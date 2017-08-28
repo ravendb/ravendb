@@ -36,7 +36,7 @@ namespace Raven.Client.Documents.Operations.Indexes
                 _indexNames = indexNames;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = GetUrl(node);
 

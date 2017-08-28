@@ -8,7 +8,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
-using Raven.Server.Exceptions;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -138,32 +137,32 @@ namespace Raven.Server.Documents
 
                 switch (changeType)
                 {
-                     case ClusterDatabaseChangeType.RecordChanged:
-                         if (task.IsCompleted)
-                         {
-                             NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
-                             return;
-                         }
-                         task.ContinueWith(done =>
-                         {
-                             NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
-                         });
-                         break;
-                     case ClusterDatabaseChangeType.ValueChanged:
-                         if (task.IsCompleted)
-                         {
-                             NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
-                             return;
-                         }
+                    case ClusterDatabaseChangeType.RecordChanged:
+                        if (task.IsCompleted)
+                        {
+                            NotifyDatabaseAboutStateChange(t.dbName, task, t.index);
+                            return;
+                        }
+                        task.ContinueWith(done =>
+                        {
+                            NotifyDatabaseAboutStateChange(t.dbName, done, t.index);
+                        });
+                        break;
+                    case ClusterDatabaseChangeType.ValueChanged:
+                        if (task.IsCompleted)
+                        {
+                            NotifyDatabaseAboutValueChange(t.dbName, task, t.index);
+                            return;
+                        }
 
-                         task.ContinueWith(done =>
-                         {
-                             NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
-                         });
-                         break;
-                     default:
-                         ThrowUnknownClusterDatabaseChangeType(changeType);
-                         break;
+                        task.ContinueWith(done =>
+                        {
+                            NotifyDatabaseAboutValueChange(t.dbName, done, t.index);
+                        });
+                        break;
+                    default:
+                        ThrowUnknownClusterDatabaseChangeType(changeType);
+                        break;
                 }
 
                 // if deleted, unload / deleted and then notify leader that we removed it
@@ -353,7 +352,7 @@ namespace Raven.Server.Documents
 
         private async Task<DocumentDatabase> UnlikelyCreateDatabaseUnderContention(StringSegment databaseName, RavenConfiguration config)
         {
-            if(await _resourceSemaphore.WaitAsync(_concurrentResourceLoadTimeout) == false)
+            if (await _resourceSemaphore.WaitAsync(_concurrentResourceLoadTimeout) == false)
                 throw new DatabaseConcurrentLoadTimeoutException("Too many databases loading concurrently, timed out waiting for them to load.");
 
             return await CreateDatabaseUnderResourceSemaphore(databaseName, config);
@@ -424,9 +423,9 @@ namespace Raven.Server.Documents
                     // nothing to do
                 }
 
-                if(_disposing.IsReadLockHeld)
+                if (_disposing.IsReadLockHeld)
                     _disposing.ExitReadLock();
-              
+
             }
         }
 
@@ -457,7 +456,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void DeleteDatabaseCachedInfo(DocumentDatabase database, ServerStore serverStore)
+        private static void DeleteDatabaseCachedInfo(DocumentDatabase database, ServerStore serverStore)
         {
             serverStore.DatabaseInfoCache.Delete(database.Name);
         }
@@ -555,7 +554,7 @@ namespace Raven.Server.Documents
             Task.Run(async () =>
             {
                 var title = $"Critical error in '{databaseName}'";
-                var message = "Database is about to be unloaded due to an encountered error";
+                const string message = "Database is about to be unloaded due to an encountered error";
 
                 try
                 {
@@ -577,8 +576,33 @@ namespace Raven.Server.Documents
 
                 await Task.Delay(2000); // let it propagate the exception to the client first
 
-                UnloadDatabase(databaseName, null);
+                UnloadDatabase(databaseName);
             });
+        }
+
+        public async Task<IDisposable> UnloadAndLockDatabase(string dbName)
+        {
+            var tcs = new TaskCompletionSource<DocumentDatabase>();
+
+            try
+            {
+                var existing = DatabasesCache.Replace(dbName, tcs.Task);
+
+                (await existing)?.Dispose();
+
+                return new DisposableAction(() =>
+                {
+                    DatabasesCache.TryRemove(dbName, out var _);
+                    tcs.TrySetCanceled();
+                });
+            }
+            catch (Exception e)
+            {
+                DatabasesCache.TryRemove(dbName, out var _);
+                tcs.TrySetException(e);
+                throw;
+            }
+
         }
 
         public void UnloadDatabase(string dbName, TimeSpan? skipIfActiveInDuration = null, Func<DocumentDatabase, bool> shouldSkip = null)
@@ -620,7 +644,7 @@ namespace Raven.Server.Documents
 
             database.DatabaseShutdownCompleted.Set();
         }
-        
+
         private enum ClusterDatabaseChangeType
         {
             RecordChanged,

@@ -20,7 +20,7 @@ namespace SlowTests.Tests.Querying
                 Map = docs => from doc in docs
                               select new { doc.MyProp };
 
-                Indexes.Add(x => x.MyProp, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.MyProp, FieldIndexing.Search);
             }
         }
 

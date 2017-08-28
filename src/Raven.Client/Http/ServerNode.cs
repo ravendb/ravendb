@@ -1,13 +1,23 @@
-﻿using Raven.Client.Util.Metrics;
+﻿using System;
+using Raven.Client.Util.Metrics;
 
 namespace Raven.Client.Http
 {
     public class ServerNode
     {
+        [Flags]
+        public enum Role
+        {
+            None = 0,
+            Promotable = 1,
+            Member = 2,
+            Rehab = 4
+        }
+
         public string Url;
         public string Database;
         public string ClusterTag;
-        public bool FailoverOnly;
+        public Role ServerRole;
 
         private readonly EWMA _ewma = new EWMA(EWMA.M1Alpha, 1, TimeUnit.Milliseconds);
         private const double SwitchBackRatio = 0.75;

@@ -1,0 +1,56 @@
+<div class="content-container">
+    <form data-bind="submit: saveConfiguration">
+        
+        <div class="content-margin">
+            <div class="toolbar">
+                <button type="submit" class="btn btn-primary" data-bind="disable: spinners.save, css: { 'btn-spinner': spinners.save }">
+                    <i class="icon-save"></i> <span>Save</span>
+                </button>
+            </div>
+    
+            <div>
+                <div class="panel padding padding-sm">
+                    <div class="row flex-row row-sm">
+                        <div class="col-sm-5">
+                            <div class="checkbox">
+                                <input id="checkboxReadBalance" class="styled" type="checkbox" data-bind="checked: model.isDefined, checkedValue: 'readBalanceBehavior'">
+                                <label for="checkboxReadBalance">
+                                    Read balance behavior
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-sm-2">
+                            <div class="dropdown" style="display:block;">
+                                <button type="button" class="btn set-size dropdown-toggle" data-toggle="dropdown" aria-expanded="false"
+                                        data-bind="enable: _.includes(model.isDefined(), 'readBalanceBehavior')">
+                                    <span data-bind="text: model.readBalanceBehaviorLabel"></span> <span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" data-bind="foreach: model.constructor.readModes">
+                                    <li><a href="#" data-bind="text: label, click: _.partial($root.setReadMode, value)"></a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="panel padding padding-sm">
+                    <div class="row flex-row row-sm">
+                        <div class="col-sm-5">
+                            <div class="checkbox">
+                                <input id="checkboxMaxRequests" class="styled" type="checkbox" data-bind="checked: model.isDefined, checkedValue: 'maxNumberOfRequestsPerSession'">
+                                <label for="checkboxMaxRequests">
+                                    Max number of requests per session
+                                </label>
+                            </div>
+                        </div>
+    
+                        <div class="col-sm-2" data-bind="validationElement: model.maxNumberOfRequestsPerSession">
+                            <input class="form-control" type="number"
+                                   data-bind="numericInput: model.maxNumberOfRequestsPerSession, enable: _.includes(model.isDefined(), 'maxNumberOfRequestsPerSession')" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+
+</div>

@@ -24,7 +24,7 @@ namespace FastTests.Client
             if (useSsl)
             {
                 var serverCertPath = SetupServerAuthentication();
-                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                adminCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
                 clientCertificate = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
                 {
                     [dbName] = DatabaseAccess.ReadWrite
@@ -71,8 +71,7 @@ namespace FastTests.Client
 
                 store.GetRequestExecutor(store.Database).ContextPool.AllocateOperationContext(out JsonOperationContext context);
 
-                var getDocumentCommand = new GetDocumentCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, transformer: null,
-                    transformerParameters: null, metadataOnly: false, context: context);
+                var getDocumentCommand = new GetDocumentCommand(new[] { "FooBars/1-A", "FooBars/2-A", "FooBars/3-A", "FooBars/4-A" }, includes: null, metadataOnly: false);
 
                 store.GetRequestExecutor(store.Database).Execute(getDocumentCommand, context);
 

@@ -149,4 +149,24 @@ namespace Raven.Client.ServerWide.PeriodicBackup
             return other.RemoteFolderName == RemoteFolderName;
         }
     }
+
+    public class FtpSettings : BackupSettings
+    {
+        public string Url { get; set; }
+
+        public int? Port { get; set; }
+
+        public string UserName { get; set; }
+
+        public string Password { get; set; }
+
+        public string CertificateAsBase64 { get; set; }
+
+        public string CertificateFileName { get; set; }
+
+        public override bool HasSettings()
+        {
+            return Port != 0 && string.IsNullOrWhiteSpace(Url) == false;
+        }
+    }
 }

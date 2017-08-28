@@ -5,6 +5,7 @@ interface computedAppUrls {
 
     databases: KnockoutComputed<string>;
     manageDatabaseGroup: KnockoutComputed<string>;
+    clientConfiguration: KnockoutComputed<string>;
     documents: KnockoutComputed<string>;
     revisionsBin: KnockoutComputed<string>;
     conflicts: KnockoutComputed<string>;
@@ -17,9 +18,7 @@ interface computedAppUrls {
     editExternalReplication: (taskId?: number) => KnockoutComputed<string>;
     editPeriodicBackupTask: (taskId?: number) => KnockoutComputed<string>;
     editSubscription: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
-    newTransformer: KnockoutComputed<string>;
-    editTransformer: (transformerName?: string) => KnockoutComputed<string>;
-    transformers: KnockoutComputed<string>;
+    editRavenEtl: (taskId?: number, taskName?: string) => KnockoutComputed<string>;
     query: (indexName?: string) => KnockoutComputed<string>;
     terms: (indexName?: string) => KnockoutComputed<string>;
     reporting: KnockoutComputed<string>;
@@ -31,11 +30,10 @@ interface computedAppUrls {
     ongoingTasksUrl: KnockoutComputed<string>;
     editExternalReplicationTaskUrl: KnockoutComputed<string>;
     editSubscriptionTaskUrl: KnockoutComputed<string>;
+    editRavenEtlTaskUrl: KnockoutComputed<string>;
     csvImportUrl: KnockoutComputed<string>;
     status: KnockoutComputed<string>;
     indexPerformance: KnockoutComputed<string>;
-    replicationPerfStats: KnockoutComputed<string>;
-    sqlReplicationPerfStats: KnockoutComputed<string>;
     requestsCount: KnockoutComputed<string>;
     requestsTracing: KnockoutComputed<string>;
     settings: KnockoutComputed<string>;
@@ -48,16 +46,10 @@ interface computedAppUrls {
     visualizer: KnockoutComputed<string>;
     databaseRecord: KnockoutComputed<string>;
     quotas: KnockoutComputed<string>;
-    replications: KnockoutComputed<string>;
-    etl: KnockoutComputed<string>;
-    hotSpare: KnockoutComputed<string>;
     revisions: KnockoutComputed<string>;
-    sqlReplications: KnockoutComputed<string>;
-    sqlReplicationsConnections: KnockoutComputed<string>;
-    editSqlReplication: KnockoutComputed<string>;
+    connectionStrings: KnockoutComputed<string>;
     databaseStudioConfig: KnockoutComputed<string>;
     statusDebug: KnockoutComputed<string>;
-    customFunctionsEditor: KnockoutComputed<string>;
     statusDebugChanges: KnockoutComputed<string>;
     statusDebugMetrics: KnockoutComputed<string>;
     statusDebugConfig: KnockoutComputed<string>;
@@ -66,11 +58,9 @@ interface computedAppUrls {
     statusDebugQueries: KnockoutComputed<string>;
     statusDebugTasks: KnockoutComputed<string>;
     statusDebugRoutes: KnockoutComputed<string>;
-    statusDebugSqlReplication: KnockoutComputed<string>;
     statusDebugIndexFields: KnockoutComputed<string>;
     statusDebugIdentities: KnockoutComputed<string>;
     statusDebugWebSocket: KnockoutComputed<string>;
-    statusDebugExplainReplication: KnockoutComputed<string>;
     infoPackage: KnockoutComputed<string>;
 
     about: KnockoutComputed<string>;

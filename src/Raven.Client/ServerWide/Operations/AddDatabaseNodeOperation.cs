@@ -38,12 +38,12 @@ namespace Raven.Client.ServerWide.Operations
                 _node = node;
             }
 
-            public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
                 url = $"{node.Url}/admin/databases/node?name={_databaseName}";
                 if (string.IsNullOrEmpty(_node) == false)
                 {
-                    url += $"node={node}";
+                    url += $"&node={_node}";
                 }
 
                 var request = new HttpRequestMessage

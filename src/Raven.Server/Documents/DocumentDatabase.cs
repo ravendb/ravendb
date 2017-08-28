@@ -16,11 +16,12 @@ using Raven.Server.Config;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.Indexes;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Documents.Transformers;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
@@ -52,11 +53,11 @@ namespace Raven.Server.Documents
         /// </summary>
         private readonly SemaphoreSlim _indexAndTransformerLocker = new SemaphoreSlim(1, 1);
         private Task _indexStoreTask;
-        private Task _transformerStoreTask;
         private long _usages;
         private readonly ManualResetEventSlim _waitForUsagesOnDisposal = new ManualResetEventSlim(false);
         private long _lastIdleTicks = DateTime.UtcNow.Ticks;
-        private long _lastTopologyIndex;
+        private long _lastTopologyIndex = -1;
+        private long _lastClientConfigurationIndex = -1;
 
         public void ResetIdleTime()
         {
@@ -84,6 +85,7 @@ namespace Raven.Server.Documents
 
         public DocumentDatabase(string name, RavenConfiguration configuration, ServerStore serverStore)
         {
+            Scripts = new ScriptRunnerCache(this);
             _logger = LoggingSource.Instance.GetLogger<DocumentDatabase>(Name);
             _serverStore = serverStore;
             StartTime = SystemTime.UtcNow;
@@ -108,29 +110,27 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                QueryMetadataCache = new QueryMetadataCache();
                 IoChanges = new IoChangesNotifications();
                 Changes = new DocumentsChanges();
                 DocumentTombstoneCleaner = new DocumentTombstoneCleaner(this);
                 DocumentsStorage = new DocumentsStorage(this);
                 IndexStore = new IndexStore(this, serverStore, _indexAndTransformerLocker);
-                TransformerStore = new TransformerStore(this, serverStore, _indexAndTransformerLocker);
                 EtlLoader = new EtlLoader(this, serverStore);
-                if (serverStore != null)
-                    ReplicationLoader = new ReplicationLoader(this, serverStore);
+                ReplicationLoader = new ReplicationLoader(this, serverStore);
                 SubscriptionStorage = new SubscriptionStorage(this, serverStore);
                 Metrics = new MetricsCountersManager();
-                Patcher = new DocumentPatcher(this);
                 TxMerger = new TransactionOperationsMerger(this, DatabaseShutdown);
                 HugeDocuments = new HugeDocuments(configuration.PerformanceHints.HugeDocumentsCollectionSize,
                     configuration.PerformanceHints.HugeDocumentSize.GetValue(SizeUnit.Bytes));
                 ConfigurationStorage = new ConfigurationStorage(this);
                 NotificationCenter = new NotificationCenter.NotificationCenter(ConfigurationStorage.NotificationsStorage, Name, _databaseShutdown.Token);
                 Operations = new Operations.Operations(Name, ConfigurationStorage.OperationsStorage, NotificationCenter, Changes);
-                DatabaseInfoCache = serverStore?.DatabaseInfoCache;
+                DatabaseInfoCache = serverStore.DatabaseInfoCache;
                 RachisLogIndexNotifications = new RachisLogIndexNotifications(DatabaseShutdown);
                 CatastrophicFailureNotification = new CatastrophicFailureNotification(e =>
                 {
-                    serverStore?.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
+                    serverStore.DatabasesLandlord.UnloadResourceOnCatastrophicFailure(name, e);
                 });
             }
             catch (Exception)
@@ -148,7 +148,7 @@ namespace Raven.Server.Documents
 
         public readonly SystemTime Time = new SystemTime();
 
-        public DocumentPatcher Patcher { get; private set; }
+        public ScriptRunnerCache Scripts;
 
         public readonly TransactionOperationsMerger TxMerger;
 
@@ -157,6 +157,8 @@ namespace Raven.Server.Documents
         public string Name { get; }
 
         public Guid DbId => DocumentsStorage.Environment?.DbId ?? Guid.Empty;
+
+        public string DbBase64Id => DocumentsStorage.Environment?.Base64Id ?? "";
 
         public RavenConfiguration Configuration { get; }
 
@@ -188,8 +190,6 @@ namespace Raven.Server.Documents
 
         public IndexStore IndexStore { get; private set; }
 
-        public TransformerStore TransformerStore { get; }
-
         public ConfigurationStorage ConfigurationStorage { get; }
 
         public ReplicationLoader ReplicationLoader { get; private set; }
@@ -207,6 +207,8 @@ namespace Raven.Server.Documents
         public ClientConfiguration ClientConfiguration { get; private set; }
 
         public long LastDatabaseRecordIndex { get; private set; }
+
+        public readonly QueryMetadataCache QueryMetadataCache;
 
         public void Initialize(InitializeOptions options = InitializeOptions.None)
         {
@@ -233,10 +235,8 @@ namespace Raven.Server.Documents
                 PeriodicBackupRunner = new PeriodicBackupRunner(this, _serverStore);
 
                 _indexStoreTask = IndexStore.InitializeAsync(record);
-                _transformerStoreTask = TransformerStore.InitializeAsync(record);
                 ReplicationLoader?.Initialize(record);
                 EtlLoader.Initialize(record);
-                Patcher.Initialize(record);
 
                 DocumentTombstoneCleaner.Start();
 
@@ -247,15 +247,6 @@ namespace Raven.Server.Documents
                 finally
                 {
                     _indexStoreTask = null;
-                }
-
-                try
-                {
-                    _transformerStoreTask.Wait(DatabaseShutdown);
-                }
-                finally
-                {
-                    _transformerStoreTask = null;
                 }
 
                 SubscriptionStorage.Initialize();
@@ -366,26 +357,12 @@ namespace Raven.Server.Documents
                     TxMerger?.Dispose();
                 });
 
-                exceptionAggregator.Execute(() =>
-                {
-                    TransformerStore.Dispose();
-                });
-
                 if (_indexStoreTask != null)
                 {
                     exceptionAggregator.Execute(() =>
                     {
                         _indexStoreTask.Wait(DatabaseShutdown);
                         _indexStoreTask = null;
-                    });
-                }
-
-                if (_transformerStoreTask != null)
-                {
-                    exceptionAggregator.Execute(() =>
-                    {
-                        _transformerStoreTask.Wait(DatabaseShutdown);
-                        _transformerStoreTask = null;
                     });
                 }
 
@@ -436,13 +413,7 @@ namespace Raven.Server.Documents
                     NotificationCenter?.Dispose();
                     NotificationCenter = null;
                 });
-
-                exceptionAggregator.Execute(() =>
-                {
-                    Patcher?.Dispose();
-                    Patcher = null;
-                });
-
+                
                 exceptionAggregator.Execute(() =>
                 {
                     SubscriptionStorage?.Dispose();
@@ -478,8 +449,6 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static readonly string CachedDatabaseInfo = "CachedDatabaseInfo";
-
         public DynamicJsonValue GenerateDatabaseInfo()
         {
             var envs = GetAllStoragesEnvironment().ToList();
@@ -506,7 +475,7 @@ namespace Raven.Server.Documents
                 [nameof(DatabaseInfo.IndexesCount)] = IndexStore.GetIndexes().Count(),
                 [nameof(DatabaseInfo.RejectClients)] = false, //TODO: implement me!
                 [nameof(DatabaseInfo.IndexingStatus)] = IndexStore.Status.ToString(),
-                [CachedDatabaseInfo] = true
+                ["CachedDatabaseInfo"] = true
             };
             return databaseInfo;
         }
@@ -532,12 +501,16 @@ namespace Raven.Server.Documents
         public IEnumerable<StorageEnvironmentWithType> GetAllStoragesEnvironment()
         {
             // TODO :: more storage environments ?
-            yield return
-                new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
-                    DocumentsStorage.Environment);
-            yield return
-                new StorageEnvironmentWithType("Configuration",
-                    StorageEnvironmentWithType.StorageEnvironmentType.Configuration, ConfigurationStorage.Environment);
+            var documentsStorage = DocumentsStorage;
+            if (documentsStorage != null)
+                yield return
+                    new StorageEnvironmentWithType(Name, StorageEnvironmentWithType.StorageEnvironmentType.Documents,
+                        documentsStorage.Environment);
+            var configurationStorage = ConfigurationStorage;
+            if (configurationStorage != null)
+                yield return
+                    new StorageEnvironmentWithType("Configuration",
+                        StorageEnvironmentWithType.StorageEnvironmentType.Configuration, configurationStorage.Environment);
 
             //check for null to prevent NRE when disposing the DocumentDatabase
             foreach (var index in (IndexStore?.GetIndexes()).EmptyIfNull())
@@ -557,19 +530,19 @@ namespace Raven.Server.Documents
             {
                 var env = index._indexStorage.Environment();
                 if (env != null)
-                    yield return (new FullBackup.StorageEnvironmentInformation()
+                    yield return new FullBackup.StorageEnvironmentInformation
                     {
                         Name = i++.ToString(),
                         Folder = "Indexes",
                         Env = env
-                    });
+                    };
             }
-            yield return (new FullBackup.StorageEnvironmentInformation()
+            yield return new FullBackup.StorageEnvironmentInformation
             {
                 Name = "",
                 Folder = "",
                 Env = DocumentsStorage.Environment
-            });
+            };
         }
 
         public void FullBackupTo(string backupPath)
@@ -652,18 +625,18 @@ namespace Raven.Server.Documents
                     record = _serverStore.Cluster.ReadDatabase(context, Name);
                 }
 
-                NotifyFeaturesAboutValueChange(record, index);
+                NotifyFeaturesAboutValueChange(record);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
+
             }
-            catch
+            catch(Exception e)
             {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+
                 if (_databaseShutdown.IsCancellationRequested)
                     ThrowDatabaseShutdown();
 
                 throw;
-            }
-            finally
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
 
@@ -684,10 +657,16 @@ namespace Raven.Server.Documents
                 if (_lastTopologyIndex < record.Topology.Stamp.Index)
                     _lastTopologyIndex = record.Topology.Stamp.Index;
 
+                ClientConfiguration = record.Client;
+                _lastClientConfigurationIndex = record.Client?.Etag ?? -1;
+
                 NotifyFeaturesAboutStateChange(record, index);
+                RachisLogIndexNotifications.NotifyListenersAbout(index, null);
             }
             catch (Exception e)
             {
+                RachisLogIndexNotifications.NotifyListenersAbout(index, e);
+
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Got exception during StateChanged({index}).", e);
 
@@ -695,10 +674,6 @@ namespace Raven.Server.Documents
                     ThrowDatabaseShutdown(e);
 
                 throw;
-            }
-            finally
-            {
-                RachisLogIndexNotifications.NotifyListenersAbout(index);
             }
         }
 
@@ -709,17 +684,17 @@ namespace Raven.Server.Documents
                 Debug.Assert(string.Equals(Name, record.DatabaseName, StringComparison.OrdinalIgnoreCase),
                     $"{Name} != {record.DatabaseName}");
 
-                if (LastDatabaseRecordIndex >= index)
+                // index and LastDatabaseRecordIndex could have equal values when we transit from/to passive and want to update the tasks. 
+                if (LastDatabaseRecordIndex > index)
                 {
                     if (_logger.IsInfoEnabled)
-                        _logger.Info($"Skipping record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName} because it was already precessed.");
+                        _logger.Info($"Skipping record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName} because it was already precessed.");
                     return;
                 }
 
                 if (_logger.IsInfoEnabled)
-                    _logger.Info($"Starting to process record {index} (current {RachisLogIndexNotifications.LastModifiedIndex}) for {record.DatabaseName}.");
+                    _logger.Info($"Starting to process record {index} (current {LastDatabaseRecordIndex}) for {record.DatabaseName}.");
 
-                Debug.Assert(index > RachisLogIndexNotifications.LastModifiedIndex, "Should never happen");
 
                 try
                 {
@@ -727,11 +702,10 @@ namespace Raven.Server.Documents
                     LastDatabaseRecordIndex = index;
 
                     IndexStore.HandleDatabaseRecordChange(record, index);
-                    TransformerStore.HandleDatabaseRecordChange(record);
                     ReplicationLoader?.HandleDatabaseRecordChange(record);
                     EtlLoader?.HandleDatabaseRecordChange(record);
                     OnDatabaseRecordChanged(record);
-
+                    SubscriptionStorage?.HandleDatabaseValueChange(record);
                     if (_logger.IsInfoEnabled)
                         _logger.Info($"Finish to process record {index} for {record.DatabaseName}.");
                 }
@@ -744,7 +718,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void NotifyFeaturesAboutValueChange(DatabaseRecord record, long index)
+        private void NotifyFeaturesAboutValueChange(DatabaseRecord record)
         {
             SubscriptionStorage?.HandleDatabaseValueChange(record);
         }
@@ -762,7 +736,6 @@ namespace Raven.Server.Documents
                 record = _serverStore.Cluster.ReadDatabase(context, Name, out index);
             }
             NotifyFeaturesAboutStateChange(record, index);
-            NotifyFeaturesAboutValueChange(record, index);
         }
 
         private void InitializeFromDatabaseRecord(DatabaseRecord record)
@@ -794,10 +767,9 @@ namespace Raven.Server.Documents
 
         public bool HasClientConfigurationChanged(long index)
         {
-            if (index < 0)
-                return false;
+            var actual = Hashing.Combine(_lastClientConfigurationIndex, ServerStore.LastClientConfigurationIndex);
 
-            return LastDatabaseRecordIndex > index || ServerStore.HasClientConfigurationChanged(index);
+            return index != actual;
         }
     }
 

@@ -1,52 +1,119 @@
 ﻿using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Queries.Parser;
+using Sparrow;
 
 namespace Raven.Server.Documents.Queries
 {
     public class SelectField
     {
-        public readonly string Name;
+        public ValueTokenType? ValueTokenType;
 
-        public readonly string Alias;
+        public string Name;
 
-        public readonly AggregationOperation AggregationOperation;
+        public string Alias;
 
-        public readonly bool IsGroupByKey;
+        public object Value;
 
-        public readonly string[] GroupByKeys;
+        public string SourceAlias;
 
-        private SelectField(string name, string alias)
+        public AggregationOperation AggregationOperation;
+
+        public bool IsGroupByKey;
+
+        public string[] GroupByKeys;
+
+        public string Function;
+
+        public bool SourceIsArray;
+
+        public SelectField[] FunctionArgs;
+
+        public bool HasSourceAlias;
+
+        private SelectField()
         {
-            Name = name;
-            Alias = alias;
+            
         }
 
-        private SelectField(string name, string alias, AggregationOperation aggregationOperation)
+        public static SelectField Create(string name)
         {
-            Name = name;
-            Alias = alias;
-            AggregationOperation = aggregationOperation;
+            return new SelectField
+            {
+                Name = name
+            };
         }
 
-        private SelectField(string alias, string[] groupByKeys)
+        public static SelectField Create(string name, string alias, string sourceAlias, bool array, bool hasSourceAlias)
         {
-            Alias = alias;
-            IsGroupByKey = true;
-            GroupByKeys = groupByKeys;
-        }
-
-        public static SelectField Create(string name, string alias)
-        {
-            return new SelectField(name, alias);
+            return new SelectField
+            {
+                Name = name,
+                Alias = alias,
+                SourceAlias = sourceAlias,
+                SourceIsArray = array,
+                HasSourceAlias = hasSourceAlias
+            };
         }
 
         public static SelectField CreateGroupByAggregation(string name, string alias, AggregationOperation aggregation)
         {
-            return new SelectField(name, alias, aggregation);
+            return new SelectField
+            {
+                Name = name,
+                Alias = alias,
+                AggregationOperation = aggregation
+            };
         }
 
         public static SelectField CreateGroupByKeyField(string alias, params string[] groupByKeys)
         {
-            return new SelectField(alias, groupByKeys);
+            return new SelectField
+            {
+                Alias = alias,
+                GroupByKeys = groupByKeys,
+                IsGroupByKey = true
+            };
+        }
+
+        public static SelectField CreateMethodCall(string methodName, string alias, SelectField[] args)
+        {
+            return new SelectField
+            {
+                Alias = alias,
+                Name = methodName,
+                Function = methodName,
+                FunctionArgs = args
+            };
+        }
+
+        public static SelectField CreateValue(string val, string alias, ValueTokenType type)
+        {
+            object finalVal = val;
+            switch (type)
+            {
+                case Parser.ValueTokenType.Long:
+                    finalVal = long.Parse(val);
+                    break;
+                case Parser.ValueTokenType.Double:
+                    finalVal = double.Parse(val);
+                    break;
+                case Parser.ValueTokenType.True:
+                    finalVal = true;
+                    break;
+                case Parser.ValueTokenType.False:
+                    finalVal = false;
+                    break;
+                case Parser.ValueTokenType.Null:
+                    finalVal = null;
+                    break;
+            }
+
+            return new SelectField
+            {
+                Value = finalVal,
+                Alias = alias,
+                ValueTokenType = type
+            };
         }
     }
 }

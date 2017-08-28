@@ -3,6 +3,7 @@
     public enum OperatorType
     {
         Equal,
+        NotEqual,
         LessThan,
         GreaterThan,
         LessThanEqual,
@@ -16,6 +17,7 @@
         Or,
         OrNot,
         Field,
-        True
+        True,
+        Value
     }
 }

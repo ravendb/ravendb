@@ -17,7 +17,7 @@ namespace Raven.Server.Config.Settings
                 return;
             }
 
-            if (System.Uri.TryCreate(uri, UriKind.RelativeOrAbsolute, out _) == false)
+            if (Uri.TryCreate(uri, UriKind.RelativeOrAbsolute, out _) == false)
                 throw new ArgumentException($"{uri} is not a valid URI.");
         }
 

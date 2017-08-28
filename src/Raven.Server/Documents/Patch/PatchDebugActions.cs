@@ -14,8 +14,15 @@ namespace Raven.Server.Documents.Patch
             {
                 [nameof(DeleteDocument)] = DeleteDocument,
                 [nameof(PutDocument)] = PutDocument,
-                [nameof(LoadDocument)] = LoadDocument,
+                [nameof(LoadDocument)] = LoadDocument
             };
+        }
+
+        public void Clear()
+        {
+            PutDocument.Clear();
+            LoadDocument.Clear();
+            DeleteDocument.Clear();
         }
     }
 }

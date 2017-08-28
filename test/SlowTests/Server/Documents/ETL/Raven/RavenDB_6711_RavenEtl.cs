@@ -151,7 +151,7 @@ namespace SlowTests.Server.Documents.ETL.Raven
             {
                 var etlDone = WaitForEtl(src, (n, statistics) => statistics.LoadSuccesses >= 3);
 
-                AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:__document_id})", applyToAllDocuments: true);
+                AddEtl(src, dest, collections: new string[0], script: "loadToAuditItems({DocumentId:id(this)})", applyToAllDocuments: true);
 
                 using (var session = src.OpenSession())
                 {

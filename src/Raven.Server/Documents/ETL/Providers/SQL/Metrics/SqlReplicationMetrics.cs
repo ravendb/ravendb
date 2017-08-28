@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.ETL.Providers.SQL.Metrics
             return new DynamicJsonValue
             {
                 ["Delete Actions Meter"] = DeleteActionsMeter.CreateMeterData(),
-                ["Insert Actions Meter"] = InsertActionsMeter.CreateMeterData(),
+                ["Insert Actions Meter"] = InsertActionsMeter.CreateMeterData()
             };
         }
     }

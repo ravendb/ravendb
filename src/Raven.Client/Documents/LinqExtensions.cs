@@ -15,10 +15,12 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Queries.Suggestion;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Session.Operations;
 using Raven.Client.Documents.Session.Operations.Lazy;
+using Raven.Client.Extensions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents
@@ -589,7 +591,7 @@ namespace Raven.Client.Documents
         /// <summary>
         /// Returns a list of results for a query asynchronously. 
         /// </summary>
-        public static Task<IList<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
+        public static Task<List<T>> ToListAsync<T>(this IQueryable<T> source, CancellationToken token = default(CancellationToken))
         {
             var provider = source.Provider as IRavenQueryProvider;
             if (provider == null)
@@ -1230,7 +1232,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public static IOrderedQueryable<T> OrderByScoreDescending<T>(this IQueryable<T> self)
         {
-            var currentMethod = typeof(LinqExtensions).GetMethod("OrderByScoreDescending");
+            var currentMethod = typeof(LinqExtensions).GetMethod(nameof(OrderByScoreDescending));
 
             Expression expression = self.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
@@ -1278,10 +1280,15 @@ namespace Raven.Client.Documents
             var session = documentQuery.AsyncSession;
             await session.Advanced.StreamIntoAsync(self, stream, token).ConfigureAwait(false);
         }
-        
+
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, int, bool>> predicate, bool exact)
         {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
             var currentMethod = GetWhereMethod(3);
+#endif
+
             Expression expression = source.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
             {
@@ -1294,7 +1301,12 @@ namespace Raven.Client.Documents
 
         public static IRavenQueryable<T> Where<T>(this IQueryable<T> source, Expression<Func<T, bool>> predicate, bool exact)
         {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
             var currentMethod = GetWhereMethod(2);
+#endif
+
             Expression expression = source.Expression;
             if (expression.Type != typeof(IRavenQueryable<T>))
             {
@@ -1303,6 +1315,152 @@ namespace Raven.Client.Documents
 
             var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, predicate, Expression.Constant(exact)));
             return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, Expression<Func<T, object>> path, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+            return source.Spatial(path.ToPropertyPath(), clause);
+        }
+
+        public static IRavenQueryable<T> Spatial<T>(this IQueryable<T> source, string fieldName, Func<SpatialCriteriaFactory, SpatialCriteria> clause)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetSpatialMethod();
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(clause)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
+        {
+            return source.OrderByDistance(path.ToPropertyPath(), latitude, longitude);
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 4);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistance(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IRavenQueryable<T> OrderByDistance<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistance), 3);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, double latitude, double longitude)
+        {
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), latitude, longitude);
+        }
+
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, double latitude, double longitude)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 4);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(latitude), Expression.Constant(longitude)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, Expression<Func<T, object>> path, string shapeWkt)
+        {
+            return source.OrderByDistanceDescending(path.ToPropertyPath(), shapeWkt);
+        }
+
+        public static IRavenQueryable<T> OrderByDistanceDescending<T>(this IQueryable<T> source, string fieldName, string shapeWkt)
+        {
+#if NETSTANDARD2_0
+            var currentMethod = (MethodInfo)MethodBase.GetCurrentMethod();
+#else
+            var currentMethod = GetOrderByDistanceMethod(nameof(OrderByDistanceDescending), 3);
+#endif
+
+            Expression expression = source.Expression;
+            if (expression.Type != typeof(IRavenQueryable<T>))
+                expression = Expression.Convert(expression, typeof(IRavenQueryable<T>));
+
+            var queryable = source.Provider.CreateQuery(Expression.Call(null, currentMethod.MakeGenericMethod(typeof(T)), expression, Expression.Constant(fieldName), Expression.Constant(shapeWkt)));
+            return (IRavenQueryable<T>)queryable;
+        }
+
+#if !NETSTANDARD2_0
+        private static MethodInfo GetOrderByDistanceMethod(string methodName, int numberOfParameters)
+        {
+            foreach (var method in typeof(LinqExtensions).GetMethods())
+            {
+                if (method.Name != methodName)
+                    continue;
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != numberOfParameters)
+                    continue;
+
+                if (parameters[1].ParameterType != typeof(string))
+                    continue;
+
+                return method;
+            }
+
+            throw new InvalidOperationException("Could not find Spatial method.");
+        }
+
+        private static MethodInfo GetSpatialMethod()
+        {
+            foreach (var method in typeof(LinqExtensions).GetMethods())
+            {
+                if (method.Name != nameof(Spatial))
+                    continue;
+
+                var parameters = method.GetParameters();
+                if (parameters.Length != 3)
+                    continue;
+
+                if (parameters[1].ParameterType != typeof(string))
+                    continue;
+
+                return method;
+            }
+
+            throw new InvalidOperationException("Could not find Spatial method.");
         }
 
         private static MethodInfo GetWhereMethod(int numberOfFuncArguments)
@@ -1323,8 +1481,9 @@ namespace Raven.Client.Documents
 
                 return method;
             }
-            
+
             throw new InvalidOperationException("Could not find Where method.");
         }
+#endif
     }
 }

@@ -109,12 +109,12 @@ namespace SlowTests.MailingList
                                         Query = new object[]
                                                            {
                                                                    g.Key,
-                                                                   g.Key.ToString().Split('-'),
+                                                                   g.Key.ToString().Split('-', StringSplitOptions.None),
                                                                    g.SelectMany(x => x.ClientNames)
                                                            }
                                     };
 
-                Indexes.Add(x => x.Query, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Query, FieldIndexing.Search);
                 Store(x => x.Query, FieldStorage.No);
             }
 

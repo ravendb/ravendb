@@ -101,7 +101,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
+        private static unsafe BlittableJsonReaderObject Read(JsonOperationContext context, ref TableValueReader reader)
         {
             var ptr = reader.Read(DatabaseInfoSchema.DatabaseInfoTable.JsonIndex, out int size);
             return new BlittableJsonReaderObject(ptr, size, context);
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Deleteing database info for '{databaseName}'.");
             var table = ctx.Transaction.InnerTransaction.OpenTable(_databaseInfoSchema, DatabaseInfoSchema.DatabaseInfoTree);
-            table.DeleteByKey(databaseName);            
+            table.DeleteByKey(databaseName);
         }
 
         public void Delete(string databaseName)

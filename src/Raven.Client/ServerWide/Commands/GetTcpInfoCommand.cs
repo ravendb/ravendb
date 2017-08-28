@@ -20,7 +20,7 @@ namespace Raven.Client.ServerWide.Commands
             _dbName = dbName;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             if (string.IsNullOrEmpty(_dbName))
             {

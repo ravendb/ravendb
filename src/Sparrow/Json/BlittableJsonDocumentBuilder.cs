@@ -474,9 +474,9 @@ namespace Sparrow.Json
 
             public PropertyTag(byte type, CachedProperties.PropertyName property, int position)
             {
-                this.Type = type;
-                this.Property = property;
-                this.Position = position;
+                Type = type;
+                Property = property;
+                Position = position;
             }
         }
 
@@ -497,8 +497,8 @@ namespace Sparrow.Json
 
             public WriteToken(int position, BlittableJsonToken token)
             {
-                this.ValuePos = position;
-                this.WrittenToken = token;
+                ValuePos = position;
+                WrittenToken = token;
             }
         }
         

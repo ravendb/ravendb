@@ -121,7 +121,7 @@ namespace Raven.Server.Documents.ETL
                 [nameof(TransformationSuccesses)] = TransformationSuccesses,
                 [nameof(TransformationErrors)] = TransformationErrors,
                 [nameof(LoadSuccesses)] = LoadSuccesses,
-                [nameof(LoadErrors)] = LoadErrors,
+                [nameof(LoadErrors)] = LoadErrors
             };
             return json;
         }

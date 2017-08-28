@@ -69,7 +69,7 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName.ToString());
 
                 await GenerateDocuments(store);
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime));
@@ -80,7 +80,7 @@ namespace RachisTests
                 usersCount.Clear();
                 reachedMaxDocCountMre.Reset();
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 await GenerateDocuments(store);
 
@@ -306,7 +306,7 @@ namespace RachisTests
                 Assert.True(await ackSent.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
                 ackSent.Reset(true);
 
-                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString()).ConfigureAwait(false);
+                await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName).ConfigureAwait(false);
                 continueMre.Set();
                 expectedRevisionsCount += 2;
 
@@ -317,7 +317,7 @@ namespace RachisTests
 
 
                 if (nodesAmount == 5)
-                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionId.ToString());
+                    await KillServerWhereSubscriptionWorks(defaultDatabase, subscription.SubscriptionName);
 
                 Assert.True(await reachedMaxDocCountMre.WaitAsync(_reasonableWaitTime).ConfigureAwait(false));
 
@@ -433,20 +433,20 @@ namespace RachisTests
             {
                 MaxId = 0
             };
-            var subscriptionId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
+            var subscriptionName = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions<User>()).ConfigureAwait(false);
             
-            var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionId)
+            var subscription = store.Subscriptions.Open<User>(new SubscriptionConnectionOptions(subscriptionName)
             {
                 TimeToWaitBeforeConnectionRetry = TimeSpan.FromMilliseconds(500),
                 MaxDocsPerBatch = batchSize
             });
-
-            var getDatabaseTopologyCommand = new GetDatabaseTopologyOperation(defaultDatabase);
-            var topology = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
-
-            foreach (var server in Servers.Where(s => topology.RelevantFor(s.ServerStore.NodeTag)))
+            var subscripitonState = await store.Subscriptions.GetSubscriptionStateAsync(store.Database, subscriptionName);
+            var getDatabaseTopologyCommand = new GetDatabaseRecordOperation(defaultDatabase);
+            var record = await store.Admin.Server.SendAsync(getDatabaseTopologyCommand).ConfigureAwait(false);
+            
+            foreach (var server in Servers.Where(s => record.Topology.RelevantFor(s.ServerStore.NodeTag)))
             {
-                await server.ServerStore.Cluster.WaitForIndexNotification(subscriptionId).ConfigureAwait(false);
+                await server.ServerStore.Cluster.WaitForIndexNotification(subscripitonState.SubscriptionId).ConfigureAwait(false);
             }
 
             var task = subscription.Run(a =>

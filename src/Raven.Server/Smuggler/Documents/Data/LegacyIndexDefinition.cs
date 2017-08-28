@@ -4,7 +4,6 @@ using System.Linq;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
-using Raven.Client.Extensions;
 
 namespace Raven.Server.Smuggler.Documents.Data
 {
@@ -20,7 +19,7 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public string Map
         {
-            get { return Maps.FirstOrDefault(); }
+            get => Maps.FirstOrDefault();
             set
             {
                 if (Maps.Count != 0)
@@ -33,40 +32,40 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public HashSet<string> Maps
         {
-            get { return _maps ?? (_maps = new HashSet<string>()); }
-            set { _maps = value; }
+            get => _maps ?? (_maps = new HashSet<string>());
+            set => _maps = value;
         }
 
         public string Reduce { get; set; }
 
         public Dictionary<string, FieldStorage> Stores
         {
-            get { return _stores ?? (_stores = new Dictionary<string, FieldStorage>()); }
-            set { _stores = value; }
+            get => _stores ?? (_stores = new Dictionary<string, FieldStorage>());
+            set => _stores = value;
         }
 
-        public Dictionary<string, FieldIndexing> Indexes
+        public Dictionary<string, LegacyFieldIndexing> Indexes
         {
-            get { return _indexes ?? (_indexes = new Dictionary<string, FieldIndexing>()); }
-            set { _indexes = value; }
+            get => _indexes ?? (_indexes = new Dictionary<string, LegacyFieldIndexing>());
+            set => _indexes = value;
         }
 
         public Dictionary<string, LegacySortOptions> SortOptions
         {
-            get { return _sortOptions ?? (_sortOptions = new Dictionary<string, LegacySortOptions>()); }
-            set { _sortOptions = value; }
+            get => _sortOptions ?? (_sortOptions = new Dictionary<string, LegacySortOptions>());
+            set => _sortOptions = value;
         }
 
         public Dictionary<string, string> Analyzers
         {
-            get { return _analyzers ?? (_analyzers = new Dictionary<string, string>()); }
-            set { _analyzers = value; }
+            get => _analyzers ?? (_analyzers = new Dictionary<string, string>());
+            set => _analyzers = value;
         }
 
         public List<string> Fields
         {
-            get { return _fields ?? (_fields = new List<string>()); }
-            set { _fields = value; }
+            get => _fields ?? (_fields = new List<string>());
+            set => _fields = value;
         }
 
         [Obsolete("Use SuggestionsOptions")]
@@ -89,20 +88,20 @@ namespace Raven.Server.Smuggler.Documents.Data
 
         public HashSet<string> SuggestionsOptions
         {
-            get { return _suggestionsOptions ?? (_suggestionsOptions = new HashSet<string>()); }
-            set { _suggestionsOptions = value; }
+            get => _suggestionsOptions ?? (_suggestionsOptions = new HashSet<string>());
+            set => _suggestionsOptions = value;
         }
 
         public Dictionary<string, FieldTermVector> TermVectors
         {
-            get { return _termVectors ?? (_termVectors = new Dictionary<string, FieldTermVector>()); }
-            set { _termVectors = value; }
+            get => _termVectors ?? (_termVectors = new Dictionary<string, FieldTermVector>());
+            set => _termVectors = value;
         }
 
         public Dictionary<string, SpatialOptions> SpatialIndexes
         {
-            get { return _spatialIndexes ?? (_spatialIndexes = new Dictionary<string, SpatialOptions>()); }
-            set { _spatialIndexes = value; }
+            get => _spatialIndexes ?? (_spatialIndexes = new Dictionary<string, SpatialOptions>());
+            set => _spatialIndexes = value;
         }
 
         [JsonIgnore]
@@ -110,7 +109,7 @@ namespace Raven.Server.Smuggler.Documents.Data
         [JsonIgnore]
         private Dictionary<string, FieldStorage> _stores;
         [JsonIgnore]
-        private Dictionary<string, FieldIndexing> _indexes;
+        private Dictionary<string, LegacyFieldIndexing> _indexes;
         [JsonIgnore]
         private Dictionary<string, LegacySortOptions> _sortOptions;
         [JsonIgnore]
@@ -141,6 +140,14 @@ namespace Raven.Server.Smuggler.Documents.Data
             Custom = 9,
             Byte = 10,
             StringVal = 11
+        }
+
+        public enum LegacyFieldIndexing
+        {
+            No,
+            Analyzed,
+            NotAnalyzed,
+            Default
         }
     }
 }

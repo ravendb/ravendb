@@ -65,7 +65,7 @@ namespace Raven.Server.Routing
             {
                 HttpContext = context,
                 RavenServer = _ravenServer,
-                RouteMatch = tryMatch.Match,
+                RouteMatch = tryMatch.Match
             };
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
@@ -93,7 +93,7 @@ namespace Raven.Server.Routing
 
             if (_ravenServer.Configuration.Security.AuthenticationEnabled)
             {
-                var authResult = TryAuthorize(tryMatch.Value, context,  reqCtx.Database);
+                var authResult = TryAuthorize(tryMatch.Value, context, reqCtx.Database);
                 if (authResult == false)
                     return reqCtx.Database?.Name;
             }
@@ -119,7 +119,8 @@ namespace Raven.Server.Routing
             {
                 case AuthorizationStatus.UnauthenticatedClients:
                     return true;
-                case AuthorizationStatus.ServerAdmin:
+                case AuthorizationStatus.ClusterAdmin:
+                case AuthorizationStatus.Operator:
                 case AuthorizationStatus.ValidUser:
                 case AuthorizationStatus.DatabaseAdmin:
                     var feature = context.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
@@ -135,7 +136,7 @@ namespace Raven.Server.Routing
                             UnlikelyFailAuthorization(context, database?.Name, feature);
                             return false;
                         case RavenServer.AuthenticationStatus.Allowed:
-                            if (route.AuthorizationStatus == AuthorizationStatus.ServerAdmin)
+                            if (route.AuthorizationStatus == AuthorizationStatus.Operator || route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
                                 goto case RavenServer.AuthenticationStatus.None;
 
                             if (database == null)
@@ -145,7 +146,11 @@ namespace Raven.Server.Routing
                                 return true;
 
                             goto case RavenServer.AuthenticationStatus.None;
-                        case RavenServer.AuthenticationStatus.ServerAdmin:
+                        case RavenServer.AuthenticationStatus.Operator:
+                            if (route.AuthorizationStatus == AuthorizationStatus.ClusterAdmin)
+                                goto case RavenServer.AuthenticationStatus.None;
+                            return true;
+                        case RavenServer.AuthenticationStatus.ClusterAdmin:
                             return true;
                         default:
                             throw new ArgumentOutOfRangeException();
@@ -184,9 +189,9 @@ namespace Raven.Server.Routing
                 {
                     message = "The provided client certificate '" + name + "' is not authorized to access " + (database ?? "the server");
                 }
-                else if (feature.Status == RavenServer.AuthenticationStatus.ServerAdmin)
+                else if (feature.Status == RavenServer.AuthenticationStatus.Operator)
                 {
-                    message = "The provided client certificate '" + name + "' does not have ServerAdmin level to access " + (database ?? "the server");
+                    message = "The provided client certificate '" + name + "' does not have sufficient level to access " + (database ?? "the server");
                 }
                 else if (feature.Status == RavenServer.AuthenticationStatus.Expired)
                 {
@@ -223,7 +228,7 @@ namespace Raven.Server.Routing
             }
         }
 
-        private void DrainRequest(JsonOperationContext ctx, HttpContext context)
+        private static void DrainRequest(JsonOperationContext ctx, HttpContext context)
         {
             if (context.Response.Headers.TryGetValue("Connection", out StringValues value) && value == "close")
                 return; // don't need to drain it, the connection will close 

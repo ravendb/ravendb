@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Server.Documents.Patching
                     x.SaveChanges();
                 }
 
-                var operation = store.Operations.Send(new DeleteCollectionOperation("users"));
+                var operation = store.Operations.Send(new DeleteByQueryOperation(new IndexQuery { Query = "FROM users" }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());
@@ -44,15 +45,12 @@ namespace SlowTests.Server.Documents.Patching
                 {
                     for (int i = 0; i < count; i++)
                     {
-                        x.Store(new User { }, "users/");
+                        x.Store(new User { }, "users|");
                     }
                     x.SaveChanges();
                 }
-
-                var operation = store.Operations.Send(new PatchCollectionOperation("users", new PatchRequest
-                {
-                    Script = "this.Name = __document_id"
-                }));
+                
+                var operation = store.Operations.Send(new PatchByQueryOperation(new IndexQuery() {Query = "FROM Users UPDATE { this.Name = id(this) } " }));
                 operation.WaitForCompletion(TimeSpan.FromSeconds(30));
 
                 var stats = store.Admin.Send(new GetStatisticsOperation());

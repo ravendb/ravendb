@@ -80,7 +80,7 @@ namespace Voron.Benchmark.Table
                 });
         }
 
-        [Setup]
+        [GlobalSetup]
         public override void Setup()
         {
             base.Setup();

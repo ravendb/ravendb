@@ -19,6 +19,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Extensions;
 using Raven.Client.Json.Converters;
@@ -42,12 +43,12 @@ namespace Raven.Client.Http
         private readonly SemaphoreSlim _updateTopologySemaphore = new SemaphoreSlim(1, 1);
         private readonly SemaphoreSlim _updateClientConfigurationSemaphore = new SemaphoreSlim(1, 1);
 
-        protected ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
+        private readonly ConcurrentDictionary<ServerNode, NodeStatus> _failedNodesTimers = new ConcurrentDictionary<ServerNode, NodeStatus>();
 
         public X509Certificate2 Certificate { get; }
         private readonly string _databaseName;
 
-        protected static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
+        private static readonly Logger Logger = LoggingSource.Instance.GetLogger<RequestExecutor>("Client");
         private DateTime _lastReturnedResponse;
 
         protected readonly ReadBalanceBehavior _readBalanceBehavior;
@@ -67,6 +68,8 @@ namespace Raven.Client.Http
         protected NodeSelector _nodeSelector;
 
         private TimeSpan? _defaultTimeout;
+
+        public long NumberOfServerRequests;
 
         //note: the condition for non empty nodes is precaution, should never happen..
         public string Url
@@ -106,16 +109,10 @@ namespace Raven.Client.Http
 
         public event EventHandler<(long RaftCommandIndex, ClientConfiguration Configuration)> ClientConfigurationChanged;
 
-        public event Action<string> SucceededRequest;
         public event Action<string, Exception> FailedRequest;
         public event Action<Topology> TopologyUpdated;
 
-        protected void OnSucceededRequest(string url)
-        {
-            SucceededRequest?.Invoke(url);
-        }
-
-        protected void OnFailedRequest(string url, Exception e)
+        private void OnFailedRequest(string url, Exception e)
         {
             FailedRequest?.Invoke(url, e);
         }
@@ -143,11 +140,6 @@ namespace Raven.Client.Http
             }
 
             _httpClient = lazyClient.Value;
-        }
-
-        public void ForceUpdateTopology(Topology topology)
-        {
-            _nodeSelector.OnUpdateTopology(topology, true);
         }
 
         public static RequestExecutor Create(string[] urls, string databaseName, X509Certificate2 certificate, DocumentConventions conventions)
@@ -216,8 +208,8 @@ namespace Raven.Client.Http
                         return;
 
                     Conventions.UpdateFrom(result.Configuration);
-                    ClientConfigurationEtag = result.RaftCommandIndex;
-                    ClientConfigurationChanged?.Invoke(this, (result.RaftCommandIndex, result.Configuration));
+                    ClientConfigurationEtag = result.Etag;
+                    ClientConfigurationChanged?.Invoke(this, (result.Etag, result.Configuration));
                 }
             }
             finally
@@ -415,6 +407,12 @@ namespace Raven.Client.Http
                     InitializeUpdateTopologyTimer();
                     return;
                 }
+                catch (AuthorizationException)
+                {
+                    // auth exceptions will always happen, on all nodes
+                    // so errors immediately
+                    throw;
+                }
                 catch (Exception e)
                 {
                     if (initialUrls.Length == 0)
@@ -520,14 +518,17 @@ namespace Raven.Client.Http
             bool shouldRetry = true,
             int? sessionId = null)
         {
-            var request = CreateRequest(chosenNode, command, out string url);
+            var request = CreateRequest(context, chosenNode, command, out string url);
 
             using (var cachedItem = GetFromCache(context, command, url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue))
             {
                 if (cachedChangeVector != null)
                 {
                     var aggressiveCacheOptions = AggressiveCaching.Value;
-                    if (aggressiveCacheOptions != null && cachedItem.Age < aggressiveCacheOptions.Duration)
+                    if (aggressiveCacheOptions != null &&
+                        cachedItem.Age < aggressiveCacheOptions.Duration &&
+                        cachedItem.MightHaveBeenModified == false &&
+                        command.CanCacheAggressively)
                     {
                         command.SetResponse(cachedValue, fromCache: true);
                         return;
@@ -547,12 +548,12 @@ namespace Raven.Client.Http
                 var responseDispose = ResponseDisposeHandling.Automatic;
                 try
                 {
+                    Interlocked.Increment(ref NumberOfServerRequests);
                     var timeout = command.Timeout ?? _defaultTimeout;
                     if (timeout.HasValue)
                     {
                         if (timeout > GlobalHttpClientTimeout)
                             ThrowTimeoutTooLarge(timeout);
-
 
                         using (var cts = CancellationTokenSource.CreateLinkedTokenSource(token, CancellationToken.None))
                         {
@@ -577,7 +578,7 @@ namespace Raven.Client.Http
 
                                     sp.Stop();
                                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
-                                        throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
+                                        throw new AllTopologyNodesDownException($"Tried to send '{command.GetType().Name}' via `{request.Method} {request.RequestUri.PathAndQuery}` to all configured nodes in the topology: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, timeoutException);
 
                                     return;
                                 }
@@ -601,10 +602,11 @@ namespace Raven.Client.Http
                 {
                     if (shouldRetry == false)
                         throw;
-
                     sp.Stop();
                     if (await HandleServerDown(url, chosenNode, nodeIndex, context, command, request, response, e).ConfigureAwait(false) == false)
+                    {
                         throw new AllTopologyNodesDownException($"Tried to send {command.GetType().Name} request to all configured nodes in the topology, all of them seem to be down or not responding. I've tried to access the following nodes: " + string.Join(",", _nodeSelector?.Topology.Nodes.Select(x => x.Url) ?? new string[0]), _nodeSelector?.Topology, e);
+                    }
 
                     return;
                 }
@@ -630,6 +632,13 @@ namespace Raven.Client.Http
                     {
                         if (await HandleUnsuccessfulResponse(chosenNode, nodeIndex, context, command, request, response, url, sessionId, shouldRetry).ConfigureAwait(false) == false)
                         {
+                            if (response.Headers.TryGetValues("Database-Missing", out var databaseMissing))
+                            {
+                                var name = databaseMissing.FirstOrDefault();
+                                if (name != null)
+                                    throw new DatabaseDoesNotExistException(name);
+                            }
+
                             if (command.FailedNodes.Count == 0) //precaution, should never happen at this point
                                 throw new InvalidOperationException("Received unsuccessful response and couldn't recover from it. Also, no record of exceptions per failed nodes. This is weird and should not happen.");
 
@@ -644,8 +653,6 @@ namespace Raven.Client.Http
                         }
                         return; // we either handled this already in the unsuccessful response or we are throwing
                     }
-
-                    OnSucceededRequest(url);
 
                     responseDispose = await command.ProcessResponse(context, Cache, response, url).ConfigureAwait(false);
                     _lastReturnedResponse = DateTime.UtcNow;
@@ -678,7 +685,7 @@ namespace Raven.Client.Http
             }
         }
 
-        public bool InSpeedTestPhase => _nodeSelector.InSpeedTestPhase;
+        public bool InSpeedTestPhase => _nodeSelector?.InSpeedTestPhase ?? false;
 
         private bool ShouldExecuteOnAll<TResult>(ServerNode chosenNode, RavenCommand<TResult> command)
         {
@@ -708,9 +715,14 @@ namespace Raven.Client.Http
                     continue;
                 }
 
-                var request = CreateRequest(nodes[i], command, out var _);
+                IDisposable disposable = null;
+
                 try
                 {
+                    disposable = ContextPool.AllocateOperationContext(out var tmpCtx);
+                    var request = CreateRequest(tmpCtx, nodes[i], command, out var _);
+
+                    Interlocked.Increment(ref NumberOfServerRequests);
                     tasks[i] = command.SendAsync(_httpClient, request, token).ContinueWith(x =>
                     {
                         try
@@ -726,6 +738,10 @@ namespace Raven.Client.Http
                         {
                             // there is really nothing we can do here
                         }
+                        finally
+                        {
+                            disposable?.Dispose();
+                        }
                     }, token);
                 }
                 catch (Exception)
@@ -733,6 +749,7 @@ namespace Raven.Client.Http
                     numberOfFailedTasks++;
                     // nothing we can do about it
                     tasks[i] = NeverEndingRequest;
+                    disposable?.Dispose();
                 }
             }
 
@@ -762,7 +779,7 @@ namespace Raven.Client.Http
 
         private HttpCache.ReleaseCacheItem GetFromCache<TResult>(JsonOperationContext context, RavenCommand<TResult> command, string url, out string cachedChangeVector, out BlittableJsonReaderObject cachedValue)
         {
-            if (command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
+            if (command.CanCache && command.IsReadRequest && command.ResponseType == RavenCommandResponseType.Object)
             {
                 return Cache.Get(context, url, out cachedChangeVector, out cachedValue);
             }
@@ -774,9 +791,9 @@ namespace Raven.Client.Http
 
         public static readonly string ClientVersion = typeof(RequestExecutor).GetTypeInfo().Assembly.GetName().Version.ToString();
 
-        private HttpRequestMessage CreateRequest<TResult>(ServerNode node, RavenCommand<TResult> command, out string url)
+        private HttpRequestMessage CreateRequest<TResult>(JsonOperationContext ctx, ServerNode node, RavenCommand<TResult> command, out string url)
         {
-            var request = command.CreateRequest(node, out url);
+            var request = command.CreateRequest(ctx, node, out url);
 
             request.RequestUri = new Uri(url);
 
@@ -792,6 +809,7 @@ namespace Raven.Client.Http
             switch (response.StatusCode)
             {
                 case HttpStatusCode.NotFound:
+                    Cache.SetNotFound(url);
                     if (command.ResponseType == RavenCommandResponseType.Empty)
                         return true;
                     else if (command.ResponseType == RavenCommandResponseType.Object)

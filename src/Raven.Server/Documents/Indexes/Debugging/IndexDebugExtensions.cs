@@ -323,7 +323,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
             };
         }
 
-        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, TransactionOperationContext context)
+        private static string GetTreeName(BlittableJsonReaderObject reduceEntry, IndexDefinitionBase indexDefinition, JsonOperationContext context)
         {
             HashSet<string> groupByFields;
 
@@ -406,12 +406,13 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 {
                     ["p0"] = reduceKeyHash.ToString()
                 }, "query/parameters");
-                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = :p0", queryParameters);
+                var query = new IndexQueryServerSide($"FROM INDEX '{index.Name}' WHERE {Constants.Documents.Indexing.Fields.ReduceKeyFieldName} = $p0", queryParameters);
 
-                var fieldsToFetch = new FieldsToFetch(query, index.Definition, null);
+                var fieldsToFetch = new FieldsToFetch(query, index.Definition);
 
+                 var retriever = new MapReduceQueryResultRetriever(null, null, null,context, fieldsToFetch, null);
                 var result = reader
-                    .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), new MapReduceQueryResultRetriever(context, fieldsToFetch), context, CancellationToken.None)
+                     .Query(query, fieldsToFetch, new Reference<int>(), new Reference<int>(), retriever, context, null, CancellationToken.None)
                     .ToList();
 
                 if (result.Count != 1)
@@ -428,7 +429,7 @@ namespace Raven.Server.Documents.Indexes.Debugging
                 case IndexType.Map:
                     return ((MapIndex)self)._compiled.OutputFields;
                 case IndexType.MapReduce:
-                    return ((MapReduceIndex)self).Compiled.OutputFields;
+                    return ((MapReduceIndex)self)._compiled.OutputFields;
                 case IndexType.AutoMap:
                     return ((AutoMapIndex)self).Definition.MapFields.Keys.ToArray();
                 case IndexType.AutoMapReduce:

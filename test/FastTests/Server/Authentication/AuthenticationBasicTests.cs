@@ -32,7 +32,7 @@ namespace FastTests.Server.Authentication
 {
     public class AuthenticationBasicTests : RavenTestBase
     {
-        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, bool serverAdmin = false)
+        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
             var serverCertificate = new X509Certificate2(serverCertPath);
             var serverCertificateHolder = new SecretProtection(new SecurityConfiguration()).LoadCertificateFromPath(serverCertPath, null);
@@ -44,7 +44,7 @@ namespace FastTests.Server.Authentication
                 var requestExecutor = store.GetRequestExecutor();
                 using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
-                    var command = new PutClientCertificateOperation(clientCertificate, permissions, serverAdmin)
+                    var command = new PutClientCertificateOperation("expired client cert", clientCertificate, permissions, clearance)
                         .GetCommand(store.Conventions, context);
 
                     requestExecutor.Execute(command, context);
@@ -58,7 +58,7 @@ namespace FastTests.Server.Authentication
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
@@ -77,26 +77,26 @@ namespace FastTests.Server.Authentication
         }
 
         [Fact]
-        public void CanReachServerAdminEndpointWithServerAdminPermission()
+        public void CanReachOperatorEndpointWithOperatorPermission()
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
-            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             
             using (var store = GetDocumentStore(adminCertificate: adminCert, userCertificate:userCert, modifyName:(s => dbName)))
             {
                 var doc = new DatabaseRecord("WhateverDB");
-                store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation
+                store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
             }
         }
 
         [Fact]
-        public void CannotReachServerAdminEndpointWithoutServerAdminPermission()
+        public void CannotReachOperatorEndpointWithoutOperatorPermission()
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
@@ -107,7 +107,7 @@ namespace FastTests.Server.Authentication
                 var doc = new DatabaseRecord("WhateverDB");
                 Assert.Throws<AuthorizationException>(() =>
                 {
-                    store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // ServerAdmin operation
+                    store.Admin.Server.Send(new CreateDatabaseOperation(doc)); // operator operation
                 });
             }
         }
@@ -117,7 +117,7 @@ namespace FastTests.Server.Authentication
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin
@@ -143,7 +143,7 @@ namespace FastTests.Server.Authentication
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
@@ -173,7 +173,7 @@ namespace FastTests.Server.Authentication
             var dbName1 = GetDatabaseName();
             var dbName2 = GetDatabaseName();
 
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin,
@@ -210,7 +210,7 @@ namespace FastTests.Server.Authentication
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
             var otherDbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [otherDbName] = DatabaseAccess.ReadWrite
@@ -233,7 +233,7 @@ namespace FastTests.Server.Authentication
             var serverCertPath = SetupServerAuthentication(serverUrl: "http://" + Environment.MachineName + ":8080");
             Assert.Throws<System.InvalidOperationException>(() =>
             {
-                AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+                AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             });
         }
 
@@ -259,7 +259,7 @@ namespace FastTests.Server.Authentication
         {
             var serverCertPath = SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), serverAdmin: true);
+            var adminCert = AskServerForClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
             var userCert = CreateAndPutExpiredClientCertificate(serverCertPath, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
@@ -278,7 +278,8 @@ namespace FastTests.Server.Authentication
         public void AllAdminRoutesHaveCorrectAuthorizationStatus()
         {
             var routes = RouteScanner.Scan(attr =>
-                attr.Path.Contains("/admin/") && (attr.RequiredAuthorization != AuthorizationStatus.ServerAdmin &&
+                attr.Path.Contains("/admin/") && (attr.RequiredAuthorization != AuthorizationStatus.ClusterAdmin &&
+                                                  attr.RequiredAuthorization != AuthorizationStatus.Operator &&
                                                   attr.RequiredAuthorization != AuthorizationStatus.DatabaseAdmin));
             Assert.Empty(routes);
         }
@@ -287,8 +288,9 @@ namespace FastTests.Server.Authentication
         public void AllAdminAuthorizationStatusHaveCorrectRoutes()
         {
             var routes = RouteScanner.Scan(attr =>
-                !attr.Path.Contains("/admin/") && (attr.RequiredAuthorization == AuthorizationStatus.ServerAdmin ||
-                                                  attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
+                !attr.Path.Contains("/admin/") && (attr.RequiredAuthorization == AuthorizationStatus.Operator ||
+                                                   attr.RequiredAuthorization == AuthorizationStatus.Operator ||
+                                                   attr.RequiredAuthorization == AuthorizationStatus.DatabaseAdmin));
             Assert.Empty(routes);
         }
 

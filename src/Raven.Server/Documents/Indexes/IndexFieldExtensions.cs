@@ -31,9 +31,9 @@ namespace Raven.Server.Documents.Indexes
             {
                 case FieldIndexing.No:
                     return Field.Index.NO;
-                case FieldIndexing.Analyzed:
+                case FieldIndexing.Search:
                     return string.IsNullOrWhiteSpace(analyzer) == false ? Field.Index.ANALYZED : Field.Index.ANALYZED_NO_NORMS;
-                case FieldIndexing.NotAnalyzed:
+                case FieldIndexing.Exact:
                     return Field.Index.NOT_ANALYZED_NO_NORMS;
                 case FieldIndexing.Default:
                     return @default;

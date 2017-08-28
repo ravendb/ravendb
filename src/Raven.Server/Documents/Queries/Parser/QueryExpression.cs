@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         [ThreadStatic] private static StringBuilder _tempBuffer;
 
-        internal static string Extract(string q, ValueToken val)
+        internal static string Extract(string q, ValueToken val, bool stripQuotes = false)
         {
             switch (val.Type)
             {
@@ -32,6 +32,8 @@ namespace Raven.Server.Documents.Queries.Parser
                 case ValueTokenType.True:
                     return "true";
             }
+            if (stripQuotes && val.Type == ValueTokenType.String)
+                return Extract(q, val.TokenStart + 1, val.TokenLength - 2, val.EscapeChars);
 
             return Extract(q, val.TokenStart, val.TokenLength, val.EscapeChars);
         }
@@ -100,6 +102,7 @@ namespace Raven.Server.Documents.Queries.Parser
                     writer.Write(" ");
                     break;
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
@@ -109,6 +112,9 @@ namespace Raven.Server.Documents.Queries.Parser
                     {
                         case OperatorType.Equal:
                             writer.Write(" = ");
+                            break;
+                        case OperatorType.NotEqual:
+                            writer.Write(" != ");
                             break;
                         case OperatorType.LessThan:
                             writer.Write(" < ");
@@ -217,12 +223,19 @@ namespace Raven.Server.Documents.Queries.Parser
                 case OperatorType.True:
                     break;
                 case OperatorType.Equal:
+                case OperatorType.NotEqual:
                 case OperatorType.LessThan:
                 case OperatorType.GreaterThan:
                 case OperatorType.LessThanEqual:
                 case OperatorType.GreaterThanEqual:
+
                     writer.WritePropertyName("Field");
-                    WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+
+                    if (Field != null)
+                        WriteValue(query, writer, Field.TokenStart, Field.TokenLength, Field.EscapeChars);
+                    else
+                        writer.WriteValue((string)null);
+
                     writer.WritePropertyName("Value");
                     switch (Value.Type)
                     {

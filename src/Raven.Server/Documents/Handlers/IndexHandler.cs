@@ -26,7 +26,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public class IndexHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/indexes", "PUT", AuthorizationStatus.ValidUser)]
+        [RavenAction("/databases/*/admin/indexes", "PUT", AuthorizationStatus.DatabaseAdmin)]
         public async Task Put()
         {
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers
                     break;
                 case IndexType.MapReduce:
                     var staticMapReduceIndex = (MapReduceIndex)index;
-                    source = staticMapReduceIndex.Compiled.Source;
+                    source = staticMapReduceIndex._compiled.Source;
                     break;
             }
 
@@ -188,7 +188,7 @@ namespace Raven.Server.Documents.Handlers
 
                         context.Write(writer, new DynamicJsonValue
                         {
-                            ["Error"] = $"{index.Name} is not map-reduce index",
+                            ["Error"] = $"{index.Name} is not map-reduce index"
                         });
 
                         return Task.CompletedTask;

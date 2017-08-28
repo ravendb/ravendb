@@ -37,12 +37,12 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                             switch (indexField.Aggregation)
                             {
                                 case AggregationOperation.None:
-                                    if (obj.TryGet(propertyName, out string stringValue) == false)
+                                    if (obj.TryGet(propertyName, out object groupByValue) == false)
                                         throw new InvalidOperationException($"Could not read group by value of '{propertyName}' property");
 
                                     aggregatedResult[propertyName] = new PropertyResult
                                     {
-                                        ResultValue = stringValue
+                                        ResultValue = groupByValue
                                     };
                                     break;
                                 case AggregationOperation.Count:
@@ -106,7 +106,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     }
                 }
             }
-            
+
             var resultObjects = new List<Document>(aggregatedResultsByReduceKey.Count);
 
             foreach (var aggregationResult in aggregatedResultsByReduceKey)
@@ -132,9 +132,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
 
             public object ResultValue;
 
-            public long LongValue = 0;
+            public long LongValue;
 
-            public double DoubleValue = 0;
+            public double DoubleValue;
 
             public PropertyResult(NumberParseResult? numberType = null)
             {
@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                         default:
                             throw new ArgumentOutOfRangeException($"Unknown number type: {_numberType.Value}");
                     }
-                } 
+                }
             }
         }
 

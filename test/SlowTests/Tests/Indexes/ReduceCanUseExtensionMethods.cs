@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -31,7 +32,7 @@ namespace SlowTests.Tests.Indexes
                 var indexDefinition = new IndexDefinitionBuilder<InputData, Result>()
                 {
                     Map = documents => from doc in documents
-                                       let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+                                       let tags = ((string[])doc.Tags.Split(',', StringSplitOptions.None)).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
                                        select new Result()
                                        {
                                            Tags = tags.ToArray()
@@ -49,7 +50,7 @@ namespace SlowTests.Tests.Indexes
 
                 WaitForIndexing(store);
 
-                TestHelper.AssertNoIndexErrors(store);
+                RavenTestHelper.AssertNoIndexErrors(store);
 
                 using (var session = store.OpenSession())
                 {
@@ -78,7 +79,7 @@ namespace SlowTests.Tests.Indexes
                 AddMap<InputData>(documents => from doc in documents
                                                    // Do not remove the redundant (string[]). 
                                                    // It's intentional here and intended to test the following parsing: ((string[])prop).Select(...)
-                                               let tags = ((string[])doc.Tags.Split(',')).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
+                                               let tags = ((string[])doc.Tags.Split(',', StringSplitOptions.None)).Select(s => s.Trim()).Where(s => !string.IsNullOrEmpty(s))
                                                select new Result()
                                                {
                                                    Tags = tags.ToArray()

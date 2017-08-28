@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -35,7 +36,7 @@ namespace SlowTests.MailingList
                                .Customize(customization => customization.WaitForNonStaleResults())
                                .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(1, results.Count);
                 }
             }
@@ -56,7 +57,7 @@ namespace SlowTests.MailingList
                                   where student.PersonId != null
                                   select new
                                   {
-                                      EmailDomain = student.Email.Split('@').Last(),
+                                      EmailDomain = student.Email.Split('@', StringSplitOptions.None).Last(),
                                       Count = 1,
                                   };
 

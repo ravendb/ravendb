@@ -8,9 +8,11 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Faceted;
 using Raven.Server.Documents.Queries.MoreLikeThis;
+using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Documents.Queries.Suggestion;
 using Raven.Server.Json;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -124,6 +126,8 @@ namespace Raven.Server.Documents.Handlers
             {
                 writer.WriteFacetedQueryResult(context, result);
             }
+
+            Database.QueryMetadataCache.MaybeAddToCache(query.FacetQuery.Metadata, result.IndexName);
         }
 
         private async Task Query(DocumentsOperationContext context, OperationCancelToken token, HttpMethod method)
@@ -161,6 +165,7 @@ namespace Raven.Server.Documents.Handlers
                 writer.WriteDocumentQueryResult(context, result, metadataOnly, out numberOfResults);
             }
 
+            Database.QueryMetadataCache.MaybeAddToCache(indexQuery.Metadata, result.IndexName);
             AddPagingPerformanceHint(PagingOperationType.Queries, $"{nameof(Query)} ({indexQuery.Metadata.IndexName})", HttpContext, numberOfResults, indexQuery.PageSize, TimeSpan.FromMilliseconds(result.DurationInMs));
         }
 
@@ -171,9 +176,7 @@ namespace Raven.Server.Documents.Handlers
 
             var json = await context.ReadForMemoryAsync(RequestBodyStream(), "index/query");
 
-            // read from cache here
-
-            return IndexQueryServerSide.Create(json);
+            return IndexQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
         private MoreLikeThisQueryServerSide GetMoreLikeThisQuery(JsonOperationContext context, HttpMethod method)
@@ -185,8 +188,6 @@ namespace Raven.Server.Documents.Handlers
             }
 
             var json = context.ReadForMemory(RequestBodyStream(), "morelikethis/query");
-
-            // read from cache here
 
             return MoreLikeThisQueryServerSide.Create(json);
         }
@@ -202,7 +203,7 @@ namespace Raven.Server.Documents.Handlers
 
             // read from cache here
 
-            return FacetQueryServerSide.Create(json);
+            return FacetQueryServerSide.Create(json, context, Database.QueryMetadataCache);
         }
 
         private SuggestionQueryServerSide GetSuggestionQuery(JsonOperationContext context, HttpMethod method)
@@ -294,10 +295,23 @@ namespace Raven.Server.Documents.Handlers
             var returnContextToPool = ContextPool.AllocateOperationContext(out DocumentsOperationContext context); // we don't dispose this as operation is async
 
             var reader = context.Read(RequestBodyStream(), "queries/delete");
-            var query = IndexQueryServerSide.Create(reader);
+            var query = IndexQueryServerSide.Create(reader, context, Database.QueryMetadataCache);
 
-            ExecuteQueryOperation(query.Metadata.IndexName, (runner, options, onProgress, token) => runner.ExecuteDeleteQuery(query, options, context, onProgress, token),
-                context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+            if (query.Metadata.IsDynamic == false)
+            {
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => runner.Query.ExecuteDeleteQuery(query, options.Query, context, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByIndex);
+            }
+            else
+            {
+                EnsureQueryHasOnlyFromClause(query.Metadata.Query, query.Metadata.CollectionName);
+
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => runner.Collection.ExecuteDelete(query.Metadata.CollectionName, options.Collection, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.DeleteByCollection);
+            }
+
             return Task.CompletedTask;
 
         }
@@ -310,30 +324,71 @@ namespace Raven.Server.Documents.Handlers
             var reader = context.Read(RequestBodyStream(), "queries/patch");
             if (reader == null)
                 throw new BadRequestException("Missing JSON content.");
-            if (reader.TryGet("Patch", out BlittableJsonReaderObject patchJson) == false || patchJson == null)
-                throw new BadRequestException("Missing 'Patch' property.");
             if (reader.TryGet("Query", out BlittableJsonReaderObject queryJson) == false || queryJson == null)
                 throw new BadRequestException("Missing 'Query' property.");
 
-            var patch = PatchRequest.Parse(patchJson);
-            var query = IndexQueryServerSide.Create(queryJson);
+            var query = IndexQueryServerSide.Create(queryJson, context, Database.QueryMetadataCache, QueryType.Update);
 
-            ExecuteQueryOperation(query.Metadata.IndexName, (runner, options, onProgress, token) => runner.ExecutePatchQuery(query, options, patch, context, onProgress, token),
+            var patch = new PatchRequest(query.Metadata.GetUpdateBody(), PatchRequestType.Patch);
+
+            if (query.Metadata.IsDynamic == false)
+            {
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => runner.Query.ExecutePatchQuery(
+                        query, options.Query, patch, query.QueryParameters, context, onProgress, token),
                 context, returnContextToPool, Operations.Operations.OperationType.UpdateByIndex);
+            }
+            else
+            {
+                EnsureQueryHasOnlyFromClause(query.Metadata.Query, query.Metadata.CollectionName);
+
+                ExecuteQueryOperation(query.Metadata,
+                    (runner, options, onProgress, token) => 
+                    runner.Collection.ExecutePatch(query.Metadata.CollectionName, options.Collection, patch, query.QueryParameters, onProgress, token),
+                    context, returnContextToPool, Operations.Operations.OperationType.UpdateByCollection);
+            }
+
             return Task.CompletedTask;
         }
 
-        private void ExecuteQueryOperation(string indexName, Func<QueryRunner, QueryOperationOptions, Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
+        private void EnsureQueryHasOnlyFromClause(Query query, string collection)
+        {
+            if (query.Where != null || 
+                query.Select != null || 
+                query.OrderBy != null || 
+                query.GroupBy != null || 
+                query.Load != null || 
+                query.Include != null || 
+                query.From.Filter != null)
+                throw new BadRequestException($"Patch and delete documents by a dynamic query is supported only for queries having just FROM clause, e.g. 'FROM {collection}'. If you need to perform filtering please issue the query to the static index.");
+        }
+
+        private void ExecuteQueryOperation(QueryMetadata queryMetadata, Func<(QueryRunner Query, CollectionRunner Collection), (QueryOperationOptions Query, CollectionOperationOptions Collection), Action<IOperationProgress>, OperationCancelToken, Task<IOperationResult>> operation, DocumentsOperationContext context, IDisposable returnContextToPool, Operations.Operations.OperationType operationType)
         {
             var options = GetQueryOperationOptions();
             var token = CreateTimeLimitedOperationToken();
 
-            var queryRunner = new QueryRunner(Database, context);
-
             var operationId = Database.Operations.GetNextOperationId();
 
-            var task = Database.Operations.AddOperation(Database, indexName, operationType, onProgress => operation(queryRunner, options, onProgress, token), operationId, token);
-            
+            Task<IOperationResult> task;
+
+            if (queryMetadata.IsDynamic == false)
+            {
+                var queryRunner = new QueryRunner(Database, context);
+                task = Database.Operations.AddOperation(Database, queryMetadata.IndexName, operationType,
+                    onProgress => operation((queryRunner, null), (options, null), onProgress, token), operationId, token);
+            }
+            else
+            {
+                var collectionRunner = new CollectionRunner(Database, context);
+
+                task = Database.Operations.AddOperation(Database, queryMetadata.CollectionName, operationType,
+                    onProgress => operation((null, collectionRunner), (null, new CollectionOperationOptions()
+                    {
+                        MaxOpsPerSecond = options.MaxOpsPerSecond
+                    }), onProgress, token), operationId, token);
+            }
+
             using (var writer = new BlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteOperationId(context, operationId);

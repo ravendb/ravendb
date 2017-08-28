@@ -6,7 +6,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Queries.Facets;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes.Debugging;
@@ -239,6 +238,11 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
+
+            writer.WriteArray(nameof(result.IncludedPaths),
+                result.IncludedPaths);
+            writer.WriteComma();
+
             writer.WriteQueryResult(context, result, metadataOnly, out numberOfResults, partial: true);
 
             writer.WriteEndObject();
@@ -411,10 +415,6 @@ namespace Raven.Server.Json
         {
             writer.WriteStartObject();
 
-            writer.WritePropertyName(nameof(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer));
-            writer.WriteBool(query.AllowMultipleIndexEntriesForSameDocumentToResultTransformer);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.CutoffEtag));
             if (query.CutoffEtag.HasValue)
                 writer.WriteInteger(query.CutoffEtag.Value);
@@ -422,19 +422,8 @@ namespace Raven.Server.Json
                 writer.WriteNull();
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(query.DisableCaching));
-            writer.WriteBool(query.DisableCaching);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(query.ExplainScores));
             writer.WriteBool(query.ExplainScores);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.HighlighterKeyName));
-            if (query.HighlighterKeyName != null)
-                writer.WriteString(query.HighlighterKeyName);
-            else
-                writer.WriteNull();
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(query.PageSize));
@@ -444,13 +433,6 @@ namespace Raven.Server.Json
             writer.WritePropertyName(nameof(query.Query));
             if (query.Query != null)
                 writer.WriteString(query.Query);
-            else
-                writer.WriteNull();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.Transformer));
-            if (query.Transformer != null)
-                writer.WriteString(query.Transformer);
             else
                 writer.WriteNull();
             writer.WriteComma();
@@ -480,85 +462,6 @@ namespace Raven.Server.Json
                 writer.WriteString(query.WaitForNonStaleResultsTimeout.Value.ToString());
             else
                 writer.WriteNull();
-            writer.WriteComma();
-
-            var isFirstInternal = true;
-
-            writer.WritePropertyName(nameof(query.HighlightedFields));
-            writer.WriteStartArray();
-            if (query.HighlightedFields != null)
-            {
-                foreach (var field in query.HighlightedFields)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteStartObject();
-
-                    writer.WritePropertyName(nameof(field.Field));
-                    writer.WriteString(field.Field);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentCount));
-                    writer.WriteInteger(field.FragmentCount);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentLength));
-                    writer.WriteInteger(field.FragmentLength);
-                    writer.WriteComma();
-
-                    writer.WritePropertyName(nameof(field.FragmentsField));
-                    writer.WriteString(field.FragmentsField);
-
-                    writer.WriteEndObject();
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.HighlighterPostTags));
-            writer.WriteStartArray();
-            if (query.HighlighterPostTags != null)
-            {
-                isFirstInternal = true;
-                foreach (var tag in query.HighlighterPostTags)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(tag);
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.HighlighterPreTags));
-            writer.WriteStartArray();
-            if (query.HighlighterPreTags != null)
-            {
-                isFirstInternal = true;
-                foreach (var tag in query.HighlighterPreTags)
-                {
-                    if (isFirstInternal == false)
-                        writer.WriteComma();
-
-                    isFirstInternal = false;
-
-                    writer.WriteString(tag);
-                }
-            }
-            writer.WriteEndArray();
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(query.TransformerParameters));
-            writer.WriteStartObject();
-            if (query.TransformerParameters != null)
-                writer.WriteObject(query.TransformerParameters);
-            writer.WriteEndObject();
 
             writer.WriteEndObject();
         }
@@ -590,16 +493,12 @@ namespace Raven.Server.Json
             writer.WriteInteger(statistics.CountOfUniqueAttachments);
             writer.WriteComma();
 
-            writer.WritePropertyName(nameof(statistics.CountOfTransformers));
-            writer.WriteInteger(statistics.CountOfTransformers);
-            writer.WriteComma();
-
             writer.WritePropertyName(nameof(statistics.DatabaseChangeVector));
             writer.WriteString(statistics.DatabaseChangeVector);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.DatabaseId));
-            writer.WriteString(statistics.DatabaseId.ToString());
+            writer.WriteString(statistics.DatabaseId);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(statistics.Is64Bit));
@@ -677,24 +576,6 @@ namespace Raven.Server.Json
                 writer.WriteEndObject();
             }
             writer.WriteEndArray();
-
-            writer.WriteEndObject();
-        }
-
-        public static void WriteTransformerDefinition(this BlittableJsonTextWriter writer, JsonOperationContext context, TransformerDefinition transformerDefinition)
-        {
-            writer.WriteStartObject();
-
-            writer.WritePropertyName(nameof(transformerDefinition.Name));
-            writer.WriteString(transformerDefinition.Name);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(transformerDefinition.TransformResults));
-            writer.WriteString(transformerDefinition.TransformResults);
-            writer.WriteComma();
-
-            writer.WritePropertyName(nameof(transformerDefinition.LockMode));
-            writer.WriteString(transformerDefinition.LockMode.ToString());
 
             writer.WriteEndObject();
         }

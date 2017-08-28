@@ -4,13 +4,10 @@ namespace Raven.Server.Documents.Queries
 {
     public class WhereField
     {
-        public readonly ValueTokenType Type;
-
         public readonly bool IsFullTextSearch;
 
-        public WhereField(ValueTokenType type, bool isFullTextSearch)
+        public WhereField(bool isFullTextSearch)
         {
-            Type = type;
             IsFullTextSearch = isFullTextSearch;
         }
     }

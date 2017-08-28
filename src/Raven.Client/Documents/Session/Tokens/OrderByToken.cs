@@ -22,6 +22,26 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public static OrderByToken ScoreDescending = new OrderByToken("score()", descending: true, ordering: OrderingType.String);
 
+        public static OrderByToken CreateDistanceAscending(string fieldName, string latitudeParameterName, string longitudeParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, point(${latitudeParameterName}, ${longitudeParameterName}))", false, OrderingType.String);
+        }
+
+        public static OrderByToken CreateDistanceAscending(string fieldName, string shapeWktParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, wkt(${shapeWktParameterName}))", false, OrderingType.String);
+        }
+
+        public static OrderByToken CreateDistanceDescending(string fieldName, string latitudeParameterName, string longitudeParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, point(${latitudeParameterName}, ${longitudeParameterName}))", true, OrderingType.String);
+        }
+
+        public static OrderByToken CreateDistanceDescending(string fieldName, string shapeWktParameterName)
+        {
+            return new OrderByToken($"distance({fieldName}, wkt(${shapeWktParameterName}))", true, OrderingType.String);
+        }
+
         public static OrderByToken CreateRandom(string seed)
         {
             if (seed == null)
@@ -42,7 +62,7 @@ namespace Raven.Client.Documents.Session.Tokens
 
         public override void WriteTo(StringBuilder writer)
         {
-            writer.Append(_fieldName);
+            WriteField(writer, _fieldName);
 
             switch (_ordering)
             {

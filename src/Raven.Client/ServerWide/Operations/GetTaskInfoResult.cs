@@ -59,15 +59,11 @@ namespace Raven.Client.ServerWide.Operations
         }
 
         public string Collection { get; set; }
-        public DateTime TimeOfLastClientActivity { get; set; }
-        public string LastChangeVector { get; set; }
-
 
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Collection)] = Collection;
-            json[nameof(TimeOfLastClientActivity)] = TimeOfLastClientActivity;
             return json;
         }
     }

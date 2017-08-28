@@ -23,6 +23,17 @@ namespace Raven.Server.Documents.Includes
             _includes = includes;
         }
 
+        public void AddRange(HashSet<string> ids)
+        {
+            if (ids == null)
+                return;
+
+            if (_includedIds == null)
+                _includedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            _includedIds.UnionWith(ids);
+        }
+
         public void Add(string id)
         {
             if (_includedIds == null)

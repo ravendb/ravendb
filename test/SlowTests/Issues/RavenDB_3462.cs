@@ -7,6 +7,7 @@
 using System.Globalization;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Xunit;
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_3462 : RavenTestBase
     {
-        [Fact(Skip = "RavenDB-5988")]
+        [Fact]
         public void BoundingBoxIndexSparialSearch()
         {
             using (var documentStore = GetDocumentStore())
@@ -37,16 +38,16 @@ namespace SlowTests.Issues
                     WaitForIndexing(documentStore);
 
                     //Point(12.556675672531128 55.675285554217), corner of the bounding rectangle below
-                    var nearbyPoints = session.Query<Entity, EntitySpatialIndex>()
-                        .Customize(x =>
-                            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128))
+                    var nearbyPoints = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128))
+                        .OfType<Entity>()
                         .ToList();
 
                     Assert.Equal(1, nearbyPoints.Count); // Passes
 
-                    nearbyPoints = session.Query<Entity, EntitySpatialIndex2>()
-                        .Customize(x =>
-                            x.WithinRadiusOf(fieldName: "Coordinates", radius: 1, latitude: 55.675285554217, longitude: 12.556675672531128))
+                    nearbyPoints = session.Query<EntitySpatialIndex2.Result, EntitySpatialIndex2>()
+                        .Spatial(x => x.Coordinates, x => x.WithinRadius(1, 55.675285554217, 12.556675672531128))
+                        .OfType<Entity>()
                         .ToList();
 
                     Assert.Equal(1, nearbyPoints.Count);
@@ -54,14 +55,16 @@ namespace SlowTests.Issues
                     var boundingRectangleWKT =
                         "POLYGON((12.556675672531128 55.675285554217,12.56213665008545 55.675285554217,12.56213665008545 55.67261750095371,12.556675672531128 55.67261750095371,12.556675672531128 55.675285554217))";
 
-                    var q = session.Query<Entity, EntitySpatialIndex>()
-                        .Customize(x => x.RelatesToShape("Coordinates", boundingRectangleWKT, SpatialRelation.Within))
+                    var q = session.Query<EntitySpatialIndex.Result, EntitySpatialIndex>()
+                        .Spatial(x => x.Coordinates, x => x.RelatesToShape(boundingRectangleWKT, SpatialRelation.Within))
+                        .OfType<Entity>()
                         .ToList();
 
                     Assert.Equal(1, q.Count);
 
-                    q = session.Query<Entity, EntitySpatialIndex2>()
-                        .Customize(x => x.RelatesToShape("Coordinates", boundingRectangleWKT, SpatialRelation.Within))
+                    q = session.Query<EntitySpatialIndex2.Result, EntitySpatialIndex2>()
+                        .Spatial(x => x.Coordinates, x => x.RelatesToShape(boundingRectangleWKT, SpatialRelation.Within))
+                        .OfType<Entity>()
                         .ToList();
 
                     Assert.Equal(1, q.Count); // does not pass
@@ -92,12 +95,17 @@ namespace SlowTests.Issues
 
         private class EntitySpatialIndex : AbstractIndexCreationTask<Entity>
         {
+            public class Result
+            {
+                public string Coordinates { get; set; }
+            }
+
             public EntitySpatialIndex()
             {
                 Map = entities => entities.Select(entity => new
                 {
                     entity.Id,
-                    Coordinates = entity.Geolocation.WKT
+                    Coordinates = CreateSpatialField(entity.Geolocation.WKT)
                 });
 
                 Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());
@@ -106,12 +114,17 @@ namespace SlowTests.Issues
 
         private class EntitySpatialIndex2 : AbstractIndexCreationTask<Entity>
         {
+            public class Result
+            {
+                public string Coordinates { get; set; }
+            }
+
             public EntitySpatialIndex2()
             {
                 Map = entities => entities.Select(e => new
                 {
                     Id = e.Id,
-                    __ = SpatialGenerate("Coordinates", e.Geolocation.Lat, e.Geolocation.Lon)
+                    Coordinates = CreateSpatialField(e.Geolocation.Lat, e.Geolocation.Lon)
                 });
 
                 Spatial("Coordinates", x => x.Cartesian.BoundingBoxIndex());

@@ -15,9 +15,18 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
         public readonly Dictionary<string, IndexField> MapAndGroupByFields;
 
         public AutoMapReduceIndexDefinition(string collection, IndexField[] mapFields, IndexField[] groupByFields)
-            : base(IndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
+            : base(AutoIndexNameFinder.FindMapReduceIndexName(collection, mapFields, groupByFields), new HashSet<string> { collection }, IndexLockMode.Unlock, IndexPriority.Normal, mapFields)
         {
-            GroupByFields = groupByFields.ToDictionary(x => x.Name, x => x);
+            GroupByFields = groupByFields.ToDictionary(x => x.Name, x =>
+            {
+                if (x.Indexing == FieldIndexing.Search)
+                {
+                    x.OriginalName = x.Name;
+                    x.Name = IndexField.GetSearchAutoIndexFieldName(x.Name);
+                }
+
+                return x;
+            }, StringComparer.Ordinal);
             
             MapAndGroupByFields = new Dictionary<string, IndexField>(MapFields.Count + GroupByFields.Count);
 
@@ -173,7 +182,7 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
                     Name = name,
                     Storage = FieldStorage.Yes,
                     Indexing = FieldIndexing.Default,
-                    Aggregation = (AggregationOperation)aggregationAsInt,
+                    Aggregation = (AggregationOperation)aggregationAsInt
                 };
 
                 mapFields[i] = field;

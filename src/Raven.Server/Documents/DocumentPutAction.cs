@@ -13,6 +13,7 @@ using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
 using System.Linq;
+using System.Text;
 using Raven.Client.ServerWide.Revisions;
 using static Raven.Server.Documents.DocumentsStorage;
 
@@ -29,7 +30,7 @@ namespace Raven.Server.Documents
             _documentDatabase = documentDatabase;
         }
 
-        public PutOperationResults PutDocument(DocumentsOperationContext context, string id, 
+        public PutOperationResults PutDocument(DocumentsOperationContext context, string id,
             string expectedChangeVector,
             BlittableJsonReaderObject document,
             long? lastModifiedTicks = null,
@@ -57,7 +58,7 @@ namespace Raven.Server.Documents
 
             var table = context.Transaction.InnerTransaction.OpenTable(DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
-            id = BuildDocumentId(context, id, table, newEtag, out bool knownNewId);
+            id = BuildDocumentId(id, newEtag, out bool knownNewId);
             using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, id, out Slice lowerId, out Slice idPtr))
             {
                 var oldValue = default(TableValueReader);
@@ -133,13 +134,13 @@ namespace Raven.Server.Documents
                         if (_documentDatabase.DocumentsStorage.RevisionsStorage.ShouldVersionDocument(collectionName, nonPersistentFlags, oldDoc, document,
                             ref flags, out RevisionsCollectionConfiguration configuration))
                         {
-                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags, 
+                            _documentDatabase.DocumentsStorage.RevisionsStorage.Put(context, id, document, flags, nonPersistentFlags,
                                 changeVector, modifiedTicks, configuration, collectionName);
                         }
                     }
                 }
 
-                using(Slice.From(context.Allocator, changeVector, out var cv))
+                using (Slice.From(context.Allocator, changeVector, out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
                     tvb.Add(lowerId);
@@ -176,7 +177,7 @@ namespace Raven.Server.Documents
                     CollectionName = collectionName.Name,
                     Id = id,
                     Type = DocumentChangeTypes.Put,
-                    IsSystemDocument = collectionName.IsSystem,
+                    IsSystemDocument = collectionName.IsSystem
                 });
 
 #if DEBUG
@@ -190,7 +191,6 @@ namespace Raven.Server.Documents
                 AssertMetadataWasFiltered(document);
                 AttachmentsStorage.AssertAttachments(document, flags);
 #endif
-
                 return new PutOperationResults
                 {
                     Etag = newEtag,
@@ -205,7 +205,7 @@ namespace Raven.Server.Documents
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private (string ChangeVector, NonPersistentDocumentFlags NonPersistentFlags) BuildChangeVectorAndResolveConflicts(
-            DocumentsOperationContext context, string id, Slice lowerId, long newEtag, 
+            DocumentsOperationContext context, string id, Slice lowerId, long newEtag,
             BlittableJsonReaderObject document, string changeVector, string excpectedChangeVector, DocumentFlags flags, TableValueReader oldValue)
         {
             var nonPersistentFlags = NonPersistentDocumentFlags.None;
@@ -217,7 +217,7 @@ namespace Raven.Server.Documents
                 // This way we avoid another replication back to the source
 
                 _documentsStorage.ConflictsStorage.ThrowConcurrencyExceptionOnConflictIfNeeded(context, lowerId, excpectedChangeVector);
-                
+
                 if (fromReplication)
                 {
                     nonPersistentFlags = _documentsStorage.ConflictsStorage.DeleteConflictsFor(context, id, document).NonPersistentFlags;
@@ -231,12 +231,12 @@ namespace Raven.Server.Documents
             }
 
             if (string.IsNullOrEmpty(changeVector) == false)
-               return (changeVector, nonPersistentFlags);
+                return (changeVector, nonPersistentFlags);
 
             string oldChangeVector;
             if (fromReplication == false)
             {
-                if(context.LastDatabaseChangeVector == null)
+                if (context.LastDatabaseChangeVector == null)
                     context.LastDatabaseChangeVector = GetDatabaseChangeVector(context);
                 oldChangeVector = context.LastDatabaseChangeVector;
             }
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(DocumentsOperationContext context, string id, Table table, long newEtag, out bool knownNewId)
+        private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
             if (string.IsNullOrWhiteSpace(id))
             {
@@ -260,12 +260,12 @@ namespace Raven.Server.Documents
             {
                 // We use if instead of switch so the JIT will better inline this method
                 var lastChar = id[id.Length - 1];
-                if (lastChar == '/')
+                if (lastChar == '|')
                 {
                     ThrowInvalidDocumentId(id);
                 }
 
-                if (lastChar == '|')
+                if (lastChar == '/')
                 {
                     knownNewId = true;
                     id = _documentsStorage.Identities.AppendNumericValueToId(id, newEtag);
@@ -282,11 +282,11 @@ namespace Raven.Server.Documents
 
         private static void ThrowInvalidDocumentId(string id)
         {
-            throw new NotSupportedException("Document ids cannot end with '/', but was called with " + id +
+            throw new NotSupportedException("Document ids cannot end with '|', but was called with " + id +
                                             ". Identities are only generated for external requests, not calls to PutDocument and such.");
         }
 
-        private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document, 
+        private void RecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
             BlittableJsonReaderObject metadata, ref DocumentFlags flags)
         {
             var actualAttachments = _documentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocument(context, lowerId);
@@ -330,7 +330,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private bool ShouldRecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc, 
+        private bool ShouldRecreateAttachments(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject oldDoc,
             BlittableJsonReaderObject document, ref DocumentFlags flags, NonPersistentDocumentFlags nonPersistentFlags)
         {
             if ((nonPersistentFlags & NonPersistentDocumentFlags.ResolveAttachmentsConflict) == NonPersistentDocumentFlags.ResolveAttachmentsConflict)
@@ -344,7 +344,7 @@ namespace Raven.Server.Documents
                 (nonPersistentFlags & NonPersistentDocumentFlags.ByAttachmentUpdate) != NonPersistentDocumentFlags.ByAttachmentUpdate &&
                 (nonPersistentFlags & NonPersistentDocumentFlags.FromReplication) != NonPersistentDocumentFlags.FromReplication)
             {
-                if (oldDoc != null && 
+                if (oldDoc != null &&
                     oldDoc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject oldMetadata) &&
                     oldMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray oldAttachments))
                 {
@@ -373,7 +373,7 @@ namespace Raven.Server.Documents
         private static void ThrowConcurrentExceptionOnMissingDoc(string id, string excpectedChangeVector)
         {
             throw new ConcurrencyException(
-                $"Document {id} does not exist, but Put was called with change vector {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
+                $"Document {id} does not exist, but Put was called with change vector: {excpectedChangeVector}. Optimistic concurrency violation, transaction will be aborted.")
             {
                 ExpectedChangeVector = excpectedChangeVector
             };
@@ -382,7 +382,7 @@ namespace Raven.Server.Documents
         private static void ThrowInvalidCollectionNameChange(string id, CollectionName oldCollectionName, CollectionName collectionName)
         {
             throw new InvalidOperationException(
-                $"Changing '{id}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{System.Environment.NewLine}" +
+                $"Changing '{id}' from '{oldCollectionName.Name}' to '{collectionName.Name}' via update is not supported.{Environment.NewLine}" +
                 $"Delete it and recreate the document {id}.");
         }
 
@@ -401,7 +401,21 @@ namespace Raven.Server.Documents
             var tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
             using (Slice.External(context.Allocator, lowerId, lowerSize, out Slice id))
             {
-                tombstoneTable.DeleteByKey(id);
+                if (tombstoneTable.ReadByKey(id, out var reader) == false)
+                    return;
+
+                if (tombstoneTable.IsOwned(reader.Id))
+                {
+                    tombstoneTable.Delete(reader.Id);
+                    return;
+                }
+
+                // this is using a different collection, so we need to handle that.
+
+                var collectionPtr = reader.Read((int)TombstoneTable.Collection, out lowerSize);
+                collectionName = new CollectionName(Encoding.UTF8.GetString(collectionPtr, lowerSize));
+                tombstoneTable = context.Transaction.InnerTransaction.OpenTable(TombstonesSchema, collectionName.GetTableName(CollectionTableType.Tombstones));
+                tombstoneTable.Delete(reader.Id);
             }
         }
 
@@ -429,7 +443,7 @@ namespace Raven.Server.Documents
                 names.Contains(Constants.Documents.Metadata.ChangeVector, StringComparer.OrdinalIgnoreCase) ||
                 names.Contains(Constants.Documents.Metadata.Flags, StringComparer.OrdinalIgnoreCase))
             {
-                throw new InvalidOperationException("Document's metadata should filter properties on before put to storage." + System.Environment.NewLine + data);
+                throw new InvalidOperationException("Document's metadata should filter properties on before put to storage." + Environment.NewLine + data);
             }
         }
     }

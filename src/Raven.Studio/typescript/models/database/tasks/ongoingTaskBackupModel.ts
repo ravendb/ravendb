@@ -3,13 +3,10 @@ import appUrl = require("common/appUrl");
 import router = require("plugins/router");
 import ongoingTask = require("models/database/tasks/ongoingTaskModel"); 
 
-
 class ongoingTaskBackupModel extends ongoingTask {
-
     editUrl: KnockoutComputed<string>;
 
     backupType = ko.observable<Raven.Client.ServerWide.PeriodicBackup.BackupType>();
-    backupDestinations = ko.observableArray<string>();
     nextBackup = ko.observable<string>();
     lastFullBackup = ko.observable<string>();
     lastIncrementalBackup = ko.observable<string>();
@@ -17,6 +14,7 @@ class ongoingTaskBackupModel extends ongoingTask {
     constructor(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup) {
         super();
 
+        this.isEdit = false;
         this.update(dto);
         this.initializeObservables();
     }
@@ -32,8 +30,6 @@ class ongoingTaskBackupModel extends ongoingTask {
         super.update(dto);
 
         this.backupType(dto.BackupType);
-        this.backupDestinations(dto.BackupDestinations.length === 0 ? ["No destinations"] : dto.BackupDestinations);
-
         const dateFormat = "YYYY MMMM Do, h:mm A";
 
         if (dto.LastFullBackup) {
@@ -61,6 +57,15 @@ class ongoingTaskBackupModel extends ongoingTask {
 
     editTask() {
         router.navigate(this.editUrl());
+    }
+
+    protected generateTaskName(dto: Raven.Client.ServerWide.Operations.OngoingTaskBackup): string {
+        const backupDestinations =
+            dto.BackupDestinations.length === 0
+                ? "No destinations"
+                : `${dto.BackupType} to ${dto.BackupDestinations.join(", ")}`;
+
+        return backupDestinations;
     }
 }
 

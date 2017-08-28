@@ -4,7 +4,6 @@ import viewModelBase = require("viewmodels/viewModelBase");
 import getDatabaseStatsCommand = require("commands/resources/getDatabaseStatsCommand");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
 import messagePublisher = require("common/messagePublisher");
-import getCollectionsStatsCommand = require("commands/database/documents/getCollectionsStatsCommand");
 import collectionsStats = require("models/database/documents/collectionsStats"); 
 import datePickerBindingHandler = require("common/bindingHelpers/datePickerBindingHandler");
 import deleteDocumentsMatchingQueryConfirm = require("viewmodels/database/query/deleteDocumentsMatchingQueryConfirm");
@@ -12,18 +11,16 @@ import deleteDocsMatchingQueryCommand = require("commands/database/documents/del
 import notificationCenter = require("common/notifications/notificationCenter");
 
 import queryCommand = require("commands/database/query/queryCommand");
+import queryCompleter = require("common/queryCompleter");
 import database = require("models/resources/database");
 import querySort = require("models/database/query/querySort");
 import collection = require("models/database/documents/collection");
-import getTransformersCommand = require("commands/database/transformers/getTransformersCommand");
 import document = require("models/database/documents/document");
 import queryStatsDialog = require("viewmodels/database/query/queryStatsDialog");
-import transformerType = require("models/database/index/transformer");
 import recentQueriesStorage = require("common/storage/recentQueriesStorage");
 import queryUtil = require("common/queryUtil");
 import eventsCollector = require("common/eventsCollector");
 import queryCriteria = require("models/database/query/queryCriteria");
-import queryTransformerParameter = require("models/database/query/queryTransformerParameter");
 
 import documentBasedColumnsProvider = require("widgets/virtualGrid/columns/providers/documentBasedColumnsProvider");
 import virtualColumn = require("widgets/virtualGrid/columns/virtualColumn");
@@ -32,15 +29,6 @@ import columnPreviewPlugin = require("widgets/virtualGrid/columnPreviewPlugin");
 import textColumn = require("widgets/virtualGrid/columns/textColumn");
 import columnsSelector = require("viewmodels/partial/columnsSelector");
 import popoverUtils = require("common/popoverUtils");
-import getCustomFunctionsCommand = require("commands/database/documents/getCustomFunctionsCommand");
-import customFunctions = require("models/database/documents/customFunctions");
-import evaluationContextHelper = require("common/helpers/evaluationContextHelper");
-
-
-type indexItem = {
-    name: string;
-    isMapReduce: boolean;
-}
 
 type filterType = "in" | "string" | "range";
 
@@ -62,12 +50,8 @@ class query extends viewModelBase {
     private gridController = ko.observable<virtualGridController<any>>();
 
     recentQueries = ko.observableArray<storedQueryDto>();
-    allTransformers = ko.observableArray<Raven.Client.Documents.Transformers.TransformerDefinition>();
 
-    collections = ko.observableArray<collection>([]);
-    indexes = ko.observableArray<indexItem>();
-    indexFields = ko.observableArray<string>();
-    querySummary = ko.observable<string>();
+    indexes = ko.observableArray<Raven.Client.Documents.Operations.IndexInformation>();
 
     criteria = ko.observable<queryCriteria>(queryCriteria.empty());
     cacheEnabled = ko.observable<boolean>(true);
@@ -75,9 +59,6 @@ class query extends viewModelBase {
     private indexEntrieStateWasTrue: boolean = false; // Used to save current query settings when switching to a 'dynamic' index
 
     columnsSelector = new columnsSelector<document>();
-
-    uiTransformer = ko.observable<string>(); // represents UI value, which might not be yet applied to criteria 
-    uiTransformerParameters = ko.observableArray<queryTransformerParameter>(); // represents UI value, which might not be yet applied to criteria 
 
     fetcher = ko.observable<fetcherType>();
     queryStats = ko.observable<Raven.Client.Documents.Queries.QueryResult<any>>();
@@ -87,11 +68,12 @@ class query extends viewModelBase {
     canDeleteDocumentsMatchingQuery: KnockoutComputed<boolean>;
     isMapReduceIndex: KnockoutComputed<boolean>;
     isDynamicIndex: KnockoutComputed<boolean>;
-    isStaticIndex: KnockoutComputed<boolean>;
+    isAutoIndex: KnockoutComputed<boolean>;
 
     private columnPreview = new columnPreviewPlugin<document>();
 
     hasEditableIndex: KnockoutComputed<boolean>;
+    queryCompleter: queryCompleter;
 
     editIndexUrl: KnockoutComputed<string>;
     indexPerformanceUrl: KnockoutComputed<string>;
@@ -106,8 +88,6 @@ class query extends viewModelBase {
     queriedIndex: KnockoutComputed<string>;
     queriedIndexLabel: KnockoutComputed<string>;
     queriedIndexDescription: KnockoutComputed<string>;
-
-    private customFunctionsContext: object;
 
     /*TODO
     isTestIndex = ko.observable<boolean>(false);
@@ -126,13 +106,14 @@ class query extends viewModelBase {
     constructor() {
         super();
 
+        this.queryCompleter = queryCompleter.remoteCompleter(this.activeDatabase, this.indexes);
         aceEditorBindingHandler.install();
         datePickerBindingHandler.install();
 
         this.initObservables();
         this.initValidation();
 
-        this.bindToCurrentInstance("runRecentQuery", "selectTransformer");
+        this.bindToCurrentInstance("runRecentQuery");
     }
 
     private initObservables() {
@@ -197,18 +178,8 @@ class query extends viewModelBase {
                 return false;
 
             const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.name === indexName);
-            return !!currentIndex && currentIndex.isMapReduce;
-        });
-
-        this.isStaticIndex = ko.pureComputed(() => {
-            const indexName = this.queriedIndex();
-            if (!indexName)
-                return false;
-
-            return !indexName.startsWith(queryUtil.DynamicPrefix) &&
-                !indexName.startsWith(queryUtil.AutoPrefix) &&
-                indexName !== queryUtil.AllDocs;
+            const currentIndex = indexes.find(i => i.Name === indexName);
+            return !!currentIndex && currentIndex.Type === "MapReduce";
         });
 
         this.isDynamicIndex = ko.pureComputed(() => {
@@ -217,8 +188,16 @@ class query extends viewModelBase {
                 return false;
 
             const indexes = this.indexes() || [];
-            const currentIndex = indexes.find(i => i.name === indexName);
+            const currentIndex = indexes.find(i => i.Name === indexName);
             return !currentIndex;
+        });
+        
+        this.isAutoIndex = ko.pureComputed(() => {
+            const indexName = this.queriedIndex();
+            if (!indexName)
+                return false;
+            
+            return indexName.toLocaleLowerCase().startsWith(queryUtil.AutoPrefix);
         });
 
         this.canDeleteDocumentsMatchingQuery = ko.pureComputed(() => {
@@ -271,13 +250,7 @@ class query extends viewModelBase {
 
         this.loadRecentQueries();
 
-        const initTask = $.Deferred<canActivateResultDto>();
-
-        this.fetchAllTransformers(this.activeDatabase())
-            .done(() => initTask.resolve({ can: true }))
-            .fail(() => initTask.resolve({ can: false }));
-
-        return initTask;
+        return true;
     }
 
     activate(indexNameOrRecentQueryHash?: string) {
@@ -287,13 +260,8 @@ class query extends viewModelBase {
         
         const db = this.activeDatabase();
 
-        return $.when<any>(this.fetchAllCollections(db), this.fetchAllIndexes(db), this.fetchCustomFunctions(db))
+        return this.fetchAllIndexes(db)
             .done(() => this.selectInitialQuery(indexNameOrRecentQueryHash));
-    }
-
-    detached() {
-        super.detached();
-        aceEditorBindingHandler.detached();
     }
 
     attached() {
@@ -321,9 +289,8 @@ class query extends viewModelBase {
         this.setupDisableReasons();
 
         const grid = this.gridController();
-        grid.withEvaluationContext(this.customFunctionsContext);
 
-        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, this.collections().map(x => x.name), {
+        const documentsProvider = new documentBasedColumnsProvider(this.activeDatabase(), grid, {
             enableInlinePreview: true
         });
 
@@ -360,45 +327,18 @@ class query extends viewModelBase {
             .done(queries => this.recentQueries(queries));
     }
 
-    private fetchAllTransformers(db: database): JQueryPromise<Array<Raven.Client.Documents.Transformers.TransformerDefinition>> {
-        return new getTransformersCommand(db)
-            .execute()
-            .done(transformers => this.allTransformers(transformers));
-    }
-
-    private fetchAllCollections(db: database): JQueryPromise<collectionsStats> {
-        return new getCollectionsStatsCommand(db)
-            .execute()
-            .done((results: collectionsStats) => {
-                this.collections(results.collections);
-            });
-    }
-
-    private fetchCustomFunctions(db: database): JQueryPromise<customFunctions> {
-        return new getCustomFunctionsCommand(db)
-            .execute()
-            .done(functions => {
-                this.customFunctionsContext = evaluationContextHelper.createContext(functions.functions);
-            });
-    }
-
     private fetchAllIndexes(db: database): JQueryPromise<any> {
         return new getDatabaseStatsCommand(db)
             .execute()
             .done((results: Raven.Client.Documents.Operations.DatabaseStatistics) => {
-                this.indexes(results.Indexes.map(indexDto => {
-                    return {
-                        name: indexDto.Name,
-                        isMapReduce: indexDto.Type === "MapReduce" //TODO: support for autoindexes?
-                    } as indexItem;
-                }));
+                this.indexes(results.Indexes);
             });
     }
 
     selectInitialQuery(indexNameOrRecentQueryHash: string) {
         if (!indexNameOrRecentQueryHash) {
             return;
-        } else if (this.indexes().find(i => i.name === indexNameOrRecentQueryHash) ||
+        } else if (this.indexes().find(i => i.Name === indexNameOrRecentQueryHash) ||
             indexNameOrRecentQueryHash.startsWith(queryUtil.DynamicPrefix) || 
             indexNameOrRecentQueryHash === queryUtil.AllDocs) {
             this.runQueryOnIndex(indexNameOrRecentQueryHash);
@@ -419,8 +359,6 @@ class query extends viewModelBase {
 
     runQueryOnIndex(indexName: string) {
         this.criteria().setSelectedIndex(indexName);
-        this.uiTransformer(null);
-        this.uiTransformerParameters([]);
 
         this.columnsSelector.reset();
 
@@ -441,16 +379,12 @@ class query extends viewModelBase {
         this.updateUrl(url);
     }
 
-    private generateQuerySummary() {
-        const criteria = this.criteria();
-        const transformer = criteria.transformer();
-        const transformerPart = transformer ? "transformed by " + transformer : "";
-        return transformerPart;
-    }
-
     runQuery() {
+        if (!this.isValid(this.criteria().validationGroup)) {
+            return;
+        }
+        
         eventsCollector.default.reportEvent("query", "run");
-        this.querySummary(this.generateQuerySummary());
         const criteria = this.criteria();
 
         if (this.criteria().queryText()) {
@@ -475,7 +409,6 @@ class query extends viewModelBase {
                     })
                     .done((queryResults: pagedResult<any>) => {
                         this.queryStats(queryResults.additionalResultInfo);
-                        queryUtil.fetchIndexFields(this.activeDatabase(), this.queriedIndex(), this.indexFields);
 
                         //TODO: this.indexSuggestions([]);
                         /* TODO
@@ -543,82 +476,7 @@ class query extends viewModelBase {
 
         criteria.updateUsing(storedQuery);
 
-        const matchedTransformer = this.allTransformers().find(t => t.Name === criteria.transformer());
-
-        if (matchedTransformer) {
-            this.selectTransformer(matchedTransformer);
-            this.fillTransformerParameters(criteria.transformerParameters());
-        } else {
-            this.selectTransformer(null);
-        }
-
         this.runQuery();
-    }
-
-    private fillTransformerParameters(transformerParameters: Array<transformerParamDto>) {
-        transformerParameters.forEach(param => {
-            const matchingField = this.uiTransformerParameters().find(x => x.name === param.name);
-            if (matchingField) {
-                matchingField.value(param.value);
-            }
-        });
-    }
-
-    selectTransformer(transformer: Raven.Client.Documents.Transformers.TransformerDefinition) {
-        if (transformer) {
-            this.uiTransformer(transformer.Name);
-            const inputs = transformerType.extractInputs(transformer.TransformResults);
-            this.uiTransformerParameters(inputs.map(input => new queryTransformerParameter(input)));
-        } else {
-            this.uiTransformer(null);
-            this.uiTransformerParameters([]);
-        }
-    }
-
-    private validateTransformer(): boolean {
-        if (!this.uiTransformer() || this.uiTransformerParameters().length === 0) {
-            return true;
-        }
-
-        let valid = true;
-
-        this.uiTransformerParameters().forEach(param => {
-            if (!this.isValid(param.validationGroup)) {
-                valid = false;
-            }
-        });
-
-        return valid;
-    }
-
-    applyTransformer() {
-        if (this.validateTransformer()) {
-
-            $("transform-results-btn").dropdown("toggle");
-
-            const criteria = this.criteria();
-            const transformerToApply = this.uiTransformer();
-            if (transformerToApply) {
-                criteria.transformer(transformerToApply);
-                criteria.transformerParameters(this.uiTransformerParameters().map(p => p.toDto()));
-                this.runQuery();
-            } else {
-                criteria.transformer(null);
-                criteria.transformerParameters([]);
-                this.runQuery();
-            }
-        }
-    }
-
-    getStoredQueryTransformerParameters(queryParams: Array<transformerParamDto>): string {
-        if (queryParams.length > 0) {
-            return "(" +
-                queryParams
-                    .map((param: transformerParamDto) => param.name + "=" + param.value)
-                    .join(", ") + ")";
-        }
-
-        return "";
     }
 
     getRecentQuerySortText(sorts: string[]) {
@@ -629,11 +487,6 @@ class query extends viewModelBase {
         }
 
         return "";
-    }
-
-    queryCompleter(editor: any, session: any, pos: AceAjax.Position, prefix: string, callback: (errors: any[], worldlist: { name: string; value: string; score: number; meta: string }[]) => void) {
-        queryUtil.queryCompleter(this.indexFields, this.queriedIndex, this.activeDatabase, editor, session, pos, prefix, callback);
-        callback([], []);
     }
 
     deleteDocsMatchingQuery() {

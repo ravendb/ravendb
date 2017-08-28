@@ -17,7 +17,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
     //TODO: private allReplicationConflicts = ko.observableArray<changesCallback<replicationConflictNotificationDto>>();
     private allDocsHandlers = ko.observableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>();
     private allIndexesHandlers = ko.observableArray<changesCallback<Raven.Client.Documents.Changes.IndexChange>>();
-    private allTransformersHandlers = ko.observableArray<changesCallback<Raven.Client.Documents.Changes.TransformerChange>>();
 
     private watchedDocuments = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>>();
     private watchedPrefixes = new Map<string, KnockoutObservableArray<changesCallback<Raven.Client.Documents.Changes.DocumentChange>>>();
@@ -64,9 +63,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
                     this.fireEvents<Raven.Client.Documents.Changes.IndexChange>(callbacks(), value, (event) => event.Name != null && event.Name === key);
                 });
                 break;
-            case "TransformerChange":
-                this.fireEvents<Raven.Client.Documents.Changes.TransformerChange>(this.allTransformersHandlers(), value, () => true);
-                break;
             default:
                 console.log("Unhandled Changes API notification type: " + eventType);
         }
@@ -107,20 +103,6 @@ class changesApi extends eventsWebSocketClient<changesApiEventDto[]> {
             if (callbacks().length === 0) {
                 this.watchedIndexes.delete(indexName);
                 this.send("unwatch-index", indexName);
-            }
-        });
-    }
-
-    watchAllTransformers(onChange: (e: Raven.Client.Documents.Changes.TransformerChange) => void) {
-        var callback = new changesCallback<Raven.Client.Documents.Changes.TransformerChange>(onChange);
-        if (this.allTransformersHandlers().length === 0) {
-            this.send("watch-transformers");
-        }
-        this.allTransformersHandlers.push(callback);
-        return new changeSubscription(() => {
-            this.allTransformersHandlers.remove(callback);
-            if (this.allTransformersHandlers().length === 0) {
-                this.send("unwatch-transformers");
             }
         });
     }

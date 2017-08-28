@@ -14,6 +14,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Documents.Queries.Spatial;
 using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 
@@ -201,7 +202,8 @@ namespace Raven.Client.Documents.Linq
                 return;
 
 
-            if (_subClauseDepth > 0) _documentQuery.OpenSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.OpenSubclause();
             _subClauseDepth++;
 
             // negate optimization : (RavenDB-3973).  in order to disable you may just set isNotEqualCheckBoundsToAndAlsoLeft & Right to "false" 
@@ -217,12 +219,10 @@ namespace Raven.Client.Documents.Linq
                 _subClauseDepth++;
                 _documentQuery.OpenSubclause();
             }
-            _isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoLeft;
+
             VisitExpression(andAlso.Left);
             _documentQuery.AndAlso();
-            _isNotEqualCheckBoundsToAndAlso = isNotEqualCheckBoundsToAndAlsoRight;
             VisitExpression(andAlso.Right);
-            _isNotEqualCheckBoundsToAndAlso = false;
 
             if (isNotEqualCheckBoundsToAndAlsoLeft || isNotEqualCheckBoundsToAndAlsoRight)
             {
@@ -230,9 +230,9 @@ namespace Raven.Client.Documents.Linq
                 _documentQuery.CloseSubclause();
             }
 
-
             _subClauseDepth--;
-            if (_subClauseDepth > 0) _documentQuery.CloseSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.CloseSubclause();
         }
 
         private bool TryHandleBetween(BinaryExpression andAlso)
@@ -309,7 +309,8 @@ namespace Raven.Client.Documents.Linq
 
         private void VisitOrElse(BinaryExpression orElse)
         {
-            if (_subClauseDepth > 0) _documentQuery.OpenSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.OpenSubclause();
             _subClauseDepth++;
 
             VisitExpression(orElse.Left);
@@ -317,7 +318,8 @@ namespace Raven.Client.Documents.Linq
             VisitExpression(orElse.Right);
 
             _subClauseDepth--;
-            if (_subClauseDepth > 0) _documentQuery.CloseSubclause();
+            if (_subClauseDepth > 0)
+                _documentQuery.CloseSubclause();
         }
 
         private void VisitEquals(BinaryExpression expression)
@@ -406,18 +408,13 @@ namespace Raven.Client.Documents.Linq
                 Equals(((ConstantExpression)expression.Right).Value, 0))
             {
                 var expressionMemberInfo = GetMember(methodCallExpression.Arguments[0]);
-                _documentQuery.OpenSubclause();
-                _documentQuery.WhereExists(expressionMemberInfo.Path);
-                _documentQuery.AndAlso();
-                _documentQuery.NegateNext();
-                _documentQuery.WhereEquals(new WhereParams
+                _documentQuery.WhereNotEquals(new WhereParams
                 {
                     FieldName = expressionMemberInfo.Path,
                     Value = GetValueFromExpression(methodCallExpression.Arguments[0], GetMemberType(expressionMemberInfo)),
                     AllowWildcards = false,
                     Exact = _insideExact
                 });
-                _documentQuery.CloseSubclause();
                 return;
             }
 
@@ -428,24 +425,14 @@ namespace Raven.Client.Documents.Linq
             }
 
             var memberInfo = GetMember(expression.Left);
-            if (_isNotEqualCheckBoundsToAndAlso == false)
-            {
-                _documentQuery.OpenSubclause();
-                _documentQuery.WhereExists(memberInfo.Path);
-                _documentQuery.AndAlso();
-            }
 
-            _documentQuery.NegateNext();
-            _documentQuery.WhereEquals(new WhereParams
+            _documentQuery.WhereNotEquals(new WhereParams
             {
                 FieldName = memberInfo.Path,
                 Value = GetValueFromExpression(expression.Right, GetMemberType(memberInfo)),
                 AllowWildcards = false,
                 Exact = _insideExact
             });
-
-            if (_isNotEqualCheckBoundsToAndAlso == false)
-                _documentQuery.CloseSubclause();
         }
 
         private static Type GetMemberType(ExpressionInfo info)
@@ -453,9 +440,8 @@ namespace Raven.Client.Documents.Linq
             return info.Type;
         }
 
-        private static readonly Regex CastingRemover = new Regex(@"(?<!\\)[\(\)]",
-                RegexOptions.Compiled
-            );
+        private static readonly Regex CastingRemover = new Regex(@"(?<!\\)[\(\)]", RegexOptions.Compiled);
+        private static readonly Regex ConvertRemover = new Regex(@"^(Convert\((.+)\,.*\))", RegexOptions.Compiled);
 
         /// <summary>
         /// Gets member info for the specified expression and the path to that expression
@@ -480,6 +466,10 @@ namespace Raven.Client.Documents.Linq
             var result = _linqPathProvider.GetPath(expression);
 
             //for standard queries, we take just the last part. But for dynamic queries, we take the whole part
+
+            var convertMatch = ConvertRemover.Match(result.Path);
+            if (convertMatch.Success)
+                result.Path = result.Path.Replace(convertMatch.Groups[1].Value, convertMatch.Groups[2].Value);
             result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
             result.Path = CastingRemover.Replace(result.Path, string.Empty); // removing cast remains
 
@@ -586,8 +576,6 @@ namespace Raven.Client.Documents.Linq
                 }
             }
 
-
-
             _documentQuery.WhereEquals(new WhereParams
             {
                 FieldName = fieldInfo.Path,
@@ -621,14 +609,27 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 GetValueFromExpression(expression.Arguments[0], GetMemberType(memberInfo)));
         }
 
-        private void VisitIsNullOrEmpty(MethodCallExpression expression)
+        private void VisitIsNullOrEmpty(MethodCallExpression expression, bool notEquals)
         {
             var memberInfo = GetMember(expression.Arguments[0]);
 
             _documentQuery.OpenSubclause();
-            _documentQuery.WhereEquals(memberInfo.Path, null, _insideExact);
-            _documentQuery.OrElse();
-            _documentQuery.WhereEquals(memberInfo.Path, string.Empty, _insideExact);
+
+            if (notEquals)
+                _documentQuery.WhereNotEquals(memberInfo.Path, null, _insideExact);
+            else
+                _documentQuery.WhereEquals(memberInfo.Path, null, _insideExact);
+
+            if (notEquals)
+                _documentQuery.AndAlso();
+            else
+                _documentQuery.OrElse();
+
+            if (notEquals)
+                _documentQuery.WhereNotEquals(memberInfo.Path, string.Empty, _insideExact);
+            else
+                _documentQuery.WhereEquals(memberInfo.Path, string.Empty, _insideExact);
+
             _documentQuery.CloseSubclause();
         }
 
@@ -741,24 +742,18 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     Nullable.GetUnderlyingType(memberExpression.Member.DeclaringType) != null)
                 {
                     memberInfo = GetMember(memberExpression.Expression);
-                    if (boolValue)
-                    {
-                        _documentQuery.OpenSubclause();
-                        _documentQuery.WhereTrue();
-                        _documentQuery.AndAlso();
-                        _documentQuery.NegateNext();
-                    }
-                    _documentQuery.WhereEquals(new WhereParams
+                    var whereParams = new WhereParams
                     {
                         FieldName = memberInfo.Path,
                         Value = null,
                         AllowWildcards = false,
                         Exact = _insideExact
-                    });
+                    };
+
                     if (boolValue)
-                    {
-                        _documentQuery.CloseSubclause();
-                    }
+                        _documentQuery.WhereNotEquals(whereParams);
+                    else
+                        _documentQuery.WhereEquals(whereParams);
                 }
                 else
                 {
@@ -893,10 +888,48 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 case nameof(LinqExtensions.Where):
                     VisitQueryableMethodCall(expression);
                     break;
-                default:
+                case nameof(LinqExtensions.Spatial):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var spatialFieldName);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var spatialCriteria);
+
+                    var spatialCriteriaFunc = (Func<SpatialCriteriaFactory, SpatialCriteria>)spatialCriteria;
+
+                    _documentQuery.Spatial((string)spatialFieldName, spatialCriteriaFunc.Invoke(SpatialCriteriaFactory.Instance));
+                    break;
+                case nameof(LinqExtensions.OrderByDistance):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldName);
+                    if (expression.Arguments.Count == 4)
                     {
-                        throw new NotSupportedException("Method not supported: " + expression.Method.Name);
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
+
+                        _documentQuery.OrderByDistance((string)distanceFieldName, (double)distanceLatitude, (double)distanceLongitude);
                     }
+                    else
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
+
+                        _documentQuery.OrderByDistance((string)distanceFieldName, (string)distanceShapeWkt);
+                    }
+                    break;
+                case nameof(LinqExtensions.OrderByDistanceDescending):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var distanceFieldNameDesc);
+                    if (expression.Arguments.Count == 4)
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceLatitude);
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[3], out var distanceLongitude);
+
+                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (double)distanceLatitude, (double)distanceLongitude);
+                    }
+                    else
+                    {
+                        LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var distanceShapeWkt);
+
+                        _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (string)distanceShapeWkt);
+                    }
+                    break;
+                default:
+                    throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }
         }
 
@@ -1032,12 +1065,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
                         if (expression.Arguments.Count == 1 && expression.Arguments[0].Type == typeof(string))
                         {
-                            _documentQuery.OpenSubclause();
-                            _documentQuery.WhereTrue();
-                            _documentQuery.AndAlso();
-                            _documentQuery.NegateNext();
-                            VisitIsNullOrEmpty(expression);
-                            _documentQuery.CloseSubclause();
+                            VisitIsNullOrEmpty(expression, notEquals: true);
                         }
                         else
                         {
@@ -1090,7 +1118,7 @@ The recommended method is to use full text search (mark the field as Analyzed an
                     }
                 case "IsNullOrEmpty":
                     {
-                        VisitIsNullOrEmpty(expression);
+                        VisitIsNullOrEmpty(expression, notEquals: false);
                         break;
                     }
                 default:
@@ -1386,13 +1414,16 @@ The recommended method is to use full text search (mark the field as Analyzed an
                 fieldType = typeof(string);
             }
 
-            _documentQuery.AddOrder(fieldName, descending, OrderingUtil.GetOrderingOfType(fieldType));
+            var ordering = OrderingUtil.GetOrderingOfType(fieldType);
+            if (descending)
+                _documentQuery.OrderByDescending(fieldName, ordering);
+            else
+                _documentQuery.OrderBy(fieldName, ordering);
         }
 
         private bool _insideSelect;
         private readonly bool _isMapReduce;
         private readonly Type _originalQueryType;
-        private bool _isNotEqualCheckBoundsToAndAlso;
 
         private void VisitSelect(Expression operand)
         {
@@ -1773,8 +1804,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IDocumentQuery<T> GetDocumentQueryFor(Expression expression)
         {
             var documentQuery = QueryGenerator.Query<T>(IndexName, _collectionName, _isMapReduce);
-            documentQuery.SetTransformer(_resultsTransformer);
-            documentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)documentQuery;
 
             try
@@ -1804,8 +1833,6 @@ The recommended method is to use full text search (mark the field as Analyzed an
         public IAsyncDocumentQuery<T> GetAsyncDocumentQueryFor(Expression expression)
         {
             var asyncDocumentQuery = QueryGenerator.AsyncQuery<T>(IndexName, _collectionName, _isMapReduce);
-            asyncDocumentQuery.SetTransformer(_resultsTransformer);
-            asyncDocumentQuery.SetTransformerParameters(_transformerParameters);
             _documentQuery = (IAbstractDocumentQuery<T>)asyncDocumentQuery;
             try
             {
@@ -1870,8 +1897,8 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
             //no reason to override a value that may or may not exist there
             if (!String.IsNullOrEmpty(_resultsTransformer))
-                finalQuery.SetTransformer(_resultsTransformer);
-            finalQuery.SetTransformerParameters(_transformerParameters);
+            {
+            }
 
             var executeQuery = GetQueryResult(finalQuery);
 
@@ -1984,9 +2011,12 @@ The recommended method is to use full text search (mark the field as Analyzed an
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
+            if (ReferenceEquals(null, obj))
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
             return Equals((FieldToFetch)obj);
         }
 

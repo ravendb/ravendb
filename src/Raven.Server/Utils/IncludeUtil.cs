@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using Raven.Server.Json;
 using Sparrow;
 using Sparrow.Json;
 
@@ -26,21 +27,21 @@ namespace Raven.Server.Utils
 
             if (HasSuffixSeparator(includePath, out var indexOfSuffixStart))
             {
-                addition = includePath.SubSegment(indexOfSuffixStart + 1);
+                addition = includePath.Subsegment(indexOfSuffixStart + 1);
 
                 if (!addition.Value[addition.Value.Length - 1].Equals(']') ||
                     ((addition.Value.Length >= 4) &&
-                     !addition.Value.SubSegment(0, 4).Equals(SuffixStart)))
+                     !addition.Value.Subsegment(0, 4).Equals(SuffixStart)))
                     return;
-                pathSegment = includePath.SubSegment(0, indexOfSuffixStart);
+                pathSegment = includePath.Subsegment(0, indexOfSuffixStart);
                 _valueHandler = HandleSuffixValue;
             }
             else if (indexOfPrefixStart != -1)
             {
-                addition = includePath.SubSegment(indexOfPrefixStart + 1);
+                addition = includePath.Subsegment(indexOfPrefixStart + 1);
                 if (!includePath[includePath.Length - 1].Equals(')'))
                     return;
-                pathSegment = includePath.SubSegment(0, indexOfPrefixStart);
+                pathSegment = includePath.Subsegment(0, indexOfPrefixStart);
                 _valueHandler = HandlePrefixValue;
             }
             else
@@ -139,7 +140,7 @@ namespace Raven.Server.Utils
 
         private static string ValueWithPrefix(StringSegment prefixSegment, object val)
         {
-            var prefix = prefixSegment.SubSegment(0, prefixSegment.Length - 1);
+            var prefix = prefixSegment.Subsegment(0, prefixSegment.Length - 1);
             return (prefix.Length > 0) && (prefix[prefix.Length - 1] != '/') ? null : $"{prefix}{val}";
         }
 

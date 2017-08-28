@@ -18,9 +18,6 @@ namespace Raven.Client.Documents.Commands
         private readonly string[] _ids;
         private readonly string[] _includes;
 
-        private readonly string _transformer;
-        private readonly Dictionary<string, object> _transformerParameters;
-
         private readonly bool _metadataOnly;
 
         private readonly string _startWith;
@@ -30,49 +27,40 @@ namespace Raven.Client.Documents.Commands
         private readonly string _exclude;
         private readonly string _startAfter;
 
-        private readonly JsonOperationContext _context;
-
         public GetDocumentCommand(int start, int pageSize)
         {
             _start = start;
             _pageSize = pageSize;
         }
 
-        public GetDocumentCommand(string id, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly)
+        public GetDocumentCommand(string id, string[] includes, bool metadataOnly)
         {
             _id = id;
             _includes = includes;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _metadataOnly = metadataOnly;
         }
 
-        public GetDocumentCommand(string[] ids, string[] includes, string transformer, Dictionary<string, object> transformerParameters, bool metadataOnly, JsonOperationContext context)
+        public GetDocumentCommand(string[] ids, string[] includes, bool metadataOnly)
         {
             if (ids == null || ids.Length == 0)
                 throw new ArgumentNullException(nameof(ids));
 
             _ids = ids;
             _includes = includes;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _metadataOnly = metadataOnly;
-            _context = context ?? throw new ArgumentNullException(nameof(context));
         }
 
-        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, string transformer, Dictionary<string, object> transformerParameters, int start, int pageSize)
+        public GetDocumentCommand(string startWith, string startAfter, string matches, string exclude, int start, int pageSize)
         {
             _startWith = startWith ?? throw new ArgumentNullException(nameof(startWith));
             _startAfter = startAfter;
             _matches = matches;
             _exclude = exclude;
-            _transformer = transformer;
-            _transformerParameters = transformerParameters;
             _start = start;
             _pageSize = pageSize;
         }
 
-        public override HttpRequestMessage CreateRequest(ServerNode node, out string url)
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             var pathBuilder = new StringBuilder(node.Url);
             pathBuilder.Append("/databases/")
@@ -102,17 +90,6 @@ namespace Raven.Client.Documents.Commands
                 }
             }
 
-            if (string.IsNullOrEmpty(_transformer) == false)
-                pathBuilder.Append($"&transformer={_transformer}");
-
-            if (_transformerParameters != null)
-            {
-                foreach (var tp in _transformerParameters)
-                {
-                    pathBuilder.Append($"&tp-{tp.Key}={tp.Value}");
-                }
-            }
-
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Get
@@ -124,7 +101,7 @@ namespace Raven.Client.Documents.Commands
             }
             else if (_ids != null)
             {
-                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, _context);
+                PrepareRequestWithMultipleIds(pathBuilder, request, _ids, ctx);
             }
 
             url = pathBuilder.ToString();

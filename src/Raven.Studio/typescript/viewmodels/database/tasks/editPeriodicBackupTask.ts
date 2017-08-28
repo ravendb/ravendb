@@ -60,7 +60,7 @@ class editPeriodicBackupTask extends viewModelBase {
                     "<ul>" +
                         "<li>Data" +
                             "<ul>" +
-                                "<li>Backup includes documents, indexes, transformers and identities <br> " +
+                                "<li>Backup includes documents, indexes and identities <br> " +
                                     "but doesn't include index data, indexes will be rebuilt after restore based on exported definitions</li>" +
                                 "<li>Snapshot contains the raw data including the indexes - definitions and data</li>" +
                             "</ul>" +
@@ -123,6 +123,14 @@ class editPeriodicBackupTask extends viewModelBase {
             {
                 content: this.textForPopover("Vault")   
             });
+
+        popoverUtils.longWithHover($("#ftp-host-info"),
+            {
+                content:
+                    "To specify the server protocol, prepend the host with protocol identifier (ftp and ftps are supported).<br>" +
+                    "If no protocol is specified the default one (ftp://) will be used.<br>" +
+                    "You can also enter a complete URL e.g. <strong>ftp://host.name:port/backup-folder/nested-backup-folder</strong>"
+            });
     }
 
     private textForPopover(storageName: string): string {
@@ -148,8 +156,13 @@ class editPeriodicBackupTask extends viewModelBase {
         }
 
         bs.isTestingCredentials(true);
+        bs.testConnectionResult(null);
+        
         new testPeriodicBackupCredentialsCommand(this.activeDatabase(), bs.connectionType, bs.toDto())
             .execute()
+            .done((result: Raven.Server.Web.System.NodeConnectionTestResult) => {
+                bs.testConnectionResult(result);        
+            })
             .always(() => bs.isTestingCredentials(false));
     }
 
@@ -177,6 +190,9 @@ class editPeriodicBackupTask extends viewModelBase {
             valid = false;
 
         if (!this.isValid(this.configuration().glacierSettings().validationGroup))
+            valid = false;
+
+        if (!this.isValid(this.configuration().ftpSettings().validationGroup))
             valid = false;
 
         return valid;

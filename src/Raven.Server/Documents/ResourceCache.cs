@@ -19,6 +19,9 @@ namespace Raven.Server.Documents
         private readonly ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>> _mappings =
             new ConcurrentDictionary<StringSegment, ConcurrentSet<StringSegment>>(CaseInsensitiveStringSegmentEqualityComparer.Instance);
 
+        /// <summary>
+        /// This locks the entire cache. Use carefully.
+        /// </summary>
         public IEnumerable<Task<TResource>> Values => _caseSensitive.Values;
 
         public void Clear()
@@ -103,6 +106,27 @@ namespace Raven.Server.Documents
                     databaseName
                 };
                 return value;
+            }
+        }
+
+        public Task<TResource> Replace(string databaseName, Task<TResource> task)
+        {
+            lock (this)
+            {
+                Task<TResource> existingTask = null;
+                _caseInsensitive.AddOrUpdate(databaseName, segment => task, (key, existing) =>
+                {
+                    existingTask = existing;
+                    return task;
+                });
+                if (_mappings.TryGetValue(databaseName, out ConcurrentSet<StringSegment> mappings))
+                {
+                    foreach (var mapping in mappings)
+                    {
+                        _caseSensitive.TryRemove(mapping, out Task<TResource> _);
+                    }
+                }
+                return existingTask;
             }
         }
     }

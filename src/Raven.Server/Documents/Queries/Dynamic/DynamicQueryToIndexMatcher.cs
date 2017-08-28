@@ -55,7 +55,7 @@ namespace Raven.Server.Documents.Queries.Dynamic
         public DynamicQueryMatchResult Match(DynamicQueryMapping query, List<Explanation> explanations = null)
         {
             var definitions = _indexStore.GetIndexesForCollection(query.ForCollection)
-                .Where(x => x.Type.IsAuto() && (query.IsMapReduce ? x.Type.IsMapReduce() : x.Type.IsMap()))
+                .Where(x => x.Type.IsAuto() && (query.IsGroupBy ? x.Type.IsMapReduce() : x.Type.IsMap()))
                 .Select(x => x.Definition)
                 .ToList();
 
@@ -115,11 +115,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
             }
 
             var index = _indexStore.GetIndex(definition.Name);
-
+            if(index == null)
+                return new DynamicQueryMatchResult(definition.Name, DynamicQueryMatchType.Failure)
+                    ;
             var state = index.State;
             var stats = index.GetStats();
 
-            if (state == IndexState.Error || state == IndexState.Disabled|| stats.IsInvalidIndex)
+            if (state == IndexState.Error || state == IndexState.Disabled || stats.IsInvalidIndex)
             {
                 explanations?.Add(new Explanation(indexName, $"Cannot do dynamic queries on disabled index or index with errors (index name = {indexName})"));
                 return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
@@ -131,16 +133,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.TryGetField(field.Name, out var indexField))
                 {
-                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
+                    if (field.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
                     {
                         explanations?.Add(new Explanation(indexName, $"The following field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
-                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                    }
-
-                    if (field.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
-                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
+                        return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Partial);
                     }
                 }
                 else
@@ -156,12 +152,12 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 explanations?.Add(new Explanation(indexName, $"The index (name = {indexName}) is disabled or abandoned. The preference is for active indexes - making a partial match"));
             }
 
-            if (currentBestState != DynamicQueryMatchType.Failure && query.IsMapReduce)
+            if (currentBestState != DynamicQueryMatchType.Failure && query.IsGroupBy)
             {
-                if (AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations) == false)
-                {
-                    return new DynamicQueryMatchResult(indexName, DynamicQueryMatchType.Failure);
-                }
+                var bestMapReduceMatch = AssertMapReduceFields(query, (AutoMapReduceIndexDefinition)definition, currentBestState, explanations);
+
+                if (bestMapReduceMatch != DynamicQueryMatchType.Complete)
+                    return new DynamicQueryMatchResult(indexName, bestMapReduceMatch);
             }
 
             if (currentBestState == DynamicQueryMatchType.Partial && index.Type.IsStatic()) // we cannot support this because we might extend fields from static index into auto index
@@ -174,7 +170,8 @@ namespace Raven.Server.Documents.Queries.Dynamic
             };
         }
 
-        private bool AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState, List<Explanation> explanations)
+        private static DynamicQueryMatchType AssertMapReduceFields(DynamicQueryMapping query, AutoMapReduceIndexDefinition definition, DynamicQueryMatchType currentBestState,
+            List<Explanation> explanations)
         {
             var indexName = definition.Name;
 
@@ -190,9 +187,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
 
                 if (field.Aggregation != mapField.AggregationOperation)
                 {
-                    explanations?.Add(new Explanation(indexName, $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
+                    explanations?.Add(new Explanation(indexName,
+                        $"The following field {field.Name} has {field.Aggregation} operation defined, while query required {mapField.AggregationOperation}"));
 
-                    return false;
+                    return DynamicQueryMatchType.Failure;
                 }
             }
 
@@ -200,16 +198,15 @@ namespace Raven.Server.Documents.Queries.Dynamic
             {
                 if (definition.GroupByFields.TryGetValue(groupByField.Name, out var indexField))
                 {
-                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Analyzed)
-                    {
-                        explanations?.Add(new Explanation(indexName, $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
-                        return false;
-                    }
+                    if (groupByField.IsSpecifiedInWhere == false)
+                        continue;
 
-                    if (groupByField.IsFullTextSearch == false && indexField.Indexing == FieldIndexing.Analyzed)
+                    if (groupByField.IsFullTextSearch && indexField.Indexing != FieldIndexing.Search)
                     {
-                        explanations?.Add(new Explanation(indexName, $"The following group by field is analyzed {indexField.Name}, while the query asks for non analyzed values"));
-                        return false;
+                        explanations?.Add(new Explanation(indexName,
+                            $"The following group by field is not analyzed {indexField.Name}, while the query needs to perform full text search on it"));
+
+                        return DynamicQueryMatchType.Partial;
                     }
                 }
                 else
@@ -217,10 +214,10 @@ namespace Raven.Server.Documents.Queries.Dynamic
                     if (explanations != null)
                     {
                         var missingFields = query.GroupByFields.Where(x => definition.GroupByFields.ContainsKey(x.Name) == false);
-                        explanations?.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
+                        explanations.Add(new Explanation(indexName, $"The following group by fields are missing: {string.Join(", ", missingFields)}"));
                     }
-                    
-                    return false;
+
+                    return DynamicQueryMatchType.Failure;
                 }
             }
 
@@ -230,13 +227,13 @@ namespace Raven.Server.Documents.Queries.Dynamic
                 if (explanations != null)
                 {
                     var extraFields = definition.GroupByFields.Where(x => query.GroupByFields.Select(y => y.Name).Contains(x.Key) == false);
-                    explanations?.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
+                    explanations.Add(new Explanation(indexName, $"Index {indexName} has additional group by fields: {string.Join(", ", extraFields)}"));
                 }
 
-                return false;
+                return DynamicQueryMatchType.Failure;
             }
 
-            return true;
+            return DynamicQueryMatchType.Complete;
         }
     }
 }

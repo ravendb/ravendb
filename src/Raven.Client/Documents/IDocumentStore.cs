@@ -16,7 +16,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Subscriptions;
-using Raven.Client.Documents.Transformers;
 using Raven.Client.Http;
 using Raven.Client.Util;
 
@@ -55,12 +54,13 @@ namespace Raven.Client.Documents
         /// Setup the context for aggressive caching.
         /// </summary>
         /// <param name="cacheDuration">Specify the aggressive cache duration</param>
+        /// <param name="database">The database to cache, if not specified, the default database will be used</param>
         /// <remarks>
         /// Aggressive caching means that we will not check the server to see whether the response
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        IDisposable AggressivelyCacheFor(TimeSpan cacheDuration);
+        IDisposable AggressivelyCacheFor(TimeSpan cacheDuration, string database = null);
 
         /// <summary>
         /// Setup the context for aggressive caching.
@@ -70,7 +70,7 @@ namespace Raven.Client.Documents
         /// we provide is current or not, but will serve the information directly from the local cache
         /// without touching the server.
         /// </remarks>
-        IDisposable AggressivelyCache();
+        IDisposable AggressivelyCache(string database = null);
 
         /// <summary>
         /// Setup the context for no aggressive caching
@@ -80,7 +80,7 @@ namespace Raven.Client.Documents
         /// queries that has been marked with WaitForNonStaleResults, we temporarily disable
         /// aggressive caching.
         /// </remarks>
-        IDisposable DisableAggressiveCaching();
+        IDisposable DisableAggressiveCaching(string database = null);
 
         /// <summary>
         /// Gets or sets the identifier for this store.
@@ -140,13 +140,6 @@ namespace Raven.Client.Documents
         Task ExecuteIndexAsync(AbstractIndexCreationTask task, CancellationToken token = default(CancellationToken));
 
         Task ExecuteIndexesAsync(IEnumerable<AbstractIndexCreationTask> tasks, CancellationToken token = default(CancellationToken));
-
-        /// <summary>
-        /// Executes the transformer creation
-        /// </summary>
-        void ExecuteTransformer(AbstractTransformerCreationTask task);
-
-        Task ExecuteTransformerAsync(AbstractTransformerCreationTask task, CancellationToken token = default(CancellationToken));
 
         /// <summary>
         /// Gets the conventions.

@@ -19,7 +19,6 @@ class queryCommand extends commandBase {
     getUrl() {
         const criteria = this.criteria;
         const url = endpoints.databases.queries.queries;
-        const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
 
         const urlArgs = this.urlEncodeArgs({
             query: criteria.queryText() || undefined,
@@ -28,7 +27,7 @@ class queryCommand extends commandBase {
             fetch: criteria.showFields() ? "__all_stored_fields" : undefined,
             debug: criteria.indexEntries() ? "entries" : undefined,
             disableCache: this.disableCache ? Date.now() : undefined
-        }) + resultsTransformerUrlFragment;
+        });
         return url + urlArgs;
     }
 
@@ -39,7 +38,6 @@ class queryCommand extends commandBase {
         /* TODO
              + criteria.selectedIndex();
         */;
-        const resultsTransformerUrlFragment = criteria.getTransformerQueryUrlPart();
 
         const urlArgs = this.urlEncodeArgs({
             query: criteria.queryText() || undefined,
@@ -47,7 +45,7 @@ class queryCommand extends commandBase {
             debug: criteria.indexEntries() ? "entries" : undefined,
             format: "excel",
             download: true
-        }) + resultsTransformerUrlFragment;
+        });
 
         return url + urlArgs;
     }

@@ -36,7 +36,7 @@ namespace SlowTests.Issues
                 Map = students => from student in students
                                   select new
                                   {
-                                      EmailDomain = student.Email.Split('@').Last(),
+                                      EmailDomain = student.Email.Split('@', StringSplitOptions.None).Last(),
                                       Count = 1,
                                   };
             }

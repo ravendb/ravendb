@@ -51,12 +51,13 @@ namespace SlowTests.Bugs.Indexing
                     session.SaveChanges();
                 }
 
+
                 using (var session = store.OpenSession())
                 {
                     Assert.Throws<RavenException>(() =>
 
                         session.Query<User>("foo")
-                            .Customize(x => x.WaitForNonStaleResults())
+                        .Customize(x => x.WaitForNonStaleResults())
                             .ToList()
                     );
                 }

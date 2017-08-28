@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -31,12 +32,12 @@ namespace SlowTests.MailingList
                                   let friends = LoadDocument<Student>(student.Friends)
                                   select new Mapping
                                   {
-                                      EmailDomain = student.Email.Split('@').Last(),
+                                      EmailDomain = student.Email.Split('@', StringSplitOptions.None).Last(),
                                       Friends = friends.Select(a => a.Email)
                                   };
 
                 Analyzers.Add(x => x.Friends, "Lucene.Net.Analysis.SimpleAnalyzer, Lucene.Net");
-                Indexes.Add(x => x.Friends, FieldIndexing.Analyzed);
+                Indexes.Add(x => x.Friends, FieldIndexing.Search);
             }
         }
 
@@ -67,7 +68,7 @@ namespace SlowTests.MailingList
                                          .Customize(customization => customization.WaitForNonStaleResults())
                                          .ToList();
 
-                    TestHelper.AssertNoIndexErrors(store);
+                    RavenTestHelper.AssertNoIndexErrors(store);
                     Assert.Equal(3, results.Count);
                 }
             }
