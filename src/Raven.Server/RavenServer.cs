@@ -165,17 +165,10 @@ namespace Raven.Server
                     }
                 }
 
-                var addresses = new List<string>();
-                var serverUri = new Uri(Configuration.Core.ServerUrl);
-                foreach (var address in GetListenIpAddresses(serverUri.DnsSafeHost))
-                {
-                    addresses.Add($"{serverUri.Scheme}://{address}:{serverUri.Port}");
-                }
-
                 _webHost = new WebHostBuilder()
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
-                    .UseUrls(addresses.ToArray())
+                    .UseUrls(Configuration.Core.ServerUrl)
                     .UseStartup<RavenServerStartup>()
                     .UseShutdownTimeout(TimeSpan.FromSeconds(1))
                     .ConfigureServices(services =>
