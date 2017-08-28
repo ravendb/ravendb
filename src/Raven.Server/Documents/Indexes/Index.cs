@@ -158,11 +158,12 @@ namespace Raven.Server.Documents.Indexes
         private NativeMemory.ThreadStats _threadAllocations;
         private string _errorStateReason;
         private bool _isCompactionInProgress;
-        private MultipleUseFlag _isStorageBeingMoved = new MultipleUseFlag();
+        
         private readonly ReaderWriterLockSlim _currentlyRunningQueriesLock = new ReaderWriterLockSlim();
         private MultipleUseFlag _priorityChanged = new MultipleUseFlag();
         private MultipleUseFlag _hadRealIndexingWorkToDo = new MultipleUseFlag();
         private Func<bool> _indexValidationStalenessCheck = () => true;
+        protected readonly StorageOperationWrapper _storageOperation;
 
         private readonly ConcurrentDictionary<string, SpatialField> _spatialFields = new ConcurrentDictionary<string, SpatialField>(StringComparer.OrdinalIgnoreCase);
 
@@ -176,8 +177,6 @@ namespace Raven.Server.Documents.Indexes
 
         private static readonly Size DefaultMaximumMemoryAllocation = new Size(32, SizeUnit.Megabytes);
 
-        private bool IsStorageWorkInProgress => _isCompactionInProgress || _isStorageBeingMoved;
-
         protected Index(long etag, IndexType type, IndexDefinitionBase definition)
         {
             if (etag <= 0)
@@ -190,6 +189,8 @@ namespace Raven.Server.Documents.Indexes
 
             if (Collections.Contains(Constants.Documents.Collections.AllDocumentsCollection))
                 HandleAllDocs = true;
+
+            _storageOperation = new StorageOperationWrapper(this);
         }
 
         public static Index Open(long etag, string path, DocumentDatabase documentDatabase)
@@ -347,31 +348,19 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal ExitWriteLock DrainRunningQueries(TimeSpan? timeout = null)
+        internal ExitWriteLock DrainRunningQueries()
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld)
                 return new ExitWriteLock();
 
-            if (_currentlyRunningQueriesLock.TryEnterWriteLock(timeout ?? TimeSpan.FromSeconds(10)) == false)
+            if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
             {
+                if (_disposing || _disposed)
+                    ThrowObjectDisposed();
+
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
             return new ExitWriteLock(_currentlyRunningQueriesLock);
-        }
-
-        internal struct ExitWriteLock : IDisposable
-        {
-            readonly ReaderWriterLockSlim _rwls;
-
-            public ExitWriteLock(ReaderWriterLockSlim rwls)
-            {
-                _rwls = rwls;
-            }
-
-            public void Dispose()
-            {
-                _rwls?.ExitWriteLock();
-            }
         }
 
         protected void Initialize(StorageEnvironment environment, DocumentDatabase documentDatabase, IndexingConfiguration configuration,
@@ -583,7 +572,7 @@ namespace Raven.Server.Documents.Indexes
                 exceptionAggregator.Execute(() =>
                 {
                     IndexPersistence?.Dispose();
-                    IndexPersistence = null;
+                    // IndexPersistence = null; - let it access IndexPersistence.ContainsField in AssertKnownField when storage operation is running
                 });
 
                 exceptionAggregator.Execute(() =>
@@ -622,7 +611,7 @@ namespace Raven.Server.Documents.Indexes
         {
             Debug.Assert(databaseContext.Transaction != null);
 
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
                 return true;
 
             if (Type == IndexType.Faulty)
@@ -638,9 +627,8 @@ namespace Raven.Server.Documents.Indexes
         public enum IndexProgressStatus
         {
             Faulty = -1,
-            Compacting = -2,
-            Stale = -3,
-            StorageMoving = -4
+            RunningStorageOperation = -2,
+            Stale = -3
         }
 
         public virtual (bool IsStale, long LastProcessedEtag) GetIndexStats(DocumentsOperationContext databaseContext)
@@ -650,11 +638,8 @@ namespace Raven.Server.Documents.Indexes
             if (Type == IndexType.Faulty)
                 return (true, (long)IndexProgressStatus.Faulty);
 
-            if (_isCompactionInProgress)
-                return (true, (long)IndexProgressStatus.Compacting);
-
-            if (_isStorageBeingMoved)
-                return (true, (long)IndexProgressStatus.StorageMoving);
+            if (_storageOperation.IsRunning)
+                return (true, (long)IndexProgressStatus.RunningStorageOperation);
 
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (indexContext.OpenReadTransaction())
@@ -988,8 +973,10 @@ namespace Raven.Server.Documents.Indexes
 
         private void ChangeIndexThreadPriorityIfNeeded()
         {
-            if (!_priorityChanged.Lower())
+            if (_priorityChanged == false)
                 return;
+
+            _priorityChanged.Lower();
 
             ThreadPriority newPriority;
             var priority = Definition.Priority;
@@ -1264,7 +1251,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual List<IndexingError> GetErrors()
         {
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
                 return new List<IndexingError>();
 
             return _indexStorage.ReadErrors();
@@ -1272,7 +1259,7 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetErrorCount()
         {
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
                 return 0;
 
             if (Type == IndexType.Faulty)
@@ -1283,7 +1270,7 @@ namespace Raven.Server.Documents.Indexes
 
         public DateTime? GetLastIndexingErrorTime()
         {
-            if (IsStorageWorkInProgress || Type == IndexType.Faulty)
+            if (_storageOperation.IsRunning || Type == IndexType.Faulty)
                 return DateTime.MinValue;
 
             return _indexStorage.ReadLastIndexingErrorTime();
@@ -1437,7 +1424,7 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual IndexProgress GetProgress(DocumentsOperationContext documentsContext)
         {
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
             {
                 return new IndexProgress
                 {
@@ -1495,7 +1482,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual IndexStats GetStats(bool calculateLag = false, bool calculateStaleness = false,
             DocumentsOperationContext documentsContext = null)
         {
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
             {
                 return new IndexStats
                 {
@@ -1730,19 +1717,24 @@ namespace Raven.Server.Documents.Indexes
                             var fieldsToFetch = new FieldsToFetch(query, Definition);
                             IEnumerable<Document> documents;
 
+                            var includeDocumentsCommand = new IncludeDocumentsCommand(
+                                DocumentDatabase.DocumentsStorage, documentsContext,
+                                query.Metadata.Includes);
+
+                            var retriever = GetQueryResultRetriever(query, documentsContext, fieldsToFetch, includeDocumentsCommand);
+
                             if (query.IsIntersect == false)
                             {
                                 documents = reader.Query(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
+                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
                             else
                             {
                                 documents = reader.IntersectQuery(query, fieldsToFetch, totalResults, skippedResults,
-                                    GetQueryResultRetriever(query, documentsContext, fieldsToFetch), documentsContext, GetOrAddSpatialField, token.Token);
+                                    retriever, documentsContext, GetOrAddSpatialField, token.Token);
                             }
 
-                            var includeDocumentsCommand = new IncludeDocumentsCommand(
-                                DocumentDatabase.DocumentsStorage, documentsContext, query.Metadata.Includes);
+                         
 
                             try
                             {
@@ -1949,7 +1941,7 @@ namespace Raven.Server.Documents.Indexes
                         var includeDocumentsCommand = new IncludeDocumentsCommand(DocumentDatabase.DocumentsStorage,
                             documentsContext, query.Includes);
                         var documents = reader.MoreLikeThis(query, stopWords,
-                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition)), documentsContext,
+                            fieldsToFetch => GetQueryResultRetriever(null, documentsContext, new FieldsToFetch(fieldsToFetch, Definition), includeDocumentsCommand), documentsContext,
                             GetOrAddSpatialField, token.Token);
 
                         foreach (var document in documents)
@@ -2013,10 +2005,10 @@ namespace Raven.Server.Documents.Indexes
             if (_isCompactionInProgress)
                 ThrowCompactionInProgress();
 
-            if (_initialized == false && _isStorageBeingMoved == false)
+            if (_initialized == false && _storageOperation.IsRunning == false)
                 ThrowNotIntialized();
 
-            if ((_disposed || _disposing) && _isStorageBeingMoved == false)
+            if ((_disposed || _disposing) && _storageOperation.IsRunning == false)
                 ThrowWasDisposed();
 
             if (assertState && State == IndexState.Error)
@@ -2202,9 +2194,13 @@ namespace Raven.Server.Documents.Indexes
 
         public long GetIndexEtag()
         {
-            if (IsStorageWorkInProgress)
+            if (_storageOperation.IsRunning)
                 return -1;
 
+            if (_storageOperation.TryGetReadLock(TimeSpan.FromSeconds(1), out var storageLock) == false)
+                return -1;
+
+            using (storageLock)
             using (DocumentDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext documentsContext))
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             {
@@ -2218,6 +2214,8 @@ namespace Raven.Server.Documents.Indexes
 
         public virtual Dictionary<string, long> GetLastProcessedDocumentTombstonesPerCollection()
         {
+            _storageOperation.TryGetReadLock(Timeout.InfiniteTimeSpan, out var storageLock);
+            using (storageLock)
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
                 using (var tx = context.OpenReadTransaction())
@@ -2262,7 +2260,7 @@ namespace Raven.Server.Documents.Indexes
         }
 
         public abstract IQueryResultRetriever
-            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch);
+            GetQueryResultRetriever(IndexQueryServerSide query, DocumentsOperationContext documentsContext, FieldsToFetch fieldsToFetch, IncludeDocumentsCommand includeDocumentsCommand);
 
         protected void HandleIndexOutputsPerDocument(string documentKey, int numberOfOutputs, IndexingStatsScope stats)
         {
@@ -2365,15 +2363,31 @@ namespace Raven.Server.Documents.Indexes
             return true;
         }
 
-        public IDisposable MovingStorage()
+        public IDisposable StorageOperation()
         {
-            return new MoveStorageOperationWrapper(this);
+            if (Monitor.TryEnter(_storageOperation) == false)
+                throw new InvalidOperationException($"Storage operation on index '{Name} ({Etag})' is already running");
+
+            _storageOperation.Init();
+
+            try
+            {
+                Dispose();
+            }
+            catch
+            {
+                Monitor.Exit(_storageOperation);
+                throw;
+            }
+
+            return _storageOperation;
         }
 
         public IOperationResult Compact(Action<IOperationProgress> onProgress)
         {
             if (_isCompactionInProgress)
                 throw new InvalidOperationException($"Index '{Name} ({Etag})' cannot be compacted because compaction is already in progress.");
+
             var progress = new IndexCompactionProgress
             {
                 Message = "Draining queries for " + Name
@@ -2397,54 +2411,48 @@ namespace Raven.Server.Documents.Indexes
 
                 try
                 {
-                    var environmentOptions =
-                        (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)_environment.Options;
-                    var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
-                        DocumentDatabase.CatastrophicFailureNotification);
-                    srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                    srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                    srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                    srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                    srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                    srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
-                    Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
+                    var storageEnvironmentOptions = _environment.Options;
 
-                    var wasRunning = _indexingThread != null;
-
-                    Dispose();
-
-                    compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
-
-                    using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
-                        StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges, DocumentDatabase.CatastrophicFailureNotification))
+                    using (StorageOperation())
                     {
-                        compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
-                        compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
-                        compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
-                        compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
-                        compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
-                        compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                        var environmentOptions =
+                            (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)storageEnvironmentOptions;
+                        var srcOptions = StorageEnvironmentOptions.ForPath(environmentOptions.BasePath.FullPath, null, null, DocumentDatabase.IoChanges,
+                            DocumentDatabase.CatastrophicFailureNotification);
+                        srcOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                        srcOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                        srcOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                        srcOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                        srcOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                        srcOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
                         Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
-                        StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                        compactPath = Configuration.StoragePath.Combine(IndexDefinitionBase.GetIndexNameSafeForFileSystem(Name) + "_Compact");
+
+                        using (var compactOptions = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)
+                            StorageEnvironmentOptions.ForPath(compactPath.FullPath, null, null, DocumentDatabase.IoChanges,
+                                DocumentDatabase.CatastrophicFailureNotification))
                         {
-                            progress.Processed = progressReport.GlobalProgress;
-                            progress.Total = progressReport.GlobalTotal;
+                            compactOptions.OnNonDurableFileSystemError += DocumentDatabase.HandleNonDurableFileSystemError;
+                            compactOptions.OnRecoveryError += DocumentDatabase.HandleOnRecoveryError;
+                            compactOptions.CompressTxAboveSizeInBytes = DocumentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);
+                            compactOptions.ForceUsing32BitsPager = DocumentDatabase.Configuration.Storage.ForceUsing32BitsPager;
+                            compactOptions.TimeToSyncAfterFlashInSec = (int)DocumentDatabase.Configuration.Storage.TimeToSyncAfterFlash.AsTimeSpan.TotalSeconds;
+                            compactOptions.NumOfConcurrentSyncsPerPhysDrive = DocumentDatabase.Configuration.Storage.NumberOfConcurrentSyncsPerPhysicalDrive;
+                            Sodium.CloneKey(out srcOptions.MasterKey, DocumentDatabase.MasterKey);
 
-                            onProgress?.Invoke(progress);
-                        });
+                            StorageCompaction.Execute(srcOptions, compactOptions, progressReport =>
+                            {
+                                progress.Processed = progressReport.GlobalProgress;
+                                progress.Total = progressReport.GlobalTotal;
+
+                                onProgress?.Invoke(progress);
+                            });
+                        }
+
+                        IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
+                        IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
                     }
-
-                    IOExtensions.DeleteDirectory(environmentOptions.BasePath.FullPath);
-                    IOExtensions.MoveDirectory(compactPath.FullPath, environmentOptions.BasePath.FullPath);
-
-                    _initialized = false;
-                    _disposed = false;
-
-                    Initialize(DocumentDatabase, Configuration, DocumentDatabase.Configuration.PerformanceHints);
-
-                    if (wasRunning)
-                        Start();
 
                     return IndexCompactionResult.Instance;
                 }
@@ -2530,7 +2538,7 @@ namespace Raven.Server.Documents.Indexes
 
             public void HoldLock()
             {
-                var timeout = _parent._isStorageBeingMoved ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(3);
+                var timeout = _parent._storageOperation.IsRunning ? TimeSpan.FromSeconds(30) : TimeSpan.FromSeconds(3);
                 if (_parent._currentlyRunningQueriesLock.TryEnterReadLock(timeout) == false)
                     ThrowLockTimeoutException();
 
@@ -2557,15 +2565,73 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        private class MoveStorageOperationWrapper : IDisposable
+        internal struct ExitWriteLock : IDisposable
+        {
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitWriteLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls?.ExitWriteLock();
+            }
+        }
+
+        protected struct ExitReadLock : IDisposable
+        {
+            public static ExitReadLock Default = default(ExitReadLock);
+
+            readonly ReaderWriterLockSlim _rwls;
+
+            public ExitReadLock(ReaderWriterLockSlim rwls)
+            {
+                _rwls = rwls;
+            }
+
+            public void Dispose()
+            {
+                _rwls?.ExitReadLock();
+            }
+        }
+
+        protected class StorageOperationWrapper : IDisposable
         {
             private readonly Index _index;
+            private bool _wasRunning;
+            private MultipleUseFlag _isRunning = new MultipleUseFlag();
+            private readonly ReaderWriterLockSlim _lock = new ReaderWriterLockSlim();
 
-            public MoveStorageOperationWrapper(Index index)
+            public StorageOperationWrapper(Index index)
             {
                 _index = index;
-                index._isStorageBeingMoved.Raise();
-                index.Dispose();
+            }
+
+            public bool IsRunning => _isRunning.IsRaised();
+
+            public void Init()
+            {
+                if (!_isRunning.Raise())
+                    throw new InvalidOperationException("Storage operation is already running");
+
+                _lock.EnterWriteLock();
+
+                _wasRunning = _index._indexingThread != null;
+            }
+
+            public bool TryGetReadLock(TimeSpan timeout, out ExitReadLock @lock)
+            {
+                if (_lock.IsReadLockHeld || _lock.TryEnterReadLock(timeout) == false)
+                {
+                    @lock = ExitReadLock.Default;
+                    return false;
+                    
+                }
+
+                @lock = new ExitReadLock(_lock);
+                return true;
             }
 
             public void Dispose()
@@ -2574,11 +2640,22 @@ namespace Raven.Server.Documents.Indexes
                 _index._disposed = false;
                 _index._disposing = false;
 
-                _index.Initialize(_index.DocumentDatabase, _index.Configuration, _index.PerformanceHints);
+                try
+                {
+                    _index.Initialize(_index.DocumentDatabase, _index.Configuration, _index.PerformanceHints);
 
-                _index.Start();
+                    if (_wasRunning)
+                        _index.Start();
+                }
+                finally
+                {
+                    _lock.ExitWriteLock();
 
-                _index._isStorageBeingMoved.Lower();
+                    Monitor.Exit(_index._storageOperation);
+
+                    if (!_isRunning.Lower())
+                        throw new InvalidOperationException("Storage operation wasn't running. It should not happen.");
+                }
             }
         }
     }
