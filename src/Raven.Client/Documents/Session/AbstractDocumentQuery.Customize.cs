@@ -1,6 +1,7 @@
 using System;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -9,14 +10,32 @@ namespace Raven.Client.Documents.Session
     /// </summary>
     public abstract partial class AbstractDocumentQuery<T, TSelf>
     {
-        protected Action<IndexQuery> BeforeQueryExecutedAction;
+        protected Action<IndexQuery> BeforeQueryExecutedCallback;
+
+        protected Action<QueryResult> AfterQueryExecutedCallback;
+
+        protected Action<BlittableJsonReaderObject> AfterStreamExecutedCallback;
 
         public QueryOperation QueryOperation { get; protected set; }
 
         /// <inheritdoc />
         public IDocumentQueryCustomization BeforeQueryExecuted(Action<IndexQuery> action)
         {
-            BeforeQueryExecutedAction += action;
+            BeforeQueryExecutedCallback += action;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IDocumentQueryCustomization AfterQueryExecuted(Action<QueryResult> action)
+        {
+            AfterQueryExecutedCallback += action;
+            return this;
+        }
+
+        /// <inheritdoc />
+        public IDocumentQueryCustomization AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        {
+            AfterStreamExecutedCallback += action;
             return this;
         }
 

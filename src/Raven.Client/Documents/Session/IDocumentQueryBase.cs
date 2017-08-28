@@ -49,13 +49,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Callback to get the results of the query
         /// </summary>
-        void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+        void AfterQueryExecuted(Action<QueryResult> action);
 
 
         /// <summary>
         ///     Callback to get the results of the stream
         /// </summary>
-        void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
+        void AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
 
         /// <summary>
         ///     Add an AND to the query

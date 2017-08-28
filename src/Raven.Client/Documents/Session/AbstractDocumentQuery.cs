@@ -150,8 +150,6 @@ namespace Raven.Client.Documents.Session
 
         public bool IsDynamicMapReduce => GroupByTokens.Count > 0;
 
-        protected Action<QueryResult> AfterQueryExecutedCallback;
-        protected AfterStreamExecutedDelegate AfterStreamExecutedCallback;
         protected long? CutoffEtag;
 
         private static TimeSpan DefaultTimeout
@@ -225,7 +223,7 @@ namespace Raven.Client.Documents.Session
         {
             var query = ToString();
             var indexQuery = GenerateIndexQuery(query);
-            BeforeQueryExecutedAction?.Invoke(indexQuery);
+            BeforeQueryExecutedCallback?.Invoke(indexQuery);
 
             return indexQuery;
         }
@@ -898,22 +896,6 @@ If you really want to do in memory filtering on the data returned from the query
         public void Statistics(out QueryStatistics stats)
         {
             stats = QueryStats;
-        }
-
-        /// <summary>
-        /// Callback to get the results of the query
-        /// </summary>
-        public void AfterQueryExecuted(Action<QueryResult> afterQueryExecutedCallback)
-        {
-            AfterQueryExecutedCallback += afterQueryExecutedCallback;
-        }
-
-        /// <summary>
-        /// Callback to get the results of the stream
-        /// </summary>
-        public void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecutedCallback)
-        {
-            AfterStreamExecutedCallback += afterStreamExecutedCallback;
         }
 
         /// <summary>
