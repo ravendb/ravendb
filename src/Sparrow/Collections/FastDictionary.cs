@@ -14,7 +14,7 @@ namespace Sparrow.Collections
         /// Must be a power of two, and at least 4.
         /// Note, however, that for a given hashtable, the initial size is a function of the first constructor arg, and may be > kMinBuckets.
         /// </summary>
-        internal const int KMinBuckets = 4;
+        internal const int KMinBuckets = 8;
 
         /// <summary>
         /// By default, if you don't specify a hashtable size at construction-time, we use this size.  Must be a power of two, and at least kMinBuckets.
@@ -100,9 +100,7 @@ namespace Sparrow.Collections
         }
 
         private Entry[] _entries;
-
-        private int[] _usedEntries;
-        private int _usedEntriesIndex;
+        private BitVector _usedEntries;
 
         private readonly int _initialCapacity; // This is the initial capacity of the dictionary, we will never shrink beyond this point.
         private int _capacity;
@@ -167,9 +165,8 @@ namespace Sparrow.Collections
                 _entries = new Entry[_capacity];
                 Array.Copy(src._entries, _entries, _capacity);
 
-                _usedEntries = new int[src._usedEntries.Length];
-                Array.Copy(src._usedEntries, _usedEntries, src._usedEntries.Length);
-                _usedEntriesIndex = src._usedEntriesIndex;
+                _usedEntries = new BitVector(src._usedEntries.Count);
+                BitVector.Copy(src._usedEntries, _usedEntries);
             }
             else
             {
@@ -179,7 +176,7 @@ namespace Sparrow.Collections
 
                 // Creating a temporary alias to use for rehashing.
                 _entries = src._entries;
-                _usedEntries = new int[_capacity];
+                _usedEntries = new BitVector(_capacity);
 
                 // This call will rewrite the aliases
                 Rehash(entries);
@@ -199,8 +196,9 @@ namespace Sparrow.Collections
             _comparer = comparer;
 
             // Calculate the next power of 2.
+            if ( initialBucketCount > 0 )
+                initialBucketCount = Bits.NextPowerOf2(initialBucketCount);
             int newCapacity = initialBucketCount >= DictionaryHelper.KMinBuckets ? initialBucketCount : DictionaryHelper.KMinBuckets;
-            newCapacity = Bits.NextPowerOf2(newCapacity);
 
             _initialCapacity = newCapacity;
 
@@ -208,8 +206,7 @@ namespace Sparrow.Collections
             _entries = new Entry[newCapacity];
             BlockCopyMemoryHelper.Memset(_entries, new Entry(KUnusedHash, default(TKey), default(TValue)));
 
-            _usedEntries = new int[newCapacity];
-            _usedEntriesIndex = 0;
+            _usedEntries = new BitVector(newCapacity);
 
             _capacity = newCapacity;
             _capacityMask = _capacity - 1;
@@ -283,11 +280,9 @@ namespace Sparrow.Collections
 
             UnusedSet: // The bucket was formerly unused, so we must track it.
 
-            if (_usedEntriesIndex >= _usedEntries.Length)
-                Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
-            _usedEntries[_usedEntriesIndex++] = bucket;
+            _usedEntries.Set(bucket);
 
-            Set:
+            Set: 
 
             _entries[bucket].Hash = uhash;
             _entries[bucket].Key = key;
@@ -306,11 +301,87 @@ namespace Sparrow.Collections
             if (key == null)
                 throw new ArgumentNullException(nameof(key));
 
-            int bucket = Lookup(key);
-            if (bucket == InvalidNodePosition)
-                return false;
+            int hash = GetInternalHashCode(key); // PERF: This goes first because it can consume lots of registers.
 
-            SetDeleted(bucket);
+            var entries = _entries;
+
+            int numProbes = 1;
+            int capacity = _capacity;
+            int bucket = hash & _capacityMask;
+
+            uint originalBucket = (uint)bucket;
+
+Loop:
+            do
+            {
+                uint nHash = entries[bucket].Hash;
+                if (nHash == KUnusedHash)
+                    goto ReturnFalse;
+                if (nHash == hash)
+                    goto PartialHit;
+
+                bucket = (bucket + numProbes) & _capacityMask;
+                numProbes++;
+
+#if DEBUG
+                if (numProbes >= 100)
+                    throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
+#else
+                if (numProbes >= capacity)
+                    break;
+#endif
+            }
+            while (true);
+
+ReturnFalse:
+            return false;
+
+PartialHit:
+            if (!_comparer.Equals(entries[bucket].Key, key))
+            {
+                // PERF: This can happen with a very^3 low probability (assuming your hash function is good enough)
+                bucket = (bucket + numProbes) & _capacityMask;
+                numProbes++;
+                goto Loop;
+            }
+
+            // Now we check until we hit Unused.
+            int deletedBucket = bucket;
+
+            bucket = (bucket + numProbes) & _capacityMask;
+            numProbes++;
+
+            do
+            {
+                uint nHash = entries[bucket].Hash;
+                if (nHash == KUnusedHash)
+                    goto ReturnTrue;
+
+                // We move all the hashes with share the original bucket. (they are conflicts)
+                if (nHash != KDeletedHash && (nHash & _capacityMask) == originalBucket)
+                {
+                    // Move the bucket to the deleted bucket. 
+                    entries[deletedBucket] = entries[bucket];
+
+                    deletedBucket = bucket;
+                }
+
+                bucket = (bucket + numProbes) & _capacityMask;
+                numProbes++;
+
+#if DEBUG
+                if (numProbes >= 100)
+                    throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
+#else
+                    if (numProbes >= capacity)
+                        break;
+#endif
+            }
+            while (true);
+
+            ReturnTrue:
+
+            SetDeleted(deletedBucket);
 
             return true;
         }
@@ -478,11 +549,9 @@ namespace Sparrow.Collections
 
                 UnusedSet: // The bucket was formerly unused, so we must track it for cleanup. 
 
-                if (_usedEntriesIndex >= _usedEntries.Length)
-                    Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
-                _usedEntries[_usedEntriesIndex++] = bucket;
+                _usedEntries.Set(bucket);
 
-                Set:
+                Set: 
 
                 _entries[bucket].Hash = uhash;
                 _entries[bucket].Key = key;
@@ -500,17 +569,33 @@ namespace Sparrow.Collections
             // PERF: As of 08/22/2017 the JIT Loop Cloning model will pick up the copies and generate 2 loops, one with range checks
             //       and one without. Given the behavior of this code, the predicted branch will be taken 100% of the time and remove
             //       the range checking for a faster more compact loop. 
-            int usedEntriesIndex = _usedEntriesIndex;
             var entries = _entries;
             var usedEntries = _usedEntries;
+            var usedEntriesBits = usedEntries.Bits;
 
-            for (int i = 0; i < usedEntriesIndex; i++)
+            int offset = 0;
+            for ( int i = 0; i < usedEntriesBits.Length; i++ )
             {
-                ref Entry entry = ref entries[usedEntries[i]];
-                entry.Hash = KUnusedHash;
-                entry.Key = default(TKey);
-                entry.Value = default(TValue);
-            }                
+                if ( usedEntriesBits[i] != 0 ) // If there isn't any used in the next 64 buckets, lets skip them. 
+                {
+                    int count = Math.Min(64, usedEntries.Count - offset); // The last one will be smaller than 64.
+                    for( int j = 0; j < count; j++)
+                    {                        
+                        if ( usedEntries.Get(offset + j) )
+                        {
+                            ref Entry entry = ref entries[offset + j];
+                            entry.Hash = KUnusedHash;
+                            entry.Key = default(TKey);
+                            entry.Value = default(TValue);
+                        }
+                    }
+                }
+
+                // We increase the offset to account for the next word.
+                offset += 64;
+            }
+
+            usedEntries.Clear();
 
 #if VALIDATE
             for (int i = 0; i < _entries.Length; i++ )
@@ -521,7 +606,6 @@ namespace Sparrow.Collections
             }
 #endif
 
-            _usedEntriesIndex = 0;
             _numberOfUsed = 0;
             _numberOfDeleted = 0;
             _size = 0;
@@ -661,9 +745,9 @@ namespace Sparrow.Collections
 
         private void Rehash(Entry[] entries)
         {
-            var size = 0;
-            _usedEntriesIndex = 0;
+            _usedEntries = new BitVector(entries.Length);
 
+            var size = 0;            
             int newCapacityMask = entries.Length - 1;
             for (int it = 0; it < _entries.Length; it++)
             {
@@ -684,9 +768,7 @@ namespace Sparrow.Collections
                 entries[bucket].Key = _entries[it].Key;
                 entries[bucket].Value = _entries[it].Value;
 
-                if (_usedEntriesIndex >= _usedEntries.Length)
-                    Array.Resize(ref _usedEntries, _usedEntries.Length * 2); // deleted entries considered in _usedEntries for later ClearUsedPortion so we may have bigger _usedEntries size
-                _usedEntries[_usedEntriesIndex++] = bucket;
+                _usedEntries.Set(bucket);
 
                 size++;
             }
