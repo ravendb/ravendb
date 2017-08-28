@@ -25,56 +25,47 @@ namespace Raven.Server.Utils
             if(string.IsNullOrEmpty(remoteAsString))
                 return ConflictStatus.AlreadyMerged;
 
-            if (string.IsNullOrEmpty(remoteAsString) || string.IsNullOrEmpty(localAsString))
+            if (string.IsNullOrEmpty(localAsString))
                 return ConflictStatus.Update;
 
             var local = localAsString.ToChangeVector();
             var remote = remoteAsString.ToChangeVector();
+
             //any missing entries from a change vector are assumed to have zero value
-            var remoteHasLargerEntries = local.Length < remote.Length;
-            var localHasLargerEntries = remote.Length < local.Length;
-            
-            Array.Sort(remote); // todo: check if we need this
-            Array.Sort(local); // todo: check if we need this
-            
-            var localIndex = 0;
-            var remoteIndex = 0;
-            
-            while (localIndex < local.Length && remoteIndex < remote.Length)
+            var localHasLargerEntries = false;
+            var remoteHasLargerEntries = false;
+
+            int numOfMatches = 0;
+            for (int i = 0; i < remote.Length; i++)
             {
-                var compareResult = remote[remoteIndex].DbId.CompareTo(local[localIndex].DbId);
-                if (compareResult == 0)
+                bool found = false;
+                for (int j = 0; j < local.Length; j++)
                 {
-                    remoteHasLargerEntries |= remote[remoteIndex].Etag > local[localIndex].Etag;
-                    localHasLargerEntries |= local[localIndex].Etag > remote[remoteIndex].Etag;
-                    remoteIndex++;
-                    localIndex++;
+                    if (remote[i].DbId == local[j].DbId)
+                    {
+                        found = true;
+                        numOfMatches++;
+                        if (remote[i].Etag > local[j].Etag)
+                        {
+                            remoteHasLargerEntries = true;
+                        }
+                        else if (remote[i].Etag < local[j].Etag)
+                        {
+                            localHasLargerEntries = true;
+                        }
+                        break;
+                    }
                 }
-                else if (compareResult > 0)
+                if (found == false)
                 {
-                    localIndex++;
-                    localHasLargerEntries = true;
-                }
-                else
-                {
-                    remoteIndex++;
                     remoteHasLargerEntries = true;
                 }
-            
-                if (localHasLargerEntries && remoteHasLargerEntries)
-                    break;
             }
-            
-            if (remoteIndex < remote.Length)
-            {
-                remoteHasLargerEntries = true;
-            }
-            
-            if (localIndex < local.Length)
+            if (numOfMatches < local.Length)
             {
                 localHasLargerEntries = true;
             }
-            
+
             if (remoteHasLargerEntries && localHasLargerEntries)
                 return ConflictStatus.Conflict;
             

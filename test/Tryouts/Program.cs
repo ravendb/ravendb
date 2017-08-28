@@ -11,6 +11,7 @@ using Raven.Client.Documents;
 using SlowTests.Client.Subscriptions;
 using SlowTests.Queries;
 using SlowTests.Server.Documents.ETL.Raven;
+using SlowTests.Server.Replication;
 using SlowTests.Tests.Linq;
 
 namespace Tryouts
@@ -19,13 +20,12 @@ namespace Tryouts
     {
         public static void Main(string[] args)
         {
-            for (int i = 0; i < 100; i++)
+            for (int i = 0; i < 1000; i++)
             {
-                Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new RavenDB_8288())
+                using (var test = new ReplicationTombstoneTests())
                 {
-                    test.Queries_will_work_during_index_replacements().Wait();
+                    test.CreateConflictAndResolveItWithTombstone().Wait();
                 }
             }
         }
