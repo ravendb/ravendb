@@ -2371,6 +2371,7 @@ namespace Raven.Server.Documents.Indexes
             catch
             {
                 Monitor.Exit(_storageOperation);
+                throw;
             }
 
             return _storageOperation;
