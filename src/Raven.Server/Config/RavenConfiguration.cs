@@ -74,8 +74,8 @@ namespace Raven.Server.Config
             ResourceType = resourceType;
 
             _configBuilder = new ConfigurationBuilder();
+            AddEnvironmentVariables();
             AddJsonConfigurationVariables(customConfigPath);
-            _configBuilder.AddEnvironmentVariables("RAVEN.");
 
             Settings = _configBuilder.Build();
 
@@ -116,6 +116,11 @@ namespace Raven.Server.Config
             {
                 _configBuilder.AddJsonFile("settings.json", optional: true);
             }
+        }
+
+        private void AddEnvironmentVariables()
+        {
+            _configBuilder.AddEnvironmentVariables("RAVEN.");
         }
 
         public LogsConfiguration Logs { get; set; }
