@@ -1,104 +1,121 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Pipes;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using rvn.Utils;
+using Raven.Server.Utils;
+using Raven.Server.Utils.Cli;
+using Sparrow.Platform;
 
 namespace rvn
 {
-    public class LogStream
+    public class LogStream : IDisposable
     {
-        private readonly string _serverUrl;
+        private readonly int _pid;
 
-        private readonly string _certPath;
+        private NamedPipeClientStream _client;
 
-        private readonly CancellationTokenSource _cancellationTokenSource;
+        private Timer _serverAliveCheck;
 
-        public LogStream(string serverUrl, string certPath)
+        private int _exitCode;
+
+        private const int ServerAliveCheckInterval = 5000;
+
+        public LogStream(int? pid = null)
         {
-            _serverUrl = serverUrl;
-            _certPath = certPath;
-            _cancellationTokenSource = new CancellationTokenSource();
+            _pid = pid ?? ServerProcessUtil.GetRavenServerPid();
         }
 
         public void Stop()
         {
-            _cancellationTokenSource.Cancel();
+            Dispose();
+            Console.WriteLine("Stop tailing logs.");
+            Environment.Exit(_exitCode);
         }
 
-        public async Task PrintAsync(Stream stream)
+        public async Task Connect()
         {
-            var ws = GetClient();
-            var uri = GetLogsEndpoint();
-            await ws.ConnectAsync(uri, _cancellationTokenSource.Token);
-
-            using (var writer = new StreamWriter(stream))
+            _serverAliveCheck = new Timer((s) =>
             {
-                writer.WriteLine("Connected to the server.");
+                if (ServerProcessUtil.IsServerDown(_pid) == false)
+                    return;
 
-                var buffer = new ArraySegment<byte>(new byte[8192]);
+                Console.WriteLine($"RavenDB server process PID {_pid} exited.");
+                _exitCode = 1;
+                Stop();
+            }, null, 0, ServerAliveCheckInterval);
+            
+            try
+            {
+                var pipeName = Pipes.GetPipeName(Pipes.LogStreamPipePrefix, _pid);
+                _client = new NamedPipeClientStream(pipeName);
+                WorkaroundSetPipePathForPosix(_client, pipeName);
+                try
+                {
+                    _client.Connect(3000);
+                }
+                catch (Exception ex)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine(Environment.NewLine + "Couldn't connect to " + pipeName);
+                    Console.ResetColor();
+                    Console.WriteLine();
+                    Console.WriteLine(ex);
+                    Environment.Exit(2);
+                }
+
+                Console.WriteLine("Connected to RavenDB server...");
+
+                var reader = new StreamReader(_client);
+                var buffer = new char[8192];
+                var stdOut = Console.Out;
                 while (true)
                 {
-                    using (var memStream = new MemoryStream())
+                    var readCount = await reader.ReadAsync(buffer, 0, buffer.Length);
+                    if (readCount > 0)
                     {
-                        WebSocketReceiveResult wsReceiveResult;
-                        do
-                        {
-                            wsReceiveResult = await ws.ReceiveAsync(buffer, _cancellationTokenSource.Token);
-                            memStream.Write(buffer.Array, buffer.Offset, wsReceiveResult.Count);
-                        }
-                        while (!wsReceiveResult.EndOfMessage);
-
-                        memStream.Seek(0, SeekOrigin.Begin);
-
-                        if (wsReceiveResult.MessageType == WebSocketMessageType.Text)
-                        {
-                            using (var reader = new StreamReader(memStream, Encoding.UTF8))
-                                writer.Write(reader.ReadToEnd());
-                        }
-
-                        if (wsReceiveResult.MessageType == WebSocketMessageType.Close)
-                        {
-                            writer.WriteLine($"Websocket connection closed: {wsReceiveResult.CloseStatus}, {wsReceiveResult.CloseStatusDescription}.");
-                            break;
-                        }
+                        await stdOut.WriteAsync(buffer, 0, readCount);
                     }
                 }
             }
-        }
-
-        private Uri GetLogsEndpoint()
-        {
-            var adminLogsUriString = $"{_serverUrl.TrimEnd('/')}/admin/logs/watch";
-            if (Uri.TryCreate(adminLogsUriString, UriKind.Absolute, out Uri result) == false)
-                throw new ArgumentException($"Invalid server URL: {_serverUrl}");
-
-            return result;
-        }
-
-        private ClientWebSocket GetClient()
-        {
-            if (string.IsNullOrEmpty(_certPath))
-                return new ClientWebSocket();
-
-            var cert = LoadCert();
-            return new ClientWebSocket()
+            catch (ObjectDisposedException)
             {
-                Options =
-                {
-                    ClientCertificates = cert
-                }
-            };
+                // closing
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+                throw;
+            }
         }
 
-        private X509CertificateCollection LoadCert()
+        private static void WorkaroundSetPipePathForPosix(NamedPipeClientStream client, string pipeName)
         {
-            var cert = X509Certificate.CreateFromCertFile(_certPath);
-            var collection = new X509CertificateCollection(new []{ cert });
-            return collection;
+            if (PlatformDetails.RunningOnPosix) // TODO: remove this if and after https://github.com/dotnet/corefx/issues/22141 (both in RavenServer.cs and AdminChannel.cs)
+            {
+                var pathField = client.GetType().GetField("_normalizedPipePath", BindingFlags.NonPublic | BindingFlags.Instance);
+                if (pathField == null)
+                {
+                    throw new InvalidOperationException("Unable to set the proper path for the admin pipe, admin channel will not be available");
+                }
+                var pipeDir = Path.Combine(Path.GetTempPath(), "ravendb-pipe");
+                pathField.SetValue(client, Path.Combine(pipeDir, pipeName));
+            }
+        }
+
+        public void Dispose()
+        {
+            _client?.Dispose();
+            _serverAliveCheck?.Dispose();
+
+            _client = null;
+            _serverAliveCheck = null;
         }
     }
 }
