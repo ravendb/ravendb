@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 
@@ -167,9 +168,8 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var reduceResults = session.Query<WeeklyStatsIndex.ReduceResult, WeeklyStatsIndex>()
-                        .Customize(x => x.Include<WeeklyStatsIndex.ReduceResult>(y => y.AudioId)
-                                            .WaitForNonStaleResults()
-                        )
+                        .Include(x => x.AudioId)
+                        .Customize(x => x.WaitForNonStaleResults())
                         .OrderByDescending(x => x.WeeksPlays)
                         .ToList();
                     var results = reduceResults

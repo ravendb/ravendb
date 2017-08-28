@@ -2,13 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
-using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
-using Raven.Client.Extensions;
-using SlowTests.Utils;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -30,7 +27,9 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var results = session.Query<Event, Events_ByActiveStagingPublishOnSaleAndStartDate>()
-                        .Customize(x => x.Include<Event>(e => e.PerformerIds).Include<Event>(e => e.VenueId).WaitForNonStaleResults())
+                        .Include(x => x.PerformerIds)
+                        .Include(x => x.VenueId)
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(e => e.StartDate == DateTime.Now.Date)
                         .Take(1024)
                         .ToList();
@@ -54,7 +53,9 @@ namespace SlowTests.MailingList
                     new ConfigForNotificationSender(documentSession).PopulateData();
 
                     var results = documentSession.Query<Event, Events_ByActiveStagingPublishOnSaleAndStartDate>()
-                        .Customize(x => x.Include<Event>(e => e.PerformerIds).Include<Event>(e => e.VenueId).WaitForNonStaleResults())
+                        .Include(x => x.PerformerIds)
+                        .Include(x => x.VenueId)
+                        .Customize(x => x.WaitForNonStaleResults())
                         .Where(e => e.StartDate == DateTime.Now.Date)
                         .Take(1024)
                         .ToList();

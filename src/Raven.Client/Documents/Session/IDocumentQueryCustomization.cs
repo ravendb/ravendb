@@ -5,7 +5,6 @@
 //-----------------------------------------------------------------------
 
 using System;
-using System.Collections.Generic;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations;
@@ -25,70 +24,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Allow you to modify the index query before it is executed
         /// </summary>
-        IDocumentQueryCustomization BeforeQueryExecution(Action<IndexQuery> action);
-
-        /// <summary>
-        ///     Adds matches highlighting for the specified field.
-        /// </summary>
-        /// <remarks>
-        ///     The specified field should be analyzed and stored for highlighter to work.
-        ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
-        /// </remarks>
-        /// <param name="fieldName">The field name to highlight.</param>
-        /// <param name="fragmentLength">The fragment length.</param>
-        /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="fragmentsField">The field in query results item to put highlights into.</param>
-        IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, string fragmentsField);
-
-        /// <summary>
-        ///     Adds matches highlighting for the specified field.
-        /// </summary>
-        /// <remarks>
-        ///     The specified field should be analyzed and stored for highlighter to work.
-        ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
-        /// </remarks>
-        /// <param name="fieldName">The field name to highlight.</param>
-        /// <param name="fragmentLength">The fragment length.</param>
-        /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlights for all results.</param>
-        IDocumentQueryCustomization Highlight(string fieldName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
-
-        /// <summary>
-        ///     Adds matches highlighting for the specified field on a Map/Reduce Index.
-        /// </summary>
-        /// <remarks>
-        ///     This is only valid for Map/Reduce Index queries.
-        ///     The specified field and key should be analyzed and stored for highlighter to work.
-        ///     For each match it creates a fragment that contains matched text surrounded by highlighter tags.
-        /// </remarks>
-        /// <param name="fieldName">The field name to highlight.</param>
-        /// <param name="fieldKeyName">The field key to associate highlights with.</param>
-        /// <param name="fragmentLength">The fragment length.</param>
-        /// <param name="fragmentCount">The maximum number of fragments for the field.</param>
-        /// <param name="highlightings">Field highlights for all results.</param>
-        IDocumentQueryCustomization Highlight(string fieldName, string fieldKeyName, int fragmentLength, int fragmentCount, out FieldHighlightings highlightings);
-
-        /// <summary>
-        ///     Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
-        /// <param name="path">The path, which is name of the property that holds the id of the object to include.</param>
-        /// <returns></returns>
-        IDocumentQueryCustomization Include<TResult>(Expression<Func<TResult, object>> path);
-
-        /// <summary>
-        ///     Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <typeparam name="TResult">The type of the object that holds the id that you want to include.</typeparam>
-        /// <typeparam name="TInclude">The type of the object that you want to include.</typeparam>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        IDocumentQueryCustomization Include<TResult, TInclude>(Expression<Func<TResult, object>> path);
-
-        /// <summary>
-        ///     Includes the specified path in the query, loading the document specified in that path
-        /// </summary>
-        /// <param name="path">Path in documents in which server should look for a 'referenced' documents.</param>
-        IDocumentQueryCustomization Include(string path);
+        IDocumentQueryCustomization BeforeQueryExecuted(Action<IndexQuery> action);
 
         /// <summary>
         ///     Disables caching for query results.
@@ -100,21 +36,6 @@ namespace Raven.Client.Documents.Session
         ///     Usage of this option will prevent holding query results in memory.
         /// </summary>
         IDocumentQueryCustomization NoTracking();
-
-        /// <summary>
-        ///     Adds an ordering for a specific field to the query
-        ///		<param name="fieldName">Name of the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        IDocumentQueryCustomization AddOrder(string fieldName, bool descending = false, OrderingType ordering = OrderingType.String);
-
-        /// <summary>
-        ///     Adds an ordering for a specific field to the query
-        ///		<typeparam name="TResult">The type of the object that holds the property that you want to order by.</typeparam>
-        ///		<param name="propertySelector">Property selector for the field.</param>
-        ///		<param name="descending">if set to <c>true</c> [descending].</param>
-        /// </summary>
-        IDocumentQueryCustomization AddOrder<TResult>(Expression<Func<TResult, object>> propertySelector, bool descending = false, OrderingType ordering = OrderingType.String);
 
         /// <summary>
         ///     Order the search results randomly
@@ -136,20 +57,6 @@ namespace Raven.Client.Documents.Session
         /// Sort using custom sorter on the server
         /// </summary>
         IDocumentQueryCustomization CustomSortUsing(string typeName, bool descending);
-
-        /// <summary>
-        ///     Sets the tags to highlight matches with.
-        /// </summary>
-        /// <param name="preTag">Prefix tag.</param>
-        /// <param name="postTag">Postfix tag.</param>
-        IDocumentQueryCustomization SetHighlighterTags(string preTag, string postTag);
-
-        /// <summary>
-        ///     Sets the tags to highlight matches with.
-        /// </summary>
-        /// <param name="preTags">Prefix tags.</param>
-        /// <param name="postTags">Postfix tags.</param>
-        IDocumentQueryCustomization SetHighlighterTags(string[] preTags, string[] postTags);
 
         /// <summary>
         ///     Enables calculation of timings for various parts of a query (Lucene search, loading documents, transforming

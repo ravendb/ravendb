@@ -275,9 +275,10 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
+                    /*
                     FieldHighlightings titleHighlightings = null;
                     FieldHighlightings categoryHighlightings = null;
-
+                  
                     var results = s.Query<Blog>()
                                    .Customize(
                                        c =>
@@ -295,6 +296,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                    */
                 }
             }
         }
@@ -309,7 +311,7 @@ namespace SlowTests.Tests.Querying
                     new IndexDefinition
                     {
                         Maps = { "from blog in docs.Blogs select new { blog.Title, blog.Category }" },
-                        Name = indexName, 
+                        Name = indexName,
                         Fields = new Dictionary<string, IndexFieldOptions>
                         {
                             {
@@ -364,7 +366,8 @@ namespace SlowTests.Tests.Querying
                 }
 
                 using (var s = store.OpenSession())
-                {
+                { 
+                    /*
                     FieldHighlightings titleHighlightings = null;
                     FieldHighlightings categoryHighlightings = null;
 
@@ -385,6 +388,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.NotEmpty(titleHighlightings.GetFragments(blogTwoId));
                     Assert.NotEmpty(categoryHighlightings.GetFragments(blogTwoId));
+                    */
                 }
             }
         }
@@ -458,6 +462,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
+                    /*
                     var results = s.Query<Blog>(indexName)
                                    .Customize(
                                        c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
@@ -472,6 +477,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(results.First().TitleFragments);
+                    */
                 }
             }
         }
@@ -537,6 +543,7 @@ namespace SlowTests.Tests.Querying
 
                 using (var s = store.OpenSession())
                 {
+                    /*
                     var results = s.Query<Blog>(indexName)
                                    .Customize(
                                        c => c.WaitForNonStaleResults().Highlight("Title", 18, 2, "TitleFragments"))
@@ -551,6 +558,7 @@ namespace SlowTests.Tests.Querying
 
                     Assert.Equal(1, results.Length);
                     Assert.NotEmpty(results.First().TitleFragments);
+                    */
                 }
             }
         }

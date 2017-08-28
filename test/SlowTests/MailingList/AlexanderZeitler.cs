@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -75,7 +76,7 @@ namespace SlowTests.MailingList
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
-                        .Customize(x => x.Include<Order>(o => o.CustomerId))
+                        .Include(x => x.CustomerId)
                         // also try to comment this
                         .Where(x => x.TotalPrice > 100)
                         .ToList();

@@ -395,9 +395,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
+        IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
-            BeforeQueryExecution(beforeQueryExecution);
+            BeforeQueryExecuted(beforeQueryExecuted);
             return this;
         }
 
@@ -725,7 +725,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 Includes = new HashSet<string>(Includes),
                 RootTypes = { typeof(T) },
-                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                BeforeQueryExecutedAction = BeforeQueryExecutedAction,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),
