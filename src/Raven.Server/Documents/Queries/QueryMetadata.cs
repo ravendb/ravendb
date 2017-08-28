@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Queries.Parser;
@@ -101,9 +102,10 @@ namespace Raven.Server.Documents.Queries
 
         private void Build(BlittableJsonReaderObject parameters)
         {
+            string fromAlias = null;
             if (Query.From.Alias != null)
             {
-                var fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
+                fromAlias = QueryExpression.Extract(QueryText, Query.From.Alias);
                 RootAliasPaths[fromAlias] = (null, false);
             }
 
@@ -123,7 +125,7 @@ namespace Raven.Server.Documents.Queries
             else if (Query.Select != null)
                 FillSelectFields(parameters);
             if (Query.Where != null)
-                new FillWhereFieldsAndParametersVisitor(this, QueryText).Visit(Query.Where, parameters);
+                new FillWhereFieldsAndParametersVisitor(this, fromAlias, QueryText).Visit(Query.Where, parameters);
 
             if (Query.OrderBy != null)
             {
@@ -226,19 +228,18 @@ namespace Raven.Server.Documents.Queries
                 ThrowUseOfReserveFunctionBodyMethodName(parameters);
 
 
-            SelectFields = new[] {SelectField.CreateMethodCall(name, null, args)};
+            SelectFields = new[] { SelectField.CreateMethodCall(name, null, args) };
         }
 
         private void ThrowUseOfReserveFunctionBodyMethodName(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("When using select function body, the '__selectOutput' function is reserved",
-                QueryText,parameters);
+                QueryText, parameters);
         }
-        
-        
+
         private void ThrowInvalidFunctionSelectWithMoreFields(BlittableJsonReaderObject parameters)
         {
-            throw new InvalidQueryException("A query can contain a single select function body without extra fields",QueryText, parameters);
+            throw new InvalidQueryException("A query can contain a single select function body without extra fields", QueryText, parameters);
         }
 
         private void ThrowMissingAliasOnSelectFunctionBody(BlittableJsonReaderObject parameters)
@@ -248,7 +249,7 @@ namespace Raven.Server.Documents.Queries
                 parameters);
         }
 
-        string ParseExpressionPath(QueryExpression expr, string path, BlittableJsonReaderObject parameters)
+        private string ParseExpressionPath(QueryExpression expr, string path, BlittableJsonReaderObject parameters)
         {
             var indexOf = path.IndexOf('.');
             if (indexOf == -1)
@@ -278,11 +279,11 @@ namespace Raven.Server.Documents.Queries
                 string path;
                 switch (load.Expression.Type)
                 {
-                        case OperatorType.Field:
-                            path = QueryExpression.Extract(QueryText, load.Expression.Field);
+                    case OperatorType.Field:
+                        path = QueryExpression.Extract(QueryText, load.Expression.Field);
                         break;
-                        case OperatorType.Value:
-                            path = QueryExpression.Extract(QueryText, load.Expression.Value);
+                    case OperatorType.Value:
+                        path = QueryExpression.Extract(QueryText, load.Expression.Value);
                         break;
                     default:
                         ThrowInvalidWith(load.Expression, "LOAD clause require a field or value refereces", parameters);
@@ -486,8 +487,7 @@ namespace Raven.Server.Documents.Queries
                     var methodName = QueryExpression.Extract(QueryText, expression.Field);
                     if (Enum.TryParse(methodName, ignoreCase: true, result: out AggregationOperation aggregation) == false)
                     {
-                        if (Query.DeclaredFunctions != null &&
-                            Query.DeclaredFunctions.TryGetValue(methodName, out var funcToken))
+                        if (Query.DeclaredFunctions != null && Query.DeclaredFunctions.TryGetValue(methodName, out var funcToken))
                         {
                             var args = new SelectField[expression.Arguments.Count];
                             for (int i = 0; i < expression.Arguments.Count; i++)
@@ -503,6 +503,11 @@ namespace Raven.Server.Documents.Queries
                             }
 
                             return SelectField.CreateMethodCall(methodName, alias, args);
+                        }
+
+                        if (string.Equals("id", methodName, StringComparison.OrdinalIgnoreCase))
+                        {
+                            return SelectField.Create(Constants.Documents.Indexing.Fields.DocumentIdFieldName, alias);
                         }
 
                         if (IsGroupBy == false)
@@ -548,12 +553,12 @@ namespace Raven.Server.Documents.Queries
                     return null;// never hit
             }
         }
-        
+
         private void ThrowInvalidMethodArgument(BlittableJsonReaderObject parameters)
         {
             throw new InvalidQueryException("Invalid method parameter, don't know how to handle it", QueryText, parameters);
         }
-        
+
         private SelectField GetSelectValue(string alias, FieldToken expressionField)
         {
             var name = QueryExpression.Extract(QueryText, expressionField);
@@ -576,7 +581,7 @@ namespace Raven.Server.Documents.Queries
                     hasSourceAlias = true;
                     array = sourceAlias.Array;
                 }
-                else if(RootAliasPaths.Count != 0)
+                else if (RootAliasPaths.Count != 0)
                 {
                     throw new InvalidOperationException($"Unknown alias {key}, but there are aliases specified in the query ({string.Join(", ", RootAliasPaths.Keys)})");
                 }
@@ -608,7 +613,7 @@ namespace Raven.Server.Documents.Queries
                 return fieldNameOrAlias;
 
             var key = new StringSegment(fieldNameOrAlias, 0, indexOf);
-          
+
             if (RootAliasPaths.TryGetValue(key, out _))
             {
                 return fieldNameOrAlias.Substring(indexOf + 1);
@@ -668,10 +673,12 @@ namespace Raven.Server.Documents.Queries
         private class FillWhereFieldsAndParametersVisitor : WhereExpressionVisitor
         {
             private readonly QueryMetadata _metadata;
+            private readonly string _fromAlias;
 
-            public FillWhereFieldsAndParametersVisitor(QueryMetadata metadata, string queryText) : base(queryText)
+            public FillWhereFieldsAndParametersVisitor(QueryMetadata metadata, string fromAlias, string queryText) : base(queryText)
             {
                 _metadata = metadata;
+                _fromAlias = fromAlias;
             }
 
             public override void VisitFieldToken(string fieldName, ValueToken value, BlittableJsonReaderObject parameters)
@@ -735,6 +742,31 @@ namespace Raven.Server.Documents.Queries
 
                 switch (methodType)
                 {
+                    case MethodType.Id:
+                        if (arguments.Count < 1 || arguments.Count > 2)
+                            throw new InvalidQueryException($"Method {methodName}() expects one argument to be provided", QueryText, parameters);
+
+                        var idExpression = arguments[arguments.Count - 1] as QueryExpression;
+                        if (idExpression == null)
+                            throw new InvalidQueryException($"Method {methodName}() expects expression , got {arguments[arguments.Count - 1]}", QueryText, parameters);
+
+                        if (arguments.Count == 2)
+                        {
+                            if (_fromAlias == null)
+                                throw new InvalidQueryException("Alias was passed to method 'id()' but query does not specify document alias.", QueryText, parameters);
+
+                            var idAliasToken = arguments[0] as FieldToken;
+                            if (idAliasToken == null)
+                                throw new InvalidQueryException($"Method 'id()' expects field token as a first argument, got {arguments[0]} type", QueryText, parameters);
+
+                            var idAliasTokenValue = QueryExpression.Extract(QueryText, idAliasToken);
+
+                            if (_fromAlias != idAliasTokenValue)
+                                throw new InvalidQueryException($"Alias passed to method 'id({idAliasTokenValue})' does not match specified document alias ('{_fromAlias}').", QueryText, parameters);
+                        }
+
+                        _metadata.AddWhereField(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
+                        break;
                     case MethodType.StartsWith:
                     case MethodType.EndsWith:
                     case MethodType.Search:
@@ -871,7 +903,7 @@ namespace Raven.Server.Documents.Queries
                 var fieldArgument = arguments[0] as FieldToken;
 
                 if (fieldArgument == null)
-                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument",QueryText, parameters);
+                    throw new InvalidQueryException($"Method {methodName}() expects a field name as its first argument", QueryText, parameters);
 
                 return QueryExpression.Extract(_metadata.Query.QueryText, fieldArgument);
             }
@@ -884,8 +916,8 @@ namespace Raven.Server.Documents.Queries
 
             var updateBody = QueryExpression.Extract(QueryText, Query.UpdateBody);
 
-            if(Query.From.Alias == null) // will have to use this 
-               return updateBody;
+            if (Query.From.Alias == null) // will have to use this 
+                return updateBody;
 
             var alias = QueryExpression.Extract(QueryText, Query.From.Alias);
             // patch is sending this, but we can also specify the alias.

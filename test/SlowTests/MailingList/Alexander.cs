@@ -22,7 +22,7 @@ namespace SlowTests.MailingList
                 {
                     Maps = { @"
 docs.Casinos
-    .SelectMany(casino => casino.Comments, (casino, comment) => new {CityId = casino.CityId, CasinoId = casino.__document_id, Id = comment.Id, DateTime = comment.DateTime, Author = comment.Author, Text = comment.Text})" },
+    .SelectMany(casino => casino.Comments, (casino, comment) => new {CityId = casino.CityId, CasinoId = Id(casino), Id = comment.Id, DateTime = comment.DateTime, Author = comment.Author, Text = comment.Text})" },
 
                     Fields = new Dictionary<string, IndexFieldOptions>
                     {

@@ -62,7 +62,7 @@ namespace SlowTests.MailingList
                                                     Name = "test",
                                                     Maps = {
                                                         LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
-    .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
+    .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = Id(doc), Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
 ") },
                                                     Reduce =
                                                         LinuxTestUtils.Dos2Unix(@"results
@@ -126,7 +126,7 @@ namespace SlowTests.MailingList
                                                     Name = "test",
                                                     Maps = {
                                                         LinuxTestUtils.Dos2Unix(@"docs.ClickAllocations
-    .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = doc.__document_id, Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
+    .Select(doc => new {AccountId = doc.AccountId, Date = doc.Date, Id = Id(doc), Key = doc.Key, LastSavedDate = doc.LastSavedDate, LastSavedUser = doc.LastSavedUser, OrderNumber = doc.OrderNumber, PurchaseDate = doc.PurchaseDate, PurchaseOrderNumber = doc.PurchaseOrderNumber, Quantity = doc.Quantity, ReorderQuantity = doc.ReorderQuantity, Type = doc.Type})
 ") },
                                                     Reduce =
                                                         LinuxTestUtils.Dos2Unix(@"results

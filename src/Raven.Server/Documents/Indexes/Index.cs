@@ -347,13 +347,16 @@ namespace Raven.Server.Documents.Indexes
             }
         }
 
-        internal ExitWriteLock DrainRunningQueries(TimeSpan? timeout = null)
+        internal ExitWriteLock DrainRunningQueries()
         {
             if (_currentlyRunningQueriesLock.IsWriteLockHeld)
                 return new ExitWriteLock();
 
-            if (_currentlyRunningQueriesLock.TryEnterWriteLock(timeout ?? TimeSpan.FromSeconds(10)) == false)
+            if (_currentlyRunningQueriesLock.TryEnterWriteLock(TimeSpan.FromSeconds(10)) == false)
             {
+                if (_disposing || _disposed)
+                    ThrowObjectDisposed();
+
                 throw new TimeoutException("After waiting for 10 seconds for all running queries ");
             }
             return new ExitWriteLock(_currentlyRunningQueriesLock);
@@ -2371,6 +2374,7 @@ namespace Raven.Server.Documents.Indexes
             catch
             {
                 Monitor.Exit(_storageOperation);
+                throw;
             }
 
             return _storageOperation;
@@ -2649,11 +2653,6 @@ namespace Raven.Server.Documents.Indexes
                     if (Interlocked.CompareExchange(ref _isRunning, 0, 1) != 1)
                         throw new InvalidOperationException("Storage operation wasn't running. It should not happen.");
                 }
-            }
-
-            private void ThrowReadLockTimeoutException()
-            {
-                throw new TimeoutException($"Could not get the index storage read lock in a reasonable time, {_index.Name} is probably undergoing maintenance now, try again later");
             }
         }
     }

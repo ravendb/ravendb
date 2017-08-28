@@ -63,6 +63,14 @@ namespace Raven.Server.Documents.Indexes.Static
             BlittableJson = document.Data;
         }
 
+        public dynamic GetId()
+        {
+            if (_doc == null)
+                return DynamicNullObject.Null;
+
+            return _doc.Id;
+        }
+
         public bool ContainsKey(string key)
         {
             return BlittableJson.GetPropertyNames().Contains(key);

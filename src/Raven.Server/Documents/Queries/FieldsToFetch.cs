@@ -101,8 +101,7 @@ namespace Raven.Server.Documents.Queries
             {
                 return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: false);
             }
-            if (selectFieldName.Length > 0 && 
-                selectFieldName[0] == '_')
+            if (selectFieldName.Length > 0)
             {
                 if (selectFieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName)
                 {
@@ -110,26 +109,29 @@ namespace Raven.Server.Documents.Queries
                     return new FieldToFetch(selectFieldName, selectField, selectField.Alias, canExtractFromIndex: false, isDocumentId: true);
                 }
 
-                if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
+                if (selectFieldName[0] == '_')
                 {
-                    if (results == null)
-                        ThrowInvalidFetchAllStoredDocuments();
-                    Debug.Assert(results != null);
-                    results.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
-
-                    extractAllStoredFields = true;
-
-                    foreach (var kvp in indexDefinition.MapFields)
+                    if (selectFieldName == Constants.Documents.Indexing.Fields.AllStoredFields)
                     {
-                        var stored = kvp.Value.Storage == FieldStorage.Yes;
-                        if (stored == false)
-                            continue;
+                        if (results == null)
+                            ThrowInvalidFetchAllStoredDocuments();
+                        Debug.Assert(results != null);
+                        results.Clear(); // __all_stored_fields should only return stored fields so we are ensuring that no other fields will be returned
 
-                        anyExtractableFromIndex = true;
-                        results[kvp.Key] = new FieldToFetch(kvp.Key, null, null, canExtractFromIndex: true, isDocumentId: false);
+                        extractAllStoredFields = true;
+
+                        foreach (var kvp in indexDefinition.MapFields)
+                        {
+                            var stored = kvp.Value.Storage == FieldStorage.Yes;
+                            if (stored == false)
+                                continue;
+
+                            anyExtractableFromIndex = true;
+                            results[kvp.Key] = new FieldToFetch(kvp.Key, null, null, canExtractFromIndex: true, isDocumentId: false);
+                        }
+
+                        return null;
                     }
-
-                    return null;
                 }
             }
 

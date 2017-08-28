@@ -8,6 +8,9 @@ namespace Raven.Server.Documents.Queries
     {
         public static MethodType GetMethodType(string methodName)
         {
+            if (string.Equals(methodName, "id", StringComparison.OrdinalIgnoreCase))
+                return MethodType.Id;
+
             if (string.Equals(methodName, "search", StringComparison.OrdinalIgnoreCase))
                 return MethodType.Search;
 

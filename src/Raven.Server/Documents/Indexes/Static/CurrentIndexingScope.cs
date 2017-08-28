@@ -25,7 +25,7 @@ namespace Raven.Server.Documents.Indexes.Static
         [ThreadStatic]
         public static CurrentIndexingScope Current;
 
-        public dynamic Source;
+        public DynamicBlittableJson Source;
 
         public string SourceCollection;
 
@@ -60,7 +60,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (source == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source is not set.");
 
-                var id = source.__document_id as LazyStringValue;
+                var id = source.GetId() as LazyStringValue;
                 if (id == null)
                     throw new ArgumentException("Cannot execute LoadDocument. Source does not have a key.");
 

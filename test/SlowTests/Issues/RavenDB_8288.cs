@@ -58,6 +58,8 @@ namespace SlowTests.Issues
                         {
                             var count = session.Query<User>("Users_ByName").Customize(x => x.WaitForNonStaleResults()).Count();
                             Assert.Equal(2, count);
+
+                            Thread.Sleep(13);
                         }
                     });
                 }

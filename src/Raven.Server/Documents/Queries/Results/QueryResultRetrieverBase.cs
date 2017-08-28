@@ -71,7 +71,7 @@ namespace Raven.Server.Documents.Queries.Results
             var result = new DynamicJsonValue();
 
             if (FieldsToFetch.IsDistinct == false && string.IsNullOrEmpty(id) == false)
-                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = id;
+                result[Constants.Documents.Metadata.Id] = id;
 
             Dictionary<string, FieldsToFetch.FieldToFetch> fields = null;
             if (FieldsToFetch.ExtractAllFromIndex)
@@ -159,7 +159,7 @@ namespace Raven.Server.Documents.Queries.Results
             }
 
             if (fieldsToFetch.IsDistinct == false && doc.Id != null)
-                result[Constants.Documents.Indexing.Fields.DocumentIdFieldName] = doc.Id;
+                result[Constants.Documents.Metadata.Id] = doc.Id;
 
             return ReturnProjection(result, doc, score, context);
         }

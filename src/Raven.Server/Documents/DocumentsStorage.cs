@@ -205,6 +205,7 @@ namespace Raven.Server.Documents
             var options = GetStorageEnvironmentOptionsFromConfiguration(_documentDatabase.Configuration, _documentDatabase.IoChanges, _documentDatabase.CatastrophicFailureNotification);
 
             options.OnNonDurableFileSystemError += _documentDatabase.HandleNonDurableFileSystemError;
+            options.OnRecoveryError += _documentDatabase.HandleOnRecoveryError;
 
             options.GenerateNewDatabaseId = generateNewDatabaseId;
             options.CompressTxAboveSizeInBytes = _documentDatabase.Configuration.Storage.CompressTxAboveSize.GetValue(SizeUnit.Bytes);

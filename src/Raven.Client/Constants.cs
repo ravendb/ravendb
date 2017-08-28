@@ -159,7 +159,7 @@ namespace Raven.Client
                     
                     public const string CustomSortFieldName = "__customSort";
 
-                    public const string DocumentIdFieldName = "__document_id";
+                    public const string DocumentIdFieldName = "id()";
 
                     public const string ReduceKeyFieldName = "__reduce_key";
 

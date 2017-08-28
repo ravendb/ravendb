@@ -125,11 +125,14 @@ namespace Raven.Client.Documents.Indexes
 
         private void OutMember(Expression instance, MemberInfo member, Type exprType)
         {
+            bool isId = false;
             var name = GetPropertyName(member.Name, exprType);
             if (TranslateToDocumentId(instance, member, exprType))
             {
-                name = Constants.Documents.Indexing.Fields.DocumentIdFieldName;
+                isId = true;
+                Out("Id(");
             }
+
             if (instance != null)
             {
                 if (ShouldParenthesisMemberExpression(instance))
@@ -137,7 +140,9 @@ namespace Raven.Client.Documents.Indexes
                 Visit(instance);
                 if (ShouldParenthesisMemberExpression(instance))
                     Out(")");
-                Out("." + name);
+
+                if (isId == false)
+                    Out("." + name);
             }
             else
             {
@@ -150,8 +155,14 @@ namespace Raven.Client.Documents.Indexes
                     Out(parentType.Name + ".");
                 }
 
-                Out(member.DeclaringType.Name + "." + name);
+                Out(member.DeclaringType.Name);
+
+                if (isId == false)
+                    Out("." + name);
             }
+
+            if (isId)
+                Out(")");
         }
 
         private static bool ShouldParenthesisMemberExpression(Expression instance)
@@ -1915,7 +1926,7 @@ namespace Raven.Client.Documents.Indexes
             {
                 object other;
                 if (_isSelectMany == false &&
-                    _duplicatedParams.TryGetValue(name, out other) && 
+                    _duplicatedParams.TryGetValue(name, out other) &&
                     ReferenceEquals(other, node) == false)
                 {
                     name += GetParamId(node);
@@ -2092,7 +2103,7 @@ namespace Raven.Client.Documents.Indexes
                         Out(node.Method.DeclaringType.Name);
                         Out(".Parse(");
                     }
-                    else if(node.Type != typeof(object) || node.Operand.NodeType == ExpressionType.Constant)
+                    else if (node.Type != typeof(object) || node.Operand.NodeType == ExpressionType.Constant)
                     {
                         Out("(");
                         ConvertTypeToCSharpKeywordIncludeNullable(node.Type);
