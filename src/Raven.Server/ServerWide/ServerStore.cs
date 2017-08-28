@@ -301,7 +301,7 @@ namespace Raven.Server.ServerWide
             {
                 var alert = AlertRaised.Create("Recovery Error - System Storage",
                     e.Message,
-                    AlertType.NonDurableFileSystem,
+                    AlertType.RecoveryError,
                     NotificationSeverity.Error,
                     "Recovery Error System");
                 if (NotificationCenter.IsInitialized)
@@ -1390,9 +1390,8 @@ namespace Raven.Server.ServerWide
                     return _nodeTcpServerUrl;
 
                 Debug.Assert(_ravenServer.WebUrl != null);
-                var tcpStatusTask = _ravenServer.GetTcpServerStatusAsync();
-                Debug.Assert(tcpStatusTask.IsCompleted);
-                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(_ravenServer.WebUrl, tcpStatusTask.Result.Port);
+                var status = _ravenServer.GetTcpServerStatus();
+                return _nodeTcpServerUrl = Configuration.Core.GetNodeTcpServerUrl(_ravenServer.WebUrl, status.Port);
             }
         }
 

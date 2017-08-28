@@ -68,7 +68,6 @@ namespace Raven.Server
         public readonly ServerStore ServerStore;
 
         private IWebHost _webHost;
-        private Task<TcpListenerStatus> _tcpListenerTask;
         private readonly Logger _tcpLogger;
 
         public event Action AfterDisposal;
@@ -88,9 +87,9 @@ namespace Raven.Server
             _tcpLogger = LoggingSource.Instance.GetLogger<RavenServer>("<TcpServer>");
         }
 
-        public Task<TcpListenerStatus> GetTcpServerStatusAsync()
+        public TcpListenerStatus GetTcpServerStatus()
         {
-            return _tcpListenerTask;
+            return _tcpListenerStatus;
         }
 
         public void Initialize()
@@ -206,7 +205,7 @@ namespace Raven.Server
                     Logger.Info($"Initialized Server... {WebUrl}");
 
                 ServerStore.TriggerDatabases();
-                _tcpListenerTask = StartTcpListener();
+                _tcpListenerStatus = StartTcpListener();
             }
             catch (Exception e)
             {
@@ -263,7 +262,7 @@ namespace Raven.Server
                     try
                     {
                         var cli = new RavenCli();
-                        var restart = cli.Start(this, writer, reader, false, null);
+                        var restart = cli.Start(this, writer, reader, false);
                         if (restart)
                         {
                             writer.WriteLine("Restarting Server...<DELIMETER_RESTART>");
@@ -455,7 +454,7 @@ namespace Raven.Server
             public int Port;
         }
 
-        private async Task<TcpListenerStatus> StartTcpListener()
+        private TcpListenerStatus StartTcpListener()
         {
             string host = "<unknown>";
             var port = 0;
@@ -755,6 +754,8 @@ namespace Raven.Server
             EnableClr = true
         };
 
+        private TcpListenerStatus _tcpListenerStatus;
+
         private async Task<bool> DispatchServerWideTcpConnection(TcpConnectionOptions tcp, TcpConnectionHeaderMessage header)
         {
             tcp.Operation = header.Operation;
@@ -957,30 +958,9 @@ namespace Raven.Server
                 ea.Execute(() => Pipe?.Dispose());
                 ea.Execute(() => Metrics?.Dispose());
                 ea.Execute(() => _webHost?.Dispose());
-                if (_tcpListenerTask != null)
+                if (_tcpListenerStatus != null)
                 {
-                    ea.Execute(() =>
-                    {
-                        if (_tcpListenerTask.IsCompleted)
-                        {
-                            CloseTcpListeners(_tcpListenerTask.Result.Listeners);
-                        }
-                        else
-                        {
-                            if (_tcpListenerTask.Exception != null)
-                            {
-                                if (_tcpLogger.IsInfoEnabled)
-                                    _tcpLogger.Info("Cannot dispose of tcp server because it has errored", _tcpListenerTask.Exception);
-                            }
-                            else
-                            {
-                                _tcpListenerTask.ContinueWith(t =>
-                                {
-                                    CloseTcpListeners(t.Result.Listeners);
-                                }, TaskContinuationOptions.OnlyOnRanToCompletion);
-                            }
-                        }
-                    });
+                    ea.Execute(() => CloseTcpListeners(_tcpListenerStatus.Listeners));
                 }
 
                 ea.Execute(() => ServerStore?.Dispose());

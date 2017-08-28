@@ -756,7 +756,7 @@ namespace Raven.Server.Utils.Cli
             [Command.Print] = new SingleAction { NumOfArgs = 1, DelegateFync = CommandPrint, Experimental = true } // test cli
         };
 
-        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring, ManualResetEvent consoleMre)
+        public bool Start(RavenServer server, TextWriter textWriter, TextReader textReader, bool consoleColoring)
         {
             _server = server;
             _writer = textWriter;
@@ -787,7 +787,7 @@ namespace Raven.Server.Utils.Cli
 
             try
             {
-                return StartCli(consoleMre);
+                return StartCli();
             }
             catch (Exception ex)
             {
@@ -825,7 +825,7 @@ namespace Raven.Server.Utils.Cli
             }
         }
 
-        private bool StartCli(ManualResetEvent consoleMre)
+        private bool StartCli()
         {
             var ctrlCPressed = false;
             if (_consoleColoring)
@@ -843,12 +843,6 @@ namespace Raven.Server.Utils.Cli
             }
             while (true)
             {
-                if (consoleMre != null && _consoleColoring)
-                {
-                    // wait for "Tcp listening on" to printed before prompt
-                    consoleMre.WaitOne(2000);
-                }
-
                 PrintCliHeader(this);
                 var line = ReadLine(this);
                 _writer.Flush();

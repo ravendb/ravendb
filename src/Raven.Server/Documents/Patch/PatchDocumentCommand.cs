@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Jint.Native;
 using Raven.Client.Documents.Operations;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -114,15 +115,22 @@ namespace Raven.Server.Documents.Patch
 
             object documentInstance;
             var args = _patchArgs;
+            BlittableJsonReaderObject originalDoc ;
             if (originalDocument == null)
             {
                 _run = _runIfMissing;
                 args = _patchIfMissingArgs;
                 documentInstance = _runIfMissing.CreateEmptyObject();
+                originalDoc = null;
             }
             else
             {
-                documentInstance = _run.Translate(context, originalDocument);
+                var translated = (BlittableObjectInstance)((JsValue)_run.Translate(context, originalDocument)).AsObject();
+                // here we need to use the _cloned_ version of the document, since the patch may
+                // change it
+                originalDoc = translated.Blittable;
+                originalDocument.Data = null; // prevent access to this by accident
+                documentInstance = translated;
             }
 
             // we will to acccess this value, and the original document data may be changed by
@@ -136,7 +144,7 @@ namespace Raven.Server.Documents.Patch
                 var result = new PatchResult
                 {
                     Status = PatchStatus.NotModified,
-                    OriginalDocument = _isTest == false ? null : originalDocument?.Data?.Clone(_externalContext),
+                    OriginalDocument = _isTest == false ? null : originalDoc?.Clone(context),
                     ModifiedDocument = modifiedDocument
                 };
 
@@ -150,14 +158,14 @@ namespace Raven.Server.Documents.Patch
 
                 DocumentsStorage.PutOperationResults? putResult = null;
 
-                if (originalDocument == null)
+                if (originalDoc  == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
                         putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
 
                     result.Status = PatchStatus.Created;
                 }
-                else if (DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDocument,
+                else if (DocumentCompare.IsEqualTo(originalDoc, modifiedDocument,
                     tryMergeAttachmentsConflict: true) == DocumentCompareResult.NotEqual)
                 {
                     Debug.Assert(originalDocument != null);
