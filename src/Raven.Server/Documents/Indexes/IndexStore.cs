@@ -1084,6 +1084,7 @@ namespace Raven.Server.Documents.Indexes
                 Monitor.TryEnter(_locker, 16, ref lockTaken);
                 if (lockTaken == false)
                     return false;
+
                 if (_indexes.TryGetByName(replacementIndexName, out Index newIndex) == false)
                     return true;
 
@@ -1109,31 +1110,52 @@ namespace Raven.Server.Documents.Indexes
 
                 if (oldIndex != null)
                 {
-                    using (oldIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
-                        DeleteIndexInternal(oldIndex);
+                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
+                    {
+                        try
+                        {
+                            using (oldIndex.DrainRunningQueries())
+                                DeleteIndexInternal(oldIndex);
+
+                            break;
+                        }
+                        catch (TimeoutException)
+                        {
+                        }
+                    }
                 }
 
                 if (newIndex.Configuration.RunInMemory == false)
                 {
-                    using (newIndex.DrainRunningQueries(Timeout.InfiniteTimeSpan))
-                    using (newIndex.StorageOperation())
+                    while (_documentDatabase.DatabaseShutdown.IsCancellationRequested == false)
                     {
-                        var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
-                        var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
-
-                        IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                            newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
-
-                        if (newIndex.Configuration.TempPath != null)
+                        try
                         {
-                            IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
-                                newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                            using (newIndex.DrainRunningQueries())
+                            using (newIndex.StorageOperation())
+                            {
+                                var oldIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(oldIndexName);
+                                var replacementIndexDirectoryName = IndexDefinitionBase.GetIndexNameSafeForFileSystem(replacementIndexName);
+
+                                IOExtensions.MoveDirectory(newIndex.Configuration.StoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                    newIndex.Configuration.StoragePath.Combine(oldIndexDirectoryName).FullPath);
+
+                                if (newIndex.Configuration.TempPath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.TempPath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.TempPath.Combine(oldIndexDirectoryName).FullPath);
+                                }
+
+                                if (newIndex.Configuration.JournalsStoragePath != null)
+                                {
+                                    IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
+                                        newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
+                                }
+                            }
+                            break;
                         }
-
-                        if (newIndex.Configuration.JournalsStoragePath != null)
+                        catch (TimeoutException)
                         {
-                            IOExtensions.MoveDirectory(newIndex.Configuration.JournalsStoragePath.Combine(replacementIndexDirectoryName).FullPath,
-                                newIndex.Configuration.JournalsStoragePath.Combine(oldIndexDirectoryName).FullPath);
                         }
                     }
                 }
