@@ -11,6 +11,7 @@ using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -481,6 +482,17 @@ namespace Raven.Client.Documents.Session
             return this;
         }
 
+        void IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        {
+            AfterQueryExecuted(action);
+        }
+
+
+        void IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        {
+            AfterStreamExecuted(action);
+        }
+
         /// <inheritdoc />
         IAsyncDocumentQuery<T> IDocumentQueryBase<T, IAsyncDocumentQuery<T>>.OpenSubclause()
         {
@@ -725,7 +737,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 Includes = new HashSet<string>(Includes),
                 RootTypes = { typeof(T) },
-                BeforeQueryExecutedAction = BeforeQueryExecutedAction,
+                BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),

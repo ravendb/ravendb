@@ -8,6 +8,7 @@ using System;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -25,6 +26,16 @@ namespace Raven.Client.Documents.Session
         ///     Allow you to modify the index query before it is executed
         /// </summary>
         IDocumentQueryCustomization BeforeQueryExecuted(Action<IndexQuery> action);
+
+        /// <summary>
+        ///     Callback to get the results of the query
+        /// </summary>
+        IDocumentQueryCustomization AfterQueryExecuted(Action<QueryResult> action);
+
+        /// <summary>
+        ///     Callback to get the results of the stream
+        /// </summary>
+        IDocumentQueryCustomization AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
 
         /// <summary>
         ///     Disables caching for query results.
