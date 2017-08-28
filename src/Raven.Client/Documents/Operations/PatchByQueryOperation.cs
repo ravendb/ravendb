@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Queries;
-using Raven.Client.Documents.Session;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -22,9 +20,8 @@ namespace Raven.Client.Documents.Operations
         private readonly QueryOperationOptions _options;
 
         public PatchByQueryOperation(string queryToUpdate)
-            : this(new IndexQuery{Query = queryToUpdate})
+            : this(new IndexQuery { Query = queryToUpdate })
         {
-            
         }
 
         public PatchByQueryOperation(IndexQuery queryToUpdate, QueryOperationOptions options = null)
@@ -44,11 +41,10 @@ namespace Raven.Client.Documents.Operations
             private readonly IndexQuery _queryToUpdate;
             private readonly QueryOperationOptions _options;
 
-            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context, 
-                IndexQuery queryToUpdate, 
+            public PatchByIndexCommand(DocumentConventions conventions, JsonOperationContext context,
+                IndexQuery queryToUpdate,
                 QueryOperationOptions options = null)
             {
-
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 if (context == null)
                     throw new ArgumentNullException(nameof(context));

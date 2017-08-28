@@ -928,6 +928,29 @@ The recommended method is to use full text search (mark the field as Analyzed an
                         _documentQuery.OrderByDistanceDescending((string)distanceFieldNameDesc, (string)distanceShapeWkt);
                     }
                     break;
+                case nameof(LinqExtensions.Include):
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var includePath);
+
+                    _documentQuery.Include((string)includePath);
+                    break;
+                case nameof(LinqExtensions.OrderBy):
+                case nameof(LinqExtensions.ThenBy):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByPath);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByOrderingType);
+
+                    _documentQuery.OrderBy((string)orderByPath, (OrderingType)orderByOrderingType);
+                    break;
+                case nameof(LinqExtensions.OrderByDescending):
+                case nameof(LinqExtensions.ThenByDescending):
+                    VisitExpression(expression.Arguments[0]);
+
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[1], out var orderByDescendingPath);
+                    LinqPathProvider.GetValueFromExpressionWithoutConversion(expression.Arguments[2], out var orderByDescendingOrderingType);
+
+                    _documentQuery.OrderByDescending((string)orderByDescendingPath, (OrderingType)orderByDescendingOrderingType);
+                    break;
                 default:
                     throw new NotSupportedException("Method not supported: " + expression.Method.Name);
             }

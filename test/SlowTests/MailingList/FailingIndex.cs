@@ -7,6 +7,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents;
 using Xunit;
 
 namespace SlowTests.MailingList
@@ -48,7 +49,7 @@ namespace SlowTests.MailingList
 
                     teams.ToArray();
 
-                    teams = from team in session.Query<Team>().Customize(x => x.Include<Team>(t => t.OwnerId))
+                    teams = from team in session.Query<Team>().Include(x => x.OwnerId)
                             where team.OwnerId == user.Id || team.Developers.Any(d => d.UserId == user.Id)
                             select team;
 

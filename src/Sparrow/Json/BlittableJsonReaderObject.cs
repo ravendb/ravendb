@@ -1081,9 +1081,6 @@ namespace Sparrow.Json
 
         protected bool Equals(BlittableJsonReaderObject other)
         {
-            if (_size != other.Size)
-                return false;
-
             if (_propCount != other._propCount)
                 return false;
 

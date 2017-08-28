@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session.Operations.Lazy;
 using Raven.Client.Documents.Session.Tokens;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
@@ -102,6 +103,17 @@ namespace Raven.Client.Documents.Session
                 OrderBy(fieldName, ordering);
 
             return this;
+        }
+
+        void IDocumentQueryBase<T, IDocumentQuery<T>>.AfterQueryExecuted(Action<QueryResult> action)
+        {
+            AfterQueryExecuted(action);
+        }
+
+
+        void IDocumentQueryBase<T, IDocumentQuery<T>>.AfterStreamExecuted(Action<BlittableJsonReaderObject> action)
+        {
+            AfterStreamExecuted(action);
         }
 
         /// <inheritdoc />
@@ -580,9 +592,9 @@ namespace Raven.Client.Documents.Session
         }
 
         /// <inheritdoc />
-        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution)
+        IDocumentQuery<T> IDocumentQueryBase<T, IDocumentQuery<T>>.BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted)
         {
-            BeforeQueryExecution(beforeQueryExecution);
+            BeforeQueryExecuted(beforeQueryExecuted);
             return this;
         }
 
@@ -727,7 +739,7 @@ namespace Raven.Client.Documents.Session
                 Negate = Negate,
                 Includes = new HashSet<string>(Includes),
                 RootTypes = { typeof(T) },
-                BeforeQueryExecutionAction = BeforeQueryExecutionAction,
+                BeforeQueryExecutedCallback = BeforeQueryExecutedCallback,
                 AfterQueryExecutedCallback = AfterQueryExecutedCallback,
                 AfterStreamExecutedCallback = AfterStreamExecutedCallback,
                 HighlightedFields = new List<HighlightedField>(HighlightedFields),

@@ -254,7 +254,7 @@ namespace Raven.Server.Documents.Patch
 
                     _writer.WritePropertyName(prop.Name);
 
-                    if (existInObject)
+                    if (existInObject && modifiedValue.Changed)
                     {
                         WriteJsonValue(obj, prop.Name, modifiedValue.Value);
                     }
@@ -290,6 +290,9 @@ namespace Raven.Server.Documents.Patch
         {
             if (objectInstance == null)
                 return null;
+
+            if (objectInstance is BlittableObjectInstance boi && boi.Changed == false)
+                return boi.Blittable.Clone(context);
 
             using (var writer = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
             {

@@ -132,7 +132,7 @@ namespace FastTests.Client
                 using (var session = store.OpenSession())
                 {
                     var orders = session.Query<Order>()
-                        .Customize(x => x.Include<Order>(o => o.CustomerId))
+                        .Include(x => x.CustomerId)
                         .Where(x => x.TotalPrice > 100)
                         .ToList();
 

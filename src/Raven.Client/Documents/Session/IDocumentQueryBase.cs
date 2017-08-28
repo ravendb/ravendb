@@ -49,13 +49,13 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Callback to get the results of the query
         /// </summary>
-        void AfterQueryExecuted(Action<QueryResult> afterQueryExecuted);
+        void AfterQueryExecuted(Action<QueryResult> action);
 
 
         /// <summary>
         ///     Callback to get the results of the stream
         /// </summary>
-        void AfterStreamExecuted(AfterStreamExecutedDelegate afterStreamExecuted);
+        void AfterStreamExecuted(Action<BlittableJsonReaderObject> action);
 
         /// <summary>
         ///     Add an AND to the query
@@ -65,7 +65,7 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         ///     Allows you to modify the index query before it is sent to the server
         /// </summary>
-        TSelf BeforeQueryExecution(Action<IndexQuery> beforeQueryExecution);
+        TSelf BeforeQueryExecuted(Action<IndexQuery> beforeQueryExecuted);
 
         /// <summary>
         ///     Specifies a boost weight to the last where clause.
