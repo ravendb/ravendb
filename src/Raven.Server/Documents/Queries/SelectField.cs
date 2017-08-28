@@ -35,11 +35,12 @@ namespace Raven.Server.Documents.Queries
             
         }
 
-        public static SelectField Create(string name)
+        public static SelectField Create(string name, string alias = null)
         {
             return new SelectField
             {
-                Name = name
+                Name = name,
+                Alias = alias
             };
         }
 

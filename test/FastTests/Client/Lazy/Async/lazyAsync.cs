@@ -168,7 +168,7 @@ namespace FastTests.Client.Lazy.Async
                     session.Advanced.AsyncDocumentQuery<ContactDto>()
                         .RawQuery(@"
 from Contacts as contact
-where contact.__document_id = $id
+where id(contact) = $id
 load contact.DetailIds as details[]
 select {
     ContactId: id(contact),
@@ -247,7 +247,7 @@ select {
                         .RawQuery(@"
 declare function triple(pos) { return pos *3; }
 from Items
-where __document_id in ($ids)
+where id() in ($ids)
 select triple(Position) as Position
 ")
                         .AddParameter("ids", new[] {"items/1", "items/2"})
