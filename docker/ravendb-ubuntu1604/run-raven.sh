@@ -2,8 +2,6 @@
 
 CUSTOM_SETTINGS_PATH="/opt/raven-settings.json"
 
-cd /opt/RavenDB/Server
-
 COMMAND="./Raven.Server"
 
 COMMAND="$COMMAND --ServerUrl=http://0.0.0.0:8080"
@@ -25,6 +23,10 @@ if [ ! -z "$DataDir" ]; then
     COMMAND="$COMMAND --DataDir=$DataDir"
 fi
 
+if [ ! -z "$LogsMode" ]; then
+    COMMAND="$COMMAND --Logs.Mode=$LogsMode"
+fi
+
 COMMAND="$COMMAND --print-id"
 COMMAND="$COMMAND --daemon"
 
@@ -32,6 +34,8 @@ if [ -f "$CUSTOM_SETTINGS_PATH" ]; then
     COMMAND="$COMMAND --config-path=\"$CUSTOM_SETTINGS_PATH\""
 fi
 
+pwd
 echo "Starting RavenDB server: $COMMAND"
 
-eval $COMMAND
+eval $COMMAND &
+./rvn logstream

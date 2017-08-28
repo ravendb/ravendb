@@ -35,7 +35,7 @@ namespace rvn
         public void Stop()
         {
             Dispose();
-            Console.WriteLine("Stop tailing logs.");
+            Console.WriteLine("Stop tailing logs. Exiting..");
             Environment.Exit(_exitCode);
         }
 
@@ -70,7 +70,7 @@ namespace rvn
                     Environment.Exit(2);
                 }
 
-                Console.WriteLine("Connected to RavenDB server...");
+                Console.WriteLine("Connected to RavenDB server. Tailing logs...");
 
                 var reader = new StreamReader(_client);
                 var buffer = new char[8192];

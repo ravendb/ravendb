@@ -1,6 +1,3 @@
-param(
-    $ServerDir="c:/ravendb/Server")
-    
 function CheckLastExitCode {
     param ([int[]]$SuccessCodes = @(0), [scriptblock]$CleanupScript=$null)
 
@@ -19,8 +16,6 @@ CALLSTACK:$(Get-PSCallStack | Out-String)
 
 $CUSTOM_SETTINGS_PATH = "c:\raven-config\$env:CustomConfigFilename"
 
-Push-Location $ServerDir
-
 $command = './rvn.exe'
 $commandArgs = @( 'windows-service' )
 
@@ -31,7 +26,6 @@ if ($service -eq $null) {
     $commandArgs += "--ServerUrl=http://0.0.0.0:8080"
     $commandArgs += "--ServerUrl.Tcp=tcp://0.0.0.0:38888"
     $commandArgs += "--DataDir=$($env:DataDir)"
-    $commandArgs += "--Logs.Path=C:\logs"
 
     if ([string]::IsNullOrEmpty($env:CustomConfigFilename) -eq $False) {
         $commandArgs += "--config-path"
@@ -50,6 +44,10 @@ if ($service -eq $null) {
         $commandArgs += "--PublicServerUrl.Tcp=$($env:PublicTcpServerUrl)"
     }
 
+    if ([string]::IsNullOrEmpty($env:LogsMode) -eq $False) {
+        $commandArgs += "--Logs.Mode=$($env:LogsMode)"
+    }
+
     write-host "Registering Windows Service: $command $commandArgs"
 } else {
     $commandArgs += "start"
@@ -59,12 +57,4 @@ if ($service -eq $null) {
 Invoke-Expression -Command "$command $commandArgs"
 CheckLastExitCode
 
-while ($true) { 
-    Start-Sleep 60 
-    $serviceStatus = (Get-Service -Name "RavenDB").Status
-    if (($serviceStatus -eq "Running") -or ($serviceStatus -eq "StartPending")) {
-        continue;
-    } else {
-        write-host "RavenDB Windows Service stopped unexpectedly. Exiting."
-    }
-}
+.\rvn.exe logstream

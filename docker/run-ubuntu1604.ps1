@@ -5,6 +5,7 @@ param(
     $DataDir = "",
     $PublicServerUrl = "",
     $PublicTcpServerUrl = "",
+    $LogsMode = "",
     [switch]$AuthenticationDisabled,
     [switch]$RemoveOnExit,
     [switch]$DryRun,
@@ -122,6 +123,11 @@ if ([string]::IsNullOrEmpty($PublicServerUrl) -eq $False) {
 if ([string]::IsNullOrEmpty($PublicTcpServerUrl) -eq $False) {
     $dockerArgs += "-e" 
     $dockerArgs += "PublicTcpServerUrl=$PublicTcpServerUrl"
+}
+
+if ([string]::IsNullOrEmpty($LogsMode) -eq $False) {
+    $dockerArgs += "-e"
+    $dockerArgs += "LogsMode=$LogsMode"
 }
 
 $dockerArgs += '-p'
