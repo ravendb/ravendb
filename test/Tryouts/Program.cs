@@ -10,11 +10,11 @@ namespace Tryouts
             {
                 Console.Clear();
                 Console.WriteLine(i);
-                using (var test = new SlowTests.Issues.RavenDB_8161())
+                using (var test = new SlowTests.Core.Commands.Patching())
                 {
                     try
                     {
-                        test.Can_delete_all_entries_from_compressed_tree_in_map_reduce_index();
+                        test.CanTestPatches();
                     }
                     catch (Exception e)
                     {

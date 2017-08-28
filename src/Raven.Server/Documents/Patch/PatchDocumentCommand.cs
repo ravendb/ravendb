@@ -144,7 +144,7 @@ namespace Raven.Server.Documents.Patch
                 var result = new PatchResult
                 {
                     Status = PatchStatus.NotModified,
-                    OriginalDocument = originalDoc,
+                    OriginalDocument = _isTest == false ? null : originalDoc?.Clone(context),
                     ModifiedDocument = modifiedDocument
                 };
 
