@@ -23,8 +23,8 @@ namespace Raven.Server.Documents.Patch
 
         public ObjectInstance GetOrCreate(string name)
         {
-            if (_instance.AsObject() is BlittableObjectInstance boi)
-                return boi.GetOrCreate(name);
+            if (_instance.AsObject() is BlittableObjectInstance b)
+                return b.GetOrCreate(name);
             var parent = _instance.AsObject();
             var o = parent.Get(name);
             if (o == null || o.IsUndefined() || o.IsNull())
