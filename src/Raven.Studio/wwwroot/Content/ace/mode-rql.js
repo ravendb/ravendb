@@ -32,7 +32,7 @@ var RqlHighlightRules = function() {
     this.$rules = {
         "start" : [ {
             token : "comment",
-            regex : "--.*$"
+            regex : "//.*$"
         },  {
             token : "comment",
             start : "/\\*",
@@ -89,7 +89,9 @@ oop.inherits(Mode, TextMode);
 
 (function() {
 
-    this.lineCommentStart = "--";
+    this.lineCommentStart = "//";
+    this.blockComment = {start: "/*", end: "*/"};
+    this.$quotes = {'"': '"', "'": "'", "`": "`"};
 
     this.$id = "ace/mode/rql";
 }).call(Mode.prototype);
