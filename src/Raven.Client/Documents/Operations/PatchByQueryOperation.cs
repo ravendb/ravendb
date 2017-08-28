@@ -40,8 +40,6 @@ namespace Raven.Client.Documents.Operations
 
         private class PatchByIndexCommand : RavenCommand<OperationIdResult>
         {
-            private static readonly Dictionary<string, object> Empty = new Dictionary<string, object>();
-            private readonly BlittableJsonReaderObject _args;
             private readonly DocumentConventions _conventions;
             private readonly IndexQuery _queryToUpdate;
             private readonly QueryOperationOptions _options;
