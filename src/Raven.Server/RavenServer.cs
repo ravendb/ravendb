@@ -200,7 +200,7 @@ namespace Raven.Server
                 _webHost.Start();
 
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
-                WebUrl = GetWebUrl(serverAddressesFeature.Addresses.First());
+                WebUrl = GetWebUrl(serverAddressesFeature.Addresses.First()).TrimEnd('/');
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
@@ -436,7 +436,7 @@ namespace Raven.Server
             return authenticationStatus;
         }
 
-        public string WebUrl { get; set; }
+        public string WebUrl { get; private set; }
 
         private readonly JsonContextPool _tcpContextPool = new JsonContextPool();
 

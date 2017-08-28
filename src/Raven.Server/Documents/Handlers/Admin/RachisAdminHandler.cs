@@ -238,7 +238,7 @@ namespace Raven.Server.Documents.Handlers.Admin
         {
             SetupCORSHeaders();
 
-            var nodeUrl = GetStringQueryString("url");
+            var nodeUrl = GetStringQueryString("url").TrimEnd('/');
             var watcher = GetBoolValueQueryString("watcher", false);
 
             var remoteIsHttps = nodeUrl.StartsWith("https:", StringComparison.OrdinalIgnoreCase);
