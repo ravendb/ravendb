@@ -41,13 +41,12 @@ namespace Raven.Server.Documents.Patch
         public string StringValue => _instance.IsString() ? _instance.AsString() : null;
         public JsValue RawJsValue => _instance;
 
-        public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context,
-            BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+        public BlittableJsonReaderObject TranslateToObject(JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
         {
             if (IsNull)
                 return null;
             var obj = _instance.AsObject();
-            return JsBlittableBridge.Translate(context, obj, usageMode);
+            return JsBlittableBridge.Translate(context, obj, modifier, usageMode);
         }
 
         public void Dispose()

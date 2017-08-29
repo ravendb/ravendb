@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Threading;
@@ -10,7 +9,6 @@ using Jint.Native;
 using Jint.Native.Object;
 using Jint.Runtime.Interop;
 using Jint.Runtime.References;
-using Raven.Client;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -20,8 +18,6 @@ namespace Raven.Server.Documents.Patch
 {
     public class ScriptRunner
     {
-        private const int DefaultStringSize = 50;
-
         private readonly ConcurrentQueue<SingleRun> _cache = new ConcurrentQueue<SingleRun>();
         private readonly DocumentDatabase _db;
         private readonly bool _enableClr;
@@ -103,7 +99,7 @@ namespace Raven.Server.Documents.Patch
             }
 
             public SingleRun(DocumentDatabase database, ScriptRunner runner, List<string> scriptsSource)
-            {                
+            {
                 _database = database;
                 _runner = runner;
                 ScriptEngine = new Engine(options =>
@@ -162,10 +158,10 @@ namespace Raven.Server.Documents.Patch
 
                 var id = args[0].AsString();
 
-                if(Includes == null)
+                if (Includes == null)
                     Includes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
                 Includes.Add(id);
-                
+
                 return self;
             }
 
@@ -280,8 +276,7 @@ namespace Raven.Server.Documents.Patch
                 if (DebugMode)
                     DebugActions.PutDocument.Add(id);
 
-                using (var reader = JsBlittableBridge.Translate(_context, args[1].AsObject(),
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+                using (var reader = JsBlittableBridge.Translate(_context, args[1].AsObject(), usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                 {
                     var put = _database.DocumentsStorage.Put(_context, id, _context.GetLazyString(changeVector), reader);
                     return put.Id;
@@ -499,8 +494,7 @@ namespace Raven.Server.Documents.Patch
                 return ScriptEngine.Object.Construct(Array.Empty<JsValue>());
             }
 
-            public object Translate(ScriptRunnerResult result, JsonOperationContext context,
-                BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
+            public object Translate(ScriptRunnerResult result, JsonOperationContext context, JsBlittableBridge.IResultModifier modifier = null, BlittableJsonDocumentBuilder.UsageMode usageMode = BlittableJsonDocumentBuilder.UsageMode.None)
             {
                 var val = result.RawJsValue;
                 if (val.IsString())
@@ -508,7 +502,7 @@ namespace Raven.Server.Documents.Patch
                 if (val.IsBoolean())
                     return val.AsBoolean();
                 if (val.IsObject())
-                    return result.TranslateToObject(context, usageMode);
+                    return result.TranslateToObject(context, modifier, usageMode);
                 if (val.IsNumber())
                     return val.AsNumber();
                 if (val.IsNull() || val.IsUndefined())

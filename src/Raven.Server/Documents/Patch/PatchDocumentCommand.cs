@@ -115,7 +115,7 @@ namespace Raven.Server.Documents.Patch
 
             object documentInstance;
             var args = _patchArgs;
-            BlittableJsonReaderObject originalDoc ;
+            BlittableJsonReaderObject originalDoc;
             if (originalDocument == null)
             {
                 _run = _runIfMissing;
@@ -136,10 +136,9 @@ namespace Raven.Server.Documents.Patch
             // we will to acccess this value, and the original document data may be changed by
             // the actions of the script, so we translate (which will create a clone) then use
             // that clone later
-            using (var scriptResult = _run.Run(context, "execute", new object[] { documentInstance, args }))
+            using (var scriptResult = _run.Run(context, "execute", new[] { documentInstance, args }))
             {
-               var  modifiedDocument = scriptResult.TranslateToObject(_externalContext,
-                    BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                var modifiedDocument = scriptResult.TranslateToObject(_externalContext, usageMode: BlittableJsonDocumentBuilder.UsageMode.ToDisk);
 
                 var result = new PatchResult
                 {
@@ -158,7 +157,7 @@ namespace Raven.Server.Documents.Patch
 
                 DocumentsStorage.PutOperationResults? putResult = null;
 
-                if (originalDoc  == null)
+                if (originalDoc == null)
                 {
                     if (_isTest == false || _run.PutOrDeleteCalled)
                         putResult = _database.DocumentsStorage.Put(context, _id, null, modifiedDocument);
