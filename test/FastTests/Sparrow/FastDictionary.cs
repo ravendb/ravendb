@@ -519,17 +519,28 @@ namespace FastTests.Sparrow
             Assert.Equal(8, dict.Capacity);
         }
 
-
         private class A
         {
+            private readonly int _hash;
+
+            public A(int hash = 1)
+            {
+                _hash = hash;
+            }
+
             public override int GetHashCode()
             {
-                return 1;
+                return _hash;
             }
 
             public override bool Equals(object obj)
             {
                 return ReferenceEquals(obj, this);
+            }
+
+            public override string ToString()
+            {
+                return _hash.ToString();
             }
         }
 
@@ -572,7 +583,53 @@ namespace FastTests.Sparrow
             Assert.Equal(1, dict.Keys.Distinct().Count());
         }
 
-        private void RandomTest(int i)
+        [Fact]
+        public void ConflictingAddTwice()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A(1);
+            var second = new A(33);
+            var third = new A(66);
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict[third] = 3;
+            Assert.Equal(3, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(2, dict.Count);
+            Assert.Throws<ArgumentException>(() => dict.Add(third, 4));
+
+            Assert.Equal(2, dict.Count);
+            Assert.Equal(2, dict.Keys.Distinct().Count());
+        }
+
+        [Fact]
+        public void ConflictingSetTwice()
+        {
+            var dict = new FastDictionary<A, long>();
+
+            var first = new A(1);
+            var second = new A(33);
+            var third = new A(66);
+
+            dict[first] = 1;
+            Assert.Equal(1, dict.Count);
+            dict[second] = 2;
+            Assert.Equal(2, dict.Count);
+            dict[third] = 3;
+            Assert.Equal(3, dict.Count);
+            dict.Remove(first);
+            Assert.Equal(2, dict.Count);
+            dict[third] = 4;
+
+            Assert.Equal(2, dict.Count);
+            Assert.Equal(2, dict.Keys.Distinct().Count());
+        }
+
+        public void RandomTest(int i)
         {
             var rng = new Random(i);
 

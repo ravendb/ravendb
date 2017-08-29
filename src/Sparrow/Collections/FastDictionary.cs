@@ -235,22 +235,23 @@ namespace Sparrow.Collections
             int bucket = hash & _capacityMask;
 
             Loop:
+            int candidate = -1;
             do
             {
                 uint nHash = entries[bucket].Hash;
                 if (nHash == KUnusedHash)
                 {
-                    _numberOfUsed++;
-                    _size++;
-                    goto UnusedSet;
+                    if (candidate == InvalidNodePosition)
+                        candidate = bucket;
+                        
+                    goto Set;
                 }
                 if (nHash == KDeletedHash)
                 {
-                    _numberOfDeleted--;
-                    _size++;
-                    goto Set;
+                    if (candidate == InvalidNodePosition)
+                        candidate = bucket;                       
                 }
-                    
+
                 if (nHash == uhash)
                     goto PartialHit;
 
@@ -278,15 +279,23 @@ namespace Sparrow.Collections
             }
             ThrowWhenDuplicatedKey(key); // We throw here. 
 
-            UnusedSet: // The bucket was formerly unused, so we must track it.
+            Set: // The bucket was formerly unused, so we must track it.
 
-            _usedEntries.Set(bucket);
+            _size++;
 
-            Set: 
+            if (_entries[candidate].Hash == KUnusedHash)
+            {
+                _usedEntries.Set(candidate);
+                _numberOfUsed++;
+            }
+            else if (_entries[candidate].Hash == KDeletedHash)
+            {
+                _numberOfDeleted--;
+            }
 
-            _entries[bucket].Hash = uhash;
-            _entries[bucket].Key = key;
-            _entries[bucket].Value = value;
+            _entries[candidate].Hash = uhash;
+            _entries[candidate].Key = key;
+            _entries[candidate].Value = value;
         }
 
         private void ThrowWhenDuplicatedKey(TKey key)
@@ -301,87 +310,11 @@ namespace Sparrow.Collections
             if (key == null)
                 throw new ArgumentNullException(nameof(key));
 
-            int hash = GetInternalHashCode(key); // PERF: This goes first because it can consume lots of registers.
+            int bucket = Lookup(key);
+            if (bucket == InvalidNodePosition)
+                return false;
 
-            var entries = _entries;
-
-            int numProbes = 1;
-            int capacity = _capacity;
-            int bucket = hash & _capacityMask;
-
-            uint originalBucket = (uint)bucket;
-
-Loop:
-            do
-            {
-                uint nHash = entries[bucket].Hash;
-                if (nHash == KUnusedHash)
-                    goto ReturnFalse;
-                if (nHash == hash)
-                    goto PartialHit;
-
-                bucket = (bucket + numProbes) & _capacityMask;
-                numProbes++;
-
-#if DEBUG
-                if (numProbes >= 100)
-                    throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
-#else
-                if (numProbes >= capacity)
-                    break;
-#endif
-            }
-            while (true);
-
-ReturnFalse:
-            return false;
-
-PartialHit:
-            if (!_comparer.Equals(entries[bucket].Key, key))
-            {
-                // PERF: This can happen with a very^3 low probability (assuming your hash function is good enough)
-                bucket = (bucket + numProbes) & _capacityMask;
-                numProbes++;
-                goto Loop;
-            }
-
-            // Now we check until we hit Unused.
-            int deletedBucket = bucket;
-
-            bucket = (bucket + numProbes) & _capacityMask;
-            numProbes++;
-
-            do
-            {
-                uint nHash = entries[bucket].Hash;
-                if (nHash == KUnusedHash)
-                    goto ReturnTrue;
-
-                // We move all the hashes with share the original bucket. (they are conflicts)
-                if (nHash != KDeletedHash && (nHash & _capacityMask) == originalBucket)
-                {
-                    // Move the bucket to the deleted bucket. 
-                    entries[deletedBucket] = entries[bucket];
-
-                    deletedBucket = bucket;
-                }
-
-                bucket = (bucket + numProbes) & _capacityMask;
-                numProbes++;
-
-#if DEBUG
-                if (numProbes >= 100)
-                    throw new InvalidOperationException("The hash function used for this object is not good enough. The distribution is causing clusters and causing huge slowdowns.");
-#else
-                    if (numProbes >= capacity)
-                        break;
-#endif
-            }
-            while (true);
-
-            ReturnTrue:
-
-            SetDeleted(deletedBucket);
+            SetDeleted(bucket);
 
             return true;
         }
@@ -505,20 +438,23 @@ PartialHit:
                 int bucket = hash & _capacityMask;
 
                 Loop:
+                int candidate = -1;
                 do
                 {
                     uint nHash = entries[bucket].Hash;
                     if (nHash == KUnusedHash)
                     {
-                        _numberOfUsed++;
                         _size++;
-                        goto UnusedSet;
+
+                        if (candidate == InvalidNodePosition)
+                            candidate = bucket;
+
+                        goto Set;
                     }
                     if (nHash == KDeletedHash)
                     {
-                        _numberOfDeleted--;
-                        _size++;
-                        goto Set;
+                        if (candidate == InvalidNodePosition)
+                            candidate = bucket;
                     }
 
                     if (nHash == uhash)
@@ -547,15 +483,25 @@ PartialHit:
                     goto Loop;
                 }
 
-                UnusedSet: // The bucket was formerly unused, so we must track it for cleanup. 
+                candidate = bucket;
 
-                _usedEntries.Set(bucket);
+                Set: // The bucket was formerly unused, so we must track it for cleanup. 
 
-                Set: 
+                if (_entries[candidate].Hash == KUnusedHash)
+                {
+                    _usedEntries.Set(candidate);
+                    _numberOfUsed++;
+                }
+                else if (_entries[candidate].Hash == KDeletedHash)
+                {
+                    _numberOfDeleted--;
+                }
 
-                _entries[bucket].Hash = uhash;
-                _entries[bucket].Key = key;
-                _entries[bucket].Value = value;
+                _usedEntries.Set(candidate);
+                
+                _entries[candidate].Hash = uhash;
+                _entries[candidate].Key = key;
+                _entries[candidate].Value = value;
             }
         }
 
