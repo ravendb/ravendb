@@ -7,42 +7,53 @@ var TextHighlightRules = require("./text_highlight_rules").TextHighlightRules;
 var RqlHighlightRules = function() {
 
     var clausesKeywords = (
-        "declare|function|from|index|where|select|group|order|by|desc|asc|load|include"
+        "declare|function|from|index|where|select|group|order|by|load|include"
     );
     var insideClauseKeywords = (
-        "as|and|or|not|all"
+        "as|not|all"
     );
     var functions = (
         "count|sum|id|key"
     );
     var whereFunctions = (
-        "in|search|boost|startsWith|endsWith|lucene|exact"
+        "between|in|search|boost|startsWith|endsWith|lucene|exact|within|circle"
     );
     var orderByFunctions = (
         "random|score"
+    );
+    
+    var orderByOptions = (
+        "desc|asc|descending|ascending"
+    );
+    var orderByAsOptions = (
+        "string|long|double|alphaNumeric"
     );
 
     var constants = (
         "null"
     );
-
     var constantsBoolean = (
         "true|false"
     );
-
-    var dataTypes = (
-        "long|double|string"
+    var binaryOperations = (
+        "and|or"
+    );
+    var operations = (
+        ">=|<=|<|>|=|==|!="
     );
 
     var keywordMapper = this.createKeywordMapper({
         "keyword.clause": clausesKeywords,
         "keyword.insideClause": insideClauseKeywords,
+        "keyword.orderByOptions": orderByOptions,
+        "keyword.orderByAsOptions": orderByAsOptions,
         "function": functions,
         "function.where": whereFunctions,
         "function.orderBy": orderByFunctions,
         "constant.language": constants,
         "constant.language.boolean": constantsBoolean,
-        "storage.type": dataTypes
+        "operations.type.binary": binaryOperations,
+        "operations.type": operations
     }, "identifier", true);
 
     this.$rules = {
