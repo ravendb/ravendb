@@ -38,7 +38,7 @@ namespace FastTests.Server.Documents.Indexing
                         .CountAsync();
 
                     Assert.Equal(1, count);
-                    Assert.Equal("Auto/Users/Bysearch(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
 
                 using (var s = store.OpenAsyncSession())
@@ -51,7 +51,7 @@ namespace FastTests.Server.Documents.Indexing
                         .CountAsync();
 
                     Assert.Equal(0, count);
-                    Assert.Equal("Auto/Users/Bysearch(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/BySearch(Name)", stats.IndexName);
                 }
             }
         }
@@ -96,7 +96,7 @@ namespace FastTests.Server.Documents.Indexing
                     Assert.Equal(2, results[0].Count);
                     Assert.Equal("Ayende Rahien", results[0].Name);
 
-                    Assert.Equal("Auto/Users/ByCountReducedBysearch(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByCountReducedBySearch(Name)", stats.IndexName);
                 }
 
                 using (var s = store.OpenSession())
@@ -117,7 +117,7 @@ namespace FastTests.Server.Documents.Indexing
 
                     Assert.Equal(0, results.Count);
 
-                    Assert.Equal("Auto/Users/ByCountReducedBysearch(Name)", stats.IndexName);
+                    Assert.Equal("Auto/Users/ByCountReducedBySearch(Name)", stats.IndexName);
                 }
             }
         }
