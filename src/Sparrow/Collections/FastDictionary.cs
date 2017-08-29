@@ -283,19 +283,22 @@ namespace Sparrow.Collections
 
             _size++;
 
-            if (_entries[candidate].Hash == KUnusedHash)
+
+            ref var entry = ref _entries[candidate];
+
+            if (entry.Hash == KUnusedHash)
             {
                 _usedEntries.Set(candidate);
                 _numberOfUsed++;
             }
-            else if (_entries[candidate].Hash == KDeletedHash)
+            else if (entry.Hash == KDeletedHash)
             {
                 _numberOfDeleted--;
             }
 
-            _entries[candidate].Hash = uhash;
-            _entries[candidate].Key = key;
-            _entries[candidate].Value = value;
+            entry.Hash = uhash;
+            entry.Key = key;
+            entry.Value = value;
         }
 
         private void ThrowWhenDuplicatedKey(TKey key)
@@ -324,18 +327,20 @@ namespace Sparrow.Collections
         {
             Contract.Ensures(_size <= Contract.OldValue<int>(_size));
 
-            if (_entries[node].Hash < KDeletedHash)
+            ref var entry = ref _entries[node];
+
+            if (entry.Hash < KDeletedHash)
             {
-                _entries[node].Hash = KDeletedHash;
-                _entries[node].Key = default(TKey);
-                _entries[node].Value = default(TValue);
+                entry.Hash = KDeletedHash;
+                entry.Key = default(TKey);
+                entry.Value = default(TValue);
 
                 _numberOfDeleted++;
                 _size--;
             }
 
             Contract.Assert(_numberOfDeleted >= Contract.OldValue<int>(_numberOfDeleted));
-            Contract.Assert(_entries[node].Hash == KDeletedHash);
+            Contract.Assert(entry.Hash == KDeletedHash);
 
             if (3 * _numberOfDeleted / 2 > _capacity - _numberOfUsed)
             {
@@ -487,21 +492,23 @@ namespace Sparrow.Collections
 
                 Set: // The bucket was formerly unused, so we must track it for cleanup. 
 
-                if (_entries[candidate].Hash == KUnusedHash)
+                ref var entry = ref _entries[candidate];
+
+                if (entry.Hash == KUnusedHash)
                 {
                     _usedEntries.Set(candidate);
                     _numberOfUsed++;
                 }
-                else if (_entries[candidate].Hash == KDeletedHash)
+                else if (entry.Hash == KDeletedHash)
                 {
                     _numberOfDeleted--;
                 }
 
                 _usedEntries.Set(candidate);
                 
-                _entries[candidate].Hash = uhash;
-                _entries[candidate].Key = key;
-                _entries[candidate].Value = value;
+                entry.Hash = uhash;
+                entry.Key = key;
+                entry.Value = value;
             }
         }
 
@@ -689,40 +696,45 @@ namespace Sparrow.Collections
             return _comparer.GetHashCode(key) & 0x7FFFFFFF;
         }
 
-        private void Rehash(Entry[] entries)
+        private void Rehash(Entry[] newEntries)
         {
-            _usedEntries = new BitVector(entries.Length);
+            _usedEntries = new BitVector(newEntries.Length);
 
-            var size = 0;            
-            int newCapacityMask = entries.Length - 1;
-            for (int it = 0; it < _entries.Length; it++)
+            var size = 0;
+            var entries = _entries;
+            int newCapacityMask = newEntries.Length - 1;
+            for (int it = 0; it < entries.Length; it++)
             {
-                uint hash = _entries[it].Hash;
+                ref var refIt = ref entries[it];
+
+                uint hash = refIt.Hash;
                 if (hash >= KDeletedHash) // No interest for the process of rehashing, we are skipping it.
                     continue;
 
                 int bucket = (int)hash & newCapacityMask;
 
                 int numProbes = 0;
-                while (entries[bucket].Hash != KUnusedHash)
+                while (newEntries[bucket].Hash != KUnusedHash)
                 {
                     numProbes++;
                     bucket = (bucket + numProbes) & newCapacityMask;
                 }
 
-                entries[bucket].Hash = hash;
-                entries[bucket].Key = _entries[it].Key;
-                entries[bucket].Value = _entries[it].Value;
+                ref var refBucket = ref newEntries[bucket];
+                
+                refBucket.Hash = hash;
+                refBucket.Key = refIt.Key;
+                refBucket.Value = refIt.Value;
 
                 _usedEntries.Set(bucket);
 
                 size++;
             }
 
-            _capacity = entries.Length;
+            _capacity = newEntries.Length;
             _capacityMask = newCapacityMask;
             _size = size;
-            _entries = entries;
+            _entries = newEntries;
 
             _numberOfUsed = size;
             _numberOfDeleted = 0;
